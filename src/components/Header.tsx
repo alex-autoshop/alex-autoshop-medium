@@ -33,7 +33,12 @@ export function Header() {
       <header className="sticky top-0 z-40 bg-night/95 backdrop-blur-md border-b border-white/10 text-white">
         <div className="container flex items-center justify-between h-16 sm:h-20 gap-2">
           <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)}>
-            <img src="/images/logo-dark.png" alt="Alex Autoshop" className="h-12 sm:h-16 w-auto" />
+            {/* Logo per Filter rein weiß -> klar sichtbar auf dunkler Navbar */}
+            <img
+              src="/images/logo-dark.png"
+              alt="Alex Autoshop"
+              className="h-16 sm:h-20 w-auto [filter:brightness(0)_invert(1)]"
+            />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
