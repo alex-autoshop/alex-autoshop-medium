@@ -12,7 +12,7 @@ export function BrandMarquee() {
             alt={brand.name}
             title={brand.name}
             loading="lazy"
-            className="h-8 sm:h-10 w-auto opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all"
+            className="h-9 sm:h-12 w-auto object-contain shrink-0"
           />
         ))}
       </div>
