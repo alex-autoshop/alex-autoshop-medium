@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://alex-autoshop-medium.vercel.app/sitemap.xml
