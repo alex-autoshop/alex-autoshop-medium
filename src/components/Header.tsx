@@ -33,7 +33,7 @@ export function Header() {
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
         <div className="container flex items-center justify-between h-16 sm:h-20 gap-2">
           <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)}>
-            <img src="/images/logo-dark.png" alt="Alex Autoshop" className="h-12 sm:h-16 w-auto" />
+            <img src="/images/logo.png" alt="Alex Autoshop" className="h-11 sm:h-14 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
