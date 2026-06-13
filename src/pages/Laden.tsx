@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { MapPin, Phone, Clock, MessageCircle, Zap, Shield, Users, Navigation } from "lucide-react";
 import { Seo } from "@/components/Seo";
-import { BRANDS } from "@/data/brands";
+import { BrandMarquee } from "@/components/BrandMarquee";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 
 const VALUES = [
@@ -133,27 +133,8 @@ export default function Laden() {
         </div>
       </section>
 
-      {/* Marken-Grid */}
-      <section className="container pb-16">
-        <h2 className="text-2xl text-center mb-8">Unsere Marken</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {BRANDS.map((brand) => (
-            <div
-              key={brand.name}
-              className="card-tilt flex items-center justify-center p-6 aspect-[3/2] hover:translate-y-0"
-              title={brand.name}
-            >
-              {/* feste Höhe + object-contain => alle Logos exakt gleich groß, egal wie groß die Quelldatei ist */}
-              <img
-                src={brand.logo}
-                alt={brand.name}
-                loading="lazy"
-                className="h-12 w-full object-contain"
-              />
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Marken-Karussell */}
+      <BrandMarquee />
     </div>
   );
 }
