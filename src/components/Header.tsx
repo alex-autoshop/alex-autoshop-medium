@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut } from "lucide-react";
+import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut, Bell } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { CartDrawer } from "@/components/CartDrawer";
 import { useAuth } from "@/context/AuthContext";
+import { useUnread } from "@/hooks/useUnread";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ export function Header() {
   const [cartOpen, setCartOpen] = useState(false);
   const itemCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const { user, signOut } = useAuth();
+  const unread = useUnread();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -87,6 +89,22 @@ export function Header() {
                 className="hidden md:inline-flex items-center gap-2 px-4 min-h-[48px] rounded-lg font-semibold bg-gold-bright text-night hover:brightness-95 transition-all"
               >
                 <LogIn className="w-4 h-4" /> Login / Registrieren
+              </Link>
+            )}
+
+            {user && (
+              <Link
+                to="/dashboard?tab=inbox"
+                className="relative flex items-center justify-center w-12 h-12 rounded-lg text-white hover:bg-white/10 transition-colors"
+                aria-label="Nachrichten"
+                title="Nachrichten"
+              >
+                <Bell className="w-6 h-6" />
+                {unread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-gold-bright text-night text-xs font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center">
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                )}
               </Link>
             )}
 

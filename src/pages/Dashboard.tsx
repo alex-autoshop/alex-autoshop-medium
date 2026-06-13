@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
   LayoutDashboard,
@@ -14,9 +14,11 @@ import {
   Plus,
   Trash2,
   MessageCircle,
+  Inbox as InboxIcon,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { MemberProductCard } from "@/components/MemberProductCard";
+import { Inbox } from "@/components/Inbox";
 import { useProducts } from "@/hooks/useProducts";
 import { useAuth } from "@/context/AuthContext";
 import { usePlannerStore } from "@/stores/plannerStore";
@@ -25,11 +27,12 @@ import { allCategories } from "@/lib/categories";
 import { whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "shop" | "planner" | "orders" | "profile";
+type Tab = "overview" | "shop" | "inbox" | "planner" | "orders" | "profile";
 
 const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
   { id: "shop", label: "Shop & Ersparnis", icon: ShoppingBag },
+  { id: "inbox", label: "Nachrichten", icon: InboxIcon },
   { id: "planner", label: "Materialplaner", icon: ClipboardCheck },
   { id: "orders", label: "Bestellungen", icon: ClipboardList },
   { id: "profile", label: "Firmendaten", icon: Building2 },
@@ -37,7 +40,9 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
-  const [tab, setTab] = useState<Tab>("overview");
+  const [params] = useSearchParams();
+  const initialTab = (params.get("tab") as Tab) || "overview";
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   const level = profile.membership_level ?? 0;
   const levelInfo = MEMBERSHIP_LEVELS.find((m) => m.level === level);
@@ -78,6 +83,7 @@ export default function Dashboard() {
 
       {tab === "overview" && <Overview level={level} />}
       {tab === "shop" && <DashboardShop level={level} />}
+      {tab === "inbox" && <Inbox />}
       {tab === "planner" && <Planner />}
       {tab === "orders" && <Orders />}
       {tab === "profile" && <ProfileForm />}

@@ -19,6 +19,7 @@ const Impressum = lazy(() => import("@/pages/Impressum"));
 const Datenschutz = lazy(() => import("@/pages/Datenschutz"));
 const AGB = lazy(() => import("@/pages/AGB"));
 const Versand = lazy(() => import("@/pages/Versand"));
+const Widerruf = lazy(() => import("@/pages/Widerruf"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 function ScrollToTop() {
@@ -73,6 +74,7 @@ export default function App() {
                 <Route path="/datenschutz" element={<Datenschutz />} />
                 <Route path="/agb" element={<AGB />} />
                 <Route path="/versand" element={<Versand />} />
+                <Route path="/widerruf" element={<Widerruf />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
