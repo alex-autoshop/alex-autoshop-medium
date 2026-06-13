@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -15,6 +15,7 @@ import {
   Trash2,
   MessageCircle,
   Inbox as InboxIcon,
+  RotateCcw,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { MemberProductCard } from "@/components/MemberProductCard";
@@ -22,6 +23,9 @@ import { Inbox } from "@/components/Inbox";
 import { useProducts } from "@/hooks/useProducts";
 import { useAuth } from "@/context/AuthContext";
 import { usePlannerStore } from "@/stores/plannerStore";
+import { useCartStore } from "@/stores/cartStore";
+import { getOrders, type Order } from "@/lib/orders";
+import { formatPrice } from "@/lib/shopify";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { allCategories } from "@/lib/categories";
 import { whatsappLink } from "@/data/shopInfo";
@@ -305,15 +309,88 @@ function Planner() {
 }
 
 function Orders() {
+  const { user } = useAuth();
+  const addItem = useCartStore((s) => s.addItem);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    getOrders(user.id).then((o) => {
+      setOrders(o);
+      setLoading(false);
+    });
+  }, [user]);
+
+  const reorder = async (order: Order) => {
+    for (const it of order.items) {
+      await addItem({
+        product: {
+          node: {
+            id: it.variantId,
+            title: it.title,
+            description: "",
+            handle: it.handle,
+            priceRange: { minVariantPrice: it.price },
+            images: it.image ? { edges: [{ node: { url: it.image, altText: it.title } }] } : { edges: [] },
+            variants: { edges: [] },
+            options: [],
+          },
+        },
+        variantId: it.variantId,
+        variantTitle: it.variantTitle,
+        price: it.price,
+        quantity: it.quantity,
+        selectedOptions: [],
+      });
+    }
+    toast.success("Wieder im Warenkorb", { description: `${order.items.length} Positionen` });
+  };
+
+  if (loading) {
+    return <div className="py-12 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>;
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="card-tilt hover:translate-y-0 p-8 text-center max-w-2xl mx-auto">
+        <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <h2 className="text-xl mb-2">Noch keine Bestellungen</h2>
+        <p className="text-muted-foreground mb-6">
+          Sobald du über den Shop bestellst, erscheint deine Bestellung hier — mit einem Klick
+          zum Nachbestellen.
+        </p>
+        <Link to="/shop" className="btn-primary">Zum Shop</Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="card-tilt hover:translate-y-0 p-8 text-center max-w-2xl mx-auto">
-      <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-      <h2 className="text-xl mb-2">Noch keine Bestellungen</h2>
-      <p className="text-muted-foreground mb-6">
-        Deine Bestellungen und Anfragen erscheinen hier, sobald die Anbindung an unser
-        Bestellsystem aktiv ist. Bis dahin: bestell direkt im Shop oder ruf uns an.
-      </p>
-      <Link to="/shop" className="btn-primary">Zum Shop</Link>
+    <div className="max-w-2xl space-y-4">
+      {orders.map((o) => (
+        <div key={o.id} className="card-tilt hover:translate-y-0 p-5">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <p className="font-semibold">
+                {new Date(o.created_at).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}
+              </p>
+              <p className="text-xs text-muted-foreground capitalize">Status: {o.status}</p>
+            </div>
+            <p className="font-display font-bold text-lg">{formatPrice(String(o.total), o.currency)}</p>
+          </div>
+          <ul className="text-sm text-muted-foreground space-y-1 mb-4">
+            {o.items.map((it, i) => (
+              <li key={i} className="flex justify-between gap-2">
+                <span className="truncate">{it.quantity}× {it.title}</span>
+                <span className="shrink-0">{formatPrice(String(parseFloat(it.price.amount) * it.quantity), it.price.currencyCode)}</span>
+              </li>
+            ))}
+          </ul>
+          <button onClick={() => reorder(o)} className="btn-outline w-full">
+            <RotateCcw className="w-4 h-4" /> Erneut bestellen
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

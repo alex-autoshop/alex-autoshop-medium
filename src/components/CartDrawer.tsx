@@ -5,6 +5,7 @@ import { formatPrice } from "@/lib/shopify";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useAuth } from "@/context/AuthContext";
 import { discountForLevel } from "@/data/memberships";
+import { recordOrder, type OrderItem } from "@/lib/orders";
 
 interface CartDrawerProps {
   open: boolean;
@@ -19,6 +20,21 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const currency = items[0]?.price.currencyCode ?? "EUR";
   const discount = user ? discountForLevel(profile.membership_level) : 0;
   const memberSaving = total * (discount / 100);
+
+  // Bestellung erfassen (nur eingeloggt) bevor Shopify-Checkout öffnet
+  const handleCheckout = () => {
+    if (!user) return;
+    const orderItems: OrderItem[] = items.map((i) => ({
+      variantId: i.variantId,
+      variantTitle: i.variantTitle,
+      title: i.product.node.title,
+      handle: i.product.node.handle,
+      image: i.product.node.images?.edges?.[0]?.node?.url ?? "",
+      price: i.price,
+      quantity: i.quantity,
+    }));
+    recordOrder({ userId: user.id, items: orderItems, total, currency });
+  };
 
   return (
     <AnimatePresence>
@@ -133,6 +149,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   href={checkoutUrl ?? "#"}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={handleCheckout}
                   className="btn-gold-bright w-full text-base font-bold"
                 >
                   <Zap className="w-5 h-5" /> Express-Kauf
@@ -141,6 +158,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   href={checkoutUrl ?? "#"}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={handleCheckout}
                   className="btn-outline w-full"
                 >
                   Zur normalen Kasse
