@@ -34,7 +34,7 @@ export function Header() {
         <div className="container flex items-center justify-between h-20 sm:h-24 gap-2">
           <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)}>
             {/* Eng zugeschnittenes farbiges Logo (leerer Rand entfernt) fuer dunkle Navbar */}
-            <img src="/images/logo-cropped.png" alt="Alex Autoshop" className="h-14 sm:h-20 w-auto" />
+            <img src="/images/logo-cropped.png" alt="Alex Autoshop" className="h-11 sm:h-14 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
