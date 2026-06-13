@@ -30,10 +30,10 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
+      <header className="sticky top-0 z-40 bg-night/95 backdrop-blur-md border-b border-white/10 text-white">
         <div className="container flex items-center justify-between h-16 sm:h-20 gap-2">
           <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)}>
-            <img src="/images/logo.png" alt="Alex Autoshop" className="h-11 sm:h-14 w-auto" />
+            <img src="/images/logo-dark.png" alt="Alex Autoshop" className="h-12 sm:h-16 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
@@ -44,7 +44,9 @@ export function Header() {
                 className={({ isActive }) =>
                   cn(
                     "px-4 py-3 rounded-lg font-medium transition-colors min-h-[48px] flex items-center",
-                    isActive ? "text-primary bg-secondary" : "text-foreground/80 hover:text-foreground hover:bg-secondary"
+                    isActive
+                      ? "text-gold-bright bg-white/10"
+                      : "text-white/75 hover:text-white hover:bg-white/10"
                   )
                 }
               >
@@ -56,7 +58,7 @@ export function Header() {
           <div className="flex items-center gap-2">
             <a
               href={`tel:${SHOP_INFO.phoneIntl}`}
-              className="hidden lg:flex items-center gap-2 text-sm font-semibold text-foreground/80 hover:text-primary transition-colors px-3 min-h-[48px]"
+              className="hidden lg:flex items-center gap-2 text-sm font-semibold text-white/75 hover:text-gold-bright transition-colors px-3 min-h-[48px]"
             >
               <Phone className="w-4 h-4" />
               {SHOP_INFO.phone}
@@ -65,13 +67,13 @@ export function Header() {
               <div className="hidden md:flex items-center gap-1">
                 <NavLink
                   to="/dashboard"
-                  className="inline-flex items-center gap-2 px-3 min-h-[48px] rounded-lg font-medium text-foreground/80 hover:text-foreground hover:bg-secondary transition-colors"
+                  className="inline-flex items-center gap-2 px-3 min-h-[48px] rounded-lg font-medium text-white/75 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   <LayoutDashboard className="w-5 h-5" /> Dashboard
                 </NavLink>
                 <button
                   onClick={handleLogout}
-                  className="inline-flex items-center justify-center w-12 h-12 rounded-lg hover:bg-secondary transition-colors"
+                  className="inline-flex items-center justify-center w-12 h-12 rounded-lg text-white/75 hover:text-white hover:bg-white/10 transition-colors"
                   aria-label="Abmelden"
                   title="Abmelden"
                 >
@@ -81,7 +83,7 @@ export function Header() {
             ) : (
               <Link
                 to="/konto"
-                className="hidden md:inline-flex items-center gap-2 px-4 min-h-[48px] rounded-lg font-semibold bg-night text-white hover:bg-neutral-800 transition-colors"
+                className="hidden md:inline-flex items-center gap-2 px-4 min-h-[48px] rounded-lg font-semibold bg-gold-bright text-night hover:brightness-95 transition-all"
               >
                 <LogIn className="w-4 h-4" /> Login / Registrieren
               </Link>
@@ -89,19 +91,19 @@ export function Header() {
 
             <button
               onClick={() => setCartOpen(true)}
-              className="relative flex items-center justify-center w-12 h-12 rounded-lg hover:bg-secondary transition-colors"
+              className="relative flex items-center justify-center w-12 h-12 rounded-lg text-white hover:bg-white/10 transition-colors"
               aria-label="Warenkorb öffnen"
             >
               <ShoppingCart className="w-6 h-6" />
               {itemCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 bg-gold-bright text-night text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                   {itemCount}
                 </span>
               )}
             </button>
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="md:hidden flex items-center justify-center w-12 h-12 rounded-lg hover:bg-secondary transition-colors"
+              className="md:hidden flex items-center justify-center w-12 h-12 rounded-lg text-white hover:bg-white/10 transition-colors"
               aria-label="Menü"
             >
               {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -110,7 +112,7 @@ export function Header() {
         </div>
 
         {mobileOpen && (
-          <nav className="md:hidden border-t border-border bg-background animate-fade-up">
+          <nav className="md:hidden border-t border-white/10 bg-night animate-fade-up">
             <div className="container py-3 flex flex-col gap-1">
               {NAV.map((item) => (
                 <NavLink
@@ -120,7 +122,7 @@ export function Header() {
                   className={({ isActive }) =>
                     cn(
                       "px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center",
-                      isActive ? "text-primary bg-secondary" : "hover:bg-secondary"
+                      isActive ? "text-gold-bright bg-white/10" : "text-white/85 hover:bg-white/10"
                     )
                   }
                 >
@@ -129,24 +131,24 @@ export function Header() {
               ))}
               <a
                 href={`tel:${SHOP_INFO.phoneIntl}`}
-                className="px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2 text-primary"
+                className="px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2 text-gold-bright"
               >
                 <Phone className="w-5 h-5" /> {SHOP_INFO.phone}
               </a>
 
-              <div className="border-t border-border mt-1 pt-2">
+              <div className="border-t border-white/10 mt-1 pt-2">
                 {user ? (
                   <>
                     <NavLink
                       to="/dashboard"
                       onClick={() => setMobileOpen(false)}
-                      className="px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2"
+                      className="px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2 text-white/85 hover:bg-white/10"
                     >
                       <LayoutDashboard className="w-5 h-5" /> Dashboard
                     </NavLink>
                     <button
                       onClick={handleLogout}
-                      className="w-full text-left px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2"
+                      className="w-full text-left px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2 text-white/85 hover:bg-white/10"
                     >
                       <LogOut className="w-5 h-5" /> Abmelden
                     </button>
@@ -155,7 +157,7 @@ export function Header() {
                   <NavLink
                     to="/konto"
                     onClick={() => setMobileOpen(false)}
-                    className="px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2 text-primary"
+                    className="px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2 text-gold-bright"
                   >
                     <LogIn className="w-5 h-5" /> Login / Registrieren
                   </NavLink>
