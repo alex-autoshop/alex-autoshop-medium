@@ -13,13 +13,16 @@ import {
   Loader2,
   Plus,
   Trash2,
+  MessageCircle,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { MemberProductCard } from "@/components/MemberProductCard";
 import { useProducts } from "@/hooks/useProducts";
 import { useAuth } from "@/context/AuthContext";
+import { usePlannerStore } from "@/stores/plannerStore";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { allCategories } from "@/lib/categories";
+import { whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "shop" | "planner" | "orders" | "profile";
@@ -187,51 +190,109 @@ function DashboardShop({ level }: { level: number }) {
 }
 
 function Planner() {
-  const [items, setItems] = useState<{ id: number; name: string; done: boolean }[]>([]);
+  const { items, add, toggle, setQuantity, remove, clear } = usePlannerStore();
   const [input, setInput] = useState("");
+  const [qty, setQty] = useState(1);
 
-  const add = (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    setItems((p) => [...p, { id: Date.now(), name: input.trim(), done: false }]);
+    add(input, qty);
     setInput("");
+    setQty(1);
+  };
+
+  const openItems = items.filter((i) => !i.done);
+
+  const whatsappRequest = () => {
+    const lines = [
+      "Hallo Alex Autoshop, ich möchte folgendes Material anfragen:",
+      ...items.map((i) => `• ${i.quantity}× ${i.name}${i.done ? " (habe ich schon)" : ""}`),
+    ];
+    return whatsappLink(lines.join("\n"));
   };
 
   return (
     <div className="max-w-2xl">
-      <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide bg-primary/10 text-primary px-3 py-1 rounded-full mb-4">
-        Beta
-      </div>
       <h2 className="text-2xl mb-2">Materialplaner</h2>
       <p className="text-muted-foreground mb-6">
-        Plane das Material für dein nächstes Projekt. Häkchen abhaken, was schon da ist.
-        (Beta — Speichern & Übernahme in den Warenkorb folgt.)
+        Plane das Material für dein nächstes Projekt — wird automatisch gespeichert. Hak ab,
+        was schon da ist, und schick die Liste als Bestellanfrage an uns.
       </p>
 
-      <form onSubmit={add} className="flex gap-3 mb-5">
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="z.B. 2K Klarlack, Härter, Schleifpapier P400 …" className="input-base flex-1" />
-        <button type="submit" className="btn-primary"><Plus className="w-5 h-5" /> Hinzu</button>
+      <form onSubmit={submit} className="flex gap-2 sm:gap-3 mb-5">
+        <input
+          type="number"
+          min={1}
+          value={qty}
+          onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
+          className="input-base w-20 text-center shrink-0"
+          aria-label="Menge"
+        />
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="z.B. 2K Klarlack, Härter, Schleifpapier P400 …"
+          className="input-base flex-1"
+        />
+        <button type="submit" className="btn-primary shrink-0">
+          <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Hinzu</span>
+        </button>
       </form>
 
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Noch keine Positionen. Füg oben dein erstes Material hinzu.</p>
+        <p className="text-muted-foreground text-sm">
+          Noch keine Positionen. Füg oben dein erstes Material hinzu.
+        </p>
       ) : (
-        <ul className="space-y-2">
-          {items.map((it) => (
-            <li key={it.id} className="card-tilt hover:translate-y-0 flex items-center gap-3 p-3">
-              <input
-                type="checkbox"
-                checked={it.done}
-                onChange={() => setItems((p) => p.map((x) => (x.id === it.id ? { ...x, done: !x.done } : x)))}
-                className="w-5 h-5 accent-[#B8860B]"
-              />
-              <span className={cn("flex-1", it.done && "line-through text-muted-foreground")}>{it.name}</span>
-              <button onClick={() => setItems((p) => p.filter((x) => x.id !== it.id))} className="w-10 h-10 flex items-center justify-center text-destructive hover:bg-destructive/10 rounded-lg">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="space-y-2 mb-5">
+            {items.map((it) => (
+              <li key={it.id} className="card-tilt hover:translate-y-0 flex items-center gap-3 p-3">
+                <input
+                  type="checkbox"
+                  checked={it.done}
+                  onChange={() => toggle(it.id)}
+                  className="w-5 h-5 accent-[#B8860B] shrink-0"
+                />
+                <div className="flex items-center border border-border rounded-lg shrink-0">
+                  <button
+                    onClick={() => setQuantity(it.id, it.quantity - 1)}
+                    className="w-9 h-9 flex items-center justify-center hover:bg-secondary rounded-l-lg"
+                    aria-label="Menge verringern"
+                  >
+                    −
+                  </button>
+                  <span className="w-8 text-center text-sm font-semibold">{it.quantity}</span>
+                  <button
+                    onClick={() => setQuantity(it.id, it.quantity + 1)}
+                    className="w-9 h-9 flex items-center justify-center hover:bg-secondary rounded-r-lg"
+                    aria-label="Menge erhöhen"
+                  >
+                    +
+                  </button>
+                </div>
+                <span className={cn("flex-1 min-w-0", it.done && "line-through text-muted-foreground")}>
+                  {it.name}
+                </span>
+                <button
+                  onClick={() => remove(it.id)}
+                  className="w-10 h-10 flex items-center justify-center text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
+                  aria-label="Entfernen"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <a href={whatsappRequest()} target="_blank" rel="noopener noreferrer" className="btn-primary flex-1">
+              <MessageCircle className="w-5 h-5" /> Als Anfrage senden ({openItems.length} offen)
+            </a>
+            <button onClick={clear} className="btn-outline">Liste leeren</button>
+          </div>
+        </>
       )}
     </div>
   );

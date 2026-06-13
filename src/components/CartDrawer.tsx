@@ -1,8 +1,10 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Minus, Plus, Trash2, ExternalLink } from "lucide-react";
+import { X, Minus, Plus, Trash2, Zap, ShieldCheck } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
+import { useAuth } from "@/context/AuthContext";
+import { discountForLevel } from "@/data/memberships";
 
 interface CartDrawerProps {
   open: boolean;
@@ -11,9 +13,12 @@ interface CartDrawerProps {
 
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const { items, isLoading, updateQuantity, removeItem, checkoutUrl } = useCartStore();
+  const { user, profile } = useAuth();
 
   const total = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
   const currency = items[0]?.price.currencyCode ?? "EUR";
+  const discount = user ? discountForLevel(profile.membership_level) : 0;
+  const memberSaving = total * (discount / 100);
 
   return (
     <AnimatePresence>
@@ -108,19 +113,51 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             {items.length > 0 && (
               <div className="border-t border-border p-4 space-y-3">
                 <div className="flex justify-between font-bold text-lg">
-                  <span>Zwischensumme</span>
+                  <span>Gesamt</span>
                   <span>{formatPrice(String(total), currency)}</span>
                 </div>
+
+                {discount > 0 && (
+                  <div className="rounded-lg bg-primary/10 border border-primary/20 p-2.5 text-sm text-center">
+                    <span className="text-primary font-semibold">
+                      Als Mitglied ({discount}%) sparst du {formatPrice(String(memberSaving), currency)}
+                    </span>
+                    <span className="block text-xs text-muted-foreground mt-0.5">
+                      wird an der Kasse / Theke verrechnet
+                    </span>
+                  </div>
+                )}
+
+                {/* Express-Kasse (Schnellmodus) */}
                 <a
                   href={checkoutUrl ?? "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-primary w-full"
+                  className="btn-gold-bright w-full text-base font-bold"
                 >
-                  Zur Kasse <ExternalLink className="w-4 h-4" />
+                  <Zap className="w-5 h-5" /> Express-Kauf
                 </a>
-                <p className="text-xs text-muted-foreground text-center">
-                  Sichere Bezahlung über Shopify
+                <a
+                  href={checkoutUrl ?? "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-outline w-full"
+                >
+                  Zur normalen Kasse
+                </a>
+
+                {discount === 0 && (
+                  <p className="text-xs text-center text-muted-foreground">
+                    {user ? (
+                      <>Als Mitglied sparst du bis zu 46%. <a href="/mitgliedschaft" className="text-primary font-semibold underline">Mehr erfahren</a></>
+                    ) : (
+                      <>Mit Konto & Mitgliedschaft bis 46% sparen.</>
+                    )}
+                  </p>
+                )}
+
+                <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Sichere Bezahlung über Shopify
                 </p>
               </div>
             )}
