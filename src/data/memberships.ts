@@ -8,6 +8,11 @@ export interface MembershipLevel {
   highlight?: boolean;
 }
 
+export function discountForLevel(level: number | undefined): number {
+  const m = MEMBERSHIP_LEVELS.find((x) => x.level === level);
+  return m ? m.discountPercent : 0;
+}
+
 export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
   {
     level: 1,

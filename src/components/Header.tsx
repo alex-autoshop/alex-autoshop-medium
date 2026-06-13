@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
-import { Menu, X, ShoppingCart, Phone } from "lucide-react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { CartDrawer } from "@/components/CartDrawer";
+import { useAuth } from "@/context/AuthContext";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
@@ -18,16 +19,21 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const itemCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    setMobileOpen(false);
+    navigate("/");
+  };
 
   return (
     <>
       <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
         <div className="container flex items-center justify-between h-16 sm:h-20 gap-2">
-          <Link to="/" className="flex items-center gap-2 shrink-0" onClick={() => setMobileOpen(false)}>
-            <img src="/images/logo-dark.png" alt="Alex Autoshop" className="h-9 sm:h-11 w-auto" />
-            <span className="font-display font-bold text-lg sm:text-xl tracking-tight hidden xs:block">
-              Alex <span className="text-primary">Autoshop</span>
-            </span>
+          <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)}>
+            <img src="/images/logo.png" alt="Alex Autoshop" className="h-12 sm:h-16 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
@@ -55,6 +61,32 @@ export function Header() {
               <Phone className="w-4 h-4" />
               {SHOP_INFO.phone}
             </a>
+            {user ? (
+              <div className="hidden md:flex items-center gap-1">
+                <NavLink
+                  to="/dashboard"
+                  className="inline-flex items-center gap-2 px-3 min-h-[48px] rounded-lg font-medium text-foreground/80 hover:text-foreground hover:bg-secondary transition-colors"
+                >
+                  <LayoutDashboard className="w-5 h-5" /> Dashboard
+                </NavLink>
+                <button
+                  onClick={handleLogout}
+                  className="inline-flex items-center justify-center w-12 h-12 rounded-lg hover:bg-secondary transition-colors"
+                  aria-label="Abmelden"
+                  title="Abmelden"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/konto"
+                className="hidden md:inline-flex items-center gap-2 px-4 min-h-[48px] rounded-lg font-semibold bg-night text-white hover:bg-neutral-800 transition-colors"
+              >
+                <LogIn className="w-4 h-4" /> Login / Registrieren
+              </Link>
+            )}
+
             <button
               onClick={() => setCartOpen(true)}
               className="relative flex items-center justify-center w-12 h-12 rounded-lg hover:bg-secondary transition-colors"
@@ -101,6 +133,34 @@ export function Header() {
               >
                 <Phone className="w-5 h-5" /> {SHOP_INFO.phone}
               </a>
+
+              <div className="border-t border-border mt-1 pt-2">
+                {user ? (
+                  <>
+                    <NavLink
+                      to="/dashboard"
+                      onClick={() => setMobileOpen(false)}
+                      className="px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2"
+                    >
+                      <LayoutDashboard className="w-5 h-5" /> Dashboard
+                    </NavLink>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2"
+                    >
+                      <LogOut className="w-5 h-5" /> Abmelden
+                    </button>
+                  </>
+                ) : (
+                  <NavLink
+                    to="/konto"
+                    onClick={() => setMobileOpen(false)}
+                    className="px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2 text-primary"
+                  >
+                    <LogIn className="w-5 h-5" /> Login / Registrieren
+                  </NavLink>
+                )}
+              </div>
             </div>
           </nav>
         )}
