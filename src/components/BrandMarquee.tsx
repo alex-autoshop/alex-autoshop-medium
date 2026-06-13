@@ -10,7 +10,7 @@ const FEATURED = [
   { name: "Liqui Moly", src: "/images/brands/liqui-moly.png", tagline: "Öle & Additive" },
   { name: "Castrol", src: "/images/brands/castrol.png", tagline: "Motorenöl" },
   { name: "Mipa", src: "/images/brands/mipa.png", tagline: "Lackierbedarf" },
-  { name: "Glasurit", src: "/images/brands/glasurit.png", tagline: "Profi-Lacksysteme" },
+  { name: "Glasurit", src: "/images/brands/glasurit.svg", tagline: "Profi-Lacksysteme" },
 ];
 
 const GOLD = "#f1eb5b";
