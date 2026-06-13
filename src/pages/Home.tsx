@@ -21,16 +21,19 @@ const USPS = [
     icon: Paintbrush,
     title: "Profi-Lackierprodukte",
     text: "Standox, Mipa, Glasurit, SATA & Co. — das volle Sortiment für Lackierer und Karosseriebetriebe.",
+    badge: "Neues Sortiment",
   },
   {
     icon: Wrench,
     title: "Teile per Kennzeichen",
     text: "Kennzeichen eingeben, Fahrzeug erkannt, passende Teile finden — im Teileportal.",
+    badge: "Neu · in Beta",
   },
   {
     icon: BadgePercent,
     title: "B2B-Rabatte bis 46%",
     text: "Drei Mitgliedschaftsstufen für Werkstätten — monatlich kündbar, sofort sparen.",
+    badge: "Neu · 10 Spots erhältlich",
   },
 ];
 
@@ -81,7 +84,10 @@ export default function Home() {
       <section className="container py-14 sm:py-20">
         <div className="grid sm:grid-cols-3 gap-5">
           {USPS.map((usp, i) => (
-            <motion.div key={usp.title} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.1 }} className="card-tilt p-6">
+            <motion.div key={usp.title} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.1 }} className="card-tilt p-6 relative">
+              <span className="absolute top-4 right-4 inline-flex items-center rounded-full bg-primary/10 text-primary text-xs font-semibold px-3 py-1 border border-primary/20">
+                {usp.badge}
+              </span>
               <usp.icon className="w-10 h-10 text-primary mb-4" />
               <h2 className="text-lg mb-2">{usp.title}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{usp.text}</p>
