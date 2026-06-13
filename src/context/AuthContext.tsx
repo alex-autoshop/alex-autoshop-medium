@@ -17,7 +17,7 @@ interface AuthState {
   profile: CompanyProfile;
   loading: boolean;
   configured: boolean;
-  signUp: (email: string, password: string, profile: CompanyProfile) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, profile: CompanyProfile) => Promise<{ error?: string; needsConfirmation?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (profile: CompanyProfile) => Promise<{ error?: string }>;
@@ -60,12 +60,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp: AuthState["signUp"] = async (email, password, profile) => {
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { ...profile, membership_level: 0 } },
     });
-    return error ? { error: error.message } : {};
+    if (error) return { error: error.message };
+    // Wenn keine Session zurückkommt, muss die E-Mail erst bestätigt werden.
+    return { needsConfirmation: !data.session };
   };
 
   const signIn: AuthState["signIn"] = async (email, password) => {

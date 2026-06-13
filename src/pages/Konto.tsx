@@ -29,13 +29,19 @@ export default function Konto() {
         toast.success("Willkommen zurück!");
         navigate(redirectTo);
       } else {
-        const { error } = await signUp(email, password, {
+        const { error, needsConfirmation } = await signUp(email, password, {
           company_name: company,
           contact_name: contact,
           phone,
         });
         if (error) return toast.error("Registrierung fehlgeschlagen", { description: error });
-        toast.success("Konto erstellt!", { description: "Du kannst dich jetzt anmelden." });
+        if (needsConfirmation) {
+          toast.success("Konto erstellt!", {
+            description: "Bitte bestätige den Link in deiner E-Mail, dann kannst du dich anmelden.",
+          });
+        } else {
+          toast.success("Konto erstellt!", { description: "Du kannst dich jetzt anmelden." });
+        }
         setMode("login");
       }
     } finally {
