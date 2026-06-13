@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { to: "/shop", label: "Shop" },
   { to: "/teileportal", label: "Teileportal" },
+  { to: "/fahrzeugmarkt", label: "Fahrzeugmarkt" },
   { to: "/mitgliedschaft", label: "Mitgliedschaft" },
   { to: "/laden", label: "Laden & Kontakt" },
 ];

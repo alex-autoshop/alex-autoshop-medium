@@ -9,6 +9,7 @@ const Shop = lazy(() => import("@/pages/Shop"));
 const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
 const Mitgliedschaft = lazy(() => import("@/pages/Mitgliedschaft"));
 const Teileportal = lazy(() => import("@/pages/Teileportal"));
+const Fahrzeugmarkt = lazy(() => import("@/pages/Fahrzeugmarkt"));
 const Laden = lazy(() => import("@/pages/Laden"));
 const Impressum = lazy(() => import("@/pages/Impressum"));
 const Datenschutz = lazy(() => import("@/pages/Datenschutz"));
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="/produkt/:handle" element={<ProductDetail />} />
               <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />
               <Route path="/teileportal" element={<Teileportal />} />
+              <Route path="/fahrzeugmarkt" element={<Fahrzeugmarkt />} />
               <Route path="/laden" element={<Laden />} />
               <Route path="/impressum" element={<Impressum />} />
               <Route path="/datenschutz" element={<Datenschutz />} />
