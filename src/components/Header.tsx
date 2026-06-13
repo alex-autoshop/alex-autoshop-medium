@@ -31,10 +31,10 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 bg-night/95 backdrop-blur-md border-b border-white/10 text-white">
-        <div className="container flex items-center justify-between h-16 sm:h-20 gap-2">
-          <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)}>
+        <div className="container flex items-center justify-between h-20 sm:h-24 gap-2">
+          <Link to="/" className="flex items-center shrink-0 -my-2" onClick={() => setMobileOpen(false)}>
             {/* Farbige Logo-Version (weisser Schriftzug, gelbe Gluehbirne, bunter Apostroph) fuer dunkle Navbar */}
-            <img src="/images/logo-new.png" alt="Alex Autoshop" className="h-16 sm:h-20 w-auto" />
+            <img src="/images/logo-new.png" alt="Alex Autoshop" className="h-24 sm:h-32 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
