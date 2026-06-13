@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Phone, MessageCircle, ChevronDown } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { MembershipCards } from "@/components/MembershipCards";
-import { MEMBERSHIP_LEVELS } from "@/data/memberships";
+import { MembershipCalculator } from "@/components/MembershipCalculator";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +30,6 @@ const FAQ = [
 ];
 
 export default function Mitgliedschaft() {
-  const [monthlySpend, setMonthlySpend] = useState(800);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   return (
@@ -57,52 +56,7 @@ export default function Mitgliedschaft() {
 
       {/* Spar-Rechner */}
       <section className="container pb-12 sm:pb-16">
-        <div className="card-tilt hover:translate-y-0 p-6 sm:p-10 max-w-3xl mx-auto">
-          <h2 className="text-2xl mb-2">Lohnt sich das für mich?</h2>
-          <p className="text-muted-foreground mb-6">
-            Wie viel gibst du monatlich für Material aus?
-          </p>
-          <div className="flex items-center gap-4 mb-2">
-            <input
-              type="range"
-              min={100}
-              max={5000}
-              step={50}
-              value={monthlySpend}
-              onChange={(e) => setMonthlySpend(Number(e.target.value))}
-              className="flex-1 accent-[#B8860B] h-12"
-              aria-label="Monatlicher Materialeinkauf"
-            />
-            <span className="font-display font-bold text-2xl w-32 text-right">
-              {monthlySpend.toLocaleString("de-DE")} €
-            </span>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-4 mt-6">
-            {MEMBERSHIP_LEVELS.map((m) => {
-              const saved = monthlySpend * (m.discountPercent / 100);
-              const net = saved - m.pricePerMonth;
-              const worth = net > 0;
-              return (
-                <div
-                  key={m.level}
-                  className={cn(
-                    "rounded-xl border p-4",
-                    worth ? "border-primary bg-primary/5" : "border-border bg-secondary/50"
-                  )}
-                >
-                  <p className="font-bold">{m.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Du sparst {saved.toLocaleString("de-DE", { maximumFractionDigits: 0 })} € − {m.pricePerMonth} € Beitrag
-                  </p>
-                  <p className={cn("font-display font-bold text-xl mt-1", worth ? "text-primary" : "text-muted-foreground")}>
-                    {worth ? "+" : ""}
-                    {net.toLocaleString("de-DE", { maximumFractionDigits: 0 })} € / Monat
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <MembershipCalculator />
       </section>
 
       {/* FAQ */}
