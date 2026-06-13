@@ -29,19 +29,27 @@ export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
 
   try {
-    const { action, plate, vin, ktype, query, productGroupIds, mfrId, page = 1 } = await req.json();
+    const { action, plate, vin, hsn, tsn, ktype, query, productGroupIds, mfrId, page = 1 } = await req.json();
     let result = null;
 
     if (action === 'plate' && plate) {
       // Kennzeichen → Fahrzeugdaten (Deutschland)
       result = await vrmLookup(plate, 'DE');
     } else if (action === 'vin' && vin) {
-      // VIN lookup
+      // VIN / Fahrgestellnummer lookup
       const apiKey = process.env.TECALLIANCE_API_KEY;
       const res = await fetch(`${VRM_BASE}/vehicles/vin/${encodeURIComponent(vin)}?lang=de`, {
         headers: { "x-api-key": apiKey }
       });
       result = res.ok ? await res.json() : { error: `VIN error: ${res.status}` };
+    } else if (action === 'kba' && hsn) {
+      // KBA-Schlüsselnummer (HSN/TSN) → Fahrzeugdaten (Deutschland)
+      const apiKey = process.env.TECALLIANCE_API_KEY;
+      const res = await fetch(
+        `${VRM_BASE}/vehicles/kba/${encodeURIComponent(hsn)}/${encodeURIComponent(tsn || "")}?lang=de`,
+        { headers: { "x-api-key": apiKey } }
+      );
+      result = res.ok ? await res.json() : { error: `KBA error: ${res.status}` };
     } else if (action === 'search' && query) {
       // Artikel-Suche
       result = await peg('LIST_ARTICLES_BY_QUICK_SEARCH', {

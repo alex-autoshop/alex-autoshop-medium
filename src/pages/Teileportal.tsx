@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Search, Car, Phone, MessageCircle, Loader2, Package } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
+import { cn } from "@/lib/utils";
 
 interface VehicleInfo {
   manufacturer?: string;
@@ -83,8 +84,20 @@ function parseArticles(data: Record<string, unknown> | null): Article[] {
   }));
 }
 
+type SearchMode = "plate" | "vin" | "kba";
+
+const MODES: { id: SearchMode; label: string }[] = [
+  { id: "plate", label: "Kennzeichen" },
+  { id: "vin", label: "VIN / FIN" },
+  { id: "kba", label: "Schlüsselnummer" },
+];
+
 export default function Teileportal() {
+  const [mode, setMode] = useState<SearchMode>("plate");
   const [plate, setPlate] = useState("");
+  const [vin, setVin] = useState("");
+  const [hsn, setHsn] = useState("");
+  const [tsn, setTsn] = useState("");
   const [vehicle, setVehicle] = useState<VehicleInfo | null>(null);
   const [vehicleLoading, setVehicleLoading] = useState(false);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
@@ -95,17 +108,29 @@ export default function Teileportal() {
   const [partsError, setPartsError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
 
-  const lookupPlate = async (e: React.FormEvent) => {
+  const lookupVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!plate.trim()) return;
+
+    let payload: Record<string, unknown> | null = null;
+    if (mode === "plate") {
+      if (!plate.trim()) return;
+      payload = { action: "plate", plate: plate.trim().toUpperCase().replace(/\s|-/g, "") };
+    } else if (mode === "vin") {
+      if (!vin.trim()) return;
+      payload = { action: "vin", vin: vin.trim().toUpperCase().replace(/\s/g, "") };
+    } else {
+      if (!hsn.trim()) return;
+      payload = { action: "kba", hsn: hsn.trim(), tsn: tsn.trim() };
+    }
+
     setVehicleLoading(true);
     setVehicleError(null);
     setVehicle(null);
     try {
-      const data = await tecdoc({ action: "plate", plate: plate.trim().toUpperCase().replace(/\s|-/g, "") });
+      const data = await tecdoc(payload);
       const info = parseVehicle(data);
       if (info) setVehicle(info);
-      else setVehicleError("Fahrzeug nicht gefunden. Prüfe das Kennzeichen oder ruf uns an — wir finden es.");
+      else setVehicleError("Fahrzeug nicht gefunden. Prüfe deine Eingabe oder ruf uns an — wir finden es.");
     } catch {
       setVehicleError("Abfrage fehlgeschlagen. Versuch es später erneut oder ruf uns an.");
     } finally {
@@ -134,11 +159,18 @@ export default function Teileportal() {
     ? [vehicle.manufacturer, vehicle.model, vehicle.typeName].filter(Boolean).join(" ")
     : "";
 
+  const vehicleId =
+    mode === "plate"
+      ? plate && `Kennzeichen: ${plate}`
+      : mode === "vin"
+      ? vin && `VIN/FIN: ${vin}`
+      : hsn && `Schlüsselnummer: HSN ${hsn}${tsn ? ` / TSN ${tsn}` : ""}`;
+
   const inquiry = (article?: Article) => {
     const lines = [
       "Hallo Alex Autoshop, ich brauche ein Teil:",
       article ? `Teil: ${article.brand} ${article.name} (Art.-Nr. ${article.articleNumber})` : `Teil: ${partQuery}`,
-      vehicleLabel ? `Fahrzeug: ${vehicleLabel}` : plate ? `Kennzeichen: ${plate}` : "",
+      vehicleLabel ? `Fahrzeug: ${vehicleLabel}` : vehicleId || "",
     ].filter(Boolean);
     return whatsappLink(lines.join("\n"));
   };
@@ -162,24 +194,88 @@ export default function Teileportal() {
       <div className="card-tilt p-6 sm:p-8 hover:translate-y-0 max-w-2xl">
         <div className="flex items-center gap-3 mb-4">
           <span className="w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center text-sm">1</span>
-          <h2 className="text-xl">Fahrzeug per Kennzeichen</h2>
+          <h2 className="text-xl">Fahrzeug finden</h2>
         </div>
-        <form onSubmit={lookupPlate} className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1 flex items-center rounded-lg border-2 border-night overflow-hidden bg-white">
-            <span className="bg-blue-700 text-white font-bold px-3 self-stretch flex items-center text-sm">D</span>
+
+        {/* Umschalter: Kennzeichen / VIN / Schlüsselnummer */}
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                setMode(m.id);
+                setVehicle(null);
+                setVehicleError(null);
+              }}
+              className={cn(
+                "px-4 min-h-[44px] rounded-lg border font-medium text-sm transition-colors",
+                mode === m.id ? "bg-night text-white border-night" : "bg-card border-border hover:border-primary"
+              )}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={lookupVehicle} className="flex flex-col sm:flex-row gap-3">
+          {mode === "plate" && (
+            <div className="flex-1 flex items-center rounded-lg border-2 border-night overflow-hidden bg-white">
+              <span className="bg-blue-700 text-white font-bold px-3 self-stretch flex items-center text-sm">D</span>
+              <input
+                value={plate}
+                onChange={(e) => setPlate(e.target.value)}
+                placeholder="W-AB 1234"
+                className="flex-1 px-4 min-h-[52px] text-lg font-bold tracking-widest uppercase focus:outline-none"
+                aria-label="Kennzeichen"
+              />
+            </div>
+          )}
+
+          {mode === "vin" && (
             <input
-              value={plate}
-              onChange={(e) => setPlate(e.target.value)}
-              placeholder="W-AB 1234"
-              className="flex-1 px-4 min-h-[52px] text-lg font-bold tracking-widest uppercase focus:outline-none"
-              aria-label="Kennzeichen"
+              value={vin}
+              onChange={(e) => setVin(e.target.value)}
+              placeholder="Fahrgestellnummer (17 Zeichen)"
+              maxLength={17}
+              className="input-base flex-1 uppercase tracking-wider"
+              aria-label="VIN / Fahrgestellnummer"
             />
-          </div>
+          )}
+
+          {mode === "kba" && (
+            <div className="flex-1 flex gap-3">
+              <input
+                value={hsn}
+                onChange={(e) => setHsn(e.target.value)}
+                placeholder="HSN (2.1)"
+                maxLength={4}
+                className="input-base w-32 uppercase tracking-wider"
+                aria-label="HSN — Herstellerschlüsselnummer"
+              />
+              <input
+                value={tsn}
+                onChange={(e) => setTsn(e.target.value)}
+                placeholder="TSN (2.2)"
+                maxLength={3}
+                className="input-base flex-1 uppercase tracking-wider"
+                aria-label="TSN — Typschlüsselnummer"
+              />
+            </div>
+          )}
+
           <button type="submit" disabled={vehicleLoading} className="btn-primary sm:px-8">
             {vehicleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
             Fahrzeug finden
           </button>
         </form>
+
+        {mode === "kba" && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Die Schlüsselnummern stehen im Fahrzeugschein (Zulassungsbescheinigung Teil I):
+            HSN unter Feld 2.1, TSN unter Feld 2.2.
+          </p>
+        )}
         {vehicleError && <p className="text-destructive text-sm mt-3">{vehicleError}</p>}
         {vehicle && (
           <motion.div
