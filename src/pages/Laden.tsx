@@ -143,11 +143,12 @@ export default function Laden() {
               className="card-tilt flex items-center justify-center p-6 aspect-[3/2] hover:translate-y-0"
               title={brand.name}
             >
+              {/* feste Höhe + object-contain => alle Logos exakt gleich groß, egal wie groß die Quelldatei ist */}
               <img
                 src={brand.logo}
                 alt={brand.name}
                 loading="lazy"
-                className="max-h-14 max-w-[80%] w-auto object-contain"
+                className="h-12 w-full object-contain"
               />
             </div>
           ))}
