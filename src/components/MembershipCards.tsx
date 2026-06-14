@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
 import { useAuth } from "@/context/AuthContext";
 import { requestMembership } from "@/lib/inbox";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { cn } from "@/lib/utils";
 
 export function MembershipCards({ compact = false }: { compact?: boolean }) {
@@ -25,6 +26,12 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
   const toggle = (mod: string) =>
     setModules((p) => (p.includes(mod) ? p.filter((x) => x !== mod) : [...p, mod]));
+
+  // Preis skaliert mit den gewählten Modulen — beim Abwählen zählt der Betrag runter.
+  const price = useMemo(
+    () => Math.round((m.pricePerMonth * modules.length) / m.modules.length),
+    [modules.length, m.pricePerMonth, m.modules.length]
+  );
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +75,9 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       <p className="text-sm text-muted-foreground mt-1 min-h-[2.5rem]">{m.tagline}</p>
 
       <p className="mt-4">
-        <span className="text-4xl font-display font-bold">{m.pricePerMonth} €</span>
+        <span className="text-4xl font-display font-bold">
+          <AnimatedNumber value={price} format={(n) => Math.round(n).toLocaleString("de-DE")} /> €
+        </span>
         <span className="text-muted-foreground"> / Monat</span>
       </p>
       <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
@@ -93,18 +102,19 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
                     "w-full flex items-center justify-between px-4 py-3 rounded-lg border text-sm font-medium transition-colors min-h-[48px]",
                     on
                       ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border bg-card text-muted-foreground"
+                      : "border-border bg-secondary/40 text-muted-foreground/60"
                   )}
                 >
-                  <span>{m.discountPercent} % auf {mod}</span>
-                  <span
-                    className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                      on ? "border-primary bg-primary" : "border-muted-foreground/40"
-                    )}
-                  >
-                    {on && <Check className="w-3 h-3 text-primary-foreground" />}
-                  </span>
+                  <span className={cn(!on && "line-through")}>{m.discountPercent} % auf {mod}</span>
+                  {on ? (
+                    <span className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center shrink-0">
+                      <Check className="w-3 h-3 text-primary-foreground" />
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/70 shrink-0">
+                      Nicht aktiv
+                    </span>
+                  )}
                 </button>
               );
             })}
