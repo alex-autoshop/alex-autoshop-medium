@@ -54,8 +54,8 @@ export function Inbox() {
   const accept = async (r: MembershipRequest) => {
     const { error } = await acceptRequest(r);
     if (error) return toast.error("Fehler", { description: error });
-    toast.success("Mitgliedschaft angenommen", {
-      description: "Setze die Stufe noch beim Nutzer in Supabase (membership_level).",
+    toast.success(`Level ${r.level} freigeschaltet`, {
+      description: "Das Mitglied sieht den Rabatt ab dem nächsten Login.",
     });
     setRequests((p) => p.filter((x) => x.id !== r.id));
   };

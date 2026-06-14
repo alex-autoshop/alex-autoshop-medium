@@ -1,7 +1,8 @@
 import { supabase } from "@/lib/supabase";
 
-// Admin-Konto (sieht eingehende Mitgliedschaftsanfragen). Bei Bedarf erweitern.
-export const ADMIN_EMAILS = ["alexanderharitopoulos@gmail.com"];
+// Admin-Konten (sehen eingehende Mitgliedschaftsanfragen + können freischalten).
+// Muss mit den E-Mails in supabase-admin-approve.sql übereinstimmen.
+export const ADMIN_EMAILS = ["alexanderharitopoulos@gmail.com", "info@alex-autoshop.de"];
 
 export interface Message {
   id: string;
@@ -113,18 +114,7 @@ export async function getPendingRequests(): Promise<MembershipRequest[]> {
 
 export async function acceptRequest(req: MembershipRequest): Promise<{ error?: string }> {
   if (!supabase) return { error: "nicht konfiguriert" };
-  const { error } = await supabase
-    .from("membership_requests")
-    .update({ status: "accepted" })
-    .eq("id", req.id);
-  if (error) return { error: error.message };
-  if (req.user_id) {
-    await sendMessage({
-      recipient: req.user_id,
-      type: "membership",
-      title: `Mitgliedschaft Level ${req.level} freigeschaltet 🎉`,
-      body: `Willkommen! Deine Mitgliedschaft Level ${req.level} ist aktiv. Dein Rabatt gilt ab sofort.`,
-    });
-  }
-  return {};
+  // Sichere DB-Funktion: setzt die Rabattstufe + schickt die Bestätigung.
+  const { error } = await supabase.rpc("approve_membership_request", { req_id: req.id });
+  return error ? { error: error.message } : {};
 }
