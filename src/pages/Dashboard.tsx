@@ -16,10 +16,14 @@ import {
   MessageCircle,
   Inbox as InboxIcon,
   RotateCcw,
+  Car,
+  Truck,
+  ShieldCheck,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
-import { MemberProductCard } from "@/components/MemberProductCard";
+import { B2BProductCard } from "@/components/B2BProductCard";
 import { Inbox } from "@/components/Inbox";
+import Teileportal from "@/pages/Teileportal";
 import { useProducts } from "@/hooks/useProducts";
 import { useAuth } from "@/context/AuthContext";
 import { usePlannerStore } from "@/stores/plannerStore";
@@ -31,11 +35,12 @@ import { allCategories } from "@/lib/categories";
 import { whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "shop" | "inbox" | "planner" | "orders" | "profile";
+type Tab = "overview" | "shop" | "teileportal" | "inbox" | "planner" | "orders" | "profile";
 
 const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
-  { id: "shop", label: "Shop & Ersparnis", icon: ShoppingBag },
+  { id: "shop", label: "B2B Shop", icon: ShoppingBag },
+  { id: "teileportal", label: "Teileportal", icon: Car },
   { id: "inbox", label: "Nachrichten", icon: InboxIcon },
   { id: "planner", label: "Materialplaner", icon: ClipboardCheck },
   { id: "orders", label: "Bestellungen", icon: ClipboardList },
@@ -87,6 +92,11 @@ export default function Dashboard() {
 
       {tab === "overview" && <Overview level={level} />}
       {tab === "shop" && <DashboardShop level={level} />}
+      {tab === "teileportal" && (
+        <div className="-mt-4">
+          <Teileportal />
+        </div>
+      )}
       {tab === "inbox" && <Inbox />}
       {tab === "planner" && <Planner />}
       {tab === "orders" && <Orders />}
@@ -111,8 +121,8 @@ function Overview({ level }: { level: number }) {
       <div className="card-tilt hover:translate-y-0 p-6 sm:col-span-2 flex flex-col justify-center">
         <h2 className="text-lg mb-2">Mehr sparen?</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Im Tab „Shop & Ersparnis" siehst du bei jedem Produkt, wie viel du mit
-          Level 1, 2 oder 3 sparen würdest. Mitglied wirst du in 5 Minuten — telefonisch oder im Laden.
+          Im Tab „B2B Shop" siehst du deine Netto-Mitgliederpreise und bestellst direkt mit Menge.
+          Mitglied wirst du in 5 Minuten — telefonisch oder im Laden.
         </p>
         <div className="flex gap-3 flex-wrap">
           <Link to="/mitgliedschaft" className="btn-primary">Mitgliedschaft ansehen</Link>
@@ -129,9 +139,29 @@ function DashboardShop({ level }: { level: number }) {
   const [submitted, setSubmitted] = useState("");
   const query = submitted ? `title:*${submitted}*` : category;
   const { products, isLoading, error, hasNextPage, loadMore } = useProducts({ query });
+  const discount = MEMBERSHIP_LEVELS.find((m) => m.level === level)?.discountPercent ?? 0;
 
   return (
     <div>
+      {/* B2B-Profi-Header */}
+      <div className="section-dark rounded-2xl p-5 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl">B2B Shop</h2>
+          <p className="text-white/65 text-sm mt-1">
+            {discount > 0 ? (
+              <>Deine Netto-Preise als <span className="text-gold-accent font-semibold">Mitglied · −{discount}%</span> — direkt mit Menge bestellen.</>
+            ) : (
+              <>Profi-Sortiment für Werkstätten. <Link to="/mitgliedschaft" className="text-gold-accent font-semibold underline">Mitglied werden</Link> & bis 46% sparen.</>
+            )}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-4 text-xs text-white/70 shrink-0">
+          <span className="inline-flex items-center gap-1.5"><Truck className="w-4 h-4 text-gold-accent" /> Schnelllieferung</span>
+          <span className="inline-flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-gold-accent" /> Geprüfte Marken</span>
+          <span className="inline-flex items-center gap-1.5"><BadgePercent className="w-4 h-4 text-gold-accent" /> Mengen-Konditionen</span>
+        </div>
+      </div>
+
       <form
         className="relative mb-4 max-w-xl"
         onSubmit={(e) => {
@@ -173,9 +203,9 @@ function DashboardShop({ level }: { level: number }) {
         <p className="text-center py-12 text-muted-foreground">Produkte konnten nicht geladen werden.</p>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {products.map((p) => (
-              <MemberProductCard key={p.node.id} product={p} memberLevel={level} />
+              <B2BProductCard key={p.node.id} product={p} memberLevel={level} discount={discount} />
             ))}
             {isLoading &&
               Array.from({ length: 8 }).map((_, i) => (
