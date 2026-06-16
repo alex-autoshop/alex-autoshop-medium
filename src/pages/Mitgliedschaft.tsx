@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Phone, MessageCircle, ChevronDown } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { MembershipCards } from "@/components/MembershipCards";
@@ -25,7 +25,7 @@ const FAQ = [
   },
   {
     q: "Für wen lohnt sich welche Stufe?",
-    a: "Faustregel: ab ca. 330 € Material-Einkauf pro Monat lohnt sich Level 1, ab ca. 500 € Level 2, ab ca. 925 € Level 3. Nutze den Rechner oben.",
+    a: "Faustregel: ab ca. 330 € Material-Einkauf pro Monat lohnt sich Level 1, ab ca. 690 € Level 2, ab ca. 1.120 € Level 3. Nutze den Rechner oben.",
   },
 ];
 
@@ -35,8 +35,8 @@ export default function Mitgliedschaft() {
   return (
     <div>
       <Seo
-        title="Mitgliedschaft – bis 46% B2B-Rabatt"
-        description="B2B-Mitgliedschaften bei Alex Autoshop Wuppertal: 15%, 33% oder 46% Rabatt auf Lackierprodukte und Werkstattbedarf. Monatlich kündbar."
+        title="Mitgliedschaft – bis 38% B2B-Rabatt"
+        description="B2B-Mitgliedschaften bei Alex Autoshop Wuppertal: 15%, 24% oder 38% Rabatt auf Lackierprodukte und Werkstattbedarf. Monatlich kündbar."
       />
 
       <section className="section-dark py-16 sm:py-20">
@@ -45,7 +45,7 @@ export default function Mitgliedschaft() {
             Dein Betrieb. <span className="text-gold-accent">Deine Konditionen.</span>
           </h1>
           <p className="text-white/65 text-lg">
-            Drei Stufen, bis zu 46% Rabatt auf das gesamte Sortiment — monatlich kündbar.
+            Drei Stufen, bis zu 38% Rabatt auf das gesamte Sortiment — monatlich kündbar.
           </p>
         </div>
       </section>

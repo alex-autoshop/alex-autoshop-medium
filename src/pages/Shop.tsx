@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Search } from "lucide-react";
 import { Seo } from "@/components/Seo";
@@ -28,7 +28,7 @@ export default function Shop() {
     <div className="container py-8 sm:py-12">
       <Seo
         title={title}
-        description={`${title} bei Alex Autoshop Wuppertal – Lackierprodukte, Autoteile und Werkstattbedarf mit B2B-Rabatten bis 46%.`}
+        description={`${title} bei Alex Autoshop Wuppertal – Lackierprodukte, Autoteile und Werkstattbedarf mit B2B-Rabatten bis 38%.`}
       />
 
       <h1 className="text-3xl sm:text-4xl mb-6">{title}</h1>

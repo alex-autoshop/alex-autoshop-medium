@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+﻿import { motion } from "framer-motion";
 import { MapPin, Phone, Clock, MessageCircle, Zap, Shield, Users, Navigation } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { BrandMarquee } from "@/components/BrandMarquee";
@@ -18,7 +18,7 @@ const VALUES = [
   {
     icon: Users,
     title: "B2B-Partner",
-    text: "Für Lackierbetriebe, Karosseriewerkstätten und Aufbereiter — mit Mitgliedschaft bis 46% Rabatt.",
+    text: "Für Lackierbetriebe, Karosseriewerkstätten und Aufbereiter — mit Mitgliedschaft bis 38% Rabatt.",
   },
 ];
 

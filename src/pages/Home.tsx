@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Phone, MapPin, Clock, Paintbrush, Wrench, BadgePercent } from "lucide-react";
 import { Seo } from "@/components/Seo";
@@ -31,7 +31,7 @@ const USPS = [
   },
   {
     icon: BadgePercent,
-    title: "B2B-Rabatte bis 46%",
+    title: "B2B-Rabatte bis 38%",
     text: "Drei Mitgliedschaftsstufen für Werkstätten — monatlich kündbar, sofort sparen.",
     badge: "Neu · 10 Spots erhältlich",
   },
@@ -44,7 +44,7 @@ export default function Home() {
     <div>
       <Seo
         title="Autolack, Autoteile & Werkstattbedarf"
-        description="Alex Autoshop Wuppertal: Lackierprodukte, Autoteile und Werkstattbedarf mit B2B-Rabatten bis 46%. Heute bestellt, schnell abholbereit."
+        description="Alex Autoshop Wuppertal: Lackierprodukte, Autoteile und Werkstattbedarf mit B2B-Rabatten bis 38%. Heute bestellt, schnell abholbereit."
       />
 
       {/* Hero — dunkel mit hellem Brand-Gold */}
@@ -73,7 +73,7 @@ export default function Home() {
                 Zum Shop <ArrowRight className="w-5 h-5" />
               </Link>
               <Link to="/mitgliedschaft" className="btn bg-white/10 text-white hover:bg-white/20 text-lg px-8">
-                Bis 46% Rabatt sichern
+                Bis 38% Rabatt sichern
               </Link>
             </div>
           </motion.div>
@@ -142,7 +142,7 @@ export default function Home() {
           <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-10">
             <h2 className="text-2xl sm:text-3xl mb-3">Werkstatt? Dann lohnt sich das.</h2>
             <p className="text-muted-foreground">
-              Drei Mitgliedschaftsstufen mit bis zu 46% Rabatt auf das gesamte Sortiment — monatlich kündbar.
+              Drei Mitgliedschaftsstufen mit bis zu 38% Rabatt auf das gesamte Sortiment — monatlich kündbar.
             </p>
           </motion.div>
           <MembershipCards compact />

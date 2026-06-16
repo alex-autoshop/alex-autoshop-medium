@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { type ShopifyProduct, formatPrice } from "@/lib/shopify";
@@ -53,7 +53,7 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
               {hasMultipleVariants && <span className="text-xs font-medium text-muted-foreground">ab </span>}
               {formatPrice(price.amount, price.currencyCode)}
             </p>
-            <p className="text-xs text-primary font-semibold">Mitglieder sparen bis 46%</p>
+            <p className="text-xs text-primary font-semibold">Mitglieder sparen bis 38%</p>
           </div>
           {firstVariant?.availableForSale && !hasMultipleVariants && (
             <button

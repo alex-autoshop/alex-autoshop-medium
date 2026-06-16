@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -68,7 +68,7 @@ export default function Dashboard() {
             {level > 0 ? (
               <>Mitgliedschaft <span className="text-primary font-semibold">{levelInfo?.name}</span> · {levelInfo?.discountPercent}% Rabatt</>
             ) : (
-              <>Kein aktives Mitglied — du zahlst Normalpreis. <Link to="/mitgliedschaft" className="text-primary font-semibold underline">Jetzt bis 46% sparen →</Link></>
+              <>Kein aktives Mitglied — du zahlst Normalpreis. <Link to="/mitgliedschaft" className="text-primary font-semibold underline">Jetzt bis 38% sparen →</Link></>
             )}
           </p>
         </div>
@@ -151,7 +151,7 @@ function DashboardShop({ level }: { level: number }) {
             {discount > 0 ? (
               <>Deine Netto-Preise als <span className="text-gold-accent font-semibold">Mitglied · −{discount}%</span> — direkt mit Menge bestellen.</>
             ) : (
-              <>Profi-Sortiment für Werkstätten. <Link to="/mitgliedschaft" className="text-gold-accent font-semibold underline">Mitglied werden</Link> & bis 46% sparen.</>
+              <>Profi-Sortiment für Werkstätten. <Link to="/mitgliedschaft" className="text-gold-accent font-semibold underline">Mitglied werden</Link> & bis 38% sparen.</>
             )}
           </p>
         </div>

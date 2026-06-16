@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+﻿import { AnimatePresence, motion } from "framer-motion";
 import { X, Minus, Plus, Trash2, Zap, ShieldCheck } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
@@ -167,9 +167,9 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 {discount === 0 && (
                   <p className="text-xs text-center text-muted-foreground">
                     {user ? (
-                      <>Als Mitglied sparst du bis zu 46%. <a href="/mitgliedschaft" className="text-primary font-semibold underline">Mehr erfahren</a></>
+                      <>Als Mitglied sparst du bis zu 38%. <a href="/mitgliedschaft" className="text-primary font-semibold underline">Mehr erfahren</a></>
                     ) : (
-                      <>Mit Konto & Mitgliedschaft bis 46% sparen.</>
+                      <>Mit Konto & Mitgliedschaft bis 38% sparen.</>
                     )}
                   </p>
                 )}
