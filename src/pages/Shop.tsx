@@ -1,11 +1,24 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, Palette } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { ProductGrid } from "@/components/ProductGrid";
+import { ProductCard } from "@/components/ProductCard";
 import { useProducts } from "@/hooks/useProducts";
+import {
+  storefrontApiRequest,
+  STOREFRONT_PRODUCT_BY_HANDLE_QUERY,
+  type ShopifyProduct,
+} from "@/lib/shopify";
 import { allCategories, getCategoryBySlug, collections } from "@/lib/categories";
 import { cn } from "@/lib/utils";
+
+// Eigene-Farbe-Konfiguratoren: ganz oben, wenn man den Shop betritt.
+const FEATURED_HANDLES = [
+  "farben-mix",
+  "individuelle-spraydose-erstellen",
+  "individuellen-lackstift-bestellen-20ml",
+];
 
 export default function Shop() {
   const { category } = useParams();
@@ -21,6 +34,28 @@ export default function Shop() {
   }, [submittedSearch, activeCategory]);
 
   const { products, isLoading, error, hasNextPage, loadMore } = useProducts({ query });
+
+  // Konfigurator-Produkte exakt per Handle laden (zuverlässiger als eine OR-Suche)
+  const [featured, setFeatured] = useState<ShopifyProduct[]>([]);
+  useEffect(() => {
+    Promise.all(
+      FEATURED_HANDLES.map((h) =>
+        storefrontApiRequest(STOREFRONT_PRODUCT_BY_HANDLE_QUERY, { handle: h })
+          .then((d) => d?.data?.productByHandle)
+          .catch(() => null)
+      )
+    ).then((nodes) =>
+      setFeatured(nodes.filter(Boolean).map((node: ShopifyProduct["node"]) => ({ node })))
+    );
+  }, []);
+
+  // nur in der "Alle"-Ansicht (keine Kategorie, keine Suche)
+  const showFeatured = !category && !submittedSearch.trim();
+
+  // im Hauptraster die Konfigurator-Produkte rausfiltern (keine Dopplung)
+  const gridProducts = showFeatured
+    ? products.filter((p) => !FEATURED_HANDLES.includes(p.node.handle))
+    : products;
 
   const title = activeCategory ? activeCategory.label : "Shop";
 
@@ -79,8 +114,25 @@ export default function Shop() {
         ))}
       </div>
 
+      {/* Eigene Farbe konfigurieren — Top 3 */}
+      {showFeatured && featured.length > 0 && (
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-4">
+            <Palette className="w-5 h-5 text-primary" />
+            <h2 className="text-xl sm:text-2xl">Eigene Farbe konfigurieren</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
+            {featured.map((p) => (
+              <ProductCard key={p.node.id} product={p} />
+            ))}
+          </div>
+          <div className="h-px bg-border my-8" />
+          <h2 className="text-xl sm:text-2xl mb-4">Alle Produkte</h2>
+        </section>
+      )}
+
       <ProductGrid
-        products={products}
+        products={gridProducts}
         isLoading={isLoading}
         error={error}
         hasNextPage={hasNextPage}
