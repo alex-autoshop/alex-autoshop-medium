@@ -60,21 +60,21 @@ export const PLANNER_TEMPLATES: { label: string; emoji: string; items: string[] 
   {
     label: "Komplettlackierung",
     emoji: "🎨",
-    items: ["Wunschfarbe (Basislack)", "2K Klarlack", "Härter", "Verdünnung", "2K Grundierfüller", "Schleifpapier P400", "Schleifpapier P800", "Abdeckband", "Silikonentferner"],
+    items: ["Wunschfarbe", "2K Klarlack", "Härter", "Verdünnung", "Grundierfüller", "Spachtel", "Schleifpapier", "Schleifpads", "Abdeckband", "Silikonentferner"],
   },
   {
     label: "Beilackierung / Smart Repair",
     emoji: "✨",
-    items: ["Wunschfarbe (Basislack)", "Klarlack", "Härter", "Beilackier-Verdünnung", "Schleifpads P1500", "Antihologramm-Politur", "Silikonentferner"],
+    items: ["Wunschfarbe", "Klarlack", "Härter", "Verdünnung", "Schleifpads", "Antihologramm-Politur", "Polierpads", "Silikonentferner"],
   },
   {
     label: "Aufbereitung / Politur",
     emoji: "💎",
-    items: ["Schleifpaste", "Antihologramm-Politur", "Polierpads", "Mikrofasertücher", "Felgenreiniger", "Silikonentferner"],
+    items: ["Schleifpaste", "Antihologramm-Politur", "Hochglanz-Politur", "Polierpads", "Exzenter-Schleifscheiben", "Mikrofasertücher", "Felgenreiniger", "Silikonentferner"],
   },
   {
     label: "Spachtel- & Karosseriearbeit",
     emoji: "🔧",
-    items: ["Spachtel", "Glasfaserspachtel", "Spritzspachtel", "Schleifpapier P120", "Schleifpapier P240", "Grundierung", "Karosseriekleber"],
+    items: ["Spachtel", "Glasfaserspachtel", "Spritzspachtel", "Schleifpapier", "Schleifpads", "Grundierung", "Karosseriekleber", "Steinschlagschutz"],
   },
 ];
