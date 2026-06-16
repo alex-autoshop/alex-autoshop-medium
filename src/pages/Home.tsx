@@ -140,9 +140,10 @@ export default function Home() {
       <section className="bg-secondary/60 py-14 sm:py-20">
         <div className="container">
           <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-10">
-            <h2 className="text-2xl sm:text-3xl mb-3">Werkstatt? Dann lohnt sich das.</h2>
+            <h2 className="text-2xl sm:text-3xl mb-3">Ein Lieferant für deine ganze Werkstatt.</h2>
             <p className="text-muted-foreground">
-              Drei Mitgliedschaftsstufen mit bis zu 38% Rabatt auf das gesamte Sortiment — monatlich kündbar.
+              Lack, Teile und Werkstattbedarf aus einer Hand — mit bis zu 38% Mitglieder-Rabatt.
+              Monatlich kündbar, keine Mindestabnahme.
             </p>
           </motion.div>
           <MembershipCards compact />

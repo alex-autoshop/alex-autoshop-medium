@@ -149,9 +149,9 @@ function DashboardShop({ level }: { level: number }) {
           <h2 className="text-xl sm:text-2xl">B2B Shop</h2>
           <p className="text-white/65 text-sm mt-1">
             {discount > 0 ? (
-              <>Deine Netto-Preise als <span className="text-gold-accent font-semibold">Mitglied · −{discount}%</span> — direkt mit Menge bestellen.</>
+              <>Deine Netto-Preise als <span className="text-gold-accent font-semibold">Mitglied · −{discount}%</span> sind schon eingerechnet — einfach Menge wählen und bestellen.</>
             ) : (
-              <>Profi-Sortiment für Werkstätten. <Link to="/mitgliedschaft" className="text-gold-accent font-semibold underline">Mitglied werden</Link> & bis 38% sparen.</>
+              <>Das komplette Profi-Sortiment für deine Werkstatt. <Link to="/mitgliedschaft" className="text-gold-accent font-semibold underline">Mitglied werden</Link> und bei jeder Bestellung bis 38% sparen.</>
             )}
           </p>
         </div>

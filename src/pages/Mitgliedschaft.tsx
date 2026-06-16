@@ -25,7 +25,7 @@ const FAQ = [
   },
   {
     q: "Für wen lohnt sich welche Stufe?",
-    a: "Faustregel: ab ca. 330 € Material-Einkauf pro Monat lohnt sich Level 1, ab ca. 690 € Level 2, ab ca. 1.120 € Level 3. Nutze den Rechner oben.",
+    a: "Faustregel: Level 1 lohnt sich ab ca. 330 € Material-Einkauf pro Monat, die höheren Stufen ab ca. 900 € — je mehr du einkaufst, desto stärker zieht Level 3. Am genausten siehst du es im Rechner oben.",
   },
 ];
 
@@ -45,7 +45,8 @@ export default function Mitgliedschaft() {
             Dein Betrieb. <span className="text-gold-accent">Deine Konditionen.</span>
           </h1>
           <p className="text-white/65 text-lg">
-            Drei Stufen, bis zu 38% Rabatt auf das gesamte Sortiment — monatlich kündbar.
+            Bündle deinen kompletten Werkstatt-Einkauf bei Alex Autoshop und spar bei jeder
+            Bestellung — bis 38% auf das gesamte Sortiment. Monatlich kündbar, keine Mindestabnahme.
           </p>
         </div>
       </section>

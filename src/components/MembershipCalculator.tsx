@@ -47,7 +47,7 @@ export function MembershipCalculator() {
     <div className="card-tilt hover:translate-y-0 p-6 sm:p-10 max-w-3xl mx-auto">
       <h2 className="text-2xl mb-2">Lohnt sich das für mich?</h2>
       <p className="text-muted-foreground mb-6">
-        Berechne, wie viel deine Werkstatt mit einer Mitgliedschaft spart.
+        Trag deinen Materialeinkauf ein — und sieh schwarz auf weiß, was eine Mitgliedschaft dir spart.
       </p>
 
       {/* Modus-Umschalter */}

@@ -24,7 +24,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     name: "Level 1",
     pricePerMonth: 49,
     discountPercent: 15,
-    tagline: "Der Einstieg für professionelle Werkstätten",
+    tagline: "Für Aufbereiter & kleine Werkstätten — clever ab Tag 1",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     savingsExample: 250,
     features: [
@@ -40,9 +40,9 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
   {
     level: 2,
     name: "Level 2",
-    pricePerMonth: 165,
+    pricePerMonth: 224,
     discountPercent: 24,
-    tagline: "Für Werkstätten mit höherem Materialbedarf",
+    tagline: "Der Bestseller für aktive Werkstätten",
     highlight: true,
     badge: "Beste Wahl",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
@@ -60,9 +60,9 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
   {
     level: 3,
     name: "Level 3",
-    pricePerMonth: 425,
+    pricePerMonth: 338,
     discountPercent: 38,
-    tagline: "Die Premium-Mitgliedschaft für Lackier- & Karosseriebetriebe",
+    tagline: "Höchstrabatt & VIP-Service für Lackier- & Karosseriebetriebe",
     badge: "Premium",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     savingsExample: 3000,
