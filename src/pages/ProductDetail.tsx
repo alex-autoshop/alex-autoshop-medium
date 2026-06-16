@@ -12,7 +12,15 @@ import {
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { useCartStore } from "@/stores/cartStore";
+import { PaintConfigurator } from "@/components/PaintConfigurator";
 import { cn } from "@/lib/utils";
+
+// Produkte mit Farb-Konfigurator (Marke → System → Menge → Fahrzeug → Farbcode)
+const CONFIGURATOR_HANDLES = new Set([
+  "farben-mix",
+  "individuelle-spraydose-erstellen",
+  "individuellen-lackstift-bestellen-20ml",
+]);
 
 type ProductNode = ShopifyProduct["node"] & { vendor?: string };
 
@@ -126,8 +134,13 @@ export default function ProductDetail() {
         </div>
 
         <div>
-          <h1 className="text-2xl sm:text-3xl leading-tight">{product.title}</h1>
-          <p className="text-3xl font-bold mt-4">
+          <h1 className="text-2xl sm:text-3xl leading-tight mb-6">{product.title}</h1>
+
+          {CONFIGURATOR_HANDLES.has(handle ?? "") ? (
+            <PaintConfigurator product={product} />
+          ) : (
+          <>
+          <p className="text-3xl font-bold">
             {price && formatPrice(String(priceNum * quantity), price.currencyCode)}
           </p>
 
@@ -204,6 +217,8 @@ export default function ProductDetail() {
               Mitglied werden →
             </Link>
           </div>
+          </>
+          )}
 
           {product.description && (
             <div className="mt-8">

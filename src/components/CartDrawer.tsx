@@ -78,7 +78,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   const img =
                     node.images?.edges?.[0]?.node?.url || PRODUCT_IMAGES[node.handle] || "";
                   return (
-                    <div key={item.variantId} className="flex gap-3 border border-border rounded-xl p-3">
+                    <div key={item.uid} className="flex gap-3 border border-border rounded-xl p-3">
                       <div className="w-20 h-20 rounded-lg bg-secondary shrink-0 overflow-hidden">
                         {img && (
                           <img src={img} alt={node.title} className="w-full h-full object-cover" loading="lazy" />
@@ -89,12 +89,19 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                         {item.variantTitle !== "Default Title" && (
                           <p className="text-xs text-muted-foreground mt-0.5">{item.variantTitle}</p>
                         )}
+                        {item.attributes && item.attributes.length > 0 && (
+                          <ul className="text-[11px] text-muted-foreground mt-1 space-y-0.5">
+                            {item.attributes.map((a) => (
+                              <li key={a.key}><span className="font-medium">{a.key}:</span> {a.value}</li>
+                            ))}
+                          </ul>
+                        )}
                         <p className="text-primary font-bold mt-1">
                           {formatPrice(item.price.amount, item.price.currencyCode)}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           <button
-                            onClick={() => updateQuantity(item.variantId, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.uid, item.quantity - 1)}
                             disabled={isLoading}
                             className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary"
                             aria-label="Menge verringern"
@@ -103,7 +110,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                           </button>
                           <span className="w-8 text-center font-semibold">{item.quantity}</span>
                           <button
-                            onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.uid, item.quantity + 1)}
                             disabled={isLoading}
                             className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary"
                             aria-label="Menge erhöhen"
@@ -111,7 +118,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                             <Plus className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => removeItem(item.variantId)}
+                            onClick={() => removeItem(item.uid)}
                             disabled={isLoading}
                             className="w-10 h-10 rounded-lg flex items-center justify-center text-destructive hover:bg-destructive/10 ml-auto"
                             aria-label="Entfernen"
