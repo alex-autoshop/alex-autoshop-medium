@@ -23,6 +23,7 @@ import {
 import { Seo } from "@/components/Seo";
 import { B2BProductCard } from "@/components/B2BProductCard";
 import { Inbox } from "@/components/Inbox";
+import { MaterialPlanner } from "@/components/MaterialPlanner";
 import Teileportal from "@/pages/Teileportal";
 import { useProducts } from "@/hooks/useProducts";
 import { useAuth } from "@/context/AuthContext";
@@ -98,7 +99,16 @@ export default function Dashboard() {
         </div>
       )}
       {tab === "inbox" && <Inbox />}
-      {tab === "planner" && <Planner />}
+      {tab === "planner" && (
+        <div className="max-w-2xl">
+          <h2 className="text-2xl mb-2">Materialplaner</h2>
+          <p className="text-muted-foreground mb-5">
+            Plane das Material für dein Projekt — Vorlage laden oder selbst zusammenstellen. Wird
+            automatisch gespeichert. Tipp: Du erreichst den Planer auch über das Widget unten rechts.
+          </p>
+          <MaterialPlanner />
+        </div>
+      )}
       {tab === "orders" && <Orders />}
       {tab === "profile" && <ProfileForm />}
     </div>

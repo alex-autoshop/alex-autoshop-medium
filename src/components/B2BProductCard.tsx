@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { type ShopifyProduct, formatPrice } from "@/lib/shopify";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useCartStore } from "@/stores/cartStore";
+import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { cn } from "@/lib/utils";
 
 // Professionelle B2B-Karte: Netto-Mitgliederpreis prominent, Mengen-Eingabe,
@@ -29,6 +30,11 @@ export function B2BProductCard({
 
   const memberPrice = basePrice * (1 - discount / 100);
   const lineTotal = (discount > 0 ? memberPrice : basePrice) * qty;
+
+  // Höchste Stufe (Level 3) als Vergleich/Upsell
+  const topLevel = MEMBERSHIP_LEVELS[MEMBERSHIP_LEVELS.length - 1];
+  const topPrice = basePrice * (1 - topLevel.discountPercent / 100);
+  const showTopHint = memberLevel !== topLevel.level;
 
   const add = async () => {
     if (!variant) return;
@@ -80,6 +86,13 @@ export function B2BProductCard({
               </p>
               <p className="text-[11px] text-primary font-semibold">Mitglieder ab −15%</p>
             </>
+          )}
+
+          {showTopHint && (
+            <div className="mt-1.5 flex items-center justify-between rounded-md bg-night/90 text-white px-2 py-1">
+              <span className="text-[11px]">Mit {topLevel.name} (−{topLevel.discountPercent}%)</span>
+              <span className="text-xs font-bold text-gold-bright">{formatPrice(String(topPrice), cur)}</span>
+            </div>
           )}
         </div>
 

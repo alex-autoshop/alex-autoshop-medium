@@ -41,6 +41,9 @@ export default function Mitgliedschaft() {
 
       <section className="section-dark py-16 sm:py-20">
         <div className="container text-center max-w-2xl mx-auto">
+          <span className="inline-flex items-center gap-2 rounded-full bg-gold-bright/15 border border-gold-bright/30 text-gold-accent text-xs font-bold uppercase tracking-wide px-4 py-1.5 mb-5">
+            🔥 Brandneu · Mitgliedschaft in Beta
+          </span>
           <h1 className="text-3xl sm:text-5xl mb-4">
             Dein Betrieb. <span className="text-gold-accent">Deine Konditionen.</span>
           </h1>
@@ -48,6 +51,10 @@ export default function Mitgliedschaft() {
             Bündle deinen kompletten Werkstatt-Einkauf bei Alex Autoshop und spar bei jeder
             Bestellung — bis 38% auf das gesamte Sortiment. Monatlich kündbar, keine Mindestabnahme.
           </p>
+          <div className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-white/80">
+            <span className="font-bold text-gold-accent">Nur 10 Gründungs-Plätze</span>
+            zu diesen Konditionen — danach werden die Beiträge angehoben.
+          </div>
         </div>
       </section>
 

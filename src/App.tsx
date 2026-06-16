@@ -5,6 +5,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { MaterialPlannerWidget } from "@/components/MaterialPlannerWidget";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Shop = lazy(() => import("@/pages/Shop"));
@@ -81,6 +82,7 @@ export default function App() {
           </main>
           <Footer />
         </div>
+        <MaterialPlannerWidget />
         <Toaster position="top-center" richColors />
       </AuthProvider>
     </BrowserRouter>
