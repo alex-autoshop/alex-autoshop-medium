@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 
 interface SeoProps {
   title: string;
@@ -6,7 +6,7 @@ interface SeoProps {
   jsonLd?: object;
 }
 
-const SITE_URL = "https://alex-autoshop-medium.vercel.app";
+const SITE_URL = "https://alex-autoshop.de";
 
 function setMeta(attr: "name" | "property", key: string, content: string) {
   let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
