@@ -121,7 +121,7 @@ export default function Shop() {
             <Palette className="w-5 h-5 text-primary" />
             <h2 className="text-xl sm:text-2xl">Eigene Farbe konfigurieren</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5 items-start">
             {featured.map((p) => (
               <ProductCard key={p.node.id} product={p} />
             ))}

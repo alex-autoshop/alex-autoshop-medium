@@ -39,11 +39,7 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
   };
 
   return (
-    <div
-      className="card-tilt overflow-hidden flex flex-col"
-      onMouseEnter={() => setShowPrices(true)}
-      onMouseLeave={() => setShowPrices(false)}
-    >
+    <div className="card-tilt overflow-hidden flex flex-col">
       <Link to={`/produkt/${node.handle}`} className="block group">
         <div className="aspect-square bg-secondary overflow-hidden">
           {img ? (

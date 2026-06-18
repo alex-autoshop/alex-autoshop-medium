@@ -32,7 +32,7 @@ export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMor
 
   return (
     <div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 items-start">
         {products.map((p) => (
           <ProductCard key={p.node.id} product={p} />
         ))}
