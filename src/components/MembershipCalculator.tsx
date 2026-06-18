@@ -6,12 +6,10 @@ import { cn } from "@/lib/utils";
 const MAX = 500_000;
 
 const CATEGORIES = [
-  { id: "teile", label: "Teile-Anschaffung" },
-  { id: "fahrzeughandel", label: "Fahrzeughandel-Einkauf" },
-  { id: "lackmaterial", label: "Lackmaterial" },
   { id: "lackfarbe", label: "Lackfarbe" },
-  { id: "buchhaltung", label: "Buchhaltung" },
-  { id: "steuerberatung", label: "Steuerberatung" },
+  { id: "lackmaterial", label: "Lackmaterial" },
+  { id: "fahrzeughandel", label: "Fahrzeughandel-Einkauf" },
+  { id: "teile", label: "Teile Anschaffung" },
   { id: "sonstiges", label: "Sonstiges" },
 ] as const;
 
@@ -238,8 +236,8 @@ export function MembershipCalculator() {
 
       <p className="text-xs text-muted-foreground mt-4">
         {mode === "months"
-          ? "So viel hättest du in den letzten 3 Monaten gespart, wenn du über Alex Autoshop gekauft hättest."
-          : "Die Ersparnis bezieht sich auf deinen Einkauf über Alex Autoshop."}
+          ? "So viel hättest du in den letzten 3 Monaten gespart, wenn du deine Lackfarben, Lackmaterialien, Autoteile, Pflegeprodukte und deinen Werkstattbedarf über Alex Autoshop gekauft hättest."
+          : "Die Ersparnis gilt auf deinen Einkauf über Alex Autoshop — Lackfarben, Lackmaterial, Autoteile, Pflegeprodukte und Werkstattbedarf."}
       </p>
     </div>
   );
