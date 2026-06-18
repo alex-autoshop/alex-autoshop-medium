@@ -101,18 +101,18 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
         {/* Menge + Hinzufügen */}
         <div className="mt-auto pt-1">
           {firstVariant?.availableForSale && !multiple ? (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center border border-border rounded-lg shrink-0">
-                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-8 h-9 flex items-center justify-center hover:bg-secondary rounded-l-lg" aria-label="weniger">
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+              <div className="flex items-center justify-between border border-border rounded-lg shrink-0 lg:w-fit">
+                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 flex items-center justify-center hover:bg-secondary rounded-l-lg" aria-label="weniger">
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="w-7 text-center text-sm font-semibold">{qty}</span>
-                <button onClick={() => setQty((q) => q + 1)} className="w-8 h-9 flex items-center justify-center hover:bg-secondary rounded-r-lg" aria-label="mehr">
+                <span className="w-8 text-center text-sm font-semibold">{qty}</span>
+                <button onClick={() => setQty((q) => q + 1)} className="w-9 h-9 flex items-center justify-center hover:bg-secondary rounded-r-lg" aria-label="mehr">
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <button onClick={add} className="btn-primary flex-1 text-sm min-h-[40px]">
-                <ShoppingCart className="w-4 h-4" /> Hinzufügen
+              <button onClick={add} className="btn-primary w-full lg:flex-1 text-sm min-h-[40px] whitespace-nowrap">
+                <ShoppingCart className="w-4 h-4 shrink-0" /> Hinzufügen
               </button>
             </div>
           ) : (
