@@ -18,7 +18,9 @@ const NAV = [
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
+  const cartOpen = useCartStore((s) => s.isOpen);
+  const openCart = useCartStore((s) => s.openCart);
+  const closeCart = useCartStore((s) => s.closeCart);
   const itemCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const { user, signOut } = useAuth();
   const unread = useUnread();
@@ -109,7 +111,7 @@ export function Header() {
             )}
 
             <button
-              onClick={() => setCartOpen(true)}
+              onClick={openCart}
               className="relative flex items-center justify-center w-12 h-12 rounded-lg text-white hover:bg-white/10 transition-colors"
               aria-label="Warenkorb öffnen"
             >
@@ -187,7 +189,7 @@ export function Header() {
         )}
       </header>
 
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+      <CartDrawer open={cartOpen} onClose={closeCart} />
     </>
   );
 }
