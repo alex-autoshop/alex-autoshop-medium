@@ -25,6 +25,7 @@ export async function recordOrder(order: {
   items: OrderItem[];
   total: number;
   currency: string;
+  status?: string; // z.B. "bestaetigt" fuer Rechnungs-/Abholbestellungen
 }): Promise<{ error?: string }> {
   if (!supabase) return { error: "nicht konfiguriert" };
   const { error } = await supabase.from("orders").insert({
@@ -32,6 +33,7 @@ export async function recordOrder(order: {
     items: order.items,
     total: order.total,
     currency: order.currency,
+    ...(order.status ? { status: order.status } : {}),
   });
   return { error: error?.message };
 }
