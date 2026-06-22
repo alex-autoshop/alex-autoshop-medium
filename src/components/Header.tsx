@@ -8,13 +8,18 @@ import { useUnread } from "@/hooks/useUnread";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+// Karo Fahrzeugmarkt — eigenständige App auf GitHub Pages
+const FAHRZEUGMARKT_URL = "https://alex-autoshop.github.io/fahrzeugmarkt/";
+
+const NAV: Array<{ to: string; label: string; href?: string }> = [
   { to: "/shop", label: "Shop" },
   { to: "/teileportal", label: "Teileportal" },
-  { to: "/fahrzeugmarkt", label: "Fahrzeugmarkt" },
+  { to: "/fahrzeugmarkt", label: "Fahrzeugmarkt", href: FAHRZEUGMARKT_URL },
   { to: "/mitgliedschaft", label: "Mitgliedschaft" },
   { to: "/laden", label: "Laden & Kontakt" },
 ];
+
+const NAV_BASE = "px-4 py-3 rounded-lg font-medium transition-colors min-h-[48px] flex items-center";
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -42,22 +47,32 @@ export function Header() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
-            {NAV.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    "px-4 py-3 rounded-lg font-medium transition-colors min-h-[48px] flex items-center",
-                    isActive
-                      ? "text-gold-bright bg-white/10"
-                      : "text-white/75 hover:text-white hover:bg-white/10"
-                  )
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+            {NAV.map((item) =>
+              item.href ? (
+                <a
+                  key={item.to}
+                  href={item.href}
+                  className={cn(NAV_BASE, "text-white/75 hover:text-white hover:bg-white/10")}
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    cn(
+                      NAV_BASE,
+                      isActive
+                        ? "text-gold-bright bg-white/10"
+                        : "text-white/75 hover:text-white hover:bg-white/10"
+                    )
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              )
+            )}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -135,21 +150,30 @@ export function Header() {
         {mobileOpen && (
           <nav className="md:hidden border-t border-white/10 bg-night animate-fade-up">
             <div className="container py-3 flex flex-col gap-1">
-              {NAV.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    cn(
-                      "px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center",
-                      isActive ? "text-gold-bright bg-white/10" : "text-white/85 hover:bg-white/10"
-                    )
-                  }
-                >
-                  {item.label}
-                </NavLink>
-              ))}
+              {NAV.map((item) => {
+                const mBase = "px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center";
+                return item.href ? (
+                  <a
+                    key={item.to}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(mBase, "text-white/85 hover:bg-white/10")}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMobileOpen(false)}
+                    className={({ isActive }) =>
+                      cn(mBase, isActive ? "text-gold-bright bg-white/10" : "text-white/85 hover:bg-white/10")
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                );
+              })}
               <a
                 href={`tel:${SHOP_INFO.phoneIntl}`}
                 className="px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2 text-gold-bright"
