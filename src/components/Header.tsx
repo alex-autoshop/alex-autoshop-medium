@@ -11,15 +11,26 @@ import { cn } from "@/lib/utils";
 // Karo Fahrzeugmarkt — eigenständige App auf GitHub Pages
 const FAHRZEUGMARKT_URL = "https://alex-autoshop.github.io/fahrzeugmarkt/";
 
-const NAV: Array<{ to: string; label: string; href?: string }> = [
+const NAV: Array<{ to: string; label: string; href?: string; beta?: boolean }> = [
   { to: "/shop", label: "Shop" },
-  { to: "/teileportal", label: "Teileportal" },
-  { to: "/fahrzeugmarkt", label: "Fahrzeugmarkt", href: FAHRZEUGMARKT_URL },
+  { to: "/teileportal", label: "Teileportal", beta: true },
+  { to: "/fahrzeugmarkt", label: "Fahrzeugmarkt", href: FAHRZEUGMARKT_URL, beta: true },
   { to: "/mitgliedschaft", label: "Mitgliedschaft" },
   { to: "/laden", label: "Laden & Kontakt" },
 ];
 
 const NAV_BASE = "px-4 py-3 rounded-lg font-medium transition-colors min-h-[48px] flex items-center";
+
+const BetaBadge = ({ className = "" }: { className?: string }) => (
+  <span
+    className={cn(
+      "ml-1.5 rounded bg-gold-bright/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-gold-bright",
+      className
+    )}
+  >
+    Beta
+  </span>
+);
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -55,6 +66,7 @@ export function Header() {
                   className={cn(NAV_BASE, "text-white/75 hover:text-white hover:bg-white/10")}
                 >
                   {item.label}
+                  {item.beta && <BetaBadge />}
                 </a>
               ) : (
                 <NavLink
@@ -70,6 +82,7 @@ export function Header() {
                   }
                 >
                   {item.label}
+                  {item.beta && <BetaBadge />}
                 </NavLink>
               )
             )}
@@ -160,6 +173,7 @@ export function Header() {
                     className={cn(mBase, "text-white/85 hover:bg-white/10")}
                   >
                     {item.label}
+                    {item.beta && <BetaBadge />}
                   </a>
                 ) : (
                   <NavLink
@@ -171,6 +185,7 @@ export function Header() {
                     }
                   >
                     {item.label}
+                    {item.beta && <BetaBadge />}
                   </NavLink>
                 );
               })}

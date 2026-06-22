@@ -93,7 +93,8 @@ const MODES: { id: SearchMode; label: string }[] = [
 ];
 
 export default function Teileportal() {
-  const [mode, setMode] = useState<SearchMode>("plate");
+  // Default: Suche per Schlüsselnummer (HSN/TSN). Button bleibt rechts in der Reihenfolge.
+  const [mode, setMode] = useState<SearchMode>("kba");
   const [plate, setPlate] = useState("");
   const [vin, setVin] = useState("");
   const [hsn, setHsn] = useState("");
