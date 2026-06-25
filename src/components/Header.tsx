@@ -20,7 +20,7 @@ const NAV: Array<{ to: string; label: string; href?: string; beta?: boolean }> =
   { to: "/laden", label: "Laden & Kontakt" },
 ];
 
-const NAV_BASE = "px-4 py-3 rounded-lg font-medium transition-colors min-h-[48px] flex items-center";
+const NAV_BASE = "px-3 py-3 rounded-lg font-medium transition-colors min-h-[48px] flex items-center whitespace-nowrap shrink-0";
 
 const BetaBadge = ({ className = "" }: { className?: string }) => (
   <span
@@ -58,7 +58,7 @@ export function Header() {
             <img src="/images/logo-cropped.png" alt="Alex Autoshop" className="h-11 sm:h-14 w-auto" />
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden xl:flex items-center gap-0.5">
             {NAV.map((item) =>
               item.href ? (
                 <a
@@ -89,19 +89,19 @@ export function Header() {
             )}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 shrink-0">
             <a
               href={`tel:${SHOP_INFO.phoneIntl}`}
-              className="hidden lg:flex items-center gap-2 text-sm font-semibold text-white/75 hover:text-gold-bright transition-colors px-3 min-h-[48px]"
+              className="hidden 2xl:flex items-center gap-2 text-sm font-semibold text-white/75 hover:text-gold-bright transition-colors px-3 min-h-[48px] whitespace-nowrap"
             >
               <Phone className="w-4 h-4" />
               {SHOP_INFO.phone}
             </a>
             {user ? (
-              <div className="hidden md:flex items-center gap-1">
+              <div className="hidden xl:flex items-center gap-1">
                 <NavLink
                   to="/dashboard"
-                  className="inline-flex items-center gap-2 px-3 min-h-[48px] rounded-lg font-medium text-white/75 hover:text-white hover:bg-white/10 transition-colors"
+                  className="inline-flex items-center gap-2 px-3 min-h-[48px] rounded-lg font-medium text-white/75 hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap"
                 >
                   <LayoutDashboard className="w-5 h-5" /> Dashboard
                 </NavLink>
@@ -117,7 +117,7 @@ export function Header() {
             ) : (
               <Link
                 to="/konto"
-                className="hidden md:inline-flex items-center gap-2 px-4 min-h-[48px] rounded-lg font-semibold bg-gold-bright text-night hover:brightness-95 transition-all"
+                className="hidden xl:inline-flex items-center gap-2 px-4 min-h-[48px] rounded-lg font-semibold bg-gold-bright text-night hover:brightness-95 transition-all whitespace-nowrap"
               >
                 <LogIn className="w-4 h-4" /> Login / Registrieren
               </Link>
@@ -155,7 +155,7 @@ export function Header() {
             </button>
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="md:hidden flex items-center justify-center w-12 h-12 rounded-lg text-white hover:bg-white/10 transition-colors"
+              className="xl:hidden flex items-center justify-center w-12 h-12 rounded-lg text-white hover:bg-white/10 transition-colors"
               aria-label="Menü"
             >
               {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -164,7 +164,7 @@ export function Header() {
         </div>
 
         {mobileOpen && (
-          <nav className="md:hidden border-t border-white/10 bg-night animate-fade-up">
+          <nav className="xl:hidden border-t border-white/10 bg-night animate-fade-up">
             <div className="container py-3 flex flex-col gap-1">
               {NAV.map((item) => {
                 const mBase = "px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center";
