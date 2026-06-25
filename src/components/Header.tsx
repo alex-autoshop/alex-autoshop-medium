@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut, Bell } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { CartDrawer } from "@/components/CartDrawer";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
 import { useUnread } from "@/hooks/useUnread";
 import { SHOP_INFO } from "@/data/shopInfo";
@@ -137,6 +138,8 @@ export function Header() {
                 )}
               </Link>
             )}
+
+            <LanguageSwitcher tone="dark" />
 
             <button
               onClick={openCart}

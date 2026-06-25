@@ -105,3 +105,25 @@
       [&_hr]:my-8 [&_hr]:border-border;
   }
 }
+
+/* ── Google-Website-Übersetzer: Standard-UI ausblenden ── */
+.goog-te-banner-frame,
+.goog-te-gadget-icon,
+.skiptranslate {
+  display: none !important;
+}
+body {
+  top: 0 !important;
+}
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+}
+.goog-text-highlight {
+  background: none !important;
+  box-shadow: none !important;
+}
+font[style] {
+  background: transparent !important;
+  box-shadow: none !important;
+}
