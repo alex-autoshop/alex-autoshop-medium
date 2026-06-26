@@ -32,13 +32,25 @@ function currentLang(): string {
   return parts[2] || "de";
 }
 
-// Sprache über Googles eigenes Auswahl-Element setzen — wechselt zuverlässig
-// zwischen ALLEN Sprachen (auch von einer Übersetzung zur nächsten), kein Reload,
-// kein Cookie-Domain-Problem.
+// googtrans-Cookie auf allen relevanten Domain-Varianten löschen (Host, .Host,
+// Wurzeldomain, .Wurzeldomain) — sonst überlebt eine alte Übersetzung den Reset.
+function clearGoogtrans() {
+  const host = location.hostname;
+  const parts = host.split(".");
+  const root = parts.length > 2 ? parts.slice(-2).join(".") : host;
+  const exp = "expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  const variants = ["", `;domain=${host}`, `;domain=.${host}`];
+  if (root !== host) variants.push(`;domain=${root}`, `;domain=.${root}`);
+  variants.forEach((d) => {
+    document.cookie = `googtrans=;${exp};path=/${d}`;
+  });
+}
+
+// Auf eine andere Sprache übersetzen — über Googles eigenes Auswahl-Element.
 function applyLang(code: string, attempt = 0) {
   const combo = document.querySelector<HTMLSelectElement>(".goog-te-combo");
   if (combo) {
-    combo.value = code === "de" ? "" : code; // "" = Original wiederherstellen
+    combo.value = code;
     combo.dispatchEvent(new Event("change"));
     return;
   }
@@ -52,8 +64,14 @@ export function LanguageSwitcher({ tone = "dark" }: { tone?: "dark" | "light" })
   const activeLang = LANGS.find((l) => l.code === active) ?? LANGS[0];
 
   const pick = (code: string) => {
-    setActive(code);
     setOpen(false);
+    if (code === "de") {
+      // Original wiederherstellen: Cookie überall löschen + neu laden
+      clearGoogtrans();
+      window.location.reload();
+      return;
+    }
+    setActive(code);
     applyLang(code);
   };
 
