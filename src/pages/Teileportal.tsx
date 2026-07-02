@@ -129,6 +129,19 @@ export default function Teileportal() {
     setVehicle(null);
     try {
       const data = await tecdoc(payload);
+      // Handle WMI/NHTSA decoded VIN response
+      if (data?.source === 'vin_decoded' && data?.vinBrand) {
+        const brand = String(data.vinBrand);
+        const year = data.vinYear ? String(data.vinYear) : undefined;
+        setVehicle({
+          manufacturer: brand,
+          model: undefined,
+          typeName: year ? `${brand} · ${year}` : brand,
+          raw: data,
+        });
+        setVehicleLoading(false);
+        return;
+      }
       const info = parseVehicle(data);
       if (info) setVehicle(info);
       else setVehicleError("Fahrzeug nicht gefunden. Prüfe deine Eingabe oder ruf uns an — wir finden es.");
