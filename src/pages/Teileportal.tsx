@@ -136,7 +136,7 @@ export default function Teileportal() {
         setVehicle({
           manufacturer: brand,
           model: undefined,
-          typeName: year ? `${brand} · ${year}` : brand,
+          typeName: year ? String(year) : undefined,
           raw: data,
         });
         setVehicleLoading(false);
