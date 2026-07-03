@@ -176,7 +176,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       orderId,
       items: orderItems,
       date: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      companyName: profile?.company_name,
+      companyName: profile?.company_name || profile?.full_name,
       email: user.email,
     };
 
@@ -186,16 +186,17 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     toast.success("Bestellung bestätigt", { description: "Zahlung bei Abholung an der Theke." });
   };
 
-  // Online-Checkout: direkte Shopify Cart-URL, 100% zuverlässig
+  // Normaler Shopify Checkout — direkte Cart-URL ohne API-Call, 100% zuverlässig
   const handleOnlineCheckout = () => {
     if (items.length === 0) return;
+    // Variant-IDs aus GID extrahieren: "gid://shopify/ProductVariant/12345" → "12345"
     const cartItems = items
       .map(i => {
         const numericId = i.variantId.split('/').pop();
         return `${numericId}:${i.quantity}`;
       })
       .join(',');
-    const shopifyCartUrl = `https://j1a6sr-q2.myshopify.com/cart/${cartItems}`;
+    const shopifyCartUrl = `https://shop.alex-autoshop.de/cart/${cartItems}`;
     if (user) {
       recordOrder({ userId: user.id, items: toOrderItems(), total, currency });
     }
@@ -265,6 +266,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   <strong className="text-foreground">{formatPrice(String(confirmed.total), confirmed.currency)}</strong>
                 </p>
 
+                {/* Bestellte Artikel kurz auflisten */}
                 <div className="mt-4 w-full max-w-xs text-left space-y-1.5">
                   {confirmed.items.map((item, i) => (
                     <div key={i} className="flex justify-between text-sm">
@@ -281,6 +283,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   <p className="text-muted-foreground mt-1">Wir legen deine Bestellung bereit. Bezahlt wird an der Theke — bar oder Karte.</p>
                 </div>
 
+                {/* PDF / Drucken */}
                 <button
                   onClick={openInvoicePdf}
                   className="btn-gold-bright w-full max-w-xs mt-5 gap-2"
@@ -297,136 +300,12 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
               </div>
 
             ) : (
-              <>
-                {/* ── Artikel-Liste ── */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {items.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-12">
-                      Dein Warenkorb ist leer.
-                    </p>
-                  ) : (
-                    items.map((item) => {
-                      const node = item.product.node;
-                      const img =
-                        node.images?.edges?.[0]?.node?.url || PRODUCT_IMAGES[node.handle] || "";
-                      return (
-                        <div key={item.uid} className="flex gap-3 border border-border rounded-xl p-3">
-                          <div className="w-20 h-20 rounded-lg bg-secondary shrink-0 overflow-hidden">
-                            {img && (
-                              <img src={img} alt={node.title} className="w-full h-full object-cover" loading="lazy" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm leading-tight line-clamp-2">{node.title}</p>
-                            {item.variantTitle !== "Default Title" && (
-                              <p className="text-xs text-muted-foreground mt-0.5">{item.variantTitle}</p>
-                            )}
-                            {item.attributes && item.attributes.length > 0 && (
-                              <ul className="text-[11px] text-muted-foreground mt-1 space-y-0.5">
-                                {item.attributes.map((a) => (
-                                  <li key={a.key}><span className="font-medium">{a.key}:</span> {a.value}</li>
-                                ))}
-                              </ul>
-                            )}
-                            <p className="text-primary font-bold mt-1">
-                              {formatPrice(item.price.amount, item.price.currencyCode)}
-                            </p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <button
-                                onClick={() => updateQuantity(item.uid, item.quantity - 1)}
-                                disabled={isLoading}
-                                className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary"
-                                aria-label="Menge verringern"
-                              >
-                                <Minus className="w-4 h-4" />
-                              </button>
-                              <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                              <button
-                                onClick={() => updateQuantity(item.uid, item.quantity + 1)}
-                                disabled={isLoading}
-                                className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary"
-                                aria-label="Menge erhöhen"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => removeItem(item.uid)}
-                                disabled={isLoading}
-                                className="w-10 h-10 rounded-lg flex items-center justify-center text-destructive hover:bg-destructive/10 ml-auto"
-                                aria-label="Entfernen"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-
-                {/* ── Kassen-Bereich ── */}
-                {items.length > 0 && (
-                  <div className="border-t border-border p-4 space-y-3">
-                    <div className="flex justify-between font-bold text-lg">
-                      <span>Gesamt</span>
-                      <span>{formatPrice(String(total), currency)}</span>
-                    </div>
-
-                    {discount > 0 && (
-                      <div className="rounded-lg bg-primary/10 border border-primary/20 p-2.5 text-sm text-center">
-                        <span className="text-primary font-semibold">
-                          Mitglied ({discount}%) — du sparst {formatPrice(String(memberSaving), currency)}
-                        </span>
-                        <span className="block text-xs text-muted-foreground mt-0.5">
-                          wird an der Theke verrechnet
-                        </span>
-                      </div>
-                    )}
-
-                    {/* ONLINE-CHECKOUT — für ALLE Kunden */}
-                    <button
-                      onClick={handleOnlineCheckout}
-                      className="btn-gold-bright w-full text-base font-bold gap-2"
-                    >
-                      <CreditCard className="w-5 h-5" />
-                      Jetzt kaufen (Kreditkarte / PayPal)
-                    </button>
-
-                    {/* EXPRESS-KAUF — für Registrierte, sonst gesperrt */}
-                    {user ? (
-                      <button
-                        onClick={handleExpressOrder}
-                        disabled={placing}
-                        className="btn-outline w-full gap-2 disabled:opacity-60"
-                      >
-                        <Zap className="w-5 h-5" />
-                        {placing ? "Wird bestätigt …" : "⚡ Express-Kauf — zahlen bei Abholung"}
-                      </button>
-                    ) : (
-                      <button
-                        disabled
-                        title="Nur für registrierte Kunden"
-                        className="btn-outline w-full gap-2 opacity-40 cursor-not-allowed"
-                      >
-                        <Lock className="w-4 h-4" />
-                        Express-Kauf —{" "}
-                        <a href="/auth" className="text-primary underline" onClick={e => e.stopPropagation()}>
-                          Anmelden
-                        </a>
-                      </button>
-                    )}
-
-                    <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5" /> Sichere Bezahlung
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
+            <>
+            {/* ── Artikel-Liste ── */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {items.length === 0 ? (
+                <p className="text-muted-foreground text-center py-12">
+                  Dein Warenkorb ist leer.
+                </p>
+              ) : (
+          
