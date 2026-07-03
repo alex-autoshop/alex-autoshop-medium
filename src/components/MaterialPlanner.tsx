@@ -25,6 +25,7 @@ import {
   STOREFRONT_PRODUCTS_QUERY,
   type ShopifyProduct,
 } from "@/lib/shopify";
+import { discountForLevel } from "@/data/memberships";
 import { sendMessage } from "@/lib/inbox";
 import { whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
@@ -155,12 +156,40 @@ function parseAiPlan(raw: string): AIPlan {
   };
 }
 
+// "23€" / "ab 19€" / "29,95€" → Zahl für Rabatt- und Summenberechnung
+function parsePrice(p: string): number | null {
+  const m = p.replace(/\./g, "").match(/(\d+(?:,\d+)?)/);
+  return m ? parseFloat(m[1].replace(",", ".")) : null;
+}
+const fmtEur = (n: number) =>
+  new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
+
+// Preis pro Position: groß und gold; Mitglieder sehen Original durchgestrichen + Netto
+function ItemPrice({ price, discount }: { price: string; discount: number }) {
+  const num = parsePrice(price);
+  if (!discount || num == null) {
+    return <span className="shrink-0 text-base font-bold text-gold-bright">{price}</span>;
+  }
+  const ab = /\bab\b/i.test(price) ? "ab " : "";
+  return (
+    <span className="shrink-0 text-right">
+      <span className="block text-[11px] text-muted-foreground line-through">{price}</span>
+      <span className="block text-base font-bold text-gold-bright">{ab}{fmtEur(num * (1 - discount / 100))}</span>
+    </span>
+  );
+}
+
 export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
   const { step, briefing, aiPlan, setStep, setBriefing, setAiPlan, toggleAiItem, resetPlanner } =
     usePlannerStore();
   const addItem = useCartStore((s) => s.addItem);
   const { profile, user } = useAuth();
   const garage: Vehicle[] = profile.vehicles ?? [];
+  const discount = user ? discountForLevel(profile.membership_level) : 0;
+  // Lebende Summe: nur angewählte Positionen, passt sich beim Abwählen an
+  const includedTotal = aiPlan
+    ? aiPlan.items.filter((i) => i.included).reduce((sum, i) => sum + (parsePrice(i.price) ?? 0), 0)
+    : 0;
 
   // Briefing-Unterschritt (0=Arbeit, 1=Fahrzeug, 2=Stelle, 3=Qualität, 4=Profi-Details)
   const [q, setQ] = useState(0);
@@ -557,8 +586,22 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
             </p>
             <div className="flex items-baseline justify-between gap-3 mb-1">
               <h3 className="font-display text-xl font-bold leading-tight">{aiPlan.title}</h3>
-              {aiPlan.totalEstimate && (
-                <span className="shrink-0 text-sm font-bold text-gold-bright bg-night rounded-lg px-3 py-1.5">{aiPlan.totalEstimate}</span>
+              {includedTotal > 0 ? (
+                <span className="shrink-0 text-right bg-night rounded-lg px-3 py-1.5">
+                  {discount > 0 && (
+                    <span className="block text-[11px] text-white/50 line-through">ca. {fmtEur(includedTotal)}</span>
+                  )}
+                  <span className="block text-base font-bold text-gold-bright">
+                    ca. {fmtEur(discount > 0 ? includedTotal * (1 - discount / 100) : includedTotal)}
+                  </span>
+                  {discount > 0 && (
+                    <span className="block text-[10px] font-semibold text-gold-bright/80">Mitglied −{discount}%</span>
+                  )}
+                </span>
+              ) : (
+                aiPlan.totalEstimate && (
+                  <span className="shrink-0 text-sm font-bold text-gold-bright bg-night rounded-lg px-3 py-1.5">{aiPlan.totalEstimate}</span>
+                )
               )}
             </div>
             {(briefing.vehicle || briefing.colorCode) && (
@@ -569,6 +612,11 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
               </p>
             )}
             {!briefing.vehicle && !briefing.colorCode && <div className="mb-4" />}
+
+            {/* Abwählen-Hinweis */}
+            <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5 text-primary" /> Tipp auf eine Position, um sie ab- oder anzuwählen — die Summe rechnet mit.
+            </p>
 
             {/* Karten-Liste: Produkt | Menge | Preis | Warum */}
             <motion.ul
@@ -588,13 +636,13 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
                   )}
                 >
                   <div className="flex items-start gap-3">
-                    <span className={cn("mt-0.5 w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors", it.included ? "bg-gold-bright border-gold-bright text-night" : "border-border")}>
+                    <span className={cn("mt-0.5 w-7 h-7 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors", it.included ? "bg-gold-bright border-gold-bright text-night" : "border-muted-foreground/50 bg-secondary")}>
                       {it.included && <Check className="w-4 h-4" strokeWidth={3} />}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="font-semibold text-sm leading-tight">{it.name}</p>
-                        <span className="shrink-0 text-sm font-bold text-gold-bright">{it.price}</span>
+                        <p className={cn("font-semibold text-sm leading-tight", !it.included && "line-through")}>{it.name}</p>
+                        <ItemPrice price={it.price} discount={discount} />
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         <span className="font-medium">{it.quantity}</span>
@@ -608,6 +656,13 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
 
             {aiPlan.hint && (
               <p className="text-xs text-muted-foreground bg-secondary/60 rounded-lg p-3 mb-4">💡 {aiPlan.hint}</p>
+            )}
+
+            {/* Spar-Teaser: Nicht-Mitglieder sehen ihr Sparpotenzial */}
+            {discount === 0 && includedTotal > 0 && (
+              <a href="/mitgliedschaft" className="block text-xs text-center bg-secondary/60 hover:bg-secondary rounded-lg p-3 mb-4 transition-colors">
+                💛 Als Mitglied würdest du bei diesem Plan bis zu <strong>{fmtEur(includedTotal * 0.46)} sparen</strong> — Mitgliedschaft ansehen →
+              </a>
             )}
 
             {/* Farbcode-Service: VIN vorhanden, Farbcode fehlt */}
