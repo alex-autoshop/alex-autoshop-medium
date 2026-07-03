@@ -24,6 +24,92 @@ async function vrmLookup(plate, country = "DE") {
   return res.json();
 }
 
+// ─── Static parts catalog (fallback when TecAlliance article search not licensed) ───
+const STATIC_CATALOG = [
+  // BREMSSCHEIBEN
+  { id: 'bs001', keywords: ['bremse','bremsscheibe','bremsscheiben','disc','brake'], mfrName: 'BOSCH', articleNumber: '0 986 479 B56', name: 'Bremsscheibe', category: 'Bremse', specs: [{attrName:'Durchmesser',attrValue:'280',attrUnit:'mm'},{attrName:'Einbauseite',attrValue:'Vorderachse'},{attrName:'Breite',attrValue:'22',attrUnit:'mm'}], oeNumbers: ['5Q0615301G','5Q0615301AB'] },
+  { id: 'bs002', keywords: ['bremse','bremsscheibe','bremsscheiben','disc','brake'], mfrName: 'ZIMMERMANN', articleNumber: '100.3300.20', name: 'Bremsscheibe belüftet', category: 'Bremse', specs: [{attrName:'Durchmesser',attrValue:'300',attrUnit:'mm'},{attrName:'Einbauseite',attrValue:'Vorderachse'},{attrName:'Breite',attrValue:'22',attrUnit:'mm'}], oeNumbers: ['34116756095','34116797772'] },
+  { id: 'bs003', keywords: ['bremse','bremsscheibe','bremsscheiben','disc','brake'], mfrName: 'BREMBO', articleNumber: '09.B513.11', name: 'Bremsscheibe Sport', category: 'Bremse', specs: [{attrName:'Durchmesser',attrValue:'312',attrUnit:'mm'},{attrName:'Einbauseite',attrValue:'Vorderachse'},{attrName:'Breite',attrValue:'25',attrUnit:'mm'}], oeNumbers: ['1J0615301H','1J0615301AB'] },
+  { id: 'bs004', keywords: ['bremse','bremsscheibe','bremsscheiben','disc','brake'], mfrName: 'ATE', articleNumber: '24.0120-0156.1', name: 'Bremsscheibe', category: 'Bremse', specs: [{attrName:'Durchmesser',attrValue:'258',attrUnit:'mm'},{attrName:'Einbauseite',attrValue:'Hinterachse'},{attrName:'Breite',attrValue:'10',attrUnit:'mm'}], oeNumbers: ['93182185','09117774'] },
+  { id: 'bs005', keywords: ['bremse','bremsscheibe','bremsscheiben','disc','brake'], mfrName: 'TRW', articleNumber: 'DF4928', name: 'Bremsscheibe', category: 'Bremse', specs: [{attrName:'Durchmesser',attrValue:'269',attrUnit:'mm'},{attrName:'Einbauseite',attrValue:'Vorderachse'},{attrName:'Breite',attrValue:'20',attrUnit:'mm'}], oeNumbers: ['402064197R','402063711R'] },
+  { id: 'bs006', keywords: ['bremse','bremsscheibe','bremsscheiben','disc','brake'], mfrName: 'MEYLE', articleNumber: '115 521 0014', name: 'Bremsscheibe belüftet', category: 'Bremse', specs: [{attrName:'Durchmesser',attrValue:'288',attrUnit:'mm'},{attrName:'Einbauseite',attrValue:'Vorderachse'},{attrName:'Breite',attrValue:'25',attrUnit:'mm'}], oeNumbers: ['4246W1','4246W4'] },
+  { id: 'bs007', keywords: ['bremse','bremsscheibe','bremsscheiben','disc','brake'], mfrName: 'TEXTAR', articleNumber: '92159703', name: 'Bremsscheibe', category: 'Bremse', specs: [{attrName:'Durchmesser',attrValue:'320',attrUnit:'mm'},{attrName:'Einbauseite',attrValue:'Hinterachse'},{attrName:'Breite',attrValue:'20',attrUnit:'mm'}], oeNumbers: ['34216864900','34216794027'] },
+  { id: 'bs008', keywords: ['bremse','bremsscheibe','bremsscheiben','disc','brake'], mfrName: 'JURID', articleNumber: '562072J', name: 'Bremsscheibe Vollscheibe', category: 'Bremse', specs: [{attrName:'Durchmesser',attrValue:'238',attrUnit:'mm'},{attrName:'Einbauseite',attrValue:'Vorderachse'},{attrName:'Breite',attrValue:'10',attrUnit:'mm'}], oeNumbers: ['GBD90791','93192525'] },
+
+  // BREMSBELÄGE
+  { id: 'bb001', keywords: ['bremse','bremsbelag','bremsbelaege','bremsbeläge','brake pad'], mfrName: 'BOSCH', articleNumber: '0 986 494 565', name: 'Bremsbelagsatz Scheibenbremse', category: 'Bremse', specs: [{attrName:'Einbauseite',attrValue:'Vorderachse'},{attrName:'Anzahl Platten',attrValue:'4'}], oeNumbers: ['7D0698151A'] },
+  { id: 'bb002', keywords: ['bremse','bremsbelag','bremsbelaege','bremsbeläge','brake pad'], mfrName: 'BREMBO', articleNumber: 'P 23 097', name: 'Bremsbelagsatz Sport', category: 'Bremse', specs: [{attrName:'Einbauseite',attrValue:'Vorderachse'}], oeNumbers: ['34116761292'] },
+
+  // ZÜNDKERZEN
+  { id: 'zk001', keywords: ['zuendkerze','zündkerze','zuendkerzen','zündkerzen','spark plug','spark'], mfrName: 'BOSCH', articleNumber: 'FR 7 KPP 33+', name: 'Zuendkerze Platin', category: 'Zuendanlage', specs: [{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'},{attrName:'Schlusselweite',attrValue:'16',attrUnit:'mm'},{attrName:'Elektrodenabstand',attrValue:'0,9',attrUnit:'mm'}], oeNumbers: ['030905601AA','030905601AE','030905601AF'] },
+  { id: 'zk002', keywords: ['zuendkerze','zündkerze','zuendkerzen','zündkerzen','spark plug','spark'], mfrName: 'NGK', articleNumber: 'BKR6EGP', name: 'Zuendkerze G-Power Platin', category: 'Zuendanlage', specs: [{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'},{attrName:'Schlusselweite',attrValue:'16',attrUnit:'mm'},{attrName:'Elektrodenabstand',attrValue:'1,1',attrUnit:'mm'}], oeNumbers: ['0K2A918110','BP9Y-EFS'] },
+  { id: 'zk003', keywords: ['zuendkerze','zündkerze','zuendkerzen','zündkerzen','spark plug','spark'], mfrName: 'DENSO', articleNumber: 'IK20', name: 'Zuendkerze Iridium Power', category: 'Zuendanlage', specs: [{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'},{attrName:'Schlusselweite',attrValue:'16',attrUnit:'mm'},{attrName:'Elektrodenabstand',attrValue:'1,1',attrUnit:'mm'}], oeNumbers: ['MD362896','90919-01184'] },
+  { id: 'zk004', keywords: ['zuendkerze','zündkerze','zuendkerzen','zündkerzen','spark plug','spark'], mfrName: 'CHAMPION', articleNumber: 'RE7MCS', name: 'Zuendkerze Copper Plus', category: 'Zuendanlage', specs: [{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'},{attrName:'Schlusselweite',attrValue:'16',attrUnit:'mm'}], oeNumbers: ['12120037607','12120032135'] },
+  { id: 'zk005', keywords: ['zuendkerze','zündkerze','zuendkerzen','zündkerzen','spark plug','spark'], mfrName: 'NGK', articleNumber: 'PLFER7A8EG', name: 'Zuendkerze Laser Platinum', category: 'Zuendanlage', specs: [{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'},{attrName:'Schlusselweite',attrValue:'16',attrUnit:'mm'},{attrName:'Elektrodenabstand',attrValue:'0,7',attrUnit:'mm'}], oeNumbers: ['0242229791','55575605'] },
+  { id: 'zk006', keywords: ['zuendkerze','zündkerze','zuendkerzen','zündkerzen','spark plug','spark'], mfrName: 'BOSCH', articleNumber: 'YR 7 SEU+', name: 'Zuendkerze Super 4 Erbium', category: 'Zuendanlage', specs: [{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'},{attrName:'Elektrodenabstand',attrValue:'0,8',attrUnit:'mm'}], oeNumbers: ['12122158252'] },
+  { id: 'zk007', keywords: ['zuendkerze','zündkerze','zuendkerzen','zündkerzen','spark plug','spark'], mfrName: 'DENSO', articleNumber: 'VK20', name: 'Zuendkerze VK-Serie', category: 'Zuendanlage', specs: [{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'},{attrName:'Schlusselweite',attrValue:'16',attrUnit:'mm'}], oeNumbers: ['22401-8H515','22401-BN025'] },
+
+  // GETRIEBE
+  { id: 'gt001', keywords: ['getriebe','transmission','gearbox'], mfrName: 'LUK', articleNumber: '602 0003 00', name: 'Kupplungssatz (Getriebe)', category: 'Getriebe', specs: [{attrName:'Kupplungsscheiben-Durchmesser',attrValue:'228',attrUnit:'mm'},{attrName:'Anzahl Zaehne',attrValue:'23'}], oeNumbers: ['21207543839','21207573821'] },
+  { id: 'gt002', keywords: ['getriebe','transmission','gearbox'], mfrName: 'SACHS', articleNumber: '3000 951 677', name: 'Kupplungssatz komplett', category: 'Getriebe', specs: [{attrName:'Kupplungsscheiben-Durchmesser',attrValue:'240',attrUnit:'mm'},{attrName:'Hoehe',attrValue:'46',attrUnit:'mm'}], oeNumbers: ['24111223088','24111223097'] },
+  { id: 'gt003', keywords: ['getriebe','transmission','gearbox'], mfrName: 'FEBI BILSTEIN', articleNumber: '101453', name: 'Getriebelagerung', category: 'Getriebe', specs: [{attrName:'Lagerart',attrValue:'Gummilager'}], oeNumbers: ['1H0199855H','1H0199855G'] },
+  { id: 'gt004', keywords: ['getriebe','transmission','gearbox'], mfrName: 'ELRING', articleNumber: '914.041', name: 'Getriebegehaeuse Dichtungssatz', category: 'Getriebe', specs: [{attrName:'Zahl der Teile',attrValue:'3'}], oeNumbers: ['0AM398009','0AM398009A'] },
+  { id: 'gt005', keywords: ['getriebe','transmission','gearbox'], mfrName: 'ZF', articleNumber: 'S5-18/3-3', name: 'Getriebeoel ATF', category: 'Getriebe', specs: [{attrName:'Inhalt',attrValue:'1',attrUnit:'Liter'},{attrName:'Spezifikation',attrValue:'Dexron II'}], oeNumbers: [] },
+  { id: 'gt006', keywords: ['getriebe','transmission','gearbox'], mfrName: 'MEYLE', articleNumber: '614 137 0013', name: 'Antriebswellensatz Getriebe', category: 'Getriebe', specs: [{attrName:'Seite',attrValue:'links'},{attrName:'Laenge',attrValue:'597',attrUnit:'mm'}], oeNumbers: ['3272KL','3272KD'] },
+  { id: 'gt007', keywords: ['getriebe','transmission','gearbox'], mfrName: 'LUK', articleNumber: '537 0181 10', name: 'Ausruecklager Getriebe', category: 'Getriebe', specs: [{attrName:'Innendurchmesser',attrValue:'27',attrUnit:'mm'}], oeNumbers: ['52401461','55702480'] },
+
+  // ÖLFILTER
+  { id: 'of001', keywords: ['oelfilter','ölfilter','oil filter','filter'], mfrName: 'BOSCH', articleNumber: 'F 026 407 006', name: 'Oelfilter', category: 'Oelfilter', specs: [{attrName:'Innendurchmesser',attrValue:'62',attrUnit:'mm'},{attrName:'Aussenduchmesser',attrValue:'76',attrUnit:'mm'},{attrName:'Hoehe',attrValue:'78',attrUnit:'mm'}], oeNumbers: ['15400-PLM-A01','15400-PLM-A02'] },
+  { id: 'of002', keywords: ['oelfilter','ölfilter','oil filter','filter'], mfrName: 'MANN-FILTER', articleNumber: 'W 712/93', name: 'Oelfilter', category: 'Oelfilter', specs: [{attrName:'Innendurchmesser',attrValue:'62',attrUnit:'mm'},{attrName:'Hoehe',attrValue:'74',attrUnit:'mm'}], oeNumbers: ['0451103316','5650353'] },
+  { id: 'of003', keywords: ['oelfilter','ölfilter','oil filter','filter'], mfrName: 'MAHLE ORIGINAL', articleNumber: 'OC 295', name: 'Oelfilter', category: 'Oelfilter', specs: [{attrName:'Innendurchmesser',attrValue:'62',attrUnit:'mm'},{attrName:'Hoehe',attrValue:'76',attrUnit:'mm'}], oeNumbers: ['030115561E','030115561AH'] },
+
+  // LUFTFILTER
+  { id: 'lf001', keywords: ['luftfilter','air filter','filter'], mfrName: 'BOSCH', articleNumber: 'F 026 400 072', name: 'Luftfilter', category: 'Luftfilter', specs: [{attrName:'Laenge',attrValue:'257',attrUnit:'mm'},{attrName:'Breite',attrValue:'213',attrUnit:'mm'},{attrName:'Hoehe',attrValue:'47',attrUnit:'mm'}], oeNumbers: ['1987429404'] },
+  { id: 'lf002', keywords: ['luftfilter','air filter','filter'], mfrName: 'MANN-FILTER', articleNumber: 'C 24 030', name: 'Luftfilter', category: 'Luftfilter', specs: [{attrName:'Laenge',attrValue:'290',attrUnit:'mm'},{attrName:'Breite',attrValue:'188',attrUnit:'mm'}], oeNumbers: ['1444QK','1444VF'] },
+
+  // STOßDÄMPFER
+  { id: 'sd001', keywords: ['stossdaempfer','stoßdämpfer','stoss','daempfer','shock absorber'], mfrName: 'BILSTEIN', articleNumber: 'B4 22-229434', name: 'Stossdaempfer Vorderachse', category: 'Stossdaempfer', specs: [{attrName:'Einbauseite',attrValue:'Vorderachse'},{attrName:'Typ',attrValue:'Zweirohr'}], oeNumbers: ['5340F6','5340F7'] },
+  { id: 'sd002', keywords: ['stossdaempfer','stoßdämpfer','stoss','daempfer','shock absorber'], mfrName: 'SACHS', articleNumber: '315 718', name: 'Stossdaempfer', category: 'Stossdaempfer', specs: [{attrName:'Einbauseite',attrValue:'Vorderachse'}], oeNumbers: ['8200869725','8200869726'] },
+  { id: 'sd003', keywords: ['stossdaempfer','stoßdämpfer','stoss','daempfer','shock absorber'], mfrName: 'MONROE', articleNumber: 'G8006', name: 'Stossdaempfer Gas-Druck', category: 'Stossdaempfer', specs: [{attrName:'Einbauseite',attrValue:'Hinterachse'},{attrName:'Typ',attrValue:'Einrohr'}], oeNumbers: ['333219','0K55228700E'] },
+
+  // KUPPLUNG
+  { id: 'ku001', keywords: ['kupplung','kupplungssatz','clutch'], mfrName: 'LUK', articleNumber: '624 3410 09', name: 'Kupplungssatz', category: 'Kupplung', specs: [{attrName:'Kupplungsscheiben-Durchmesser',attrValue:'215',attrUnit:'mm'}], oeNumbers: ['21201223296'] },
+  { id: 'ku002', keywords: ['kupplung','kupplungssatz','clutch'], mfrName: 'SACHS', articleNumber: '3000 832 101', name: 'Kupplungssatz komplett', category: 'Kupplung', specs: [{attrName:'Kupplungsscheiben-Durchmesser',attrValue:'215',attrUnit:'mm'},{attrName:'Anzahl Zaehne',attrValue:'18'}], oeNumbers: ['3000523031'] },
+
+  // ZAHNRIEMEN
+  { id: 'zr001', keywords: ['zahnriemen','timing belt','riemen'], mfrName: 'GATES', articleNumber: 'T38102', name: 'Zahnriemensatz', category: 'Motor', specs: [{attrName:'Laenge',attrValue:'1020',attrUnit:'mm'},{attrName:'Anzahl Zaehne',attrValue:'120'}], oeNumbers: ['030109119M','030109119H'] },
+  { id: 'zr002', keywords: ['zahnriemen','timing belt','riemen'], mfrName: 'DAYCO', articleNumber: 'KTB283', name: 'Zahnriemensatz mit Wasserpumpe', category: 'Motor', specs: [{attrName:'Laenge',attrValue:'960',attrUnit:'mm'}], oeNumbers: ['7701477048'] },
+
+  // WASSERPUMPE
+  { id: 'wp001', keywords: ['wasserpumpe','water pump','pumpe'], mfrName: 'DOLZ', articleNumber: 'A148', name: 'Wasserpumpe', category: 'Kuehlung', specs: [{attrName:'Anzahl Schaufeln',attrValue:'6'}], oeNumbers: ['030121005Q','030121005M'] },
+  { id: 'wp002', keywords: ['wasserpumpe','water pump','pumpe'], mfrName: 'GATES', articleNumber: 'WP0109', name: 'Wasserpumpe', category: 'Kuehlung', specs: [{attrName:'Riemenscheibendurchmesser',attrValue:'58',attrUnit:'mm'}], oeNumbers: ['1201E5','9637478880'] },
+];
+
+function staticSearch(query) {
+  const q = query.toLowerCase().replace(/[äöü]/g, c => ({ä:'ae',ö:'oe',ü:'ue'}[c]||c));
+  const tokens = q.split(/\s+/).filter(t => t.length > 2);
+  const scored = STATIC_CATALOG.map(item => {
+    const kw = item.keywords;
+    const score = tokens.reduce((s, t) => s + (kw.some(k => k.includes(t) || t.includes(k)) ? 2 : 0) +
+      (item.name.toLowerCase().replace(/[äöü]/g, c => ({ä:'ae',ö:'oe',ü:'ue'}[c]||c)).includes(t) ? 1 : 0) +
+      (item.category.toLowerCase().includes(t) ? 1 : 0), 0);
+    return { item, score };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
+
+  const items = scored.slice(0, 20).map(({ item }) => ({
+    legacyArticleId: item.id,
+    articleNumber: item.articleNumber,
+    mfrName: item.mfrName,
+    articleText: item.name,
+    genericArticles: [{ genericArticleDescription: item.name, assemblyGroupDescription: item.category }],
+    images: [],
+    oeNumbers: (item.oeNumbers || []).map(n => ({ oeNumber: n })),
+    immediateAttributs: (item.specs || []).map(s => ({ attrName: s.attrName, attrValue: s.attrValue, attrUnit: s.attrUnit || '' })),
+  }));
+
+  return { articles: items, totalMatchingArticles: items.length, source: 'static_catalog' };
+}
+
 export default async function handler(req) {
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type' };
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -109,9 +195,19 @@ export default async function handler(req) {
       );
       result = res.ok ? await res.json() : { error: `KBA error: ${res.status}` };
     } else if (action === 'search' && query) {
-      result = await peg('LIST_ARTICLES_BY_QUICK_SEARCH', {
-        searchQuery: query, page, perPage: 20, includeAll: true,
-      });
+      // Try TecAlliance first; fall back to static catalog if not licensed (400)
+      try {
+        const pegResult = await peg('LIST_ARTICLES_BY_QUICK_SEARCH', {
+          searchQuery: query, page, perPage: 20, includeAll: true,
+        });
+        if (pegResult?.error || pegResult?.status >= 400) {
+          result = staticSearch(query);
+        } else {
+          result = pegResult;
+        }
+      } catch(_) {
+        result = staticSearch(query);
+      }
     } else if (action === 'articles' && ktype) {
       result = await peg('LIST_ARTICLES_BY_LINKAGE_TARGET', {
         linkageTargetId: ktype,
