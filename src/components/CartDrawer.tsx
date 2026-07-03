@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard } from "lucide-react";
+import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice, fetchFreshCheckoutUrl } from "@/lib/shopify";
@@ -187,26 +187,21 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     toast.success("Bestellung bestätigt", { description: "Zahlung bei Abholung an der Theke." });
   };
 
-  // Normaler Shopify Checkout (für alle)
-  const handleOnlineCheckout = async () => {
-    if (!cartId) {
-      toast.error("Warenkorb nicht gefunden", { description: "Füge ein Produkt hinzu und versuch es nochmal." });
-      return;
+  // Normaler Shopify Checkout — direkte Cart-URL ohne API-Call, 100% zuverlässig
+  const handleOnlineCheckout = () => {
+    if (items.length === 0) return;
+    // Variant-IDs aus GID extrahieren: "gid://shopify/ProductVariant/12345" → "12345"
+    const cartItems = items
+      .map(i => {
+        const numericId = i.variantId.split('/').pop();
+        return `${numericId}:${i.quantity}`;
+      })
+      .join(',');
+    const shopifyCartUrl = `https://j1a6sr-q2.myshopify.com/cart/${cartItems}`;
+    if (user) {
+      recordOrder({ userId: user.id, items: toOrderItems(), total, currency });
     }
-    setCheckoutLoading(true);
-    try {
-      const freshUrl = await fetchFreshCheckoutUrl(cartId);
-      if (!freshUrl) {
-        toast.error("Online-Kasse gerade nicht verfügbar", { description: "Versuch es gleich nochmal." });
-        return;
-      }
-      if (user) {
-        recordOrder({ userId: user.id, items: toOrderItems(), total, currency });
-      }
-      window.open(freshUrl, '_blank', 'noopener,noreferrer');
-    } finally {
-      setCheckoutLoading(false);
-    }
+    window.location.href = shopifyCartUrl;
   };
 
   const openInvoicePdf = () => {
@@ -310,3 +305,4 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             {/* ── Artikel-Liste ── */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {items.length === 0 ? (
+                <p className="text-muted-foreground text-center py-1
