@@ -2,6 +2,13 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, isAuthConfigured } from "@/lib/supabase";
 
+// Projekt-Fahrzeug des Kunden — wird in Supabase user_metadata gespeichert.
+export interface Vehicle {
+  id: string;
+  label: string; // z.B. "BMW 320i G20, 2021"
+  color_code?: string; // z.B. "LC9Z" — spart im Planner die Farbcode-Suche
+}
+
 export interface CompanyProfile {
   company_name?: string;
   contact_name?: string;
@@ -9,6 +16,7 @@ export interface CompanyProfile {
   address?: string;
   // Mitgliedschaftsstufe: 0 = kein Mitglied, 1/2/3 = Level. Wird von Alex in Supabase gesetzt.
   membership_level?: number;
+  vehicles?: Vehicle[];
 }
 
 interface AuthState {
@@ -33,6 +41,7 @@ function readProfile(user: User | null): CompanyProfile {
     phone: m.phone ?? "",
     address: m.address ?? "",
     membership_level: typeof m.membership_level === "number" ? m.membership_level : 0,
+    vehicles: Array.isArray(m.vehicles) ? m.vehicles : [],
   };
 }
 

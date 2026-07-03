@@ -71,6 +71,9 @@ ${PRODUCT_CATALOG}
 5. "reason" = 1 kurzer Satz für Werkstatt-Profis, warum das Material gebraucht wird.
 6. "search_query" = kurzer Shopify-Suchbegriff (z.B. "friz klarlack", "silikonentferner", "abdeckband 19mm").
 7. 5-10 Positionen. Pflichtmaterial zuerst.
+8. Wenn der Kunde einen FARBCODE angibt: in den Basislack-Namen aufnehmen (z.B. "Mipa 1K Basislack, Farbcode LC9Z"). Wenn nicht: "(Farbcode wird an der Theke ermittelt)" ergänzen.
+9. Wenn der Kunde eine LACKMENGE vorgibt: exakt diese Menge verwenden und den Katalogpreis der nächstgrößeren Gebindegröße nehmen — NICHT neu kalkulieren.
+10. Wenn der Kunde einen KLARLACK-WUNSCH angibt: genau dieses Produkt empfehlen, keinen anderen.
 
 ## JSON-FORMAT (exakt so)
 {

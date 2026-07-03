@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Loader2, Mail, Lock, Building2, User as UserIcon, Phone } from "lucide-react";
+import { Loader2, Mail, Lock, Building2, User as UserIcon, Phone, Car, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Seo } from "@/components/Seo";
 import { useAuth } from "@/context/AuthContext";
@@ -18,6 +18,8 @@ export default function Konto() {
   const [company, setCompany] = useState("");
   const [contact, setContact] = useState("");
   const [phone, setPhone] = useState("");
+  // Projekt-Fahrzeuge: bei Registrierung einpflegen → im AI-Planner per Ein-Tipp wählbar
+  const [vehicles, setVehicles] = useState<{ label: string; color_code: string }[]>([]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +35,13 @@ export default function Konto() {
           company_name: company,
           contact_name: contact,
           phone,
+          vehicles: vehicles
+            .filter((v) => v.label.trim())
+            .map((v, i) => ({
+              id: `${Date.now()}-${i}`,
+              label: v.label.trim(),
+              ...(v.color_code.trim() ? { color_code: v.color_code.trim() } : {}),
+            })),
         });
         if (error) return toast.error("Registrierung fehlgeschlagen", { description: error });
         if (needsConfirmation) {
@@ -100,6 +109,47 @@ export default function Konto() {
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefon (optional)" className="input-base pl-11" />
+              </div>
+
+              {/* ── Projekt-Fahrzeuge (optional) ── */}
+              <div className="pt-2">
+                <p className="text-sm font-medium mb-1 flex items-center gap-1.5">
+                  <Car className="w-4 h-4 text-primary" /> Deine Projekt-Fahrzeuge (optional)
+                </p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Einmal einpflegen — im AI-Materialplaner wählst du sie später mit einem Tipp aus.
+                </p>
+                {vehicles.map((v, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <input
+                      value={v.label}
+                      onChange={(e) => setVehicles(vehicles.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+                      placeholder="z.B. BMW 320i G20, 2021"
+                      className="input-base flex-1"
+                    />
+                    <input
+                      value={v.color_code}
+                      onChange={(e) => setVehicles(vehicles.map((x, j) => (j === i ? { ...x, color_code: e.target.value } : x)))}
+                      placeholder="Farbcode"
+                      className="input-base w-28"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setVehicles(vehicles.filter((_, j) => j !== i))}
+                      className="w-11 shrink-0 flex items-center justify-center text-destructive hover:bg-destructive/10 rounded-lg"
+                      aria-label="Fahrzeug entfernen"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setVehicles([...vehicles, { label: "", color_code: "" }])}
+                  className="btn-outline w-full text-sm"
+                >
+                  <Plus className="w-4 h-4" /> Fahrzeug hinzufügen
+                </button>
               </div>
             </>
           )}

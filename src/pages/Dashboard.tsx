@@ -26,7 +26,7 @@ import { Inbox } from "@/components/Inbox";
 import { MaterialPlanner } from "@/components/MaterialPlanner";
 import Teileportal from "@/pages/Teileportal";
 import { useProducts } from "@/hooks/useProducts";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, type Vehicle } from "@/context/AuthContext";
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useCartStore } from "@/stores/cartStore";
 import { getOrders, type Order } from "@/lib/orders";
@@ -443,12 +443,25 @@ function ProfileForm() {
     phone: profile.phone ?? "",
     address: profile.address ?? "",
   });
+  const [vehicles, setVehicles] = useState<Vehicle[]>(profile.vehicles ?? []);
+  const [newLabel, setNewLabel] = useState("");
+  const [newCode, setNewCode] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const addVehicle = () => {
+    if (!newLabel.trim()) return;
+    setVehicles([
+      ...vehicles,
+      { id: `${Date.now()}`, label: newLabel.trim(), ...(newCode.trim() ? { color_code: newCode.trim() } : {}) },
+    ]);
+    setNewLabel("");
+    setNewCode("");
+  };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const { error } = await updateProfile(form);
+    const { error } = await updateProfile({ ...form, vehicles });
     setSaving(false);
     if (error) toast.error("Speichern fehlgeschlagen", { description: error });
     else toast.success("Gespeichert");
@@ -473,6 +486,45 @@ function ProfileForm() {
         <label className="text-sm font-medium mb-1 block">Lieferadresse</label>
         <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="input-base" />
       </div>
+      {/* ── Meine Projektautos ── */}
+      <div className="pt-2 border-t border-border">
+        <label className="text-sm font-medium mb-1 mt-3 flex items-center gap-1.5">
+          <Car className="w-4 h-4 text-primary" /> Meine Projektautos
+        </label>
+        <p className="text-xs text-muted-foreground mb-3">
+          Im AI-Materialplaner mit einem Tipp wählbar — inklusive Farbcode.
+        </p>
+        {vehicles.length === 0 && (
+          <p className="text-sm text-muted-foreground mb-3">Noch keine Fahrzeuge — füg unten dein erstes Projektauto hinzu.</p>
+        )}
+        <div className="space-y-2 mb-3">
+          {vehicles.map((v) => (
+            <div key={v.id} className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
+              <Car className="w-4 h-4 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{v.label}</p>
+                {v.color_code && <p className="text-xs text-muted-foreground">Farbcode {v.color_code}</p>}
+              </div>
+              <button
+                type="button"
+                onClick={() => setVehicles(vehicles.filter((x) => x.id !== v.id))}
+                className="w-9 h-9 flex items-center justify-center text-destructive hover:bg-destructive/10 rounded-md shrink-0"
+                aria-label="Fahrzeug entfernen"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="z.B. BMW 320i G20, 2021" className="input-base flex-1" />
+          <input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="Farbcode" className="input-base w-28" />
+          <button type="button" onClick={addVehicle} disabled={!newLabel.trim()} className="btn-outline shrink-0 px-4 disabled:opacity-40" aria-label="Fahrzeug hinzufügen">
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
       <button type="submit" disabled={saving} className="btn-primary">
         {saving && <Loader2 className="w-5 h-5 animate-spin" />} Speichern
       </button>

@@ -15,8 +15,11 @@ export type PlannerStep = 1 | 2 | 3;
 export interface PlannerBriefing {
   job: string; // Was wird gemacht?
   vehicle: string; // Marke + Modell (optional)
+  colorCode: string; // Farbcode falls bekannt (z.B. "LC9Z"), "" = AI/Theke klärt
   area: string; // Schadenstelle
   quality: string; // Qualitätsstufe
+  paintAmount: string; // gewünschte Lackmenge, "" = AI kalkuliert
+  clearcoat: string; // Klarlack-Wunsch, "" = AI empfiehlt
 }
 
 export interface AIPlanItem {
@@ -36,7 +39,7 @@ export interface AIPlan {
   hint?: string;
 }
 
-const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", area: "", quality: "" };
+const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", colorCode: "", area: "", quality: "", paintAmount: "", clearcoat: "" };
 
 interface PlannerStore {
   items: PlannerItem[];

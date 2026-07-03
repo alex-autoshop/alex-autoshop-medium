@@ -12,10 +12,14 @@ import {
   Loader2,
   AlertTriangle,
   Wand2,
+  Car,
+  Palette,
+  Hand,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePlannerStore, type AIPlan, type AIPlanItem } from "@/stores/plannerStore";
 import { useCartStore } from "@/stores/cartStore";
+import { useAuth, type Vehicle } from "@/context/AuthContext";
 import {
   storefrontApiRequest,
   STOREFRONT_PRODUCTS_QUERY,
@@ -27,6 +31,7 @@ import { cn } from "@/lib/utils";
 // ─────────────────────────────────────────────────────────────────────
 // AI-Materialplaner — 3 Schritte auf einer Page:
 // 1. Projekt-Briefing (große Touch-Buttons, kein Tippen nötig)
+//    + Erstuser-Tutorial + Fahrzeug-Garage + optionale Profi-Details
 // 2. AI generiert Materialplan (/api/alex-ai, SSE-Stream)
 // 3. Aktionen: Warenkorb, WhatsApp, Drucken, Neu planen
 // ─────────────────────────────────────────────────────────────────────
@@ -38,6 +43,12 @@ const QUALITIES = [
   { value: "Mittelklasse (Mipa)", label: "Mittelklasse", sub: "Mipa" },
   { value: "Budget (FRIZ)", label: "Budget", sub: "FRIZ / Master" },
 ];
+const PAINT_AMOUNTS = ["250 ml", "500 ml", "1 L", "2 L oder mehr"];
+const CLEARCOATS = [
+  { label: "FRIZ 2K — 13€", value: "FRIZ 2K-Klarlack 500ml" },
+  { label: "Mipa CX4 Express — 29,95€", value: "Mipa CX4 Express-Klarlack 1L" },
+  { label: "Master HS 5L — 65€", value: "Master HS Klarlack 5L" },
+];
 
 const LOADING_STEPS = [
   "Projekt wird analysiert …",
@@ -45,6 +56,8 @@ const LOADING_STEPS = [
   "Produkte aus dem Sortiment gewählt …",
   "Preise werden geprüft …",
 ];
+
+const TUTORIAL_KEY = "aiplanner-tutorial-done";
 
 // Framer Motion Varianten für Step-Übergänge
 const stepVariants = {
@@ -145,8 +158,10 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
   const { step, briefing, aiPlan, setStep, setBriefing, setAiPlan, toggleAiItem, resetPlanner } =
     usePlannerStore();
   const addItem = useCartStore((s) => s.addItem);
+  const { profile } = useAuth();
+  const garage: Vehicle[] = profile.vehicles ?? [];
 
-  // Briefing-Unterschritt (0=Arbeit, 1=Fahrzeug, 2=Stelle, 3=Qualität)
+  // Briefing-Unterschritt (0=Arbeit, 1=Fahrzeug, 2=Stelle, 3=Qualität, 4=Profi-Details)
   const [q, setQ] = useState(0);
   const [customJob, setCustomJob] = useState("");
   const [customArea, setCustomArea] = useState("");
@@ -154,6 +169,24 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [cartBusy, setCartBusy] = useState(false);
   const [cartDone, setCartDone] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => {
+    try {
+      return !localStorage.getItem(TUTORIAL_KEY);
+    } catch {
+      return false;
+    }
+  });
+
+  const dismissTutorial = () => {
+    try {
+      localStorage.setItem(TUTORIAL_KEY, "1");
+    } catch {
+      /* localStorage gesperrt */
+    }
+    setShowTutorial(false);
+  };
+
+  const TOTAL_Q = 5;
 
   // ── Schritt 2: AI-Plan generieren ──
   const generate = async (b = briefing) => {
@@ -169,8 +202,11 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
       `Erstelle einen Materialplan für folgendes Lackier-Projekt:`,
       `Arbeit: ${b.job}`,
       b.vehicle ? `Fahrzeug: ${b.vehicle}` : `Fahrzeug: nicht angegeben`,
+      b.colorCode ? `Farbcode: ${b.colorCode}` : `Farbcode: nicht bekannt — an der Theke ermitteln`,
       `Schadenstelle: ${b.area}`,
       `Qualitätsstufe: ${b.quality}`,
+      b.paintAmount ? `Gewünschte Lackmenge (vom Kunden vorgegeben): ${b.paintAmount}` : `Lackmenge: bitte passend kalkulieren`,
+      b.clearcoat ? `Klarlack-Wunsch (vom Kunden vorgegeben): ${b.clearcoat}` : `Klarlack: bitte passend empfehlen`,
     ].join("\n");
 
     try {
@@ -245,7 +281,7 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
     const lines = [
       `Hallo Alex Autoshop! 👋 Materialanfrage:`,
       `📋 ${aiPlan.title}`,
-      briefing.vehicle ? `🚗 ${briefing.vehicle}` : "",
+      briefing.vehicle ? `🚗 ${briefing.vehicle}${briefing.colorCode ? ` — Farbcode ${briefing.colorCode}` : ""}` : "",
       "",
       ...aiPlan.items.filter((i) => i.included).map((i) => `• ${i.name} — ${i.quantity}${i.price ? ` (${i.price})` : ""}`),
       "",
@@ -284,11 +320,13 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
     },
     {
       title: "Welches Fahrzeug?",
-      subtitle: "Optional — hilft bei der Mengenkalkulation" as string | undefined,
+      subtitle: (garage.length > 0 ? "Tipp ein gespeichertes Projektauto an — oder gib ein anderes ein" : "Optional — hilft bei der Mengenkalkulation") as string | undefined,
       content: (
-        <VehicleInput
-          value={briefing.vehicle}
-          onChange={(v) => setBriefing({ vehicle: v })}
+        <VehicleStep
+          garage={garage}
+          vehicle={briefing.vehicle}
+          colorCode={briefing.colorCode}
+          onChange={(patch) => setBriefing(patch)}
           onNext={() => setQ(2)}
         />
       ),
@@ -320,9 +358,8 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
               key={opt.value}
               active={briefing.quality === opt.value}
               onClick={() => {
-                const b = { ...briefing, quality: opt.value };
                 setBriefing({ quality: opt.value });
-                generate(b);
+                setQ(4);
               }}
             >
               <span className="font-bold">{opt.label}</span>
@@ -332,13 +369,100 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
         </div>
       ),
     },
+    {
+      title: "Profi-Details?",
+      subtitle: "Optional — wenn du's nicht weißt, entscheidet die AI" as string | undefined,
+      content: (
+        <div className="space-y-5">
+          <div>
+            <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+              <Palette className="w-4 h-4 text-primary" /> Wie viel Lack brauchst du?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Chip label="AI kalkulieren lassen" active={!briefing.paintAmount} onClick={() => setBriefing({ paintAmount: "" })} />
+              {PAINT_AMOUNTS.map((a) => (
+                <Chip key={a} label={a} active={briefing.paintAmount === a} onClick={() => setBriefing({ paintAmount: a })} />
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-primary" /> Welcher Klarlack?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Chip label="AI empfehlen lassen" active={!briefing.clearcoat} onClick={() => setBriefing({ clearcoat: "" })} />
+              {CLEARCOATS.map((c) => (
+                <Chip key={c.value} label={c.label} active={briefing.clearcoat === c.value} onClick={() => setBriefing({ clearcoat: c.value })} />
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-2 pt-1">
+            <button onClick={() => generate()} className="btn-primary w-full min-h-[56px] text-base font-bold">
+              <Wand2 className="w-5 h-5" /> Plan erstellen
+            </button>
+            <button
+              onClick={() => {
+                setBriefing({ paintAmount: "", clearcoat: "" });
+                generate({ ...briefing, paintAmount: "", clearcoat: "" });
+              }}
+              className="min-h-[48px] text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Überspringen — AI entscheidet alles
+            </button>
+          </div>
+        </div>
+      ),
+    },
   ];
 
   return (
     <div className={cn("relative", compact ? "" : "max-w-2xl")}>
       <AnimatePresence mode="wait">
+        {/* ── ERSTUSER-TUTORIAL ── */}
+        {step === 1 && showTutorial && (
+          <motion.div key="tutorial" variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary mb-1">
+              <Wand2 className="w-4 h-4" /> AI-Materialplaner
+            </p>
+            <h3 className="font-display text-xl sm:text-2xl font-bold mb-4">So einfach geht's</h3>
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={{ show: { transition: { staggerChildren: 0.12 } } }}
+              className="space-y-3 mb-5"
+            >
+              {[
+                { icon: Hand, title: "1 · Fragen antippen", text: "Arbeit, Fahrzeug, Stelle, Qualität — alles große Buttons. Kein Tippen nötig, auch mit Handschuhen." },
+                { icon: Sparkles, title: "2 · AI erstellt deinen Plan", text: "Komplette Materialliste mit Mengen und echten Preisen aus unserem Sortiment — in Sekunden." },
+                { icon: ShoppingCart, title: "3 · Fertig machen", text: "Alles mit einem Klick in den Warenkorb, per WhatsApp anfragen oder als Liste drucken." },
+              ].map(({ icon: Icon, title, text }) => (
+                <motion.div
+                  key={title}
+                  variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
+                  className="flex gap-3 rounded-xl border border-border bg-card p-3.5"
+                >
+                  <div className="w-11 h-11 rounded-lg bg-night flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5 text-gold-bright" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">{title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{text}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+            <p className="text-xs text-muted-foreground bg-secondary/60 rounded-lg p-3 mb-4">
+              💡 <strong>Neu beim Lackieren?</strong> Überspring einfach alle optionalen Felder — die AI kalkuliert Menge, Klarlack und Härter für dich.{" "}
+              <strong>Profi?</strong> Gib Farbcode, Lackmenge und Klarlack selbst vor — dann rechnet die AI exakt damit.
+            </p>
+            <button onClick={dismissTutorial} className="btn-primary w-full min-h-[56px] text-base font-bold">
+              Los geht's <ArrowRight className="w-5 h-5" />
+            </button>
+          </motion.div>
+        )}
+
         {/* ── SCHRITT 1: Briefing ── */}
-        {step === 1 && (
+        {step === 1 && !showTutorial && (
           <motion.div key={`q${q}`} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: "easeOut" }}>
             {/* Fortschritt */}
             <div className="flex items-center gap-2 mb-5">
@@ -352,7 +476,7 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
                   <div key={i} className={cn("h-1.5 flex-1 rounded-full transition-colors", i <= q ? "bg-gold-bright" : "bg-border")} />
                 ))}
               </div>
-              <span className="text-xs font-semibold text-muted-foreground shrink-0">{q + 1}/4</span>
+              <span className="text-xs font-semibold text-muted-foreground shrink-0">{q + 1}/{TOTAL_Q}</span>
             </div>
 
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary mb-1">
@@ -411,12 +535,19 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary mb-1">
               <Sparkles className="w-4 h-4" /> Dein AI-Materialplan
             </p>
-            <div className="flex items-baseline justify-between gap-3 mb-4">
+            <div className="flex items-baseline justify-between gap-3 mb-1">
               <h3 className="font-display text-xl font-bold leading-tight">{aiPlan.title}</h3>
               {aiPlan.totalEstimate && (
                 <span className="shrink-0 text-sm font-bold text-gold-bright bg-night rounded-lg px-3 py-1.5">{aiPlan.totalEstimate}</span>
               )}
             </div>
+            {(briefing.vehicle || briefing.colorCode) && (
+              <p className="text-xs text-muted-foreground mb-4 flex items-center gap-1.5">
+                <Car className="w-3.5 h-3.5" /> {briefing.vehicle}
+                {briefing.colorCode && <span className="font-semibold text-foreground">· Farbcode {briefing.colorCode}</span>}
+              </p>
+            )}
+            {!briefing.vehicle && !briefing.colorCode && <div className="mb-4" />}
 
             {/* Karten-Liste: Produkt | Menge | Preis | Warum */}
             <motion.ul
@@ -500,6 +631,23 @@ function TouchButton({ children, active, onClick }: { children: React.ReactNode;
   );
 }
 
+// Kleine Auswahl-Chips (48px) für Profi-Details
+function Chip({ label, active, onClick }: { label: string; active?: boolean; onClick: () => void }) {
+  return (
+    <motion.button
+      type="button"
+      whileTap={{ scale: 0.96 }}
+      onClick={onClick}
+      className={cn(
+        "min-h-[48px] px-4 rounded-xl border-2 text-sm font-semibold transition-colors",
+        active ? "border-gold-bright bg-night text-white" : "border-border bg-card hover:border-primary"
+      )}
+    >
+      {label}
+    </motion.button>
+  );
+}
+
 function OptionGrid({
   options,
   selected,
@@ -550,22 +698,85 @@ function OptionGrid({
   );
 }
 
-function VehicleInput({ value, onChange, onNext }: { value: string; onChange: (v: string) => void; onNext: () => void }) {
+// Fahrzeug-Schritt: gespeicherte Projektautos (Garage) als Ein-Tipp-Auswahl,
+// plus Freitext + optionalem Farbcode für alle anderen.
+function VehicleStep({
+  garage,
+  vehicle,
+  colorCode,
+  onChange,
+  onNext,
+}: {
+  garage: Vehicle[];
+  vehicle: string;
+  colorCode: string;
+  onChange: (patch: { vehicle?: string; colorCode?: string }) => void;
+  onNext: () => void;
+}) {
+  const [showManual, setShowManual] = useState(garage.length === 0);
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onNext();
-      }}
-      className="grid gap-2.5"
-    >
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="z.B. BMW 3er G20, 2021" className="input-base min-h-[56px] text-base" autoFocus />
-      <button type="submit" className="btn-primary w-full min-h-[56px] text-base font-bold">
-        Weiter <ArrowRight className="w-5 h-5" />
-      </button>
-      <button type="button" onClick={() => { onChange(""); onNext(); }} className="min-h-[48px] text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-        Überspringen
-      </button>
-    </form>
+    <div className="grid gap-2.5">
+      {/* Garage: Ein Tipp wählt Fahrzeug + Farbcode */}
+      {garage.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {garage.map((v) => (
+            <TouchButton
+              key={v.id}
+              active={vehicle === v.label}
+              onClick={() => {
+                onChange({ vehicle: v.label, colorCode: v.color_code ?? "" });
+                onNext();
+              }}
+            >
+              <span className="font-semibold flex items-center gap-2"><Car className="w-4 h-4 shrink-0" /> {v.label}</span>
+              {v.color_code && <span className="text-xs opacity-70">Farbcode {v.color_code}</span>}
+            </TouchButton>
+          ))}
+          {!showManual && (
+            <TouchButton onClick={() => setShowManual(true)}>
+              <span className="font-semibold text-muted-foreground">Anderes Fahrzeug …</span>
+            </TouchButton>
+          )}
+        </div>
+      )}
+
+      {showManual && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onNext();
+          }}
+          className="grid gap-2.5"
+        >
+          <input
+            value={vehicle}
+            onChange={(e) => onChange({ vehicle: e.target.value })}
+            placeholder="z.B. BMW 3er G20, 2021"
+            className="input-base min-h-[56px] text-base"
+            autoFocus={garage.length === 0}
+          />
+          <input
+            value={colorCode}
+            onChange={(e) => onChange({ colorCode: e.target.value })}
+            placeholder="Farbcode, falls bekannt (z.B. LC9Z) — optional"
+            className="input-base min-h-[56px] text-base"
+          />
+          <button type="submit" className="btn-primary w-full min-h-[56px] text-base font-bold">
+            Weiter <ArrowRight className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onChange({ vehicle: "", colorCode: "" });
+              onNext();
+            }}
+            className="min-h-[48px] text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Überspringen
+          </button>
+        </form>
+      )}
+    </div>
   );
 }
