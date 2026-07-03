@@ -60,7 +60,6 @@ function parseIntercarsArticles(data: any): Article[] {
   return items.slice(0, 50).map((ic: any) => {
     const ekPrice: number | undefined = ic.price;
     const sellPrice = ekPrice != null ? Math.ceil(ekPrice * PRICE_MARKUP * 100) / 100 : undefined;
-    // Find image URL — Intercars may return string URLs or objects
     const imgRaw = ic.images?.[0];
     const imageUrl: string | undefined =
       typeof imgRaw === "string" ? imgRaw : imgRaw?.url ?? imgRaw?.imageURL ?? undefined;
@@ -77,7 +76,7 @@ function parseIntercarsArticles(data: any): Article[] {
         : [],
       mountingInfo: undefined,
       price: sellPrice,
-      priceOriginal: undefined, // Don't expose EK price to customers
+      priceOriginal: undefined,
       availability: ic.availability,
       deliveryDays: ic.deliveryDays,
       source: "intercars" as const,
@@ -218,7 +217,6 @@ export default function Teileportal() {
     setSearched(true);
     setSelectedBrands(new Set());
     try {
-      // Try Intercars first (live prices + availability)
       let parsed: Article[] = [];
       let total = 0;
       try {
@@ -229,7 +227,6 @@ export default function Teileportal() {
         // Intercars not configured or failed — fall through to static catalog
       }
 
-      // Fall back to TecDoc / static catalog if Intercars returned nothing
       if (parsed.length === 0) {
         const tdData = await tecdoc({ action: "search", query: partQuery.trim() });
         parsed = parseArticles(tdData);
@@ -288,19 +285,17 @@ export default function Teileportal() {
           <h2 className="text-xl">Fahrzeug finden</h2>
         </div>
 
-        <div className="flex gap-2 mb-4 flex-wrap">
-          {MODES.map((m) => (
+        {/* Mode tabs */}
+        <div className="flex gap-2 mb-4">
+          {MODES.map(m => (
             <button
               key={m.id}
-              type="button"
-              onClick={() => {
-                setMode(m.id);
-                setVehicle(null);
-                setVehicleError(null);
-              }}
+              onClick={() => { setMode(m.id); setVehicle(null); setVehicleError(null); }}
               className={cn(
-                "px-4 min-h-[44px] rounded-lg border font-medium text-sm transition-colors",
-                mode === m.id ? "bg-night text-white border-night" : "bg-card border-border hover:border-primary"
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                mode === m.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
               )}
             >
               {m.label}
@@ -308,80 +303,75 @@ export default function Teileportal() {
           ))}
         </div>
 
-        <form onSubmit={lookupVehicle} className="flex flex-col sm:flex-row gap-3">
+        <form onSubmit={lookupVehicle} className="flex flex-col gap-3">
           {mode === "plate" && (
-            <div className="flex-1 flex items-center rounded-lg border-2 border-night overflow-hidden bg-white">
-              <span className="bg-blue-700 text-white font-bold px-3 self-stretch flex items-center text-sm">D</span>
-              <input
-                value={plate}
-                onChange={(e) => setPlate(e.target.value)}
-                placeholder="W-AB 1234"
-                className="flex-1 px-4 min-h-[52px] text-lg font-bold tracking-widest uppercase focus:outline-none"
-                aria-label="Kennzeichen"
-              />
-            </div>
+            <input
+              value={plate}
+              onChange={e => setPlate(e.target.value)}
+              placeholder="z. B. W-AA1234"
+              className="input-base uppercase"
+              aria-label="Kennzeichen"
+            />
           )}
-
           {mode === "vin" && (
             <input
               value={vin}
-              onChange={(e) => setVin(e.target.value)}
-              placeholder="Fahrgestellnummer (17 Zeichen)"
+              onChange={e => setVin(e.target.value)}
+              placeholder="17-stellige VIN / FIN"
+              className="input-base uppercase"
               maxLength={17}
-              className="input-base flex-1 uppercase tracking-wider"
-              aria-label="VIN / Fahrgestellnummer"
+              aria-label="VIN"
             />
           )}
-
           {mode === "kba" && (
-            <div className="flex-1 flex gap-3">
+            <div className="flex gap-2">
               <input
                 value={hsn}
-                onChange={(e) => setHsn(e.target.value)}
-                placeholder="HSN (2.1)"
+                onChange={e => setHsn(e.target.value)}
+                placeholder="HSN (4-stellig)"
+                className="input-base w-36"
                 maxLength={4}
-                className="input-base w-32 uppercase tracking-wider"
-                aria-label="HSN — Herstellerschlüsselnummer"
+                aria-label="HSN"
               />
               <input
                 value={tsn}
-                onChange={(e) => setTsn(e.target.value)}
-                placeholder="TSN (2.2)"
+                onChange={e => setTsn(e.target.value)}
+                placeholder="TSN (3-stellig)"
+                className="input-base w-36"
                 maxLength={3}
-                className="input-base flex-1 uppercase tracking-wider"
-                aria-label="TSN — Typschlüsselnummer"
+                aria-label="TSN"
               />
             </div>
           )}
-
-          <button type="submit" disabled={vehicleLoading} className="btn-primary sm:px-8">
-            {vehicleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-            Fahrzeug finden
+          <button type="submit" disabled={vehicleLoading} className="btn-primary self-start gap-2">
+            {vehicleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}
+            Fahrzeug suchen
           </button>
         </form>
 
-        {mode === "kba" && (
-          <p className="text-xs text-muted-foreground mt-2">
-            Die Schlüsselnummern stehen im Fahrzeugschein (Zulassungsbescheinigung Teil I):
-            HSN unter Feld 2.1, TSN unter Feld 2.2.
-          </p>
+        {vehicleError && (
+          <p className="text-destructive text-sm mt-3">{vehicleError}</p>
         )}
-        {vehicleError && <p className="text-destructive text-sm mt-3">{vehicleError}</p>}
+
         {vehicle && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-4 rounded-xl bg-secondary p-4 flex items-start gap-3"
+            className="mt-4 rounded-xl bg-primary/10 border border-primary/20 p-4"
           >
-            <Car className="w-6 h-6 text-primary mt-0.5 shrink-0" />
-            <div>
-              <p className="font-bold">{vehicleLabel || "Fahrzeug erkannt"}</p>
-              <p className="text-sm text-muted-foreground">
-                {[vehicle.power && `${vehicle.power} kW`, vehicle.fuel, vehicle.firstRegistration && `EZ ${vehicle.firstRegistration}`]
-                  .filter(Boolean)
-                  .join(" · ")}
+            <p className="font-bold text-primary text-sm mb-1">Fahrzeug erkannt</p>
+            <p className="font-semibold">
+              {[vehicle.manufacturer, vehicle.model, vehicle.typeName].filter(Boolean).join(" ")}
+            </p>
+            {(vehicle.power || vehicle.fuel || vehicle.firstRegistration) && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {[
+                  vehicle.power && `${vehicle.power} kW`,
+                  vehicle.fuel,
+                  vehicle.firstRegistration && `ab ${vehicle.firstRegistration}`,
+                ].filter(Boolean).join(" · ")}
               </p>
-            </div>
+            )}
           </motion.div>
         )}
       </div>
@@ -392,11 +382,11 @@ export default function Teileportal() {
           <span className="w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center text-sm">2</span>
           <h2 className="text-xl">Teil suchen</h2>
         </div>
-        <form onSubmit={searchParts} className="flex flex-col sm:flex-row gap-3">
+        <form onSubmit={searchParts} className="flex gap-2">
           <input
             value={partQuery}
-            onChange={(e) => setPartQuery(e.target.value)}
-            placeholder="z.B. Bremsscheibe, Ölfilter, Stoßdämpfer …"
+            onChange={e => setPartQuery(e.target.value)}
+            placeholder="z. B. Bremsbeläge vorne, Ölfilter, Stoßdämpfer …"
             className="input-base flex-1"
             aria-label="Teilesuche"
           />
@@ -408,7 +398,7 @@ export default function Teileportal() {
         {partsError && <p className="text-destructive text-sm mt-3">{partsError}</p>}
       </div>
 
-      {/* Ergebnisse — Intercars-Style */}
+      {/* Ergebnisse */}
       {searched && !partsLoading && (
         <div className="mt-8">
           {articles.length > 0 ? (() => {
@@ -506,3 +496,87 @@ export default function Teileportal() {
                                   <>
                                     <div className="text-right">
                                       <p className="font-bold text-lg leading-none">
+                                        {a.price.toFixed(2).replace(".", ",")} €
+                                      </p>
+                                      {a.priceOriginal != null && a.priceOriginal > a.price && (
+                                        <p className="text-xs text-muted-foreground line-through">
+                                          {a.priceOriginal.toFixed(2).replace(".", ",")} €
+                                        </p>
+                                      )}
+                                    </div>
+                                    <span className={cn(
+                                      "inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium",
+                                      a.deliveryDays != null && a.deliveryDays <= 1
+                                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                        : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                                    )}>
+                                      {a.availability ?? "Auf Anfrage"}
+                                    </span>
+                                    <a
+                                      href={inquiry(a)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1"
+                                    >
+                                      <MessageCircle className="w-3.5 h-3.5" />
+                                      Bestellen
+                                    </a>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                                      Auf Anfrage
+                                    </span>
+                                    <a
+                                      href={inquiry(a)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1"
+                                    >
+                                      <MessageCircle className="w-3.5 h-3.5" />
+                                      Preis anfragen
+                                    </a>
+                                  </>
+                                )}
+                                <a
+                                  href={`tel:${SHOP_INFO.phoneIntl}`}
+                                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                >
+                                  <Phone className="w-3 h-3" /> {SHOP_INFO.phone}
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })() : (
+            <p className="text-muted-foreground">Keine Teile gefunden — frag uns direkt, wir finden es.</p>
+          )}
+        </div>
+      )}
+
+      {/* Anfrage-CTA */}
+      <div className="section-dark rounded-3xl p-8 sm:p-10 mt-10 max-w-2xl">
+        <h2 className="text-xl sm:text-2xl mb-2">
+          Lieber direkt <span className="text-gold-accent">anfragen?</span>
+        </h2>
+        <p className="text-white/65 mb-6 text-sm leading-relaxed">
+          Schick uns Kennzeichen + Teilewunsch — wir prüfen Preis und Verfügbarkeit und melden uns sofort.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <a href={inquiry()} target="_blank" rel="noopener noreferrer" className="btn-gold-bright flex-1">
+            <MessageCircle className="w-5 h-5" /> Per WhatsApp anfragen
+          </a>
+          <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn bg-white/10 text-white hover:bg-white/20 flex-1">
+            <Phone className="w-5 h-5" /> {SHOP_INFO.phone}
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}

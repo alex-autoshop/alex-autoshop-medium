@@ -25,7 +25,7 @@ export async function recordOrder(order: {
   items: OrderItem[];
   total: number;
   currency: string;
-  status?: string; // z.B. "bestaetigt" fuer Rechnungs-/Abholbestellungen
+  status?: string;
 }): Promise<{ error?: string; orderId?: string }> {
   if (!supabase) return { error: "nicht konfiguriert" };
   const { data, error } = await supabase.from("orders").insert({
@@ -44,4 +44,6 @@ export async function getOrders(userId: string): Promise<Order[]> {
     .from("orders")
     .select("*")
     .eq("user_id", userId)
-    .order("created
+    .order("created_at", { ascending: false });
+  return (data as Order[]) ?? [];
+}

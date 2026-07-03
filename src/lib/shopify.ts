@@ -61,8 +61,8 @@ export async function storefrontApiRequest(query: string, variables: Record<stri
   });
 
   if (response.status === 402) {
-    toast.error("Shopify: Zahlungspflichtiger Plan erforderlich", {
-      description: "Dein Shopify-Store benötigt einen aktiven Plan. Besuche https://admin.shopify.com zum Upgraden.",
+    toast.error("Shop vorübergehend nicht verfügbar", {
+      description: "Bitte kontaktiere uns direkt unter 0202 82690.",
     });
     return;
   }
@@ -288,10 +288,6 @@ export const CART_LINES_REMOVE_MUTATION = `
 function formatCheckoutUrl(checkoutUrl: string): string {
   try {
     const url = new URL(checkoutUrl);
-    // Shopify gibt die Checkout-URL teils über die Primärdomain (alex-autoshop.de) zurück.
-    // Diese Domain zeigt aber auf Vercel (die React-App) und hat keine Checkout-Route -> 404.
-    // Deshalb immer auf Shopifys permanente Domain umbiegen, wo der Checkout sicher gehostet ist.
-    // WICHTIG: channel=online_store NICHT setzen — Shopify 2025 Checkout wirft sonst 404.
     url.host = SHOPIFY_STORE_PERMANENT_DOMAIN;
     url.protocol = 'https:';
     url.searchParams.delete('channel');
@@ -365,11 +361,9 @@ export async function removeLineFromShopifyCart(cartId: string, lineId: string):
   return { success: true };
 }
 
-const CART_FETCH_QUERY = `
-  query getCart($cartId: ID!) {
-    cart(id: $cartId) {
-      id
-      checkoutUrl
-    }
-  }
-`;
+export function formatPrice(amount: string, currencyCode: string): string {
+  return new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: currencyCode,
+  }).format(parseFloat(amount));
+}
