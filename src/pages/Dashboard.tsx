@@ -446,16 +446,26 @@ function ProfileForm() {
   const [vehicles, setVehicles] = useState<Vehicle[]>(profile.vehicles ?? []);
   const [newLabel, setNewLabel] = useState("");
   const [newCode, setNewCode] = useState("");
+  const [newColorName, setNewColorName] = useState("");
+  const [newVin, setNewVin] = useState("");
   const [saving, setSaving] = useState(false);
 
   const addVehicle = () => {
     if (!newLabel.trim()) return;
     setVehicles([
       ...vehicles,
-      { id: `${Date.now()}`, label: newLabel.trim(), ...(newCode.trim() ? { color_code: newCode.trim() } : {}) },
+      {
+        id: `${Date.now()}`,
+        label: newLabel.trim(),
+        ...(newCode.trim() ? { color_code: newCode.trim() } : {}),
+        ...(newColorName.trim() ? { color_name: newColorName.trim() } : {}),
+        ...(newVin.trim() ? { vin: newVin.trim() } : {}),
+      },
     ]);
     setNewLabel("");
     setNewCode("");
+    setNewColorName("");
+    setNewVin("");
   };
 
   const save = async (e: React.FormEvent) => {
@@ -503,7 +513,13 @@ function ProfileForm() {
               <Car className="w-4 h-4 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate">{v.label}</p>
-                {v.color_code && <p className="text-xs text-muted-foreground">Farbcode {v.color_code}</p>}
+                {(v.color_code || v.color_name || v.vin) && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {[v.color_code ? `Farbcode ${v.color_code}` : "", v.color_name ?? "", v.vin ? `VIN ${v.vin}` : ""]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -516,12 +532,18 @@ function ProfileForm() {
             </div>
           ))}
         </div>
-        <div className="flex gap-2">
-          <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="z.B. BMW 320i G20, 2021" className="input-base flex-1" />
-          <input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="Farbcode" className="input-base w-28" />
-          <button type="button" onClick={addVehicle} disabled={!newLabel.trim()} className="btn-outline shrink-0 px-4 disabled:opacity-40" aria-label="Fahrzeug hinzufügen">
-            <Plus className="w-4 h-4" />
-          </button>
+        <div className="space-y-2">
+          <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="Fahrzeug, z.B. BMW 320i G20, 2021" className="input-base text-foreground" />
+          <div className="grid grid-cols-2 gap-2">
+            <input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="Farbcode (z.B. LC9Z)" className="input-base text-foreground" />
+            <input value={newColorName} onChange={(e) => setNewColorName(e.target.value)} placeholder="Farbname" className="input-base text-foreground" />
+          </div>
+          <div className="flex gap-2">
+            <input value={newVin} onChange={(e) => setNewVin(e.target.value)} placeholder="VIN / Fahrgestellnummer (optional)" className="input-base flex-1 text-foreground" />
+            <button type="button" onClick={addVehicle} disabled={!newLabel.trim()} className="btn-outline shrink-0 px-4 disabled:opacity-40" aria-label="Fahrzeug hinzufügen">
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 

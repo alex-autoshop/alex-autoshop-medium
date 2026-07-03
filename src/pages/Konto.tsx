@@ -19,7 +19,7 @@ export default function Konto() {
   const [contact, setContact] = useState("");
   const [phone, setPhone] = useState("");
   // Projekt-Fahrzeuge: bei Registrierung einpflegen → im AI-Planner per Ein-Tipp wählbar
-  const [vehicles, setVehicles] = useState<{ label: string; color_code: string }[]>([]);
+  const [vehicles, setVehicles] = useState<{ label: string; color_code: string; color_name: string; vin: string }[]>([]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +41,8 @@ export default function Konto() {
               id: `${Date.now()}-${i}`,
               label: v.label.trim(),
               ...(v.color_code.trim() ? { color_code: v.color_code.trim() } : {}),
+              ...(v.color_name.trim() ? { color_name: v.color_name.trim() } : {}),
+              ...(v.vin.trim() ? { vin: v.vin.trim() } : {}),
             })),
         });
         if (error) return toast.error("Registrierung fehlgeschlagen", { description: error });
@@ -120,32 +122,48 @@ export default function Konto() {
                   Einmal einpflegen — im AI-Materialplaner wählst du sie später mit einem Tipp aus.
                 </p>
                 {vehicles.map((v, i) => (
-                  <div key={i} className="flex gap-2 mb-2">
+                  <div key={i} className="rounded-lg border border-border p-2.5 mb-2 space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        value={v.label}
+                        onChange={(e) => setVehicles(vehicles.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+                        placeholder="Fahrzeug, z.B. BMW 320i G20"
+                        className="input-base flex-1 text-foreground"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setVehicles(vehicles.filter((_, j) => j !== i))}
+                        className="w-11 shrink-0 flex items-center justify-center text-destructive hover:bg-destructive/10 rounded-lg"
+                        aria-label="Fahrzeug entfernen"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        value={v.color_code}
+                        onChange={(e) => setVehicles(vehicles.map((x, j) => (j === i ? { ...x, color_code: e.target.value } : x)))}
+                        placeholder="Farbcode"
+                        className="input-base text-foreground"
+                      />
+                      <input
+                        value={v.color_name}
+                        onChange={(e) => setVehicles(vehicles.map((x, j) => (j === i ? { ...x, color_name: e.target.value } : x)))}
+                        placeholder="Farbname"
+                        className="input-base text-foreground"
+                      />
+                    </div>
                     <input
-                      value={v.label}
-                      onChange={(e) => setVehicles(vehicles.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
-                      placeholder="z.B. BMW 320i G20, 2021"
-                      className="input-base flex-1"
+                      value={v.vin}
+                      onChange={(e) => setVehicles(vehicles.map((x, j) => (j === i ? { ...x, vin: e.target.value } : x)))}
+                      placeholder="VIN — wir ermitteln den Farbcode kostenlos"
+                      className="input-base text-foreground"
                     />
-                    <input
-                      value={v.color_code}
-                      onChange={(e) => setVehicles(vehicles.map((x, j) => (j === i ? { ...x, color_code: e.target.value } : x)))}
-                      placeholder="Farbcode"
-                      className="input-base w-28"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setVehicles(vehicles.filter((_, j) => j !== i))}
-                      className="w-11 shrink-0 flex items-center justify-center text-destructive hover:bg-destructive/10 rounded-lg"
-                      aria-label="Fahrzeug entfernen"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
                 ))}
                 <button
                   type="button"
-                  onClick={() => setVehicles([...vehicles, { label: "", color_code: "" }])}
+                  onClick={() => setVehicles([...vehicles, { label: "", color_code: "", color_name: "", vin: "" }])}
                   className="btn-outline w-full text-sm"
                 >
                   <Plus className="w-4 h-4" /> Fahrzeug hinzufügen

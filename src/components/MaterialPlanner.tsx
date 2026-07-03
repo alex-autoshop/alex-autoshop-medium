@@ -25,6 +25,7 @@ import {
   STOREFRONT_PRODUCTS_QUERY,
   type ShopifyProduct,
 } from "@/lib/shopify";
+import { sendMessage } from "@/lib/inbox";
 import { whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
@@ -158,7 +159,7 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
   const { step, briefing, aiPlan, setStep, setBriefing, setAiPlan, toggleAiItem, resetPlanner } =
     usePlannerStore();
   const addItem = useCartStore((s) => s.addItem);
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const garage: Vehicle[] = profile.vehicles ?? [];
 
   // Briefing-Unterschritt (0=Arbeit, 1=Fahrzeug, 2=Stelle, 3=Qualität, 4=Profi-Details)
@@ -202,12 +203,17 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
       `Erstelle einen Materialplan für folgendes Lackier-Projekt:`,
       `Arbeit: ${b.job}`,
       b.vehicle ? `Fahrzeug: ${b.vehicle}` : `Fahrzeug: nicht angegeben`,
-      b.colorCode ? `Farbcode: ${b.colorCode}` : `Farbcode: nicht bekannt — an der Theke ermitteln`,
+      b.colorCode
+        ? `Farbcode: ${b.colorCode}`
+        : b.vin
+          ? `Farbcode: unbekannt — Kunde hat VIN angegeben (${b.vin}), Alex Autoshop ermittelt den Farbcode daraus`
+          : `Farbcode: nicht bekannt — an der Theke ermitteln`,
+      b.colorName ? `Farbname: ${b.colorName}` : "",
       `Schadenstelle: ${b.area}`,
       `Qualitätsstufe: ${b.quality}`,
       b.paintAmount ? `Gewünschte Lackmenge (vom Kunden vorgegeben): ${b.paintAmount}` : `Lackmenge: bitte passend kalkulieren`,
       b.clearcoat ? `Klarlack-Wunsch (vom Kunden vorgegeben): ${b.clearcoat}` : `Klarlack: bitte passend empfehlen`,
-    ].join("\n");
+    ].filter(Boolean).join("\n");
 
     try {
       const [raw] = await Promise.all([streamAiResponse(briefingText), minWait]);
@@ -281,7 +287,8 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
     const lines = [
       `Hallo Alex Autoshop! 👋 Materialanfrage:`,
       `📋 ${aiPlan.title}`,
-      briefing.vehicle ? `🚗 ${briefing.vehicle}${briefing.colorCode ? ` — Farbcode ${briefing.colorCode}` : ""}` : "",
+      briefing.vehicle ? `🚗 ${briefing.vehicle}${briefing.colorCode ? ` — Farbcode ${briefing.colorCode}` : ""}${briefing.colorName ? ` (${briefing.colorName})` : ""}` : "",
+      briefing.vin && !briefing.colorCode ? `🔎 VIN: ${briefing.vin} — bitte Farbcode ermitteln` : "",
       "",
       ...aiPlan.items.filter((i) => i.included).map((i) => `• ${i.name} — ${i.quantity}${i.price ? ` (${i.price})` : ""}`),
       "",
@@ -289,6 +296,17 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
       `Bitte um Verfügbarkeit & Bestpreis. Danke!`,
     ].filter(Boolean);
     return whatsappLink(lines.join("\n"));
+  };
+
+  // Farbcode-Service: VIN per WhatsApp anfragen + Bestätigung in die Inbox
+  const requestColorCode = () => {
+    if (!user) return;
+    sendMessage({
+      recipient: user.id,
+      type: "system",
+      title: "Farbcode-Anfrage gesendet 🎨",
+      body: `Wir ermitteln den Farbcode für ${briefing.vehicle || "dein Fahrzeug"} (VIN ${briefing.vin}). Du bekommst die Antwort per WhatsApp oder hier in deinen Nachrichten — meist innerhalb weniger Stunden.`,
+    });
   };
 
   const restart = () => {
@@ -326,6 +344,8 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
           garage={garage}
           vehicle={briefing.vehicle}
           colorCode={briefing.colorCode}
+          colorName={briefing.colorName}
+          vin={briefing.vin}
           onChange={(patch) => setBriefing(patch)}
           onNext={() => setQ(2)}
         />
@@ -545,6 +565,7 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
               <p className="text-xs text-muted-foreground mb-4 flex items-center gap-1.5">
                 <Car className="w-3.5 h-3.5" /> {briefing.vehicle}
                 {briefing.colorCode && <span className="font-semibold text-foreground">· Farbcode {briefing.colorCode}</span>}
+                {briefing.colorName && <span>· {briefing.colorName}</span>}
               </p>
             )}
             {!briefing.vehicle && !briefing.colorCode && <div className="mb-4" />}
@@ -587,6 +608,28 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
 
             {aiPlan.hint && (
               <p className="text-xs text-muted-foreground bg-secondary/60 rounded-lg p-3 mb-4">💡 {aiPlan.hint}</p>
+            )}
+
+            {/* Farbcode-Service: VIN vorhanden, Farbcode fehlt */}
+            {briefing.vin && !briefing.colorCode && (
+              <div className="rounded-xl bg-night text-white p-4 mb-4">
+                <p className="text-sm font-bold flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-gold-bright" /> Farbcode-Service — kostenlos
+                </p>
+                <p className="text-xs text-white/70 mt-1 mb-3">
+                  VIN erkannt. Wir ermitteln deinen exakten Farbcode und melden uns per WhatsApp
+                  {user ? " und in deinen Nachrichten" : ""} — meist innerhalb weniger Stunden.
+                </p>
+                <a
+                  href={whatsappLink(`Hallo Alex Autoshop! Bitte ermittelt den Farbcode für mein Fahrzeug:\n🚗 ${briefing.vehicle || "—"}\n🔎 VIN: ${briefing.vin}${briefing.colorName ? `\n🎨 Farbname: ${briefing.colorName}` : ""}\nProjekt: ${aiPlan.title}`)}
+                  onClick={requestColorCode}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-gold-bright w-full text-sm min-h-[48px]"
+                >
+                  <MessageCircle className="w-4 h-4" /> Farbcode aus VIN anfragen
+                </a>
+              </div>
             )}
 
             {/* Aktionen */}
@@ -699,25 +742,30 @@ function OptionGrid({
 }
 
 // Fahrzeug-Schritt: gespeicherte Projektautos (Garage) als Ein-Tipp-Auswahl,
-// plus Freitext + optionalem Farbcode für alle anderen.
+// plus Freitext + Farbcode / Farbname / VIN für alle anderen.
 function VehicleStep({
   garage,
   vehicle,
   colorCode,
+  colorName,
+  vin,
   onChange,
   onNext,
 }: {
   garage: Vehicle[];
   vehicle: string;
   colorCode: string;
-  onChange: (patch: { vehicle?: string; colorCode?: string }) => void;
+  colorName: string;
+  vin: string;
+  onChange: (patch: { vehicle?: string; colorCode?: string; colorName?: string; vin?: string }) => void;
   onNext: () => void;
 }) {
   const [showManual, setShowManual] = useState(garage.length === 0);
+  const inputCls = "input-base min-h-[56px] text-base text-foreground bg-card";
 
   return (
     <div className="grid gap-2.5">
-      {/* Garage: Ein Tipp wählt Fahrzeug + Farbcode */}
+      {/* Garage: Ein Tipp wählt Fahrzeug + Farbcode + VIN */}
       {garage.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {garage.map((v) => (
@@ -725,12 +773,23 @@ function VehicleStep({
               key={v.id}
               active={vehicle === v.label}
               onClick={() => {
-                onChange({ vehicle: v.label, colorCode: v.color_code ?? "" });
+                onChange({
+                  vehicle: v.label,
+                  colorCode: v.color_code ?? "",
+                  colorName: v.color_name ?? "",
+                  vin: v.vin ?? "",
+                });
                 onNext();
               }}
             >
               <span className="font-semibold flex items-center gap-2"><Car className="w-4 h-4 shrink-0" /> {v.label}</span>
-              {v.color_code && <span className="text-xs opacity-70">Farbcode {v.color_code}</span>}
+              {(v.color_code || v.color_name) && (
+                <span className="text-xs opacity-70">
+                  {v.color_code ? `Farbcode ${v.color_code}` : ""}
+                  {v.color_code && v.color_name ? " · " : ""}
+                  {v.color_name ?? ""}
+                </span>
+              )}
             </TouchButton>
           ))}
           {!showManual && (
@@ -752,23 +811,40 @@ function VehicleStep({
           <input
             value={vehicle}
             onChange={(e) => onChange({ vehicle: e.target.value })}
-            placeholder="z.B. BMW 3er G20, 2021"
-            className="input-base min-h-[56px] text-base"
+            placeholder="Fahrzeug, z.B. BMW 3er G20"
+            className={inputCls}
             autoFocus={garage.length === 0}
           />
+          <div className="grid grid-cols-2 gap-2.5">
+            <input
+              value={colorCode}
+              onChange={(e) => onChange({ colorCode: e.target.value })}
+              placeholder="Farbcode (z.B. LC9Z)"
+              className={inputCls}
+            />
+            <input
+              value={colorName}
+              onChange={(e) => onChange({ colorName: e.target.value })}
+              placeholder="Farbname (z.B. Deep Black)"
+              className={inputCls}
+            />
+          </div>
           <input
-            value={colorCode}
-            onChange={(e) => onChange({ colorCode: e.target.value })}
-            placeholder="Farbcode, falls bekannt (z.B. LC9Z) — optional"
-            className="input-base min-h-[56px] text-base"
+            value={vin}
+            onChange={(e) => onChange({ vin: e.target.value })}
+            placeholder="VIN / Fahrgestellnummer"
+            className={inputCls}
           />
+          <p className="text-xs text-muted-foreground -mt-1">
+            Kein Farbcode zur Hand? Gib die VIN ein — wir ermitteln ihn <strong>kostenlos</strong> und melden uns.
+          </p>
           <button type="submit" className="btn-primary w-full min-h-[56px] text-base font-bold">
             Weiter <ArrowRight className="w-5 h-5" />
           </button>
           <button
             type="button"
             onClick={() => {
-              onChange({ vehicle: "", colorCode: "" });
+              onChange({ vehicle: "", colorCode: "", colorName: "", vin: "" });
               onNext();
             }}
             className="min-h-[48px] text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"

@@ -7,6 +7,8 @@ export interface Vehicle {
   id: string;
   label: string; // z.B. "BMW 320i G20, 2021"
   color_code?: string; // z.B. "LC9Z" — spart im Planner die Farbcode-Suche
+  color_name?: string; // z.B. "Deep Black Perleffekt"
+  vin?: string; // Fahrgestellnummer — für kostenlose Farbcode-Ermittlung
 }
 
 export interface CompanyProfile {

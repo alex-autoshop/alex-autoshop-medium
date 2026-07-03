@@ -16,6 +16,8 @@ export interface PlannerBriefing {
   job: string; // Was wird gemacht?
   vehicle: string; // Marke + Modell (optional)
   colorCode: string; // Farbcode falls bekannt (z.B. "LC9Z"), "" = AI/Theke klärt
+  colorName: string; // Farbname falls bekannt (z.B. "Deep Black")
+  vin: string; // VIN — Alex Autoshop ermittelt daraus den Farbcode (kostenlos)
   area: string; // Schadenstelle
   quality: string; // Qualitätsstufe
   paintAmount: string; // gewünschte Lackmenge, "" = AI kalkuliert
@@ -39,7 +41,7 @@ export interface AIPlan {
   hint?: string;
 }
 
-const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", colorCode: "", area: "", quality: "", paintAmount: "", clearcoat: "" };
+const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", colorCode: "", colorName: "", vin: "", area: "", quality: "", paintAmount: "", clearcoat: "" };
 
 interface PlannerStore {
   items: PlannerItem[];
@@ -122,6 +124,12 @@ export const usePlannerStore = create<PlannerStore>()(
       // nach Reload/Abbruch für immer fest, ohne dass ein Request läuft.
       partialize: (s) =>
         ({ ...s, step: s.step === 2 ? (s.aiPlan ? 3 : 1) : s.step }) as PlannerStore,
+      // Alte localStorage-Stände kennen neue Briefing-Felder nicht —
+      // mit Defaults auffüllen, damit Inputs nie undefined-Werte bekommen.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<PlannerStore>;
+        return { ...current, ...p, briefing: { ...current.briefing, ...(p.briefing ?? {}) } };
+      },
     }
   )
 );
