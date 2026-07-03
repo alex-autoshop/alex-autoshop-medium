@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/cartStore";
-import { formatPrice, fetchFreshCheckoutUrl } from "@/lib/shopify";
+import { formatPrice } from "@/lib/shopify";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useAuth } from "@/context/AuthContext";
 import { discountForLevel } from "@/data/memberships";
@@ -119,11 +119,10 @@ function generateInvoiceHtml(order: ConfirmedOrder): string {
 }
 
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
-  const { items, isLoading, updateQuantity, removeItem, cartId, clearCart } = useCartStore();
+  const { items, isLoading, updateQuantity, removeItem, clearCart } = useCartStore();
   const { user, profile } = useAuth();
 
   const [placing, setPlacing] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [confirmed, setConfirmed] = useState<ConfirmedOrder | null>(null);
 
   const total = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
@@ -305,4 +304,8 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             {/* ── Artikel-Liste ── */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {items.length === 0 ? (
-                <p className="text-muted-foreground text-center py-1
+                <p className="text-muted-foreground text-center py-12">
+                  Dein Warenkorb ist leer.
+                </p>
+              ) : (
+        
