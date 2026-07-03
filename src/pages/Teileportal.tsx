@@ -21,6 +21,10 @@ interface Article {
   brand: string;
   articleNumber: string;
   imageUrl?: string;
+  category?: string;
+  oeNumbers?: string[];
+  specs?: { name: string; value: string }[];
+  mountingInfo?: string;
 }
 
 async function tecdoc(payload: Record<string, unknown>) {
@@ -75,12 +79,19 @@ function parseArticles(data: Record<string, unknown> | null): Article[] {
     (data as any)?.LIST_ARTICLES_BY_QUICK_SEARCH?.articles ??
     [];
   if (!Array.isArray(articles)) return [];
-  return articles.slice(0, 30).map((a: any, i: number) => ({
+  return articles.slice(0, 50).map((a: any, i: number) => ({
     id: a.legacyArticleId ?? a.articleId ?? i,
-    name: a.genericArticleDescription ?? a.articleText ?? a.genericArticles?.[0]?.genericArticleDescription ?? "Artikel",
+    name: a.genericArticles?.[0]?.genericArticleDescription ?? a.genericArticleDescription ?? a.articleText ?? "Artikel",
     brand: a.mfrName ?? a.brandName ?? "",
     articleNumber: a.articleNumber ?? a.articleNo ?? "",
     imageUrl: a.images?.[0]?.imageURL200 ?? a.images?.[0]?.imageURL100 ?? undefined,
+    category: a.genericArticles?.[0]?.assemblyGroupDescription ?? undefined,
+    oeNumbers: ((a.oeNumbers ?? []) as any[]).slice(0, 3).map((oe: any) => oe.oeNumber ?? String(oe)).filter(Boolean),
+    specs: ((a.immediateAttributs ?? a.articleAttributes ?? []) as any[]).slice(0, 5).map((attr: any) => ({
+      name: attr.attrName ?? attr.attributeName ?? "",
+      value: `${attr.attrValue ?? attr.value ?? ""}${attr.attrUnit ?? attr.unit ?? ""}`,
+    })).filter((s: { name: string; value: string }) => s.name && s.value),
+    mountingInfo: a.immediateAttributs?.find((a: any) => a.attrName?.toLowerCase().includes("montage"))?.attrValue ?? undefined,
   }));
 }
 
@@ -108,6 +119,8 @@ export default function Teileportal() {
   const [partsLoading, setPartsLoading] = useState(false);
   const [partsError, setPartsError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
+  const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
+  const [totalCount, setTotalCount] = useState(0);
 
   const lookupVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,9 +171,12 @@ export default function Teileportal() {
     setPartsLoading(true);
     setPartsError(null);
     setSearched(true);
+    setSelectedBrands(new Set());
     try {
       const data = await tecdoc({ action: "search", query: partQuery.trim() });
-      setArticles(parseArticles(data));
+      const parsed = parseArticles(data);
+      setArticles(parsed);
+      setTotalCount((data as any)?.totalMatchingArticles ?? parsed.length);
     } catch {
       setPartsError("Suche fehlgeschlagen. Versuch es später erneut.");
       setArticles([]);
@@ -332,41 +348,134 @@ export default function Teileportal() {
         {partsError && <p className="text-destructive text-sm mt-3">{partsError}</p>}
       </div>
 
-      {/* Ergebnisse */}
+      {/* Ergebnisse — Intercars-Style */}
       {searched && !partsLoading && (
         <div className="mt-8">
-          {articles.length > 0 ? (
-            <>
-              <h2 className="text-xl mb-4">{articles.length} Teile gefunden</h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {articles.map((a) => (
-                  <div key={a.id} className="card-tilt p-4 flex gap-4">
-                    <div className="w-20 h-20 rounded-lg bg-secondary shrink-0 overflow-hidden flex items-center justify-center">
-                      {a.imageUrl ? (
-                        <img src={a.imageUrl} alt={a.name} loading="lazy" className="w-full h-full object-contain" />
-                      ) : (
-                        <Package className="w-8 h-8 text-muted-foreground" />
+          {articles.length > 0 ? (() => {
+            const allBrands = [...new Set(articles.map(a => a.brand).filter(Boolean))].sort();
+            const filtered = selectedBrands.size > 0
+              ? articles.filter(a => selectedBrands.has(a.brand))
+              : articles;
+            return (
+              <div className="flex gap-6">
+                {/* Sidebar */}
+                <aside className="w-52 shrink-0 hidden lg:block">
+                  <div className="border border-border rounded-xl p-4 sticky top-24">
+                    <h3 className="font-bold text-sm mb-3 uppercase tracking-wide text-muted-foreground">Hersteller</h3>
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {allBrands.map(brand => (
+                        <label key={brand} className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-primary"
+                            checked={selectedBrands.has(brand)}
+                            onChange={() => {
+                              const next = new Set(selectedBrands);
+                              next.has(brand) ? next.delete(brand) : next.add(brand);
+                              setSelectedBrands(next);
+                            }}
+                          />
+                          <span className="text-sm group-hover:text-primary transition-colors">{brand}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            ({articles.filter(a => a.brand === brand).length})
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    {selectedBrands.size > 0 && (
+                      <button
+                        onClick={() => setSelectedBrands(new Set())}
+                        className="mt-3 text-xs text-primary hover:underline"
+                      >
+                        Filter zurücksetzen
+                      </button>
+                    )}
+                  </div>
+                </aside>
+
+                {/* Hauptbereich */}
+                <div className="flex-1 min-w-0">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+                    <div>
+                      <span className="font-bold text-lg">ALLE ({totalCount > articles.length ? totalCount : articles.length})</span>
+                      {selectedBrands.size > 0 && (
+                        <span className="ml-2 text-sm text-muted-foreground">— {filtered.length} gefiltert</span>
                       )}
                     </div>
-                    <div className="min-w-0 flex flex-col">
-                      <p className="font-semibold text-sm leading-tight">{a.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {a.brand} {a.articleNumber && `· ${a.articleNumber}`}
-                      </p>
-                      <a
-                        href={inquiry(a)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-auto pt-2 text-primary font-semibold text-sm inline-flex items-center gap-1 min-h-[44px]"
-                      >
-                        <MessageCircle className="w-4 h-4" /> Preis anfragen
-                      </a>
+                    <div className="text-sm text-muted-foreground hidden sm:block">
+                      {vehicleLabel && <span className="font-medium">📋 {vehicleLabel}</span>}
                     </div>
                   </div>
-                ))}
+
+                  {/* Artikel-Liste */}
+                  <div className="space-y-3">
+                    {filtered.map((a) => (
+                      <div key={a.id} className="border border-border rounded-xl bg-card hover:border-primary/40 transition-colors overflow-hidden">
+                        <div className="flex gap-4 p-4">
+                          {/* Bild */}
+                          <div className="w-16 h-16 shrink-0 rounded-lg bg-secondary flex items-center justify-center overflow-hidden">
+                            {a.imageUrl ? (
+                              <img src={a.imageUrl} alt={a.name} loading="lazy" className="w-full h-full object-contain" />
+                            ) : (
+                              <Package className="w-7 h-7 text-muted-foreground" />
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-bold text-sm text-primary truncate">{a.articleNumber}</p>
+                                <p className="font-semibold text-sm leading-snug mt-0.5">{a.name}</p>
+                                {a.brand && (
+                                  <span className="inline-block mt-1 px-2 py-0.5 rounded bg-secondary text-xs font-bold tracking-wide uppercase">
+                                    {a.brand}
+                                  </span>
+                                )}
+                                {a.specs && a.specs.length > 0 && (
+                                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                    {a.specs.map(s => `${s.name}: ${s.value}`).join(" · ")}
+                                  </p>
+                                )}
+                                {a.oeNumbers && a.oeNumbers.length > 0 && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    OE: {a.oeNumbers.join(", ")}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Preis + CTA */}
+                              <div className="shrink-0 text-right flex flex-col items-end gap-2">
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                                  Auf Anfrage
+                                </span>
+                                <a
+                                  href={inquiry(a)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                  Preis anfragen
+                                </a>
+                                <a
+                                  href={`tel:${SHOP_INFO.phoneIntl}`}
+                                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                                >
+                                  <Phone className="w-3 h-3" /> {SHOP_INFO.phone}
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </>
-          ) : (
+            );
+          })() : (
             <p className="text-muted-foreground">Keine Teile gefunden — frag uns direkt, wir finden es.</p>
           )}
         </div>
