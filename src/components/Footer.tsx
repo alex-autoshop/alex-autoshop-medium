@@ -61,12 +61,6 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-            <Link
-              to="/fahrzeugmarkt"
-              className="inline-flex items-center gap-1.5 mt-5 px-4 py-2.5 rounded-lg border border-white/15 text-sm font-semibold text-white/85 hover:border-primary hover:text-white transition-colors"
-            >
-              Fahrzeugmarkt <ArrowUpRight className="w-4 h-4" />
-            </Link>
           </div>
         </div>
       </div>

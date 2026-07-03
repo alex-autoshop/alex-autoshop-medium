@@ -15,7 +15,7 @@ const FAHRZEUGMARKT_URL = "https://alex-autoshop.github.io/fahrzeugmarkt/";
 const NAV: Array<{ to: string; label: string; href?: string; beta?: boolean }> = [
   { to: "/shop", label: "Shop" },
   { to: "/teileportal", label: "Teileportal", beta: true },
-  { to: "/fahrzeugmarkt", label: "Fahrzeugmarkt", href: FAHRZEUGMARKT_URL, beta: true },
+  // Fahrzeugmarkt bewusst ausgeblendet (in Arbeit) — Seite bleibt unter /fahrzeugmarkt erreichbar
   { to: "/mitgliedschaft", label: "Mitgliedschaft" },
   { to: "/laden", label: "Laden & Kontakt" },
 ];
