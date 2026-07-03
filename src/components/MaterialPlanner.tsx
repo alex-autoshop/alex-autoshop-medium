@@ -48,8 +48,19 @@ const QUALITIES = [
 const PAINT_AMOUNTS = ["250 ml", "500 ml", "1 L", "2 L oder mehr"];
 const SYSTEM_1K = "1K Basislack + Klarlack";
 const PAINT_SYSTEMS = [SYSTEM_1K, "2K Decklack — ohne Klarlack", "Nur Basislack — Klarlack hab ich schon"];
-const STOCK_PAINT = ["Abdeckband & Folie", "Schleifmittel", "Verdünnung", "Silikonentferner", "Härter", "Spachtel"];
-const STOCK_POLISH = ["Polierpads", "Mikrofasertücher", "Silikonentferner", "Felgenreiniger"];
+const STOCK_PAINT = [
+  "Abdeckband & Folie",
+  "Schleifmittel",
+  "Verdünnung",
+  "Silikonentferner",
+  "Härter",
+  "Spachtel",
+  "Poliermittel",
+  "Grundierung / Füller",
+  "Mischbecher & Siebe",
+  "Handschuhe & Tücher",
+];
+const STOCK_POLISH = ["Poliermittel", "Polierpads", "Mikrofasertücher", "Silikonentferner", "Felgenreiniger", "Abdeckband"];
 const CLEARCOATS = [
   { label: "FRIZ 2K — 13€", value: "FRIZ 2K-Klarlack 500ml" },
   { label: "Mipa CX4 Express — 29,95€", value: "Mipa CX4 Express-Klarlack 1L" },
