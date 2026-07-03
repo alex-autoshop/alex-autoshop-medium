@@ -291,9 +291,10 @@ function formatCheckoutUrl(checkoutUrl: string): string {
     // Shopify gibt die Checkout-URL teils über die Primärdomain (alex-autoshop.de) zurück.
     // Diese Domain zeigt aber auf Vercel (die React-App) und hat keine Checkout-Route -> 404.
     // Deshalb immer auf Shopifys permanente Domain umbiegen, wo der Checkout sicher gehostet ist.
+    // WICHTIG: channel=online_store NICHT setzen — Shopify 2025 Checkout wirft sonst 404.
     url.host = SHOPIFY_STORE_PERMANENT_DOMAIN;
     url.protocol = 'https:';
-    url.searchParams.set('channel', 'online_store');
+    url.searchParams.delete('channel');
     return url.toString();
   } catch {
     return checkoutUrl;
@@ -366,7 +367,4 @@ export async function removeLineFromShopifyCart(cartId: string, lineId: string):
 
 export function formatPrice(amount: string, currencyCode: string): string {
   return new Intl.NumberFormat('de-DE', {
-    style: 'currency',
-    currency: currencyCode,
-  }).format(parseFloat(amount));
-}
+    style
