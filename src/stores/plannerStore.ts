@@ -8,6 +8,36 @@ export interface PlannerItem {
   done: boolean;
 }
 
+// ── AI-Materialplaner ────────────────────────────────────────────────
+
+export type PlannerStep = 1 | 2 | 3;
+
+export interface PlannerBriefing {
+  job: string; // Was wird gemacht?
+  vehicle: string; // Marke + Modell (optional)
+  area: string; // Schadenstelle
+  quality: string; // Qualitätsstufe
+}
+
+export interface AIPlanItem {
+  id: number;
+  name: string; // Produktempfehlung aus dem Sortiment
+  quantity: string; // z.B. "500 ml" oder "2 Rollen"
+  price: string; // Preisschätzung, z.B. "13€" / "ab 19€"
+  reason: string; // Warum wird das gebraucht?
+  searchQuery: string; // Shopify-Suchbegriff
+  included: boolean; // im Warenkorb/WhatsApp berücksichtigen
+}
+
+export interface AIPlan {
+  title: string;
+  items: AIPlanItem[];
+  totalEstimate: string;
+  hint?: string;
+}
+
+const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", area: "", quality: "" };
+
 interface PlannerStore {
   items: PlannerItem[];
   projectName: string;
@@ -18,6 +48,15 @@ interface PlannerStore {
   setQuantity: (id: number, quantity: number) => void;
   remove: (id: number) => void;
   clear: () => void;
+  // AI-Planner State
+  step: PlannerStep;
+  briefing: PlannerBriefing;
+  aiPlan: AIPlan | null;
+  setStep: (step: PlannerStep) => void;
+  setBriefing: (patch: Partial<PlannerBriefing>) => void;
+  setAiPlan: (plan: AIPlan | null) => void;
+  toggleAiItem: (id: number) => void;
+  resetPlanner: () => void;
 }
 
 let seq = 0;
@@ -50,6 +89,28 @@ export const usePlannerStore = create<PlannerStore>()(
         })),
       remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
       clear: () => set({ items: [], projectName: "" }),
+
+      // ── AI-Planner ──
+      step: 1,
+      briefing: EMPTY_BRIEFING,
+      aiPlan: null,
+      setStep: (step) => set({ step }),
+      setBriefing: (patch) => set((s) => ({ briefing: { ...s.briefing, ...patch } })),
+      setAiPlan: (plan) => set({ aiPlan: plan }),
+      toggleAiItem: (id) =>
+        set((s) =>
+          s.aiPlan
+            ? {
+                aiPlan: {
+                  ...s.aiPlan,
+                  items: s.aiPlan.items.map((i) =>
+                    i.id === id ? { ...i, included: !i.included } : i
+                  ),
+                },
+              }
+            : s
+        ),
+      resetPlanner: () => set({ step: 1, briefing: EMPTY_BRIEFING, aiPlan: null }),
     }),
     { name: "material-planner", storage: createJSONStorage(() => localStorage) }
   )
