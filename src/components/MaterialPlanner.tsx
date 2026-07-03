@@ -183,13 +183,13 @@ const fmtEur = (n: number) =>
 function ItemPrice({ price, discount }: { price: string; discount: number }) {
   const num = parsePrice(price);
   if (!discount || num == null) {
-    return <span className="shrink-0 text-base font-bold text-gold-bright">{price}</span>;
+    return <span className="shrink-0 text-base font-bold text-gold-deep">{price}</span>;
   }
   const ab = /\bab\b/i.test(price) ? "ab " : "";
   return (
     <span className="shrink-0 text-right">
       <span className="block text-[11px] text-muted-foreground line-through">{price}</span>
-      <span className="block text-base font-bold text-gold-bright">{ab}{fmtEur(num * (1 - discount / 100))}</span>
+      <span className="block text-base font-bold text-gold-deep">{ab}{fmtEur(num * (1 - discount / 100))}</span>
     </span>
   );
 }
