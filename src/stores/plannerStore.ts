@@ -21,7 +21,9 @@ export interface PlannerBriefing {
   area: string; // Schadenstelle
   quality: string; // Qualitätsstufe
   paintAmount: string; // gewünschte Lackmenge, "" = AI kalkuliert
-  clearcoat: string; // Klarlack-Wunsch, "" = AI empfiehlt
+  paintSystem: string; // Lacksystem: "" = AI, "1K Basislack + Klarlack", "2K Decklack …", "Nur Basislack …"
+  clearcoat: string; // Klarlack-Wunsch (nur bei 1K-System), "" = AI empfiehlt
+  inStock: string[]; // Material, das die Werkstatt schon hat — kommt NICHT in den Plan
 }
 
 export interface AIPlanItem {
@@ -41,7 +43,7 @@ export interface AIPlan {
   hint?: string;
 }
 
-const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", colorCode: "", colorName: "", vin: "", area: "", quality: "", paintAmount: "", clearcoat: "" };
+const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", colorCode: "", colorName: "", vin: "", area: "", quality: "", paintAmount: "", paintSystem: "", clearcoat: "", inStock: [] };
 
 interface PlannerStore {
   items: PlannerItem[];

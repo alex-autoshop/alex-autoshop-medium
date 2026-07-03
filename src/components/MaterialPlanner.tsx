@@ -46,6 +46,10 @@ const QUALITIES = [
   { value: "Budget (FRIZ)", label: "Budget", sub: "FRIZ / Master" },
 ];
 const PAINT_AMOUNTS = ["250 ml", "500 ml", "1 L", "2 L oder mehr"];
+const SYSTEM_1K = "1K Basislack + Klarlack";
+const PAINT_SYSTEMS = [SYSTEM_1K, "2K Decklack — ohne Klarlack", "Nur Basislack — Klarlack hab ich schon"];
+const STOCK_PAINT = ["Abdeckband & Folie", "Schleifmittel", "Verdünnung", "Silikonentferner", "Härter", "Spachtel"];
+const STOCK_POLISH = ["Polierpads", "Mikrofasertücher", "Silikonentferner", "Felgenreiniger"];
 const CLEARCOATS = [
   { label: "FRIZ 2K — 13€", value: "FRIZ 2K-Klarlack 500ml" },
   { label: "Mipa CX4 Express — 29,95€", value: "Mipa CX4 Express-Klarlack 1L" },
@@ -186,6 +190,15 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
   const { profile, user } = useAuth();
   const garage: Vehicle[] = profile.vehicles ?? [];
   const discount = user ? discountForLevel(profile.membership_level) : 0;
+  // Bei Politur/Aufbereitung sind alle Lackfragen sinnlos — nur Lager-Frage zeigen
+  const isPaintJob = briefing.job !== "Politur/Aufbereitung";
+  const stockOptions = isPaintJob ? STOCK_PAINT : STOCK_POLISH;
+  const toggleStock = (m: string) =>
+    setBriefing({
+      inStock: briefing.inStock.includes(m)
+        ? briefing.inStock.filter((x) => x !== m)
+        : [...briefing.inStock, m],
+    });
   // Lebende Summe: nur angewählte Positionen, passt sich beim Abwählen an
   const includedTotal = aiPlan
     ? aiPlan.items.filter((i) => i.included).reduce((sum, i) => sum + (parsePrice(i.price) ?? 0), 0)
@@ -240,8 +253,14 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
       b.colorName ? `Farbname: ${b.colorName}` : "",
       `Schadenstelle: ${b.area}`,
       `Qualitätsstufe: ${b.quality}`,
+      b.job !== "Politur/Aufbereitung"
+        ? b.paintSystem
+          ? `Lacksystem (vom Kunden vorgegeben): ${b.paintSystem}`
+          : `Lacksystem: bitte passend empfehlen (1K Basislack + Klarlack oder 2K Decklack)`
+        : "",
       b.paintAmount ? `Gewünschte Lackmenge (vom Kunden vorgegeben): ${b.paintAmount}` : `Lackmenge: bitte passend kalkulieren`,
-      b.clearcoat ? `Klarlack-Wunsch (vom Kunden vorgegeben): ${b.clearcoat}` : `Klarlack: bitte passend empfehlen`,
+      b.clearcoat ? `Klarlack-Wunsch (vom Kunden vorgegeben): ${b.clearcoat}` : "",
+      b.inStock.length > 0 ? `Bereits in der Werkstatt vorhanden — NICHT in den Plan aufnehmen: ${b.inStock.join(", ")}` : "",
     ].filter(Boolean).join("\n");
 
     try {
@@ -419,45 +438,77 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
       ),
     },
     {
-      title: "Profi-Details?",
-      subtitle: "Optional — wenn du's nicht weißt, entscheidet die AI" as string | undefined,
+      title: isPaintJob ? "Profi-Details?" : "Schon was auf Lager?",
+      subtitle: "Optional — was du nicht wählst, entscheidet die AI" as string | undefined,
       content: (
         <div className="space-y-5">
+          {/* Lacksystem: 1K braucht Klarlack, 2K glänzt direkt, oder Klarlack ist schon da */}
+          {isPaintJob && (
+            <div>
+              <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-primary" /> Welches Lacksystem?
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Chip label="AI empfehlen lassen" active={!briefing.paintSystem} onClick={() => setBriefing({ paintSystem: "", clearcoat: "" })} />
+                {PAINT_SYSTEMS.map((ps) => (
+                  <Chip
+                    key={ps}
+                    label={ps}
+                    active={briefing.paintSystem === ps}
+                    onClick={() => setBriefing({ paintSystem: ps, ...(ps !== SYSTEM_1K ? { clearcoat: "" } : {}) })}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Klarlack-Wahl nur, wenn das System überhaupt einen braucht */}
+          {isPaintJob && briefing.paintSystem === SYSTEM_1K && (
+            <div>
+              <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-primary" /> Welcher Klarlack?
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Chip label="AI empfehlen lassen" active={!briefing.clearcoat} onClick={() => setBriefing({ clearcoat: "" })} />
+                {CLEARCOATS.map((c) => (
+                  <Chip key={c.value} label={c.label} active={briefing.clearcoat === c.value} onClick={() => setBriefing({ clearcoat: c.value })} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {isPaintJob && (
+            <div>
+              <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                <Palette className="w-4 h-4 text-primary" /> Wie viel Lack brauchst du?
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Chip label="AI kalkulieren lassen" active={!briefing.paintAmount} onClick={() => setBriefing({ paintAmount: "" })} />
+                {PAINT_AMOUNTS.map((a) => (
+                  <Chip key={a} label={a} active={briefing.paintAmount === a} onClick={() => setBriefing({ paintAmount: a })} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Lager-Check: was die Werkstatt schon hat, fliegt aus dem Plan */}
           <div>
-            <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-              <Palette className="w-4 h-4 text-primary" /> Wie viel Lack brauchst du?
+            <p className="text-sm font-semibold mb-1 flex items-center gap-1.5">
+              <Check className="w-4 h-4 text-primary" /> Hast du davon schon was da?
             </p>
+            <p className="text-xs text-muted-foreground mb-2">Antippen, was vorhanden ist — kommt dann nicht in den Plan.</p>
             <div className="flex flex-wrap gap-2">
-              <Chip label="AI kalkulieren lassen" active={!briefing.paintAmount} onClick={() => setBriefing({ paintAmount: "" })} />
-              {PAINT_AMOUNTS.map((a) => (
-                <Chip key={a} label={a} active={briefing.paintAmount === a} onClick={() => setBriefing({ paintAmount: a })} />
+              {stockOptions.map((m) => (
+                <Chip key={m} label={m} active={briefing.inStock.includes(m)} onClick={() => toggleStock(m)} />
               ))}
             </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-primary" /> Welcher Klarlack?
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Chip label="AI empfehlen lassen" active={!briefing.clearcoat} onClick={() => setBriefing({ clearcoat: "" })} />
-              {CLEARCOATS.map((c) => (
-                <Chip key={c.value} label={c.label} active={briefing.clearcoat === c.value} onClick={() => setBriefing({ clearcoat: c.value })} />
-              ))}
-            </div>
-          </div>
+
           <div className="grid gap-2 pt-1">
             <button onClick={() => generate()} className="btn-primary w-full min-h-[56px] text-base font-bold">
               <Wand2 className="w-5 h-5" /> Plan erstellen
             </button>
-            <button
-              onClick={() => {
-                setBriefing({ paintAmount: "", clearcoat: "" });
-                generate({ ...briefing, paintAmount: "", clearcoat: "" });
-              }}
-              className="min-h-[48px] text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Überspringen — AI entscheidet alles
-            </button>
+            <p className="text-xs text-muted-foreground text-center">Nichts gewählt? Kein Problem — die AI entscheidet alles.</p>
           </div>
         </div>
       ),

@@ -74,6 +74,8 @@ ${PRODUCT_CATALOG}
 8. Wenn der Kunde einen FARBCODE angibt: in den Basislack-Namen aufnehmen (z.B. "Mipa 1K Basislack, Farbcode LC9Z"). Wenn nur FARBNAME oder VIN bekannt: Zusatz "(Farbcode ermitteln wir kostenlos aus VIN/Farbname)". Wenn gar nichts: "(Farbcode wird an der Theke ermittelt)".
 9. Wenn der Kunde eine LACKMENGE vorgibt: exakt diese Menge verwenden und den Katalogpreis der nächstgrößeren Gebindegröße nehmen — NICHT neu kalkulieren.
 10. Wenn der Kunde einen KLARLACK-WUNSCH angibt: genau dieses Produkt empfehlen, keinen anderen.
+11. LACKSYSTEM respektieren: Bei "2K Decklack" KEINEN separaten Klarlack einplanen (2K glänzt direkt — nutze die 2K-Preise aus dem Katalog). Bei "1K Basislack + Klarlack" beides plus passenden Härter. Bei "Nur Basislack — Klarlack vorhanden" weder Klarlack noch Klarlack-Härter aufnehmen.
+12. VORHANDENES MATERIAL: Positionen, die der Kunde als "bereits vorhanden" angibt, NICHT in die Liste aufnehmen — komplett weglassen, auch nicht mit 0€. Die Werkstatt hat sie schon.
 
 ## JSON-FORMAT (exakt so)
 {
