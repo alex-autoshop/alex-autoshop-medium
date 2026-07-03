@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -56,41 +56,64 @@ const stepVariants = {
 let aiSeq = 0;
 const nextAiId = () => Date.now() * 100 + (aiSeq++ % 100);
 
-// SSE-Stream von /api/alex-ai lesen und Volltext zurückgeben
-async function streamAiResponse(briefingText: string): Promise<string> {
-  const res = await fetch("/api/alex-ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mode: "material_plan",
-      messages: [{ role: "user", content: briefingText }],
-    }),
-  });
-  if (!res.ok || !res.body) throw new Error(`AI-Anfrage fehlgeschlagen (${res.status})`);
+// Modul-weiter Guard: verhindert Doppel-Requests, auch wenn der Planner
+// mehrfach gemountet ist (Dashboard + schwebendes Widget).
+let generatingGlobal = false;
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let full = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      const payload = line.slice(6).trim();
-      if (!payload || payload === "[DONE]") continue;
+// SSE-Stream von /api/alex-ai lesen und Volltext zurückgeben.
+// Mit hartem Timeout — die Ladeanimation darf NIE endlos hängen.
+async function streamAiResponse(briefingText: string): Promise<string> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 60000);
+  try {
+    const res = await fetch("/api/alex-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: ctrl.signal,
+      body: JSON.stringify({
+        mode: "material_plan",
+        messages: [{ role: "user", content: briefingText }],
+      }),
+    });
+    if (!res.ok || !res.body) {
+      let detail = "";
       try {
-        const chunk = JSON.parse(payload);
-        full += chunk?.choices?.[0]?.delta?.content ?? "";
+        detail = (await res.text()).slice(0, 200);
       } catch {
-        /* unvollständige Chunks ignorieren */
+        /* Body nicht lesbar */
+      }
+      throw new Error(`AI-Anfrage fehlgeschlagen (${res.status})${detail ? ` — ${detail}` : ""}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let full = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (!payload || payload === "[DONE]") continue;
+        try {
+          const chunk = JSON.parse(payload);
+          full += chunk?.choices?.[0]?.delta?.content ?? "";
+        } catch {
+          /* unvollständige Chunks ignorieren */
+        }
       }
     }
+    return full;
+  } catch (e) {
+    if (ctrl.signal.aborted) throw new Error("Zeitüberschreitung — der AI-Server hat nicht geantwortet");
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-  return full;
 }
 
 // JSON aus der AI-Antwort extrahieren (robust gegen Code-Fences / Prosa)
@@ -131,12 +154,11 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [cartBusy, setCartBusy] = useState(false);
   const [cartDone, setCartDone] = useState(false);
-  const generating = useRef(false);
 
   // ── Schritt 2: AI-Plan generieren ──
   const generate = async (b = briefing) => {
-    if (generating.current) return;
-    generating.current = true;
+    if (generatingGlobal) return;
+    generatingGlobal = true;
     setError(null);
     setStep(2);
     setLoadingStep(0);
@@ -159,9 +181,23 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
       setError(e instanceof Error ? e.message : "Unbekannter Fehler");
     } finally {
       clearInterval(ticker);
-      generating.current = false;
+      generatingGlobal = false;
     }
   };
+
+  // Selbstheilung: Steht der Planner beim Mount auf "lädt" (Schritt 2),
+  // obwohl kein Request läuft (z.B. nach Reload oder abgebrochenem Versuch),
+  // wird automatisch neu generiert bzw. sauber zurückgesetzt.
+  useEffect(() => {
+    if (step === 2 && !generatingGlobal) {
+      if (briefing.job && briefing.area && briefing.quality) {
+        generate();
+      } else {
+        setStep(aiPlan ? 3 : 1);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Schritt 3: Alle in den Warenkorb ──
   const addAllToCart = async () => {

@@ -112,7 +112,14 @@ export const usePlannerStore = create<PlannerStore>()(
         ),
       resetPlanner: () => set({ step: 1, briefing: EMPTY_BRIEFING, aiPlan: null }),
     }),
-    { name: "material-planner", storage: createJSONStorage(() => localStorage) }
+    {
+      name: "material-planner",
+      storage: createJSONStorage(() => localStorage),
+      // step 2 (AI lädt) NIE persistieren — sonst hängt die Ladeanimation
+      // nach Reload/Abbruch für immer fest, ohne dass ein Request läuft.
+      partialize: (s) =>
+        ({ ...s, step: s.step === 2 ? (s.aiPlan ? 3 : 1) : s.step }) as PlannerStore,
+    }
   )
 );
 
