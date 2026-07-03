@@ -183,6 +183,129 @@ function parsePrice(p: string): number | null {
 const fmtEur = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
 
+// HTML-Escaping für den Druck (AI-/Nutzertexte)
+const esc = (t: string) =>
+  t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// Professioneller A4-Materialplan (genau 1 Seite) — zum Abheften in die Werkstatt-Kartei.
+// Mitarbeiter haken die Kästchen beim Zusammenstellen ab.
+function generatePlanPrintHtml(
+  plan: AIPlan,
+  briefing: { job: string; vehicle: string; colorCode: string; colorName: string; vin: string; area: string; quality: string },
+  note: string,
+  discount: number,
+  total: number
+): string {
+  const planNo = `MP-${Date.now().toString(36).toUpperCase()}`;
+  const date = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const items = plan.items.filter((i) => i.included);
+  const rows = items
+    .map(
+      (i, idx) => `
+      <tr>
+        <td class="chk"><span class="box"></span></td>
+        <td class="num">${idx + 1}</td>
+        <td><strong>${esc(i.name)}</strong>${i.reason ? `<span class="why">${esc(i.reason)}</span>` : ""}</td>
+        <td class="qty">${esc(i.quantity)}</td>
+        <td class="price">${esc(i.price || "—")}</td>
+      </tr>`
+    )
+    .join("");
+
+  const meta = [
+    ["Arbeit", briefing.job],
+    ["Fahrzeug", briefing.vehicle || "—"],
+    ["Farbcode", briefing.colorCode || (briefing.vin ? "aus VIN ermitteln" : "an der Theke ermitteln")],
+    ["Farbname", briefing.colorName || "—"],
+    ["Schadenstelle", briefing.area],
+    ["Qualität", briefing.quality],
+  ]
+    .map(([k, v]) => `<div class="meta-item"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`)
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Materialplan ${planNo}</title>
+<style>
+  @page { size: A4; margin: 11mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 11px; line-height: 1.35; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #B8860B; padding-bottom: 8px; margin-bottom: 10px; }
+  .logo { font-size: 20px; font-weight: 800; color: #B8860B; }
+  .logo span { color: #111; }
+  .shop { font-size: 9.5px; color: #555; margin-top: 2px; }
+  .doc { text-align: right; }
+  .doc h1 { font-size: 15px; letter-spacing: 1px; }
+  .doc p { font-size: 9.5px; color: #555; }
+  .title { font-size: 14px; font-weight: 800; margin-bottom: 6px; }
+  .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 12px; background: #f7f5ee; border: 1px solid #e6dfc8; border-radius: 6px; padding: 7px 10px; margin-bottom: 10px; }
+  .meta-item .k { display: block; font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #8a8a8a; }
+  .meta-item .v { font-weight: 700; font-size: 10.5px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  th { background: #111; color: #fff; text-align: left; padding: 5px 6px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 5px 6px; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
+  .chk { width: 22px; } .box { display: inline-block; width: 12px; height: 12px; border: 1.5px solid #111; border-radius: 2px; }
+  .num { width: 18px; color: #999; }
+  .why { display: block; font-size: 9px; color: #777; margin-top: 1px; }
+  .qty { width: 70px; white-space: nowrap; }
+  .price { width: 75px; text-align: right; font-weight: 700; white-space: nowrap; }
+  .total td { border-top: 2px solid #111; border-bottom: none; font-size: 12px; font-weight: 800; padding-top: 6px; }
+  .member { font-size: 9.5px; color: #8B6914; font-weight: 700; text-align: right; }
+  .note { background: #fffbea; border: 1px solid #e6c84a; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; font-size: 10px; }
+  .sign { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 14px; }
+  .sign div { border-top: 1px solid #999; padding-top: 3px; font-size: 8.5px; color: #777; }
+  .foot { margin-top: 10px; padding-top: 6px; border-top: 1px solid #ddd; font-size: 8.5px; color: #999; display: flex; justify-content: space-between; }
+  .print-btn { display: block; margin: 14px auto 0; padding: 10px 26px; background: #B8860B; color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  @media print { .print-btn { display: none; } }
+</style>
+</head>
+<body>
+  <div class="head">
+    <div>
+      <div class="logo">alex <span>autoshop</span></div>
+      <div class="shop">Handelstraße 64 · 42277 Wuppertal · Tel 0202 82690 · alex-autoshop.de</div>
+    </div>
+    <div class="doc">
+      <h1>MATERIALPLAN</h1>
+      <p>Nr: ${planNo}<br>Datum: ${date}</p>
+    </div>
+  </div>
+
+  <div class="title">${esc(plan.title)}</div>
+  <div class="meta">${meta}${briefing.vin ? `<div class="meta-item"><span class="k">VIN</span><span class="v">${esc(briefing.vin)}</span></div>` : ""}</div>
+
+  <table>
+    <thead>
+      <tr><th></th><th>#</th><th>Material</th><th>Menge</th><th style="text-align:right">Preis</th></tr>
+    </thead>
+    <tbody>
+      ${rows}
+      <tr class="total"><td></td><td></td><td>Gesamt (geschätzt)</td><td></td><td class="price">ca. ${fmtEur(discount > 0 ? total * (1 - discount / 100) : total)}</td></tr>
+      ${discount > 0 ? `<tr><td colspan="5" class="member">Mitgliedspreis (−${discount}%) bereits eingerechnet · Listenpreis: ca. ${fmtEur(total)}</td></tr>` : ""}
+    </tbody>
+  </table>
+
+  ${note.trim() ? `<div class="note"><strong>Anmerkung:</strong> ${esc(note.trim())}</div>` : ""}
+  ${plan.hint ? `<div class="note">💡 ${esc(plan.hint)}</div>` : ""}
+
+  <div class="sign">
+    <div>Zusammengestellt von / Datum</div>
+    <div>Geprüft von / Datum</div>
+    <div>Auftrag / Kennzeichen</div>
+  </div>
+
+  <div class="foot">
+    <span>Alex Autoshop · Mo–Fr 9–17:30 · Sa 9–14 · Bestellung: WhatsApp oder alex-autoshop.de</span>
+    <span>Erstellt mit Alex AI Materialplaner</span>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">🖨️ Drucken / Als PDF speichern</button>
+</body>
+</html>`;
+}
+
 // Preis pro Position: groß und gold; Mitglieder sehen Original durchgestrichen + Netto
 function ItemPrice({ price, discount }: { price: string; discount: number }) {
   const num = parsePrice(price);
@@ -403,6 +526,17 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
       title: "Farbcode-Anfrage gesendet 🎨",
       body: `Wir ermitteln den Farbcode für ${briefing.vehicle || "dein Fahrzeug"} (VIN ${briefing.vin}). Du bekommst die Antwort per WhatsApp oder hier in deinen Nachrichten — meist innerhalb weniger Stunden.`,
     });
+  };
+
+  // Export: professioneller 1-Seiten-A4-Plan im eigenen Fenster
+  const exportPlan = () => {
+    if (!aiPlan) return;
+    const html = generatePlanPrintHtml(aiPlan, briefing, planNote, discount, includedTotal);
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
   };
 
   const restart = () => {
@@ -821,7 +955,7 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
                 <a href={whatsappHref()} target="_blank" rel="noopener noreferrer" className="btn-outline min-h-[56px] text-sm">
                   <MessageCircle className="w-4 h-4" /> WhatsApp
                 </a>
-                <button onClick={() => window.print()} className="btn-outline min-h-[56px] text-sm">
+                <button onClick={exportPlan} className="btn-outline min-h-[56px] text-sm">
                   <Printer className="w-4 h-4" /> Exportieren
                 </button>
               </div>
