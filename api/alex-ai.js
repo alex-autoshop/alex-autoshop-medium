@@ -76,6 +76,7 @@ ${PRODUCT_CATALOG}
 10. Wenn der Kunde einen KLARLACK-WUNSCH angibt: genau dieses Produkt empfehlen, keinen anderen.
 11. LACKSYSTEM respektieren: Bei "2K Decklack" KEINEN separaten Klarlack einplanen (2K glänzt direkt — nutze die 2K-Preise aus dem Katalog). Bei "1K Basislack + Klarlack" beides plus passenden Härter. Bei "Nur Basislack — Klarlack vorhanden" weder Klarlack noch Klarlack-Härter aufnehmen.
 12. VORHANDENES MATERIAL: Positionen, die der Kunde als "bereits vorhanden" angibt, NICHT in die Liste aufnehmen — komplett weglassen, auch nicht mit 0€. Die Werkstatt hat sie schon.
+13. WERKZEUG: Nur wenn der Kunde explizit Werkzeug anfordert (z.B. Lackierpistole, Poliermaschine, Exzenterschleifer), als eigene Position ans Ende der Liste. Werkzeugpreise stehen NICHT im Katalog — daher price_estimate IMMER exakt "Preis im Shop" (niemals Preise erfinden!) und search_query passend (z.B. "lackierpistole", "poliermaschine", "exzenter"). Marken führen wir: SATA, DeVilbiss (Pistolen), Rupes, Flex (Poliermaschinen), Mirka (Schleifmaschinen).
 
 ## JSON-FORMAT (exakt so)
 {

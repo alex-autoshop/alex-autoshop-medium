@@ -24,6 +24,7 @@ export interface PlannerBriefing {
   paintSystem: string; // Lacksystem: "" = AI, "1K Basislack + Klarlack", "2K Decklack …", "Nur Basislack …"
   clearcoat: string; // Klarlack-Wunsch (nur bei 1K-System), "" = AI empfiehlt
   inStock: string[]; // Material, das die Werkstatt schon hat — kommt NICHT in den Plan
+  needTools: string[]; // Werkzeug, das der Kunde zusätzlich braucht (Pistole, Poliermaschine …)
 }
 
 export interface AIPlanItem {
@@ -43,7 +44,7 @@ export interface AIPlan {
   hint?: string;
 }
 
-const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", colorCode: "", colorName: "", vin: "", area: "", quality: "", paintAmount: "", paintSystem: "", clearcoat: "", inStock: [] };
+const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", colorCode: "", colorName: "", vin: "", area: "", quality: "", paintAmount: "", paintSystem: "", clearcoat: "", inStock: [], needTools: [] };
 
 interface PlannerStore {
   items: PlannerItem[];

@@ -63,6 +63,8 @@ const STOCK_PAINT = [
   "Handschuhe & Tücher",
 ];
 const STOCK_POLISH = ["Poliermittel", "Polierpads", "Mikrofasertücher", "Silikonentferner", "Felgenreiniger", "Abdeckband"];
+const TOOLS_PAINT = ["Lackierpistole (Set)", "Exzenterschleifer", "Poliermaschine (Set)"];
+const TOOLS_POLISH = ["Poliermaschine (Set)", "Exzenterschleifer"];
 const CLEARCOATS = [
   { label: "FRIZ 2K — 13€", value: "FRIZ 2K-Klarlack 500ml" },
   { label: "Mipa CX4 Express — 29,95€", value: "Mipa CX4 Express-Klarlack 1L" },
@@ -206,6 +208,13 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
   // Bei Politur/Aufbereitung sind alle Lackfragen sinnlos — nur Lager-Frage zeigen
   const isPaintJob = briefing.job !== "Politur/Aufbereitung";
   const stockOptions = isPaintJob ? STOCK_PAINT : STOCK_POLISH;
+  const toolOptions = isPaintJob ? TOOLS_PAINT : TOOLS_POLISH;
+  const toggleTool = (m: string) =>
+    setBriefing({
+      needTools: briefing.needTools.includes(m)
+        ? briefing.needTools.filter((x) => x !== m)
+        : [...briefing.needTools, m],
+    });
   const toggleStock = (m: string) =>
     setBriefing({
       inStock: briefing.inStock.includes(m)
@@ -274,6 +283,7 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
       b.paintAmount ? `Gewünschte Lackmenge (vom Kunden vorgegeben): ${b.paintAmount}` : `Lackmenge: bitte passend kalkulieren`,
       b.clearcoat ? `Klarlack-Wunsch (vom Kunden vorgegeben): ${b.clearcoat}` : "",
       b.inStock.length > 0 ? `Bereits in der Werkstatt vorhanden — NICHT in den Plan aufnehmen: ${b.inStock.join(", ")}` : "",
+      b.needTools.length > 0 ? `Kunde benötigt zusätzlich WERKZEUG (als Positionen mit price_estimate "Preis im Shop" aufnehmen): ${b.needTools.join(", ")}` : "",
     ].filter(Boolean).join("\n");
 
     try {
@@ -538,6 +548,19 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
             <div className="flex flex-wrap gap-2">
               {stockOptions.map((m) => (
                 <Chip key={m} label={m} active={briefing.inStock.includes(m)} onClick={() => toggleStock(m)} />
+              ))}
+            </div>
+          </div>
+
+          {/* Werkzeug: für Erstkunden ohne Ausrüstung — Preis kommt aus dem Shop */}
+          <div>
+            <p className="text-sm font-semibold mb-1 flex items-center gap-1.5">
+              <Wand2 className="w-4 h-4 text-primary" /> Brauchst du auch Werkzeug?
+            </p>
+            <p className="text-xs text-muted-foreground mb-2">Für alle ohne eigene Ausrüstung — kommt mit in den Plan.</p>
+            <div className="flex flex-wrap gap-2">
+              {toolOptions.map((m) => (
+                <Chip key={m} label={m} active={briefing.needTools.includes(m)} onClick={() => toggleTool(m)} />
               ))}
             </div>
           </div>
