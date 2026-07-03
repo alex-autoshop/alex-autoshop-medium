@@ -26,16 +26,16 @@ export async function recordOrder(order: {
   total: number;
   currency: string;
   status?: string; // z.B. "bestaetigt" fuer Rechnungs-/Abholbestellungen
-}): Promise<{ error?: string }> {
+}): Promise<{ error?: string; orderId?: string }> {
   if (!supabase) return { error: "nicht konfiguriert" };
-  const { error } = await supabase.from("orders").insert({
+  const { data, error } = await supabase.from("orders").insert({
     user_id: order.userId,
     items: order.items,
     total: order.total,
     currency: order.currency,
     ...(order.status ? { status: order.status } : {}),
-  });
-  return { error: error?.message };
+  }).select("id").single();
+  return { error: error?.message, orderId: data?.id };
 }
 
 export async function getOrders(userId: string): Promise<Order[]> {
@@ -44,6 +44,4 @@ export async function getOrders(userId: string): Promise<Order[]> {
     .from("orders")
     .select("*")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-  return (data as Order[]) ?? [];
-}
+    .order("created
