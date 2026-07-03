@@ -63,7 +63,7 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
           <p className="text-xl font-display font-bold text-foreground">
             {multiple && <span className="text-sm font-medium text-muted-foreground">Ab </span>}
             {formatPrice(String(basePrice), cur)}
-            <span className="text-[11px] font-normal text-muted-foreground ml-1">inkl. MwSt.</span>
+            <span className="text-[11px] font-normal text-muted-foreground ml-1">inkl. MwSt. · zzgl. <Link to="/versand" onClick={(e) => e.stopPropagation()} className="underline">Versand</Link></span>
           </p>
         </div>
 

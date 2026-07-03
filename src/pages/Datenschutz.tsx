@@ -1,65 +1,132 @@
-﻿
 const Datenschutz = () => (
   <div>
     <article className="prose-legal">
       <h1>Datenschutzerklärung</h1>
-      <p><em>Letzte Fassung: 13. Oktober 2025</em></p>
+      <p><em>Stand: Juli 2026</em></p>
 
-      <p>Alex Autoshop betreibt diesen Shop und diese Website, einschließlich aller zugehörigen Informationen, Inhalte, Funktionen, Tools, Produkte und Services, um Ihnen als Kunde ein individuelles Einkaufserlebnis bereitzustellen (die „Services"). In dieser Datenschutzerklärung wird beschrieben, wie wir personenbezogene Daten erfassen, verwenden oder weitergeben, wenn Sie die Website besuchen, nutzen oder einen Kauf tätigen.</p>
+      <h2>1. Verantwortlicher</h2>
+      <p>
+        Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO):<br />
+        <strong>Alex Autoshop</strong>, Inhaber: Alexander Haritopoulos<br />
+        Handelstraße 64, 42277 Wuppertal, Deutschland<br />
+        Telefon: 0202 82690 · E-Mail: info@alex-autoshop.de
+      </p>
 
-      <h2>Welche personenbezogenen Daten erfassen oder verarbeiten wir?</h2>
-      <p>Je nachdem, wie Sie mit den Services interagieren, können wir die folgenden Kategorien personenbezogener Daten erfassen:</p>
-      <ul>
-        <li><strong>Kontaktdaten</strong> – Name, Postanschrift, Rechnungsadresse, Lieferadresse, Telefonnummer und E-Mail-Adresse.</li>
-        <li><strong>Finanzdaten</strong> – Kredit-/Debitkartennummern, Zahlungsdetails.</li>
-        <li><strong>Kontoinformationen</strong> – Benutzername, Passwort, Einstellungen.</li>
-        <li><strong>Transaktionsinformationen</strong> – Angesehene, in den Warenkorb gelegte oder gekaufte Artikel.</li>
-        <li><strong>Kommunikation mit uns</strong> – Informationen aus Kundenanfragen.</li>
-        <li><strong>Geräteinformationen</strong> – IP-Adresse, Browser, Netzwerkverbindung.</li>
-        <li><strong>Nutzungsinformationen</strong> – Interaktion mit den Services.</li>
-      </ul>
+      <h2>2. Übersicht der Verarbeitungen</h2>
+      <p>
+        Wir verarbeiten personenbezogene Daten, wenn Sie unsere Website besuchen, ein Kundenkonto
+        anlegen, bestellen, unseren AI-Assistenten oder Materialplaner nutzen oder mit uns
+        kommunizieren. Verarbeitet werden je nach Nutzung: Kontaktdaten (Name, Adresse, E-Mail,
+        Telefon), Kontodaten (E-Mail, Passwort — verschlüsselt), Bestell- und Zahlungsdaten,
+        Fahrzeugdaten, die Sie freiwillig hinterlegen (z.&nbsp;B. Modell, Farbcode, VIN), Inhalte
+        Ihrer Anfragen sowie technische Daten (IP-Adresse, Browsertyp, Zugriffszeitpunkt).
+      </p>
 
-      <h2>Quellen von personenbezogenen Daten</h2>
-      <ul>
-        <li><strong>Direkt von Ihnen</strong> – bei Kontoerstellung, Nutzung der Services, Kommunikation.</li>
-        <li><strong>Automatisch über die Services</strong> – über Cookies und ähnliche Technologien.</li>
-        <li><strong>Von unseren Dienstanbietern</strong> – die in unserem Auftrag handeln.</li>
-        <li><strong>Von Partnern und Drittanbietern</strong></li>
-      </ul>
+      <h2>3. Rechtsgrundlagen</h2>
+      <p>
+        Die Verarbeitung erfolgt zur Vertragserfüllung und -anbahnung (Art. 6 Abs. 1 lit. b DSGVO,
+        z.&nbsp;B. Bestellungen, Kundenkonto), aufgrund berechtigter Interessen (Art. 6 Abs. 1 lit. f
+        DSGVO, z.&nbsp;B. sicherer und stabiler Betrieb der Website), aufgrund Ihrer Einwilligung
+        (Art. 6 Abs. 1 lit. a DSGVO, z.&nbsp;B. optionale Dienste wie die Übersetzungsfunktion) oder
+        zur Erfüllung rechtlicher Pflichten (Art. 6 Abs. 1 lit. c DSGVO, z.&nbsp;B. handels- und
+        steuerrechtliche Aufbewahrung).
+      </p>
 
-      <h2>Wie verwenden wir Ihre personenbezogenen Daten?</h2>
-      <ul>
-        <li><strong>Bereitstellung der Services</strong> – Bestellabwicklung, Zahlungsverarbeitung, Versand.</li>
-        <li><strong>Marketing und Werbung</strong> – Newsletter, personalisierte Werbung.</li>
-        <li><strong>Sicherheit und Betrugsprävention</strong> – Kontoauthentifizierung, sichere Zahlungen.</li>
-        <li><strong>Kommunikation</strong> – Kundensupport, Servicemitteilungen.</li>
-        <li><strong>Rechtliche Gründe</strong> – Einhaltung gesetzlicher Verpflichtungen.</li>
-      </ul>
+      <h2>4. Hosting (Vercel)</h2>
+      <p>
+        Diese Website wird bei Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, USA
+        gehostet. Beim Aufruf der Website verarbeitet Vercel technisch notwendige Daten
+        (IP-Adresse, Zeitpunkt, abgerufene Ressource) in Server-Logs. Rechtsgrundlage ist unser
+        berechtigtes Interesse an der sicheren Bereitstellung der Website (Art. 6 Abs. 1 lit. f
+        DSGVO). Mit Vercel besteht ein Auftragsverarbeitungsvertrag; die Übermittlung in die USA
+        erfolgt auf Grundlage der EU-Standardvertragsklauseln bzw. des EU-US Data Privacy
+        Framework.
+      </p>
 
-      <h2>Wie geben wir personenbezogene Daten weiter?</h2>
-      <p>Unter bestimmten Umständen können wir Ihre Daten an Dritte weitergeben:</p>
-      <ul>
-        <li>Dienstleister (IT, Zahlungsabwicklung, Versand)</li>
-        <li>Marketing-Partner</li>
-        <li>Im Zusammenhang mit geschäftlichen Transaktionen</li>
-        <li>Zur Einhaltung gesetzlicher Verpflichtungen</li>
-      </ul>
+      <h2>5. Shop &amp; Bezahlung (Shopify)</h2>
+      <p>
+        Für Produktkatalog, Warenkorb und Kaufabwicklung nutzen wir Shopify (Shopify International
+        Ltd., Victoria Buildings, 1-2 Haddington Road, Dublin 4, Irland). Bei einer Bestellung
+        werden die dafür erforderlichen Daten (Bestelldaten, Liefer- und Rechnungsadresse,
+        Zahlungsinformationen) durch Shopify bzw. den jeweiligen Zahlungsdienstleister (z.&nbsp;B.
+        Shopify Payments, PayPal, Klarna) verarbeitet. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.
+        Details: <a href="https://www.shopify.com/de/legal/datenschutz" target="_blank" rel="noopener noreferrer">Shopify-Datenschutzerklärung</a>.
+      </p>
 
-      <h2>Ihre Rechte</h2>
-      <ul>
-        <li><strong>Recht auf Zugang/Auskunft</strong></li>
-        <li><strong>Recht auf Löschung</strong></li>
-        <li><strong>Recht auf Berichtigung</strong></li>
-        <li><strong>Recht auf Datenübertragbarkeit</strong></li>
-        <li><strong>Verwaltung von Kommunikationseinstellungen</strong></li>
-        <li><strong>Recht auf Widerspruch und Einschränkung der Verarbeitung</strong> (EWR/UK)</li>
-        <li><strong>Widerruf der Einwilligung</strong> (EWR/UK)</li>
-      </ul>
+      <h2>6. Kundenkonto &amp; Datenbank (Supabase)</h2>
+      <p>
+        Kundenkonten, Bestellhistorie, Nachrichten und freiwillig hinterlegte Fahrzeugdaten
+        speichern wir bei Supabase (Supabase Inc.), Serverstandort EU. Passwörter werden
+        ausschließlich verschlüsselt gespeichert. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO. Sie
+        können Ihr Konto jederzeit löschen lassen (Kontakt unten).
+      </p>
 
-      <h2>Kontakt</h2>
+      <h2>7. AI-Assistent &amp; Materialplaner (Anthropic)</h2>
+      <p>
+        Unser AI-Assistent „Alex AI" und der AI-Materialplaner verarbeiten Ihre Eingaben (z.&nbsp;B.
+        Projektbeschreibung, Fahrzeugangaben) über die API von Anthropic PBC (USA), um
+        Produktempfehlungen und Materiallisten zu erstellen. Geben Sie dort keine sensiblen
+        persönlichen Daten ein. Die Eingaben werden von uns nicht zu Werbezwecken ausgewertet.
+        Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Anbahnung/Erbringung der angefragten
+        Leistung). Übermittlung in die USA auf Grundlage der EU-Standardvertragsklauseln.
+      </p>
+
+      <h2>8. Übersetzungsfunktion (Google Translate)</h2>
+      <p>
+        Auf Wunsch können Sie die Website über den Sprach-Umschalter übersetzen lassen. Das
+        Google-Translate-Script wird <strong>erst geladen, wenn Sie den Sprach-Umschalter aktiv
+        anklicken</strong>. Dabei werden Daten (u.&nbsp;a. IP-Adresse, Seiteninhalte) an Google
+        Ireland Ltd. bzw. Google LLC (USA) übertragen und ein Cookie („googtrans") gesetzt.
+        Rechtsgrundlage: Ihre Einwilligung durch aktive Nutzung (Art. 6 Abs. 1 lit. a DSGVO); Sie
+        können die Übersetzung jederzeit über den Umschalter (Deutsch) beenden.
+      </p>
+
+      <h2>9. Schriftarten</h2>
+      <p>
+        Alle Schriftarten sind lokal auf unserem Server eingebunden. Es findet
+        <strong> keine Verbindung zu Google Fonts</strong> oder anderen Font-Diensten statt.
+      </p>
+
+      <h2>10. Cookies &amp; lokale Speicherung</h2>
+      <p>
+        Wir setzen technisch notwendige Cookies und localStorage-Einträge ein (Warenkorb, Login,
+        Materialplaner-Stand, Cookie-Auswahl). Diese sind für den Betrieb erforderlich
+        (Art. 6 Abs. 1 lit. f DSGVO bzw. § 25 Abs. 2 TDDDG). Das Übersetzungs-Cookie („googtrans")
+        wird nur nach aktiver Nutzung der Übersetzungsfunktion gesetzt. Tracking- oder
+        Werbe-Cookies setzen wir nicht ein.
+      </p>
+
+      <h2>11. Kommunikation (E-Mail, Telefon, WhatsApp)</h2>
+      <p>
+        Bei Kontaktaufnahme verarbeiten wir Ihre Angaben zur Bearbeitung der Anfrage (Art. 6 Abs. 1
+        lit. b DSGVO). Nutzen Sie WhatsApp-Links auf unserer Seite, gelten zusätzlich die
+        Datenschutzbestimmungen von WhatsApp Ireland Ltd.; die Nutzung ist freiwillig — alle
+        Anliegen können auch per E-Mail oder Telefon geklärt werden.
+      </p>
+
+      <h2>12. Speicherdauer</h2>
+      <p>
+        Wir speichern personenbezogene Daten nur so lange, wie es für die genannten Zwecke
+        erforderlich ist. Bestell- und Rechnungsdaten unterliegen den gesetzlichen
+        Aufbewahrungsfristen (6 bzw. 10 Jahre, §§ 147 AO, 257 HGB). Kontodaten werden bei
+        Kontolöschung entfernt, soweit keine gesetzlichen Pflichten entgegenstehen.
+      </p>
+
+      <h2>13. Ihre Rechte</h2>
+      <p>
+        Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung
+        (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) sowie
+        Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21 DSGVO).
+        Eine erteilte Einwilligung können Sie jederzeit mit Wirkung für die Zukunft widerrufen.
+        Außerdem haben Sie das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren —
+        für uns zuständig: Landesbeauftragte für Datenschutz und Informationsfreiheit
+        Nordrhein-Westfalen (LDI NRW), Kavalleriestraße 2-4, 40213 Düsseldorf.
+      </p>
+
+      <h2>14. Kontakt in Datenschutzfragen</h2>
       <p>
         E-Mail: info@alex-autoshop.de<br />
-        Adresse: Handelstraße 64, 42277 Wuppertal, Deutschland
+        Post: Alex Autoshop, Handelstraße 64, 42277 Wuppertal
       </p>
     </article>
   </div>

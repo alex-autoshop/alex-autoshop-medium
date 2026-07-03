@@ -180,7 +180,7 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
               <p className="text-xs text-muted-foreground">{variant.title}</p>
               <p className="text-3xl font-display font-bold">
                 {formatPrice(String((discount > 0 ? memberPrice : basePrice) * qty), cur)}
-                <span className="text-xs font-normal text-muted-foreground ml-1">inkl. MwSt.</span>
+                <span className="text-xs font-normal text-muted-foreground ml-1">inkl. MwSt. · zzgl. Versand</span>
               </p>
               {discount > 0 && (
                 <p className="text-xs text-primary font-semibold">

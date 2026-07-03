@@ -21,6 +21,24 @@ const LANGS: { code: string; label: string; flag: string }[] = [
   { code: "zh-CN", label: "中文", flag: "🇨🇳" },
 ];
 
+// Google-Translate-Script erst bei Bedarf laden (Performance + DSGVO:
+// Daten fließen erst nach aktiver Nutzer-Entscheidung an Google).
+let translateRequested = false;
+function ensureGoogleTranslate() {
+  if (translateRequested || document.querySelector(".goog-te-combo")) return;
+  translateRequested = true;
+  (window as unknown as Record<string, unknown>).googleTranslateElementInit = () => {
+    const g = (window as unknown as { google?: { translate?: { TranslateElement?: new (opts: object, id: string) => void } } }).google;
+    if (g?.translate?.TranslateElement) {
+      new g.translate.TranslateElement({ pageLanguage: "de", autoDisplay: false }, "google_translate_element");
+    }
+  };
+  const script = document.createElement("script");
+  script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+  script.async = true;
+  document.body.appendChild(script);
+}
+
 function getCookie(name: string): string | undefined {
   return document.cookie.split("; ").find((r) => r.startsWith(name + "="))?.split("=").slice(1).join("=");
 }
@@ -63,6 +81,12 @@ export function LanguageSwitcher({ tone = "dark" }: { tone?: "dark" | "light" })
   const ref = useRef<HTMLDivElement>(null);
   const activeLang = LANGS.find((l) => l.code === active) ?? LANGS[0];
 
+  // Läuft bereits eine Übersetzung (Cookie gesetzt)? Dann Script sofort nachladen,
+  // sonst bricht die Übersetzung nach einem Reload ab.
+  useEffect(() => {
+    if (currentLang() !== "de") ensureGoogleTranslate();
+  }, []);
+
   const pick = (code: string) => {
     setOpen(false);
     if (code === "de") {
@@ -91,7 +115,10 @@ export function LanguageSwitcher({ tone = "dark" }: { tone?: "dark" | "light" })
   return (
     <div ref={ref} className="relative notranslate" translate="no">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          ensureGoogleTranslate();
+          setOpen((v) => !v);
+        }}
         className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 min-h-[44px] text-sm font-medium transition-colors ${triggerClass}`}
         aria-label="Sprache wählen"
       >
@@ -116,7 +143,9 @@ export function LanguageSwitcher({ tone = "dark" }: { tone?: "dark" | "light" })
               {active === l.code && <Check className="h-4 w-4 text-primary" />}
             </button>
           ))}
-          <p className="px-3 pb-1 pt-1.5 text-[10px] text-muted-foreground">Übersetzt von Google</p>
+          <p className="px-3 pb-1 pt-1.5 text-[10px] text-muted-foreground">
+            Übersetzt von Google — bei Nutzung werden Daten an Google übertragen (siehe Datenschutz).
+          </p>
         </div>
       )}
     </div>

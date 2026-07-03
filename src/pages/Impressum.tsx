@@ -4,7 +4,7 @@ const Impressum = () => (
     <article className="prose-legal">
       <h1>Impressum</h1>
 
-      <h2>Angaben gemäß § 5 TMG</h2>
+      <h2>Angaben gemäß § 5 DDG</h2>
       <p><strong>Alex Autoshop</strong></p>
       <p>Inhaber: Alexander Haritopoulos</p>
       <p>Handelstraße 64<br />42277 Wuppertal</p>
@@ -27,7 +27,7 @@ const Impressum = () => (
       <hr />
 
       <h2>Haftung für Inhalte</h2>
-      <p>Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.</p>
+      <p>Als Diensteanbieter sind wir für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Als Diensteanbieter im Sinne des Digitale-Dienste-Gesetzes (DDG) und der Verordnung (EU) 2022/2065 (Digital Services Act) sind wir jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.</p>
       <p>Verpflichtungen zur Entfernung oder Sperrung der Nutzung von Informationen nach den allgemeinen Gesetzen bleiben hiervon unberührt. Eine diesbezügliche Haftung ist jedoch erst ab dem Zeitpunkt der Kenntnis einer konkreten Rechtsverletzung möglich. Bei Bekanntwerden von entsprechenden Rechtsverletzungen werden wir diese Inhalte umgehend entfernen.</p>
 
       <hr />
@@ -43,16 +43,10 @@ const Impressum = () => (
 
       <hr />
 
-      <h2>Online-Streitbeilegung</h2>
-      <p>Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit, die Sie unter <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="noopener noreferrer">https://ec.europa.eu/consumers/odr</a> finden.</p>
-      <p>Unsere E-Mail-Adresse lautet: info@alex-autoshop.de</p>
-
-      <hr />
-
       <h2>Hinweis gemäß § 36 VSBG</h2>
       <p>Alex Autoshop ist weder bereit noch verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
 
-      <p><em>Stand: Februar 2025</em></p>
+      <p><em>Stand: Juli 2026</em></p>
     </article>
   </div>
 );

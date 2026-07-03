@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
+import { MotionConfig } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
@@ -40,6 +41,7 @@ const PageFallback = () => (
 
 export default function App() {
   return (
+    <MotionConfig reducedMotion="user">
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
@@ -88,5 +90,6 @@ export default function App() {
         <Toaster position="top-center" richColors />
       </AuthProvider>
     </BrowserRouter>
+    </MotionConfig>
   );
 }
