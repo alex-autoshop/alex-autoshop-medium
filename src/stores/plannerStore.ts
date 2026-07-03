@@ -59,9 +59,11 @@ interface PlannerStore {
   step: PlannerStep;
   briefing: PlannerBriefing;
   aiPlan: AIPlan | null;
+  planNote: string; // Freitext-Anmerkung des Kunden — geht mit in WhatsApp/Druck
   setStep: (step: PlannerStep) => void;
   setBriefing: (patch: Partial<PlannerBriefing>) => void;
   setAiPlan: (plan: AIPlan | null) => void;
+  setPlanNote: (note: string) => void;
   toggleAiItem: (id: number) => void;
   resetPlanner: () => void;
 }
@@ -101,9 +103,11 @@ export const usePlannerStore = create<PlannerStore>()(
       step: 1,
       briefing: EMPTY_BRIEFING,
       aiPlan: null,
+      planNote: "",
       setStep: (step) => set({ step }),
       setBriefing: (patch) => set((s) => ({ briefing: { ...s.briefing, ...patch } })),
       setAiPlan: (plan) => set({ aiPlan: plan }),
+      setPlanNote: (planNote) => set({ planNote }),
       toggleAiItem: (id) =>
         set((s) =>
           s.aiPlan
@@ -117,7 +121,7 @@ export const usePlannerStore = create<PlannerStore>()(
               }
             : s
         ),
-      resetPlanner: () => set({ step: 1, briefing: EMPTY_BRIEFING, aiPlan: null }),
+      resetPlanner: () => set({ step: 1, briefing: EMPTY_BRIEFING, aiPlan: null, planNote: "" }),
     }),
     {
       name: "material-planner",

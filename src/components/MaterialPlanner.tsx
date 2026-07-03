@@ -15,6 +15,7 @@ import {
   Car,
   Palette,
   Hand,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePlannerStore, type AIPlan, type AIPlanItem } from "@/stores/plannerStore";
@@ -23,6 +24,7 @@ import { useAuth, type Vehicle } from "@/context/AuthContext";
 import {
   storefrontApiRequest,
   STOREFRONT_PRODUCTS_QUERY,
+  formatPrice,
   type ShopifyProduct,
 } from "@/lib/shopify";
 import { discountForLevel } from "@/data/memberships";
@@ -195,7 +197,7 @@ function ItemPrice({ price, discount }: { price: string; discount: number }) {
 }
 
 export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
-  const { step, briefing, aiPlan, setStep, setBriefing, setAiPlan, toggleAiItem, resetPlanner } =
+  const { step, briefing, aiPlan, planNote, setStep, setBriefing, setAiPlan, setPlanNote, toggleAiItem, resetPlanner } =
     usePlannerStore();
   const addItem = useCartStore((s) => s.addItem);
   const { profile, user } = useAuth();
@@ -352,9 +354,34 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
       ...aiPlan.items.filter((i) => i.included).map((i) => `• ${i.name} — ${i.quantity}${i.price ? ` (${i.price})` : ""}`),
       "",
       aiPlan.totalEstimate ? `Geschätzt gesamt: ${aiPlan.totalEstimate}` : "",
+      planNote.trim() ? `📝 Anmerkung: ${planNote.trim()}` : "",
       `Bitte um Verfügbarkeit & Bestpreis. Danke!`,
     ].filter(Boolean);
     return whatsappLink(lines.join("\n"));
+  };
+
+  // Eigene Position ergänzen — Preis wird best-effort im Shop nachgeschlagen
+  const addCustomItem = async (name: string) => {
+    if (!aiPlan) return;
+    let price = "";
+    try {
+      const d = await storefrontApiRequest(STOREFRONT_PRODUCTS_QUERY, { first: 1, query: name });
+      const node = d?.data?.products?.edges?.[0]?.node;
+      if (node) {
+        const pr = node.priceRange.minVariantPrice;
+        const multiple = (node.variants?.edges?.length ?? 0) > 1;
+        price = `${multiple ? "ab " : ""}${formatPrice(pr.amount, pr.currencyCode)}`;
+      }
+    } catch {
+      /* Preis bleibt offen — wird an der Theke geklärt */
+    }
+    setAiPlan({
+      ...aiPlan,
+      items: [
+        ...aiPlan.items,
+        { id: nextAiId(), name, quantity: "1×", price, reason: "Selbst hinzugefügt", searchQuery: name, included: true },
+      ],
+    });
   };
 
   // Farbcode-Service: VIN per WhatsApp anfragen + Bestätigung in die Inbox
@@ -716,6 +743,9 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
               ))}
             </motion.ul>
 
+            {/* Eigene Position ergänzen */}
+            <AddItemRow onAdd={addCustomItem} />
+
             {aiPlan.hint && (
               <p className="text-xs text-muted-foreground bg-secondary/60 rounded-lg p-3 mb-4">💡 {aiPlan.hint}</p>
             )}
@@ -749,6 +779,15 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
               </div>
             )}
 
+            {/* Anmerkung: geht mit in WhatsApp-Anfrage und Ausdruck */}
+            <textarea
+              value={planNote}
+              onChange={(e) => setPlanNote(e.target.value)}
+              rows={2}
+              placeholder="Anmerkung (optional) — z.B. Bis Freitag benötigt / Bitte Lieferung"
+              className="input-base text-foreground w-full py-3 mb-3 resize-none text-sm"
+            />
+
             {/* Aktionen */}
             <div className="grid gap-2">
               <button onClick={addAllToCart} disabled={cartBusy} className="btn-primary w-full min-h-[56px] text-base font-bold">
@@ -771,6 +810,40 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// Eigene Position zum Plan hinzufügen — Preis kommt automatisch aus dem Shop
+function AddItemRow({ onAdd }: { onAdd: (name: string) => Promise<void> }) {
+  const [val, setVal] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!val.trim() || busy) return;
+    setBusy(true);
+    await onAdd(val.trim());
+    setVal("");
+    setBusy(false);
+  };
+
+  return (
+    <form onSubmit={submit} className="flex gap-2 mb-4">
+      <input
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        placeholder="Noch was? Position hinzufügen …"
+        className="input-base flex-1 text-foreground"
+      />
+      <button
+        type="submit"
+        disabled={!val.trim() || busy}
+        className="btn-outline shrink-0 px-4 disabled:opacity-40"
+        aria-label="Position hinzufügen"
+      >
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+      </button>
+    </form>
   );
 }
 
