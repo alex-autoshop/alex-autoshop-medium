@@ -25,6 +25,12 @@ interface Article {
   oeNumbers?: string[];
   specs?: { name: string; value: string }[];
   mountingInfo?: string;
+  // Intercars live data
+  price?: number;
+  priceOriginal?: number;
+  availability?: string;
+  deliveryDays?: number;
+  source?: "intercars" | "static";
 }
 
 async function tecdoc(payload: Record<string, unknown>) {
@@ -35,6 +41,48 @@ async function tecdoc(payload: Record<string, unknown>) {
   });
   if (!res.ok) throw new Error(`API-Fehler ${res.status}`);
   return res.json();
+}
+
+async function intercars(payload: Record<string, unknown>) {
+  const res = await fetch("/api/intercars", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`Intercars API-Fehler ${res.status}`);
+  return res.json();
+}
+
+const PRICE_MARKUP = 1.7;
+
+function parseIntercarsArticles(data: any): Article[] {
+  const items: any[] = data?.articles ?? data?.results ?? (Array.isArray(data) ? data : []);
+  return items.slice(0, 50).map((ic: any) => {
+    const ekPrice: number | undefined = ic.price;
+    const sellPrice = ekPrice != null ? Math.ceil(ekPrice * PRICE_MARKUP * 100) / 100 : undefined;
+    // Find image URL — Intercars may return string URLs or objects
+    const imgRaw = ic.images?.[0];
+    const imageUrl: string | undefined =
+      typeof imgRaw === "string" ? imgRaw : imgRaw?.url ?? imgRaw?.imageURL ?? undefined;
+    return {
+      id: ic.id ?? ic._sku ?? Math.random(),
+      name: ic.name ?? "Artikel",
+      brand: ic.brand ?? "",
+      articleNumber: ic._sku ?? ic._index ?? ic.id ?? "",
+      imageUrl,
+      category: undefined,
+      oeNumbers: ic.oemNumbers ?? [],
+      specs: ic.specs
+        ? Object.entries(ic.specs).map(([name, value]) => ({ name, value: String(value) }))
+        : [],
+      mountingInfo: undefined,
+      price: sellPrice,
+      priceOriginal: undefined, // Don't expose EK price to customers
+      availability: ic.availability,
+      deliveryDays: ic.deliveryDays,
+      source: "intercars" as const,
+    };
+  });
 }
 
 function parseVehicle(data: Record<string, unknown> | null): VehicleInfo | null {
@@ -170,10 +218,26 @@ export default function Teileportal() {
     setSearched(true);
     setSelectedBrands(new Set());
     try {
-      const data = await tecdoc({ action: "search", query: partQuery.trim() });
-      const parsed = parseArticles(data);
+      // Try Intercars first (live prices + availability)
+      let parsed: Article[] = [];
+      let total = 0;
+      try {
+        const icData = await intercars({ action: "search", query: partQuery.trim(), limit: 20 });
+        parsed = parseIntercarsArticles(icData);
+        total = icData?.totalCount ?? parsed.length;
+      } catch {
+        // Intercars not configured or failed — fall through to static catalog
+      }
+
+      // Fall back to TecDoc / static catalog if Intercars returned nothing
+      if (parsed.length === 0) {
+        const tdData = await tecdoc({ action: "search", query: partQuery.trim() });
+        parsed = parseArticles(tdData);
+        total = (tdData as any)?.totalMatchingArticles ?? parsed.length;
+      }
+
       setArticles(parsed);
-      setTotalCount((data as any)?.totalMatchingArticles ?? parsed.length);
+      setTotalCount(total);
     } catch {
       setPartsError("Suche fehlgeschlagen. Versuch es später erneut.");
       setArticles([]);
@@ -438,57 +502,7 @@ export default function Teileportal() {
                               </div>
 
                               <div className="shrink-0 text-right flex flex-col items-end gap-2">
-                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                                  Auf Anfrage
-                                </span>
-                                <a
-                                  href={inquiry(a)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1"
-                                >
-                                  <MessageCircle className="w-3.5 h-3.5" />
-                                  Preis anfragen
-                                </a>
-                                <a
-                                  href={`tel:${SHOP_INFO.phoneIntl}`}
-                                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                                >
-                                  <Phone className="w-3 h-3" /> {SHOP_INFO.phone}
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })() : (
-            <p className="text-muted-foreground">Keine Teile gefunden — frag uns direkt, wir finden es.</p>
-          )}
-        </div>
-      )}
-
-      {/* Anfrage-CTA */}
-      <div className="section-dark rounded-3xl p-8 sm:p-10 mt-10 max-w-2xl">
-        <h2 className="text-xl sm:text-2xl mb-2">
-          Lieber direkt <span className="text-gold-accent">anfragen?</span>
-        </h2>
-        <p className="text-white/65 mb-6 text-sm leading-relaxed">
-          Schick uns Kennzeichen + Teilewunsch — wir prüfen Preis und Verfügbarkeit und melden uns sofort.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <a href={inquiry()} target="_blank" rel="noopener noreferrer" className="btn-gold-bright flex-1">
-            <MessageCircle className="w-5 h-5" /> Per WhatsApp anfragen
-          </a>
-          <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn bg-white/10 text-white hover:bg-white/20 flex-1">
-            <Phone className="w-5 h-5" /> {SHOP_INFO.phone}
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
+                                {a.price != null ? (
+                                  <>
+                                    <div className="text-right">
+                                      <p className="font-bold text-lg leading-none">
