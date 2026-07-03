@@ -365,6 +365,11 @@ export async function removeLineFromShopifyCart(cartId: string, lineId: string):
   return { success: true };
 }
 
-export function formatPrice(amount: string, currencyCode: string): string {
-  return new Intl.NumberFormat('de-DE', {
-    style
+const CART_FETCH_QUERY = `
+  query getCart($cartId: ID!) {
+    cart(id: $cartId) {
+      id
+      checkoutUrl
+    }
+  }
+`;

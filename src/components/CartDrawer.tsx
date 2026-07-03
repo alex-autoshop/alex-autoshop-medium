@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/cartStore";
-import { formatPrice } from "@/lib/shopify";
+import { formatPrice, fetchFreshCheckoutUrl } from "@/lib/shopify";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useAuth } from "@/context/AuthContext";
 import { discountForLevel } from "@/data/memberships";
@@ -16,10 +16,11 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
-  const { items, isLoading, updateQuantity, removeItem, checkoutUrl, clearCart } = useCartStore();
+  const { items, isLoading, updateQuantity, removeItem, cartId, clearCart } = useCartStore();
   const { user, profile } = useAuth();
 
   const [placing, setPlacing] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
   // Bestätigte Rechnungs-/Abholbestellung — zeigt die Erfolgsansicht im Drawer.
   const [confirmed, setConfirmed] = useState<{ total: number; currency: string; count: number } | null>(null);
 
@@ -228,44 +229,34 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   </button>
                 )}
 
-                {/* Online sofort bezahlen über Shopify */}
-                <a
-                  href={checkoutUrl ?? "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    if (!checkoutUrl) {
-                      e.preventDefault();
-                      toast.error("Online-Kasse gerade nicht verfügbar", { description: "Bestell als Mitglied auf Rechnung oder versuch es gleich nochmal." });
+                {/* Online sofort bezahlen über Shopify — immer frische URL holen */}
+                <button
+                  disabled={checkoutLoading}
+                  onClick={async () => {
+                    if (!cartId) {
+                      toast.error("Warenkorb nicht gefunden", { description: "Füge ein Produkt hinzu und versuch es nochmal." });
                       return;
                     }
-                    handleCheckout();
+                    setCheckoutLoading(true);
+                    try {
+                      const freshUrl = await fetchFreshCheckoutUrl(cartId);
+                      if (!freshUrl) {
+                        toast.error("Online-Kasse gerade nicht verfügbar", { description: "Bestell als Mitglied auf Rechnung oder versuch es gleich nochmal." });
+                        return;
+                      }
+                      handleCheckout();
+                      window.open(freshUrl, '_blank', 'noopener,noreferrer');
+                    } finally {
+                      setCheckoutLoading(false);
+                    }
                   }}
                   className={user ? "btn-outline w-full" : "btn-gold-bright w-full text-base font-bold"}
                 >
-                  <Zap className="w-5 h-5" /> Express-Kauf (online zahlen)
-                </a>
+                  <Zap className="w-5 h-5" />
+                  {checkoutLoading ? "Wird geladen …" : "Express-Kauf (online zahlen)"}
+                </button>
 
                 {discount === 0 && (
                   <p className="text-xs text-center text-muted-foreground">
                     {user ? (
-                      <>Als Mitglied sparst du bis zu 38%. <a href="/mitgliedschaft" className="text-primary font-semibold underline">Mehr erfahren</a></>
-                    ) : (
-                      <>Mit Konto & Mitgliedschaft bis 38% sparen.</>
-                    )}
-                  </p>
-                )}
-
-                <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Sichere Bezahlung über Shopify
-                </p>
-              </div>
-            )}
-            </>
-            )}
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
+                      <>Als Mitglied sparst du bis zu 38%. <a h
