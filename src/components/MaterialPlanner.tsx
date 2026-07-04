@@ -233,8 +233,7 @@ function generatePlanPrintHtml(
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 11px; line-height: 1.35; }
   .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #B8860B; padding-bottom: 8px; margin-bottom: 10px; }
-  .logo { font-size: 20px; font-weight: 800; color: #B8860B; }
-  .logo span { color: #111; }
+  .logo-img { height: 44px; width: auto; display: block; }
   .shop { font-size: 9.5px; color: #555; margin-top: 2px; }
   .doc { text-align: right; }
   .doc h1 { font-size: 15px; letter-spacing: 1px; }
@@ -264,7 +263,7 @@ function generatePlanPrintHtml(
 <body>
   <div class="head">
     <div>
-      <div class="logo">alex <span>autoshop</span></div>
+      <img class="logo-img" src="${typeof window !== "undefined" ? window.location.origin : "https://alex-autoshop.de"}/images/logo-cropped.png" alt="Alex Autoshop" />
       <div class="shop">Handelstraße 64 · 42277 Wuppertal · Tel 0202 82690 · alex-autoshop.de</div>
     </div>
     <div class="doc">
