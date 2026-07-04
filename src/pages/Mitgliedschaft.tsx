@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 
 const FAQ = [
   {
+    q: "Gilt die Mitgliedschaft nur in Wuppertal?",
+    a: "Nein — deutschlandweit! Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Du bestellst online zu deinen Mitgliedspreisen, wir versenden in ganz Deutschland (versandkostenfrei ab 100 €).",
+  },
+  {
     q: "Wie werde ich Mitglied?",
     a: "Ruf uns an (0202 82690), schreib per WhatsApp oder komm direkt im Laden vorbei. Die Anmeldung dauert 5 Minuten — der Rabatt gilt sofort.",
   },
@@ -35,8 +39,8 @@ export default function Mitgliedschaft() {
   return (
     <div>
       <Seo
-        title="Mitgliedschaft – bis 38% B2B-Rabatt"
-        description="B2B-Mitgliedschaften bei Alex Autoshop Wuppertal: 15%, 24% oder 38% Rabatt auf Lackierprodukte und Werkstattbedarf. Monatlich kündbar."
+        title="Mitgliedschaft – bis 38% Rabatt, deutschlandweit"
+        description="Mitgliedschaften bei Alex Autoshop: 15%, 24% oder 38% Rabatt auf Lackierprodukte und Werkstattbedarf. Deutschlandweit für alle — Werkstatt wie privat. Monatlich kündbar, Versand in ganz Deutschland."
       />
 
       <section className="section-dark py-16 sm:py-20">
@@ -51,6 +55,13 @@ export default function Mitgliedschaft() {
             Bündle deinen kompletten Werkstatt-Einkauf bei Alex Autoshop und spar bei jeder
             Bestellung — bis 38% auf das gesamte Sortiment. Monatlich kündbar, keine Mindestabnahme.
           </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            {["🇩🇪 Deutschlandweit verfügbar", "Für jeden abschließbar — Werkstatt wie privat", "Lieferung direkt zu dir"].map((t) => (
+              <span key={t} className="rounded-full bg-white/5 border border-white/15 px-4 py-1.5 text-sm font-semibold text-white/85">
+                {t}
+              </span>
+            ))}
+          </div>
           <div className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-white/80">
             <span className="font-bold text-gold-accent">Nur 10 Gründungs-Plätze</span>
             zu diesen Konditionen — danach werden die Beiträge angehoben.
