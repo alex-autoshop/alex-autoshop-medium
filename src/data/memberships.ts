@@ -1,3 +1,8 @@
+export interface Feature {
+  label: string;
+  info?: string;
+}
+
 export interface MembershipLevel {
   level: number;
   name: string;
@@ -7,7 +12,7 @@ export interface MembershipLevel {
   tagline: string;
   modules: string[];
   defaultModules?: string[];
-  features: string[];
+  features: Feature[];
   savingsExample: number;
   highlight?: boolean;
   badge?: string;
@@ -31,13 +36,34 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     defaultModules: ["Lackfarben", "Lackmaterial"],
     savingsExample: 467,
     features: [
-      "Gratis Farbe: 250 ml / Monat",
-      "Farbfehlerschutz: bis 2 L / Monat",
-      "NRW Tageslieferung: 3 Touren täglich — Bestellung bis 14:00 Uhr",
-      "Wuppertal-Express: Lieferung in ~1 h bis 17:30 Uhr (Nicht-Mitglieder bis 16:00)",
-      "Willkommensgeschenk: 50 €",
-      "Preisgarantie: Dein Einkaufspreis steigt nie — auch wenn wir Grundpreise erhöhen",
-      "7 % Cashback ab 500 € Teileumsatz / Monat",
+      {
+        label: "Gratis Farbe 250 ml / Monat",
+        info: "Monatlich gratis: 1 Dose Wunschfarbe bis 250 ml — kein Aufpreis, direkt mit der nächsten Bestellung.",
+      },
+      {
+        label: "Farbfehlerschutz bis 2 L / Monat",
+        info: "Farbe falsch gewählt oder falsch angemischt? Wir mischen erneut — auf unsere Kosten. Gilt für bis zu 2 L pro Monat.",
+      },
+      {
+        label: "NRW Tageslieferung bis 14:00 Uhr",
+        info: "3 Touren täglich durch NRW (8:00, 11:00, 14:00 Uhr). Als Mitglied kannst du bis 14:00 Uhr bestellen und bekommst noch heute deine Ware.",
+      },
+      {
+        label: "Wuppertal-Express in ~1 h",
+        info: "Im Raum Wuppertal liefern wir innerhalb von ca. 1 Stunde — wie Lieferando, aber für Lack & Teile. Mitglieder bestellen bis 17:30 Uhr (Nicht-Mitglieder bis 16:00).",
+      },
+      {
+        label: "Willkommensgeschenk 50 €",
+        info: "Einmalig beim Start deiner Mitgliedschaft: 50 € Guthaben auf deine erste Bestellung.",
+      },
+      {
+        label: "Preisgarantie",
+        info: "Dein Mitgliederpreis bleibt dauerhaft eingefroren — auch wenn Alex Autoshop die Grundpreise für alle anderen erhöht.",
+      },
+      {
+        label: "7 % Cashback ab 500 € Teileumsatz",
+        info: "Erreichst du im Monat mind. 500 € Umsatz über das Teileportal, bekommst du 7 % zurück als Guthaben für deine nächste Bestellung.",
+      },
     ],
   },
   {
@@ -51,14 +77,38 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     savingsExample: 2347,
     features: [
-      "Gratis Farbe: 1 L / Monat",
-      "Farbfehlerschutz: bis zu 4 L / Monat",
-      "NRW Tageslieferung: 3 Touren täglich — Bestellung bis 14:00 Uhr",
-      "Wuppertal-Express: Lieferung in ~1 h bis 17:30 Uhr (Nicht-Mitglieder bis 16:00)",
-      "Willkommensgeschenk: 250 €",
-      "Preisgarantie: Dein Einkaufspreis steigt nie — auch wenn wir Grundpreise erhöhen",
-      "Im Alex-Netzwerk gelistet: Kratzer- & Lackschaden-Kunden werden direkt an dich vermittelt",
-      "8,5 % Cashback ab 1.200 € Teileumsatz / Monat",
+      {
+        label: "Gratis Farbe 1 L / Monat",
+        info: "Monatlich gratis: 1 L Wunschfarbe deiner Wahl — einfach bei der Bestellung angeben.",
+      },
+      {
+        label: "Farbfehlerschutz bis 4 L / Monat",
+        info: "Farbe falsch gewählt oder falsch angemischt? Wir mischen erneut — auf unsere Kosten. Gilt für bis zu 4 L pro Monat.",
+      },
+      {
+        label: "NRW Tageslieferung bis 14:00 Uhr",
+        info: "3 Touren täglich durch NRW (8:00, 11:00, 14:00 Uhr). Als Mitglied kannst du bis 14:00 Uhr bestellen und bekommst noch heute deine Ware.",
+      },
+      {
+        label: "Wuppertal-Express in ~1 h",
+        info: "Im Raum Wuppertal liefern wir innerhalb von ca. 1 Stunde — wie Lieferando, aber für Lack & Teile. Mitglieder bestellen bis 17:30 Uhr (Nicht-Mitglieder bis 16:00).",
+      },
+      {
+        label: "Willkommensgeschenk 250 €",
+        info: "Einmalig beim Start: 250 € Guthaben auf deine erste Bestellung als Mitglied.",
+      },
+      {
+        label: "Preisgarantie",
+        info: "Dein Mitgliederpreis bleibt dauerhaft eingefroren — auch wenn Alex Autoshop die Grundpreise für alle anderen erhöht.",
+      },
+      {
+        label: "Kundenvermittlung: Kratzer & Lackschäden",
+        info: "Du wirst im Alex-Netzwerk als Partnerwerkstatt gelistet. Kunden die bei uns nach Hilfe für Kratzer oder Lackschäden fragen, werden direkt an dich weitervermittelt.",
+      },
+      {
+        label: "8,5 % Cashback ab 1.200 € Teileumsatz",
+        info: "Erreichst du im Monat mind. 1.200 € Umsatz über das Teileportal, bekommst du 8,5 % zurück als Guthaben.",
+      },
     ],
   },
   {
@@ -72,14 +122,38 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     savingsExample: 5930,
     features: [
-      "Gratis Farbe: 2 L / Monat",
-      "Farbfehlerschutz: unbegrenzt",
-      "NRW Tageslieferung: 3 Touren täglich — Bestellung bis 14:00 Uhr (Tourpriorität)",
-      "Wuppertal-Express: Lieferung in ~1 h bis 17:30 Uhr (Nicht-Mitglieder bis 16:00)",
-      "Willkommensgeschenk: 450 €",
-      "Preisgarantie: Dein Einkaufspreis steigt nie — auch wenn wir Grundpreise erhöhen",
-      "Bevorzugte Auftragsbearbeitung",
-      "12,5 % Cashback ab 2.500 € Teileumsatz / Monat",
+      {
+        label: "Gratis Farbe 2 L / Monat",
+        info: "Monatlich gratis: 2 L Wunschfarbe — inklusive Sondermischungen auf Anfrage.",
+      },
+      {
+        label: "Farbfehlerschutz unbegrenzt",
+        info: "Farbe falsch gewählt oder falsch angemischt? Wir mischen erneut — auf unsere Kosten. Ohne mengenmäßiges Limit.",
+      },
+      {
+        label: "NRW Tageslieferung bis 14:00 Uhr (Priorität)",
+        info: "3 Touren täglich durch NRW (8:00, 11:00, 14:00 Uhr). Level-3-Mitglieder werden bei der Tourenplanung bevorzugt behandelt.",
+      },
+      {
+        label: "Wuppertal-Express in ~1 h",
+        info: "Im Raum Wuppertal liefern wir innerhalb von ca. 1 Stunde. Mitglieder bestellen bis 17:30 Uhr (Nicht-Mitglieder bis 16:00).",
+      },
+      {
+        label: "Willkommensgeschenk 450 €",
+        info: "Einmalig beim Start: 450 € Guthaben auf deine erste Bestellung als Premium-Mitglied.",
+      },
+      {
+        label: "Preisgarantie",
+        info: "Dein Mitgliederpreis bleibt dauerhaft eingefroren — auch wenn Alex Autoshop die Grundpreise für alle anderen erhöht.",
+      },
+      {
+        label: "Bevorzugte Auftragsbearbeitung",
+        info: "Deine Bestellungen werden intern priorisiert — kürzere Wartezeit, direkte Bearbeitung durch unser Team.",
+      },
+      {
+        label: "12,5 % Cashback ab 2.500 € Teileumsatz",
+        info: "Erreichst du im Monat mind. 2.500 € Umsatz über das Teileportal, bekommst du 12,5 % zurück als Guthaben.",
+      },
     ],
   },
 ];

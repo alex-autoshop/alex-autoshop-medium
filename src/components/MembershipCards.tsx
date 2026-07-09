@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, Zap, Loader2 } from "lucide-react";
+import { Check, Zap, Loader2, Info } from "lucide-react";
+import type { Feature } from "@/data/memberships";
 import { toast } from "sonner";
 import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
 import { useAuth } from "@/context/AuthContext";
@@ -29,6 +30,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const [modules, setModules] = useState<string[]>(m.defaultModules ?? m.modules);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [openInfo, setOpenInfo] = useState<string | null>(null);
 
   const toggle = (mod: string) =>
     setModules((p) => (p.includes(mod) ? p.filter((x) => x !== mod) : [...p, mod]));
@@ -136,14 +138,32 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
           </div>
 
           <ul className="space-y-2 mt-5 mb-5 flex-1">
-            {m.features.map((f) => {
-              const isCashback = f.includes("Cashback");
+            {m.features.map((f: Feature) => {
+              const isCashback = f.label.includes("Cashback");
               const autoteileAktiv = modules.includes("Autoteile");
               const inactive = isCashback && !autoteileAktiv;
+              const isOpen = openInfo === f.label;
               return (
-                <li key={f} className={cn("flex items-start gap-2 text-sm", inactive && "opacity-40")}>
-                  <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                  <span className={cn(inactive && "line-through")}>{f}</span>
+                <li key={f.label} className={cn("flex flex-col gap-0.5 text-sm", inactive && "opacity-40")}>
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <span className={cn("flex-1", inactive && "line-through")}>{f.label}</span>
+                    {f.info && (
+                      <button
+                        type="button"
+                        onClick={() => setOpenInfo(isOpen ? null : f.label)}
+                        className="shrink-0 w-4 h-4 rounded-full border border-muted-foreground/40 flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                        aria-label="Mehr Info"
+                      >
+                        <Info className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                  </div>
+                  {isOpen && f.info && (
+                    <p className="ml-6 text-xs text-muted-foreground bg-secondary/60 rounded-md px-3 py-2 leading-relaxed">
+                      {f.info}
+                    </p>
+                  )}
                 </li>
               );
             })}
