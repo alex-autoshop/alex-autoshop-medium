@@ -57,8 +57,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Einmalig beim Start deiner Mitgliedschaft: 50 € Guthaben auf deine erste Bestellung.",
       },
       {
-        label: "Preisgarantie",
-        info: "Dein Mitgliederpreis bleibt dauerhaft eingefroren — auch wenn Alex Autoshop die Grundpreise für alle anderen erhöht.",
+        label: "Preisschutz ab Mitgliedschaftsstart",
+        info: "Ab dem ersten Tag deiner Mitgliedschaft sind deine Preise für immer eingefroren — egal was passiert. Steigen unsere Grundpreise für alle anderen, zahlst du weiterhin denselben Preis wie beim Start.",
       },
       {
         label: "7 % Cashback ab 500 € Teileumsatz",
@@ -98,8 +98,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Einmalig beim Start: 250 € Guthaben auf deine erste Bestellung als Mitglied.",
       },
       {
-        label: "Preisgarantie",
-        info: "Dein Mitgliederpreis bleibt dauerhaft eingefroren — auch wenn Alex Autoshop die Grundpreise für alle anderen erhöht.",
+        label: "Preisschutz ab Mitgliedschaftsstart",
+        info: "Ab dem ersten Tag deiner Mitgliedschaft sind deine Preise für immer eingefroren — egal was passiert. Steigen unsere Grundpreise für alle anderen, zahlst du weiterhin denselben Preis wie beim Start.",
       },
       {
         label: "Kundenvermittlung: Kratzer & Lackschäden",
@@ -139,12 +139,12 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Im Raum Wuppertal liefern wir innerhalb von ca. 1 Stunde. Mitglieder bestellen bis 17:30 Uhr (Nicht-Mitglieder bis 16:00).",
       },
       {
-        label: "Willkommensgeschenk 450 €",
-        info: "Einmalig beim Start: 450 € Guthaben auf deine erste Bestellung als Premium-Mitglied.",
+        label: "Willkommensgeschenk 500 €",
+        info: "Einmalig beim Start: 500 € Guthaben auf deine erste Bestellung als Premium-Mitglied.",
       },
       {
-        label: "Preisgarantie",
-        info: "Dein Mitgliederpreis bleibt dauerhaft eingefroren — auch wenn Alex Autoshop die Grundpreise für alle anderen erhöht.",
+        label: "Preisschutz ab Mitgliedschaftsstart",
+        info: "Ab dem ersten Tag deiner Mitgliedschaft sind deine Preise für immer eingefroren — egal was passiert. Steigen unsere Grundpreise für alle anderen, zahlst du weiterhin denselben Preis wie beim Start.",
       },
       {
         label: "Bevorzugte Auftragsbearbeitung",
