@@ -76,3 +76,11 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       "Höchste Priorität",
       "Gratis Farbe: 2 L / Monat",
       "Farbfehlerschutz: unbegrenzt",
+      "Expresslieferung: unbegrenzt",
+      "Willkommensgeschenk: 450 €",
+      "Jahresbonus: Geld-zurück-Garantie",
+      "Blacklist-Preisschutz",
+      "Bevorzugte Auftragsbearbeitung",
+    ],
+  },
+];
