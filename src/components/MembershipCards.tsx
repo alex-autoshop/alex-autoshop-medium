@@ -38,6 +38,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
     () => Math.round(m.pricePerMonth * ratio),
     [modules.length, m.pricePerMonth, m.modules.length]
   );
+  const originalPrice = m.originalPrice ? Math.round(m.originalPrice * ratio) : undefined;
   const savings = useMemo(
     () => Math.round(m.savingsExample * ratio),
     [modules.length, m.savingsExample, m.modules.length]
@@ -85,9 +86,9 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       <p className="text-sm text-muted-foreground mt-1 min-h-[2.5rem]">{m.tagline}</p>
 
       <p className="mt-4">
-        {m.originalPrice && (
+        {originalPrice && (
           <span className="text-lg text-muted-foreground line-through mr-2">
-            {m.originalPrice.toLocaleString("de-DE")} €
+            {originalPrice!.toLocaleString("de-DE")} €
           </span>
         )}
         <span className="text-4xl font-display font-bold">
