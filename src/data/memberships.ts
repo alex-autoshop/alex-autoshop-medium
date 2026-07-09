@@ -59,7 +59,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       "Jahresbonus: Geld-zurück-Garantie",
       "Blacklist-Preisschutz",
       "Bevorzugter Vermittlungspartner",
-      "8,5 % Cashback ab 500 € Teileumsatz / Monat",
+      "8,5 % Cashback ab 1.200 € Teileumsatz / Monat",
     ],
   },
   {
@@ -83,7 +83,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       "Jahresbonus: Geld-zurück-Garantie",
       "Blacklist-Preisschutz",
       "Bevorzugte Auftragsbearbeitung",
-      "12,5 % Cashback ab 500 € Teileumsatz / Monat",
+      "12,5 % Cashback ab 2.500 € Teileumsatz / Monat",
     ],
   },
 ];
