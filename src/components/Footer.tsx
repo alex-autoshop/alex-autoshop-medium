@@ -41,7 +41,7 @@ export function Footer() {
           <div>
             <img src="/images/logo-cropped.png" alt="Alex Autoshop" className="h-12 w-auto mb-4" />
             <p className="text-sm text-white/60 leading-relaxed">
-              Autolack, Lackierprodukte, Autoteile und Werkstattbedarf — B2B-Distributor in Wuppertal seit 2023.
+              Autolack, Lackierprodukte, Autoteile und Werkstattbedarf — B2B-Distributor in Wuppertal seit 2021.
             </p>
             <p className="text-sm text-white/60 mt-4">
               {SHOP_INFO.street}<br />{SHOP_INFO.zip} {SHOP_INFO.city}<br />

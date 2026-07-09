@@ -32,7 +32,7 @@ export default function Laden() {
 
       <section className="container py-12 sm:py-16 text-center max-w-3xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <p className="text-primary font-semibold uppercase tracking-wide text-sm mb-3">Seit 2023 in Wuppertal</p>
+          <p className="text-primary font-semibold uppercase tracking-wide text-sm mb-3">Seit 2021 in Wuppertal</p>
           <h1 className="text-3xl sm:text-5xl leading-tight mb-5">
             Alex Autoshop — <span className="text-primary">Lack & Teile</span> aus einer Hand
           </h1>
