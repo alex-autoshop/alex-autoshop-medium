@@ -124,6 +124,25 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
                 );
               })}
             </div>
+            {/* System-Hinweis */}
+            {opt.name === "Komponenten" && (() => {
+              const sel = selected["Komponenten"];
+              const twoKAvail = isValueAvailable("Komponenten", opt.values.find(v => v.startsWith("2K")) ?? "2K");
+              if (!sel) return null;
+              if (sel.startsWith("1K") && twoKAvail)
+                return (
+                  <p className="text-sm text-primary/80 bg-primary/8 border border-primary/20 rounded-lg px-3 py-2 mt-1">
+                    💡 <strong>Tipp:</strong> Diese Farbe gibt es auch als 2K — mehr Haltbarkeit &amp; besserer Glanz. Einfach oben umschalten.
+                  </p>
+                );
+              if (sel.startsWith("2K"))
+                return (
+                  <p className="text-sm text-muted-foreground bg-secondary/60 rounded-lg px-3 py-2 mt-1">
+                    ✓ Falls deine Wunschfarbe in 2K nicht verfügbar ist, melden wir uns kurz bei dir — du bekommst dann die beste Alternative vorgeschlagen.
+                  </p>
+                );
+              return null;
+            })()}
           </Section>
         );
       })}
