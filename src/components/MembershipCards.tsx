@@ -15,11 +15,11 @@ export function MembershipCards({ compact = false }: { compact?: boolean }) {
         🇩🇪 <span className="text-foreground">Deutschlandweit</span> — jeder kann Mitglied werden,
         Werkstatt wie privat. Wir liefern direkt zu dir.
       </p>
-    <div className="grid lg:grid-cols-3 gap-5 items-start">
-      {MEMBERSHIP_LEVELS.map((m) => (
-        <Card key={m.level} m={m} compact={compact} />
-      ))}
-    </div>
+      <div className="grid lg:grid-cols-3 gap-5 items-start">
+        {MEMBERSHIP_LEVELS.map((m) => (
+          <Card key={m.level} m={m} compact={compact} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -33,7 +33,6 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const toggle = (mod: string) =>
     setModules((p) => (p.includes(mod) ? p.filter((x) => x !== mod) : [...p, mod]));
 
-  // Preis und Ersparnis skalieren mit den gewählten Modulen
   const ratio = modules.length / m.modules.length;
   const price = useMemo(
     () => Math.round(m.pricePerMonth * ratio),
@@ -102,7 +101,6 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
       {!compact && (
         <>
-          {/* Module wählen */}
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mt-5 mb-2">
             Module wählen
           </p>
@@ -136,7 +134,6 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
             })}
           </div>
 
-          {/* Features */}
           <ul className="space-y-2 mt-5 mb-5 flex-1">
             {m.features.map((f) => (
               <li key={f} className="flex items-start gap-2 text-sm">
@@ -145,7 +142,6 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
             ))}
           </ul>
 
-          {/* E-Mail-Anfrage */}
           <form onSubmit={submit} className="mt-auto space-y-2">
             {!user && (
               <input
@@ -158,4 +154,18 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
               />
             )}
             <button type="submit" disabled={loading} className={m.highlight ? "btn-primary w-full" : "btn-dark w-full"}>
-              {loading ? <Loader2 c
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+              Jetzt freischalten →
+            </button>
+          </form>
+        </>
+      )}
+
+      {compact && (
+        <Link to="/mitgliedschaft" className={cn("mt-5", m.highlight ? "btn-primary" : "btn-outline")}>
+          Mehr erfahren
+        </Link>
+      )}
+    </div>
+  );
+}
