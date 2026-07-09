@@ -136,11 +136,17 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
           </div>
 
           <ul className="space-y-2 mt-5 mb-5 flex-1">
-            {m.features.map((f) => (
-              <li key={f} className="flex items-start gap-2 text-sm">
-                <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" /> {f}
-              </li>
-            ))}
+            {m.features.map((f) => {
+              const isCashback = f.includes("Cashback");
+              const autoteileAktiv = modules.includes("Autoteile");
+              const inactive = isCashback && !autoteileAktiv;
+              return (
+                <li key={f} className={cn("flex items-start gap-2 text-sm", inactive && "opacity-40")}>
+                  <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                  <span className={cn(inactive && "line-through")}>{f}</span>
+                </li>
+              );
+            })}
           </ul>
 
           <form onSubmit={submit} className="mt-auto space-y-2">
