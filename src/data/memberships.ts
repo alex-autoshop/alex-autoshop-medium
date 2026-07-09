@@ -2,13 +2,13 @@ export interface MembershipLevel {
   level: number;
   name: string;
   pricePerMonth: number;
-  originalPrice?: number; // durchgestrichener Originalpreis
+  originalPrice?: number;
   discountPercent: number;
   tagline: string;
   modules: string[];
-  defaultModules?: string[]; // welche Module per default aktiv sind
+  defaultModules?: string[];
   features: string[];
-  savingsExample: number; // beispielhafte Ersparnis €/Monat
+  savingsExample: number;
   highlight?: boolean;
   badge?: string;
 }
@@ -33,11 +33,10 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     features: [
       "Gratis Farbe: 250 ml / Monat",
       "Farbfehlerschutz: bis 2 L / Monat",
-      "NRW-Tour: Bestellung bis 14 Uhr = Gleichtagslieferung (4 Touren täglich)",
-      "Wuppertal-Express: Lieferung in 1h — Bestellung bis 17:30 Uhr",
+      "NRW Tageslieferung: 3 Touren täglich — Bestellung bis 14:00 Uhr",
+      "Wuppertal-Express: Lieferung in ~1 h bis 17:30 Uhr (Nicht-Mitglieder bis 16:00)",
       "Willkommensgeschenk: 50 €",
       "Preisgarantie: Dein Einkaufspreis steigt nie — auch wenn wir Grundpreise erhöhen",
-      "Mitgliedspreise im Shop sichtbar",
       "7 % Cashback ab 500 € Teileumsatz / Monat",
     ],
   },
@@ -54,8 +53,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     features: [
       "Gratis Farbe: 1 L / Monat",
       "Farbfehlerschutz: bis zu 4 L / Monat",
-      "NRW-Tour: Bestellung bis 14 Uhr = Gleichtagslieferung (4 Touren täglich)",
-      "Wuppertal-Express: Lieferung in 1h — Bestellung bis 17:30 Uhr",
+      "NRW Tageslieferung: 3 Touren täglich — Bestellung bis 14:00 Uhr",
+      "Wuppertal-Express: Lieferung in ~1 h bis 17:30 Uhr (Nicht-Mitglieder bis 16:00)",
       "Willkommensgeschenk: 250 €",
       "Preisgarantie: Dein Einkaufspreis steigt nie — auch wenn wir Grundpreise erhöhen",
       "Im Alex-Netzwerk gelistet: Kratzer- & Lackschaden-Kunden werden direkt an dich vermittelt",
@@ -73,13 +72,10 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     savingsExample: 5930,
     features: [
-      "Maximale Ersparnis",
-      "Bester Schutz",
-      "Höchste Priorität",
       "Gratis Farbe: 2 L / Monat",
       "Farbfehlerschutz: unbegrenzt",
-      "NRW-Tour: Höchste Priorität — Bestellung bis 14 Uhr = Gleichtagslieferung",
-      "Wuppertal-Express: Lieferung in 1h — Bestellung bis 17:30 Uhr",
+      "NRW Tageslieferung: 3 Touren täglich — Bestellung bis 14:00 Uhr (Tourpriorität)",
+      "Wuppertal-Express: Lieferung in ~1 h bis 17:30 Uhr (Nicht-Mitglieder bis 16:00)",
       "Willkommensgeschenk: 450 €",
       "Preisgarantie: Dein Einkaufspreis steigt nie — auch wenn wir Grundpreise erhöhen",
       "Bevorzugte Auftragsbearbeitung",
