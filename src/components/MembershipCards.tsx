@@ -81,6 +81,11 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       <p className="text-sm text-muted-foreground mt-1 min-h-[2.5rem]">{m.tagline}</p>
 
       <p className="mt-4">
+        {m.originalPrice && (
+          <span className="text-lg text-muted-foreground line-through mr-2">
+            {m.originalPrice.toLocaleString("de-DE")} €
+          </span>
+        )}
         <span className="text-4xl font-display font-bold">
           <AnimatedNumber value={price} format={(n) => Math.round(n).toLocaleString("de-DE")} /> €
         </span>
@@ -153,13 +158,4 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
             </button>
           </form>
         </>
-      )}
-
-      {compact && (
-        <Link to="/mitgliedschaft" className={cn("mt-5", m.highlight ? "btn-primary" : "btn-outline")}>
-          Mehr erfahren
-        </Link>
-      )}
-    </div>
-  );
-}
+      )

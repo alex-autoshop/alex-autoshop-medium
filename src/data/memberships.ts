@@ -2,6 +2,7 @@ export interface MembershipLevel {
   level: number;
   name: string;
   pricePerMonth: number;
+  originalPrice?: number; // durchgestrichener Originalpreis
   discountPercent: number;
   tagline: string;
   modules: string[];
@@ -60,7 +61,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
   {
     level: 3,
     name: "Level 3",
-    pricePerMonth: 338,
+    pricePerMonth: 430,
+    originalPrice: 555,
     discountPercent: 38,
     tagline: "Höchstrabatt & VIP-Service für Lackier- & Karosseriebetriebe",
     badge: "Premium",
@@ -75,8 +77,4 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       "Expresslieferung: unbegrenzt",
       "Willkommensgeschenk: 450 €",
       "Jahresbonus: Geld-zurück-Garantie",
-      "Blacklist-Preisschutz",
-      "Bevorzugte Auftragsbearbeitung",
-    ],
-  },
-];
+ 
