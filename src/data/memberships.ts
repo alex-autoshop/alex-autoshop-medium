@@ -26,7 +26,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     discountPercent: 15,
     tagline: "Für Aufbereiter & kleine Werkstätten — clever ab Tag 1",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
-    savingsExample: 250,
+    savingsExample: 467,
     features: [
       "Gratis Farbe: 250 ml / Monat",
       "Farbfehlerschutz: bis 2 L / Monat",
@@ -46,7 +46,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     highlight: true,
     badge: "Beste Wahl",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
-    savingsExample: 1000,
+    savingsExample: 2347,
     features: [
       "Gratis Farbe: 1 L / Monat",
       "Farbfehlerschutz: bis zu 4 L / Monat",
@@ -65,7 +65,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     tagline: "Höchstrabatt & VIP-Service für Lackier- & Karosseriebetriebe",
     badge: "Premium",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
-    savingsExample: 3000,
+    savingsExample: 5930,
     features: [
       "Maximale Ersparnis",
       "Bester Schutz",

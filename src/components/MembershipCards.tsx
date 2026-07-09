@@ -87,7 +87,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
         <span className="text-muted-foreground"> / Monat</span>
       </p>
       <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
-        <Zap className="w-4 h-4" /> Spare bis {m.savingsExample.toLocaleString("de-DE")} € / Monat
+        <Zap className="w-4 h-4" /> Spare im Durchschnitt {m.savingsExample.toLocaleString("de-DE")} € / Monat
       </p>
 
       {!compact && (
