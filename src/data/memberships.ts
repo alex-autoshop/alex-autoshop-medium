@@ -6,6 +6,7 @@ export interface MembershipLevel {
   discountPercent: number;
   tagline: string;
   modules: string[];
+  defaultModules?: string[]; // welche Module per default aktiv sind
   features: string[];
   savingsExample: number; // beispielhafte Ersparnis €/Monat
   highlight?: boolean;
@@ -27,6 +28,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     discountPercent: 15,
     tagline: "Für Aufbereiter & kleine Werkstätten — clever ab Tag 1",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
+    defaultModules: ["Lackfarben", "Lackmaterial"],
     savingsExample: 467,
     features: [
       "Gratis Farbe: 250 ml / Monat",
@@ -74,7 +76,3 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       "Höchste Priorität",
       "Gratis Farbe: 2 L / Monat",
       "Farbfehlerschutz: unbegrenzt",
-      "Expresslieferung: unbegrenzt",
-      "Willkommensgeschenk: 450 €",
-      "Jahresbonus: Geld-zurück-Garantie",
- 

@@ -26,17 +26,22 @@ export function MembershipCards({ compact = false }: { compact?: boolean }) {
 
 function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const { user } = useAuth();
-  const [modules, setModules] = useState<string[]>(m.modules);
+  const [modules, setModules] = useState<string[]>(m.defaultModules ?? m.modules);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
   const toggle = (mod: string) =>
     setModules((p) => (p.includes(mod) ? p.filter((x) => x !== mod) : [...p, mod]));
 
-  // Preis skaliert mit den gewählten Modulen — beim Abwählen zählt der Betrag runter.
+  // Preis und Ersparnis skalieren mit den gewählten Modulen
+  const ratio = modules.length / m.modules.length;
   const price = useMemo(
-    () => Math.round((m.pricePerMonth * modules.length) / m.modules.length),
+    () => Math.round(m.pricePerMonth * ratio),
     [modules.length, m.pricePerMonth, m.modules.length]
+  );
+  const savings = useMemo(
+    () => Math.round(m.savingsExample * ratio),
+    [modules.length, m.savingsExample, m.modules.length]
   );
 
   const submit = async (e: React.FormEvent) => {
@@ -92,7 +97,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
         <span className="text-muted-foreground"> / Monat</span>
       </p>
       <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
-        <Zap className="w-4 h-4" /> Spare im Durchschnitt {m.savingsExample.toLocaleString("de-DE")} € / Monat
+        <Zap className="w-4 h-4" /> Spare im Durchschnitt {savings.toLocaleString("de-DE")} € / Monat
       </p>
 
       {!compact && (
@@ -153,9 +158,4 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
               />
             )}
             <button type="submit" disabled={loading} className={m.highlight ? "btn-primary w-full" : "btn-dark w-full"}>
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              Jetzt freischalten →
-            </button>
-          </form>
-        </>
-      )
+              {loading ? <Loader2 c
