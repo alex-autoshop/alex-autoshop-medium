@@ -58,7 +58,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       "Willkommensgeschenk: 250 €",
       "Jahresbonus: Geld-zurück-Garantie",
       "Blacklist-Preisschutz",
-      "Bevorzugter Vermittlungspartner",
+      "Im Alex-Netzwerk gelistet: Kratzer- & Lackschaden-Kunden werden direkt an dich vermittelt",
       "8,5 % Cashback ab 1.200 € Teileumsatz / Monat",
     ],
   },
