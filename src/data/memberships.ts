@@ -23,6 +23,34 @@ export function discountForLevel(level: number | undefined): number {
   return m ? m.discountPercent : 0;
 }
 
+
+export const MEMBERSHIP_MODULE_KEYS = ["Autoteile", "Lackfarben", "Lackmaterial"] as const;
+export type MembershipModule = typeof MEMBERSHIP_MODULE_KEYS[number];
+
+/** Gibt den Rabatt zurück NUR wenn das Modul für den User freigeschaltet ist */
+export function discountForModule(
+  level: number | undefined,
+  modules: string[],
+  module: MembershipModule
+): number {
+  if (!modules.includes(module)) return 0;
+  const m = MEMBERSHIP_LEVELS.find((x) => x.level === level);
+  return m ? m.discountPercent : 0;
+}
+
+/** Gibt alle aktiven Rabatte als Map zurück */
+export function moduleDiscounts(
+  level: number | undefined,
+  modules: string[]
+): Record<MembershipModule, number> {
+  const pct = MEMBERSHIP_LEVELS.find((x) => x.level === level)?.discountPercent ?? 0;
+  return {
+    Autoteile: modules.includes("Autoteile") ? pct : 0,
+    Lackfarben: modules.includes("Lackfarben") ? pct : 0,
+    Lackmaterial: modules.includes("Lackmaterial") ? pct : 0,
+  };
+}
+
 export const MEMBERSHIP_MODULES = ["Autoteile", "Lackfarben", "Lackmaterial"];
 
 export const MEMBERSHIP_LEVELS: MembershipLevel[] = [

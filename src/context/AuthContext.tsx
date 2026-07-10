@@ -18,6 +18,7 @@ export interface CompanyProfile {
   address?: string;
   // Mitgliedschaftsstufe: 0 = kein Mitglied, 1/2/3 = Level. Wird von Alex in Supabase gesetzt.
   membership_level?: number;
+  membership_modules?: string[]; // aktive Module: Autoteile, Lackfarben, Lackmaterial
   vehicles?: Vehicle[];
 }
 
@@ -43,6 +44,7 @@ function readProfile(user: User | null): CompanyProfile {
     phone: m.phone ?? "",
     address: m.address ?? "",
     membership_level: typeof m.membership_level === "number" ? m.membership_level : 0,
+    membership_modules: Array.isArray(m.membership_modules) ? m.membership_modules : ["Autoteile", "Lackfarben", "Lackmaterial"],
     vehicles: Array.isArray(m.vehicles) ? m.vehicles : [],
   };
 }

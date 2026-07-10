@@ -19,6 +19,7 @@ import {
   Car,
   Truck,
   ShieldCheck,
+  Check,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { B2BProductCard } from "@/components/B2BProductCard";
@@ -31,9 +32,10 @@ import { usePlannerStore } from "@/stores/plannerStore";
 import { useCartStore } from "@/stores/cartStore";
 import { getOrders, type Order } from "@/lib/orders";
 import { formatPrice } from "@/lib/shopify";
-import { MEMBERSHIP_LEVELS } from "@/data/memberships";
+import { MEMBERSHIP_LEVELS, moduleDiscounts, MEMBERSHIP_MODULE_KEYS, type MembershipModule } from "@/data/memberships";
 import { allCategories } from "@/lib/categories";
 import { whatsappLink } from "@/data/shopInfo";
+import { requestMembership } from "@/lib/inbox";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "shop" | "teileportal" | "inbox" | "planner" | "orders" | "profile";
@@ -91,8 +93,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {tab === "overview" && <Overview level={level} />}
-      {tab === "shop" && <DashboardShop level={level} />}
+      {tab === "overview" && <Overview level={level} profile={profile} />}
+      {tab === "shop" && <DashboardShop level={level} profile={profile} />}
       {tab === "teileportal" && (
         <div className="-mt-4">
           <Teileportal />
@@ -115,41 +117,122 @@ export default function Dashboard() {
   );
 }
 
-function Overview({ level }: { level: number }) {
+function Overview({ level, profile }: { level: number; profile: import("@/context/AuthContext").CompanyProfile }) {
+  const modules = profile.membership_modules ?? ["Autoteile", "Lackfarben", "Lackmaterial"];
+  const discounts = moduleDiscounts(level, modules);
+  const pct = MEMBERSHIP_LEVELS.find((m) => m.level === level)?.discountPercent ?? 0;
+  const [requesting, setRequesting] = useState(false);
+  const [requestDone, setRequestDone] = useState(false);
+
+  const moduleLabels: Record<MembershipModule, string> = {
+    Autoteile: "Autoteile (Teileportal)",
+    Lackfarben: "Lackfarben (Wunschfarbe, Spraydose)",
+    Lackmaterial: "Lackmaterial (Klarlack, Grundierung…)",
+  };
+
+  const handleModuleRequest = async (mod: MembershipModule) => {
+    setRequesting(true);
+    await requestMembership({
+      level,
+      modules: [...modules, mod],
+      email: profile.company_name ?? "",
+      userId: undefined,
+    });
+    setRequesting(false);
+    setRequestDone(true);
+    toast.success("Anfrage gesendet!", { description: `Wir schalten ${mod} für dich frei.` });
+  };
+
   return (
-    <div className="grid sm:grid-cols-3 gap-5">
-      <div className="card-tilt hover:translate-y-0 p-6 sm:col-span-1">
-        <BadgePercent className="w-9 h-9 text-primary mb-3" />
-        <p className="text-sm text-muted-foreground">Deine Stufe</p>
-        <p className="text-2xl font-display font-bold">
-          {level > 0 ? `Level ${level}` : "Kein Mitglied"}
-        </p>
-        <p className="text-sm text-primary font-semibold">
-          {MEMBERSHIP_LEVELS.find((m) => m.level === level)?.discountPercent ?? 0}% Rabatt
-        </p>
-      </div>
-      <div className="card-tilt hover:translate-y-0 p-6 sm:col-span-2 flex flex-col justify-center">
-        <h2 className="text-lg mb-2">Mehr sparen?</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Im Tab „B2B Shop" siehst du deine Netto-Mitgliederpreise und bestellst direkt mit Menge.
-          Mitglied wirst du in 5 Minuten — telefonisch oder im Laden.
-        </p>
-        <div className="flex gap-3 flex-wrap">
-          <Link to="/mitgliedschaft" className="btn-primary">Mitgliedschaft ansehen</Link>
-          <a href="tel:+4920282690" className="btn-outline">Anrufen: 0202 82690</a>
+    <div className="space-y-5">
+      <div className="grid sm:grid-cols-3 gap-5">
+        <div className="card-tilt hover:translate-y-0 p-6 sm:col-span-1">
+          <BadgePercent className="w-9 h-9 text-primary mb-3" />
+          <p className="text-sm text-muted-foreground">Deine Stufe</p>
+          <p className="text-2xl font-display font-bold">
+            {level > 0 ? `Level ${level}` : "Kein Mitglied"}
+          </p>
+          <p className="text-sm text-primary font-semibold">
+            {pct > 0 ? `${pct}% Rabatt` : "Kein Rabatt"}
+          </p>
+        </div>
+        <div className="card-tilt hover:translate-y-0 p-6 sm:col-span-2 flex flex-col justify-center">
+          <h2 className="text-lg mb-2">Mehr sparen?</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Im Tab „B2B Shop" siehst du deine Netto-Mitgliederpreise und bestellst direkt mit Menge.
+            Mitglied wirst du in 5 Minuten — telefonisch oder im Laden.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <Link to="/mitgliedschaft" className="btn-primary">Mitgliedschaft ansehen</Link>
+            <a href="tel:+4920282690" className="btn-outline">Anrufen: 0202 82690</a>
+          </div>
         </div>
       </div>
+
+      {/* Aktive Module & Rabatte */}
+      {level > 0 && (
+        <div className="card-tilt hover:translate-y-0 p-6">
+          <h2 className="text-lg mb-1">Deine aktiven Rabatt-Module</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Rabatte gelten nur für freigeschaltete Bereiche. Du kannst jederzeit weitere Module hinzubuchen.
+          </p>
+          <div className="space-y-3">
+            {MEMBERSHIP_MODULE_KEYS.map((mod) => {
+              const active = modules.includes(mod);
+              const d = discounts[mod];
+              return (
+                <div key={mod} className={cn(
+                  "flex items-center justify-between gap-3 rounded-xl border px-4 py-3",
+                  active ? "border-primary/40 bg-primary/5" : "border-border bg-secondary/30 opacity-60"
+                )}>
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                      active ? "bg-primary text-primary-foreground" : "bg-border text-muted-foreground"
+                    )}>
+                      {active ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{moduleLabels[mod]}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {active ? `−${d}% auf alle ${mod}` : "Nicht aktiv"}
+                      </p>
+                    </div>
+                  </div>
+                  {!active && !requestDone && (
+                    <button
+                      type="button"
+                      disabled={requesting}
+                      onClick={() => handleModuleRequest(mod)}
+                      className="btn-outline text-xs px-3 py-1.5 min-h-0"
+                    >
+                      {requesting ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                      Hinzubuchen
+                    </button>
+                  )}
+                  {!active && requestDone && (
+                    <span className="text-xs text-primary">Anfrage gesendet ✓</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function DashboardShop({ level }: { level: number }) {
+function DashboardShop({ level, profile }: { level: number; profile: import("@/context/AuthContext").CompanyProfile }) {
   const [category, setCategory] = useState<string>("");
   const [search, setSearch] = useState("");
   const [submitted, setSubmitted] = useState("");
   const query = submitted ? `title:*${submitted}*` : category;
   const { products, isLoading, error, hasNextPage, loadMore } = useProducts({ query });
-  const discount = MEMBERSHIP_LEVELS.find((m) => m.level === level)?.discountPercent ?? 0;
+  const modules = profile.membership_modules ?? ["Autoteile", "Lackfarben", "Lackmaterial"];
+  const discounts = moduleDiscounts(level, modules);
+  // Im B2B Shop zeigen wir Lack-Rabatte (Lackfarben + Lackmaterial)
+  const discount = Math.max(discounts.Lackfarben, discounts.Lackmaterial);
 
   return (
     <div>

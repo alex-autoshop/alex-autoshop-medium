@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { type ShopifyProduct, formatPrice } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
 import { useAuth } from "@/context/AuthContext";
-import { discountForLevel } from "@/data/memberships";
+import { discountForModule } from "@/data/memberships";
 import { cn } from "@/lib/utils";
 
 type Variant = ShopifyProduct["node"]["variants"]["edges"][number]["node"];
@@ -23,7 +23,8 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
   const addItem = useCartStore((s) => s.addItem);
   const cartLoading = useCartStore((s) => s.isLoading);
   const { user, profile } = useAuth();
-  const discount = user ? discountForLevel(profile.membership_level) : 0;
+  const modules = profile.membership_modules ?? ["Autoteile", "Lackfarben", "Lackmaterial"];
+  const discount = user ? discountForModule(profile.membership_level, modules, "Lackfarben") : 0;
 
   const options = product.options ?? [];
   const variants: Variant[] = (product.variants?.edges ?? []).map((e) => e.node);
