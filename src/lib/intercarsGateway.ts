@@ -40,8 +40,9 @@ function digNumber(obj: any, key: string): number | undefined {
 }
 
 export interface IcLiveInfo {
-  price: number;        // Verkaufspreis (EK × Markup)
-  availability: string; // z.B. "sofort (10+ Stück)"
+  price: number;        // UVP / Einzelhandelspreis von Inter Cars
+  availability: string; // z.B. "1 Werktag · 5 Stück"
+  deliveryDays: number; // 1 = lokal verfügbar, 2 = Zentrallager
   icSku: string;
 }
 
@@ -59,12 +60,18 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
     const p = prods[0] || (await icCall("search", { sku: artNo, pageSize: 3 }))?.products?.[0];
     if (p?.sku) {
       const d = await icCall("product-detail", { sku: p.sku });
-      const ek = digNumber(d?.pricing, "customerPriceGross") ?? digNumber(d?.pricing, "listPriceGross");
+      // UVP ("Einzelhandel") anzeigen — NICHT den EK. Fallback: EK x Markup.
+      const uvp = digNumber(d?.pricing, "listPriceGross");
+      const ek = digNumber(d?.pricing, "customerPriceGross");
+      const price = uvp && uvp > 0 ? uvp : ek && ek > 0 ? Math.ceil(ek * PRICE_MARKUP * 100) / 100 : undefined;
       const avail = digNumber(d?.stock, "availability") ?? 0;
-      if (ek && ek > 0) {
+      if (price) {
         result = {
-          price: Math.ceil(ek * PRICE_MARKUP * 100) / 100,
-          availability: avail > 0 ? (avail >= 10 ? "sofort (10+ Stück)" : `sofort (${avail} Stück)`) : "1–3 Werktage",
+          price,
+          availability: avail > 0
+            ? `1 Werktag · ${avail >= 10 ? ">10" : avail} Stück`
+            : "2 Werktage · Zentrallager",
+          deliveryDays: avail > 0 ? 1 : 2,
           icSku: String(p.sku),
         };
       }

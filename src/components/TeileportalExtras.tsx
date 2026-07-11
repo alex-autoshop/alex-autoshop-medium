@@ -294,3 +294,127 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin 
     </AnimatePresence>
   );
 }
+
+// ─── ARTIKEL-EXPANDER (wie Inter Cars: Mehr Info / Ersatz / Anwendungen / OE) ─
+
+import { ChevronDown, Loader2 } from "lucide-react";
+import { apArticleSpecs, apAnalogParts, apCompatibleCars, type ApAnalogPart } from "@/lib/autoparts";
+
+type ExpTab = "info" | "ersatz" | "anwendungen" | "oe";
+const EXP_TABS: { id: ExpTab; label: string }[] = [
+  { id: "info", label: "Mehr Info" },
+  { id: "ersatz", label: "Ersatz" },
+  { id: "anwendungen", label: "Anwendungen" },
+  { id: "oe", label: "OE-Nummern" },
+];
+
+export function ArticleExpander({ articleId, articleNumber, specs, oeNumbers, onSearchNumber }: {
+  articleId: string | number;
+  articleNumber: string;
+  specs?: { name: string; value: string }[];
+  oeNumbers?: string[];
+  onSearchNumber: (no: string) => void;
+}) {
+  const [tab, setTab] = useState<ExpTab | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [info, setInfo] = useState<{ name: string; value: string }[] | null>(null);
+  const [analogs, setAnalogs] = useState<ApAnalogPart[] | null>(null);
+  const [cars, setCars] = useState<Array<{ brand: string; count: number; models: string[] }> | null>(null);
+  const [openBrand, setOpenBrand] = useState<string | null>(null);
+
+  const openTab = async (t: ExpTab) => {
+    if (tab === t) { setTab(null); return; }
+    setTab(t);
+    setLoading(true);
+    try {
+      if (t === "info" && info === null) setInfo(specs && specs.length > 2 ? specs : await apArticleSpecs(articleId));
+      if ((t === "ersatz" || t === "oe") && analogs === null) setAnalogs(await apAnalogParts(articleNumber));
+      if (t === "anwendungen" && cars === null) setCars(await apCompatibleCars(articleNumber));
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="border-t border-border/60">
+      <div className="flex flex-wrap gap-1.5 px-4 py-2">
+        {EXP_TABS.map((x) => (
+          <button key={x.id} onClick={() => openTab(x.id)}
+            className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors",
+              tab === x.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground")}>
+            {x.label} <ChevronDown className={cn("w-3 h-3 transition-transform", tab === x.id && "rotate-180")} />
+          </button>
+        ))}
+      </div>
+      <AnimatePresence>
+        {tab && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="px-4 pb-4 pt-1 text-sm">
+              {loading && <div className="flex items-center gap-2 text-muted-foreground py-3"><Loader2 className="w-4 h-4 animate-spin" /> Lädt …</div>}
+
+              {!loading && tab === "info" && (
+                (info && info.length > 0) ? (
+                  <div className="rounded-lg border border-border divide-y divide-border/60 text-xs overflow-hidden max-w-xl">
+                    {info.map((s, i) => <div key={i} className="flex justify-between gap-4 px-3 py-1.5"><span className="text-muted-foreground">{s.name}</span><span className="font-medium text-right">{s.value}</span></div>)}
+                  </div>
+                ) : <p className="text-xs text-muted-foreground">Keine technischen Details verfügbar — frag uns direkt.</p>
+              )}
+
+              {!loading && tab === "ersatz" && (
+                (analogs && analogs.length > 0) ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {analogs.map((x, i) => (
+                      <button key={i} onClick={() => onSearchNumber(x.articleNumber)}
+                        className="px-2.5 py-1.5 rounded-lg border border-border text-xs hover:border-primary/50 hover:text-primary transition-colors">
+                        <span className="font-bold">{x.brand}</span> <span className="font-mono">{x.articleNumber}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : <p className="text-xs text-muted-foreground">Keine Ersatz-Artikel gefunden.</p>
+              )}
+
+              {!loading && tab === "anwendungen" && (
+                (cars && cars.length > 0) ? (
+                  <div className="space-y-1 max-w-xl">
+                    {cars.map((g) => (
+                      <div key={g.brand} className="rounded-lg border border-border overflow-hidden">
+                        <button onClick={() => setOpenBrand(openBrand === g.brand ? null : g.brand)}
+                          className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold hover:bg-secondary/50 transition-colors">
+                          <span>{g.brand} ({g.count})</span>
+                          <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", openBrand === g.brand && "rotate-180")} />
+                        </button>
+                        {openBrand === g.brand && (
+                          <div className="px-3 pb-2 text-xs text-muted-foreground">{g.models.join(" · ") || "Modelle auf Anfrage"}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="text-xs text-muted-foreground">Keine Fahrzeugliste verfügbar.</p>
+              )}
+
+              {!loading && tab === "oe" && (
+                <div className="space-y-2 max-w-xl">
+                  {oeNumbers && oeNumbers.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">OEM-Teilenummern</p>
+                      <div className="flex flex-wrap gap-1">
+                        {oeNumbers.map((oe) => <button key={oe} onClick={() => onSearchNumber(oe)} className="px-2 py-0.5 rounded bg-secondary font-mono text-[11px] hover:text-primary">{oe}</button>)}
+                      </div>
+                    </div>
+                  )}
+                  {analogs && analogs.length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">Ersatzteilnummern</p>
+                      <div className="flex flex-wrap gap-1">
+                        {analogs.slice(0, 12).map((x, i) => <span key={i} className="px-2 py-0.5 rounded bg-secondary text-[11px]"><b>{x.brand}</b> <span className="font-mono">{x.articleNumber}</span></span>)}
+                      </div>
+                    </div>
+                  )}
+                  {(!oeNumbers || oeNumbers.length === 0) && (!analogs || analogs.length === 0) && <p className="text-xs text-muted-foreground">Keine Referenznummern verfügbar.</p>}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

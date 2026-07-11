@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, type ApArticle } from "@/lib/autoparts";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
 import { icPriceLookup } from "@/lib/intercarsGateway";
+import { ArticleExpander } from "@/components/TeileportalExtras";
 
 const BRAND_DOMAINS: Record<string, string> = {
   'BOSCH': 'bosch.com', 'BREMBO': 'brembo.com', 'ZIMMERMANN': 'zimmermann-brake.com',
@@ -622,6 +623,8 @@ export default function Teileportal() {
                                 </div>
                               </div>
                             </div>
+                            <ArticleExpander articleId={a.id} articleNumber={a.articleNumber} specs={a.specs} oeNumbers={a.oeNumbers}
+                              onSearchNumber={(no) => { setPartQuery(no); setActiveCat(null); setPhase('articles'); loadParts(no); }} />
                           </motion.div>
                         ))}
                       </div>

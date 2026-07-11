@@ -279,3 +279,50 @@ export async function apArticlesByNumber(articleNo: string): Promise<ApArticle[]
   }
   return raw.map(toApArticle).filter((a): a is ApArticle => !!a && !!a.articleNumber);
 }
+
+// ─── ARTIKEL-ZUSATZDATEN (on-demand, für Aufklapp-Tabs) ─────
+
+export interface ApAnalogPart { brand: string; articleNumber: string; }
+
+/** Alle technischen Spezifikationen eines Artikels. */
+export async function apArticleSpecs(articleId: string | number): Promise<{ name: string; value: string }[]> {
+  try {
+    const r = await ap(`/articles/selection-of-all-specifications-criterias-for-the-article/article-id/${articleId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`);
+    const arr = pickArray(r, 'criteria', 'specifications', 'articleCriteria');
+    return arr.map((c: any) => ({
+      name: String(first(c?.criteriaName, c?.name, c?.specificationName, c?.criteriaDescription) || ''),
+      value: String(first(c?.formattedValue, c?.value, c?.specificationValue, c?.rawValue) ?? ''),
+    })).filter((s) => s.name && s.value).slice(0, 20);
+  } catch { return []; }
+}
+
+/** Ersatz / analoge Teile anderer Marken zu einer Artikelnummer. */
+export async function apAnalogParts(articleNo: string): Promise<ApAnalogPart[]> {
+  try {
+    const r = await ap(`/artlookup/search-for-analog-spare-parts-by-the-articles-numbers/lang-id/${LANG}/articleNo/${encodeURIComponent(articleNo)}`);
+    const arr = pickArray(r, 'articles', 'analogs', 'crossReferences');
+    const seen = new Set<string>();
+    return arr.map((a: any) => ({
+      brand: String(first(a?.supplierName, a?.brandName, a?.mfrName, a?.brand) || ''),
+      articleNumber: String(first(a?.articleNumber, a?.articleNo, a?.number) || ''),
+    })).filter((x) => x.articleNumber && !seen.has(x.brand + x.articleNumber) && seen.add(x.brand + x.articleNumber)).slice(0, 30);
+  } catch { return []; }
+}
+
+/** Passende Fahrzeuge je Hersteller (wie Inter Cars "Anwendungen": AUDI (78)…). */
+export async function apCompatibleCars(articleNo: string): Promise<Array<{ brand: string; count: number; models: string[] }>> {
+  try {
+    const r = await ap('/articles/get-compatible-cars-by-article-number/type-id/1', { articleNo, langId: LANG, countryFilterId: COUNTRY });
+    const arr = pickArray(r, 'vehicles', 'cars', 'compatibleCars');
+    const groups = new Map<string, { count: number; models: Set<string> }>();
+    for (const v of arr) {
+      const brand = String(first(v?.manufacturerName, v?.manuName, v?.brand) || 'Sonstige');
+      const model = String(first(v?.modelName, v?.model, v?.vehicleName) || '');
+      const g = groups.get(brand) || { count: 0, models: new Set<string>() };
+      g.count++; if (model) g.models.add(model);
+      groups.set(brand, g);
+    }
+    return [...groups.entries()].map(([brand, g]) => ({ brand, count: g.count, models: [...g.models].slice(0, 12) }))
+      .sort((a, b) => b.count - a.count).slice(0, 20);
+  } catch { return []; }
+}
