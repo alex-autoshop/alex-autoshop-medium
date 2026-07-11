@@ -37,8 +37,6 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
   const isBase = modules.length === 0;
   const ratio = modules.length / m.modules.length;
-
-  // Preis & Rabatt abhängig vom Modul-Status
   const activeDiscount = isBase ? m.baseDiscountPercent : m.discountPercent;
 
   const price = useMemo(() => {
@@ -110,7 +108,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
       {isBase ? (
         <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
-          <Zap className="w-4 h-4" /> {activeDiscount}% Rabatt auf das gesamte Sortiment
+          <Zap className="w-4 h-4" /> {activeDiscount}% auf das gesamte Sortiment und Teileportal
         </p>
       ) : (
         <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
@@ -121,40 +119,44 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       {!compact && (
         <>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mt-5 mb-2">
-            Rabatt-Paket
+            Module wählen
           </p>
           <div className="space-y-2">
-            {/* Kombinierter Toggle: alles oder nichts */}
-            <button
-              type="button"
-              onClick={() => setModules(isBase ? [...m.modules] : [])}
-              className={cn(
-                "w-full flex items-center justify-between px-4 py-3 rounded-lg border text-sm font-medium transition-colors min-h-[48px]",
-                !isBase
-                  ? "border-primary bg-primary/10 text-foreground"
-                  : "border-border bg-secondary/40 text-muted-foreground/60"
-              )}
-            >
-              <span className={cn(isBase && "line-through")}>
-                {isBase ? m.discountPercent : m.discountPercent} % auf das gesamte Sortiment und Teileportal
-              </span>
-              {!isBase ? (
-                <span className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center shrink-0">
-                  <Check className="w-3 h-3 text-primary-foreground" />
-                </span>
-              ) : (
-                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/70 shrink-0">
-                  Nicht aktiv
-                </span>
-              )}
-            </button>
+            {m.modules.map((mod) => {
+              const on = modules.includes(mod);
+              return (
+                <button
+                  key={mod}
+                  type="button"
+                  onClick={() => toggle(mod)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-4 py-3 rounded-lg border text-sm font-medium transition-colors min-h-[48px]",
+                    on
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border bg-secondary/40 text-muted-foreground/60"
+                  )}
+                >
+                  <span className={cn(!on && "line-through")}>
+                    {m.discountPercent}% auf {mod}
+                  </span>
+                  {on ? (
+                    <span className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center shrink-0">
+                      <Check className="w-3 h-3 text-primary-foreground" />
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/70 shrink-0">
+                      Nicht aktiv
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Basis-Hinweis wenn kein Modul aktiv */}
+          {/* Basis-Hinweis wenn alle Module abgewählt */}
           {isBase && (
             <div className="mt-3 rounded-lg bg-secondary/60 border border-border px-4 py-3 text-xs text-muted-foreground leading-relaxed">
-              <span className="font-semibold text-foreground">{activeDiscount}% auf alles</span> — Basis-Zugang ohne Modul-Paket.
-              Aktiviere das Paket für {m.discountPercent}% und alle Vorteile.
+              <span className="font-semibold text-foreground">{activeDiscount}% auf das gesamte Sortiment und Teileportal</span> — inkl. Gratis-Farbe und alle Mitgliedsvorteile. Module einzeln zubuchbar.
             </div>
           )}
 
