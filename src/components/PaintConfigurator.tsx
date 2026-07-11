@@ -231,7 +231,7 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
 
         {discount === 0 && (
           <p className="text-xs text-muted-foreground text-center mt-3">
-            <Link to="/mitgliedschaft" className="text-primary font-semibold underline">Mitglied werden</Link> und bis 38% sparen.
+            <Link to="/mitgliedschaft" className="text-primary font-semibold underline">Mitglied werden</Link> und bis 40% sparen.
           </p>
         )}
       </div>

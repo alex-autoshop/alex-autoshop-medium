@@ -39,8 +39,8 @@ export default function Mitgliedschaft() {
   return (
     <div>
       <Seo
-        title="Mitgliedschaft – bis 38% Rabatt, deutschlandweit"
-        description="Mitgliedschaften bei Alex Autoshop: 15%, 24% oder 38% Rabatt auf Lackierprodukte und Werkstattbedarf. Deutschlandweit für alle — Werkstatt wie privat. Monatlich kündbar, Versand in ganz Deutschland."
+        title="Mitgliedschaft – bis 40% Rabatt, deutschlandweit"
+        description="Mitgliedschaften bei Alex Autoshop: 15%, 24% oder 40% Rabatt auf Lackierprodukte und Werkstattbedarf. Deutschlandweit für alle — Werkstatt wie privat. Monatlich kündbar, Versand in ganz Deutschland."
       />
 
       <section className="section-dark py-16 sm:py-20">
@@ -53,7 +53,7 @@ export default function Mitgliedschaft() {
           </h1>
           <p className="text-white/65 text-lg">
             Bündle deinen kompletten Werkstatt-Einkauf bei Alex Autoshop und spar bei jeder
-            Bestellung — bis 38% auf das gesamte Sortiment. Monatlich kündbar, keine Mindestabnahme.
+            Bestellung — bis 40% auf das gesamte Sortiment. Monatlich kündbar, keine Mindestabnahme.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             {["🇩🇪 Deutschlandweit verfügbar", "Für jeden abschließbar — Werkstatt wie privat", "Lieferung direkt zu dir"].map((t) => (

@@ -71,7 +71,7 @@ export default function Dashboard() {
             {level > 0 ? (
               <>Mitgliedschaft <span className="text-primary font-semibold">{levelInfo?.name}</span> · {levelInfo?.discountPercent}% Rabatt</>
             ) : (
-              <>Kein aktives Mitglied — du zahlst Normalpreis. <Link to="/mitgliedschaft" className="text-primary font-semibold underline">Jetzt bis 38% sparen →</Link></>
+              <>Kein aktives Mitglied — du zahlst Normalpreis. <Link to="/mitgliedschaft" className="text-primary font-semibold underline">Jetzt bis 40% sparen →</Link></>
             )}
           </p>
         </div>
@@ -313,7 +313,7 @@ function DashboardShop({ level, profile }: { level: number; profile: import("@/c
             {discount > 0 ? (
               <>Deine Netto-Preise als <span className="text-gold-accent font-semibold">Mitglied · −{discount}%</span> sind schon eingerechnet — einfach Menge wählen und bestellen.</>
             ) : (
-              <>Das komplette Profi-Sortiment für deine Werkstatt. <Link to="/mitgliedschaft" className="text-gold-accent font-semibold underline">Mitglied werden</Link> und bei jeder Bestellung bis 38% sparen.</>
+              <>Das komplette Profi-Sortiment für deine Werkstatt. <Link to="/mitgliedschaft" className="text-gold-accent font-semibold underline">Mitglied werden</Link> und bei jeder Bestellung bis 40% sparen.</>
             )}
           </p>
         </div>

@@ -63,7 +63,7 @@ export default function Shop() {
     <div className="container py-8 sm:py-12">
       <Seo
         title={title}
-        description={`${title} bei Alex Autoshop Wuppertal – Lackierprodukte, Autoteile und Werkstattbedarf mit B2B-Rabatten bis 38%.`}
+        description={`${title} bei Alex Autoshop Wuppertal – Lackierprodukte, Autoteile und Werkstattbedarf mit B2B-Rabatten bis 40%.`}
       />
 
       <h1 className="text-3xl sm:text-4xl mb-6">{title}</h1>

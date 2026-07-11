@@ -910,7 +910,7 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
             {/* Spar-Teaser: Nicht-Mitglieder sehen ihr Sparpotenzial */}
             {discount === 0 && includedTotal > 0 && (
               <a href="/mitgliedschaft" className="block text-xs text-center bg-secondary/60 hover:bg-secondary rounded-lg p-3 mb-4 transition-colors">
-                💛 Als Mitglied würdest du bei diesem Plan bis zu <strong>{fmtEur(includedTotal * 0.46)} sparen</strong> — Mitgliedschaft ansehen →
+                💛 Als Mitglied würdest du bei diesem Plan bis zu <strong>{fmtEur(includedTotal * 0.40)} sparen</strong> — Mitgliedschaft ansehen →
               </a>
             )}
 
