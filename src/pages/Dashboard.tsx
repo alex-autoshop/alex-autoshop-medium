@@ -36,6 +36,7 @@ import { MEMBERSHIP_LEVELS, moduleDiscounts, MEMBERSHIP_MODULE_KEYS, type Member
 import { allCategories } from "@/lib/categories";
 import { whatsappLink } from "@/data/shopInfo";
 import { requestMembership } from "@/lib/inbox";
+import { MembershipCards } from "@/components/MembershipCards";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "shop" | "teileportal" | "inbox" | "planner" | "orders" | "profile";
@@ -118,48 +119,13 @@ export default function Dashboard() {
 }
 
 function Overview({ level, profile }: { level: number; profile: import("@/context/AuthContext").CompanyProfile }) {
-  const modules = profile.membership_modules ?? ["Autoteile", "Lackfarben", "Lackmaterial"];
-  const discounts = moduleDiscounts(level, modules);
   const levelInfo = MEMBERSHIP_LEVELS.find((m) => m.level === level);
   const pct = levelInfo?.discountPercent ?? 0;
-  const fullPrice = levelInfo?.pricePerMonth ?? 0;
-  const [requesting, setRequesting] = useState(false);
-  const [requestDone, setRequestDone] = useState<MembershipModule | null>(null);
-  const [pendingRemove, setPendingRemove] = useState<MembershipModule | null>(null);
-
-  const moduleLabels: Record<MembershipModule, string> = {
-    Autoteile: "Autoteile (Teileportal)",
-    Lackfarben: "Lackfarben (Wunschfarbe, Spraydose)",
-    Lackmaterial: "Lackmaterial (Klarlack, Grundierung…)",
-  };
-
-  const handleAdd = async (mod: MembershipModule) => {
-    setRequesting(true);
-    await requestMembership({ level, modules: [...modules, mod], email: profile.company_name ?? "", userId: undefined });
-    setRequesting(false);
-    setRequestDone(mod);
-    toast.success("Anfrage gesendet!", { description: `Wir schalten ${mod} für dich frei.` });
-  };
-
-  const handleRemoveConfirm = async () => {
-    if (!pendingRemove) return;
-    setRequesting(true);
-    const newMods = modules.filter((m) => m !== pendingRemove);
-    await requestMembership({ level, modules: newMods, email: profile.company_name ?? "", userId: undefined });
-    setRequesting(false);
-    setRequestDone(pendingRemove);
-    setPendingRemove(null);
-    toast.success("Anfrage gesendet!", { description: `Wir entfernen ${pendingRemove} aus deinen Modulen.` });
-  };
-
-  // Preis nach Moduländerung berechnen
-  const priceAfterRemove = pendingRemove
-    ? Math.round(fullPrice * (modules.filter((m) => m !== pendingRemove).length / 3))
-    : 0;
-  const savingsLost = pendingRemove ? Math.round(fullPrice - priceAfterRemove) : 0;
+  const [showChange, setShowChange] = useState(false);
 
   return (
     <div className="space-y-5">
+      {/* Top: Stufe + Mehr sparen */}
       <div className="grid sm:grid-cols-3 gap-5">
         <div className="card-tilt hover:translate-y-0 p-6 sm:col-span-1">
           <BadgePercent className="w-9 h-9 text-primary mb-3" />
@@ -178,116 +144,99 @@ function Overview({ level, profile }: { level: number; profile: import("@/contex
             Mitglied wirst du in 5 Minuten — telefonisch oder im Laden.
           </p>
           <div className="flex gap-3 flex-wrap">
-            <Link to="/mitgliedschaft" className="btn-primary">Mitgliedschaft ansehen</Link>
             <a href="tel:+4920282690" className="btn-outline">Anrufen: 0202 82690</a>
           </div>
         </div>
       </div>
 
-      {/* Aktive Module & Rabatte */}
-      {level > 0 && (
-        <div className="card-tilt hover:translate-y-0 p-6">
-          <h2 className="text-lg mb-1">Deine aktiven Rabatt-Module</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Rabatte gelten nur für freigeschaltete Bereiche — aktive Module können abgewählt oder neue hinzugebucht werden.
-          </p>
-          <div className="space-y-3">
-            {MEMBERSHIP_MODULE_KEYS.map((mod) => {
-              const active = modules.includes(mod);
-              const d = discounts[mod];
-              const isPending = pendingRemove === mod;
-              const isDone = requestDone === mod;
-              return (
-                <div key={mod} className="space-y-2">
-                  <div className={cn(
-                    "flex items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors",
-                    active && !isPending ? "border-primary/40 bg-primary/5" : "border-border bg-secondary/30",
-                    isPending && "border-destructive/40 bg-destructive/5"
-                  )}>
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                        active && !isPending ? "bg-primary text-primary-foreground" : "bg-border text-muted-foreground"
-                      )}>
-                        {active && !isPending ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{moduleLabels[mod]}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {active && !isPending ? `−${d}% auf alle ${mod}` : isPending ? "Abwählen bestätigen?" : "Nicht aktiv"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {active && !isPending && !isDone && (
-                        <button
-                          type="button"
-                          onClick={() => setPendingRemove(mod)}
-                          className="text-xs text-muted-foreground hover:text-destructive border border-border hover:border-destructive/40 rounded-lg px-3 py-1.5 transition-colors"
-                        >
-                          Abwählen
-                        </button>
-                      )}
-                      {!active && !isDone && (
-                        <button
-                          type="button"
-                          disabled={requesting}
-                          onClick={() => handleAdd(mod)}
-                          className="btn-outline text-xs px-3 py-1.5 min-h-0"
-                        >
-                          {requesting ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-                          Hinzubuchen
-                        </button>
-                      )}
-                      {isDone && <span className="text-xs text-primary">Anfrage gesendet ✓</span>}
-                    </div>
-                  </div>
-
-                  {/* Bestätigungs-Panel beim Abwählen */}
-                  {isPending && (
-                    <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-4 space-y-3">
-                      <p className="text-sm font-semibold text-destructive">Modul abwählen: {mod}</p>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div className="rounded-lg bg-background border border-border px-3 py-2.5">
-                          <p className="text-xs text-muted-foreground mb-0.5">Aktueller Monatsbeitrag</p>
-                          <p className="font-bold text-lg">{fullPrice.toLocaleString("de-DE")} €</p>
-                          <p className="text-xs text-muted-foreground">{modules.length} Module aktiv</p>
-                        </div>
-                        <div className="rounded-lg bg-background border border-destructive/30 px-3 py-2.5">
-                          <p className="text-xs text-muted-foreground mb-0.5">Nach Abwahl</p>
-                          <p className="font-bold text-lg">{priceAfterRemove.toLocaleString("de-DE")} €</p>
-                          <p className="text-xs text-muted-foreground">{modules.length - 1} Module aktiv · −{savingsLost} €/Mo</p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        ⚠️ Du verlierst <strong>−{pct}% Rabatt auf {mod}</strong> und sparst {savingsLost} € / Monat weniger.
-                        Diese Änderung wird an Alex Autoshop gemeldet und manuell bestätigt.
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          disabled={requesting}
-                          onClick={handleRemoveConfirm}
-                          className="flex-1 text-sm font-medium py-2.5 rounded-lg bg-destructive text-white hover:bg-destructive/90 transition-colors"
-                        >
-                          {requesting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Ja, Modul entfernen"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPendingRemove(null)}
-                          className="flex-1 btn-outline text-sm py-2.5"
-                        >
-                          Abbrechen
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+      {/* Mitgliedschaft verwalten / wechseln */}
+      <div className="card-tilt hover:translate-y-0 p-6">
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+          <div>
+            <h2 className="text-lg">Mitgliedschaft</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Wähle oder wechsle deine Stufe — Module einzeln zubuchbar.
+            </p>
           </div>
+          {level > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowChange((v) => !v)}
+              className="btn-outline text-sm"
+            >
+              {showChange ? "Schließen" : "Stufe wechseln"}
+            </button>
+          )}
         </div>
-      )}
+
+        {/* Ethische Warnung beim Wechsel */}
+        {showChange && level > 0 && (
+          <div className="mb-5 rounded-xl border border-amber-400/40 bg-amber-400/8 px-4 py-3 text-sm space-y-1">
+            <p className="font-semibold text-amber-600 dark:text-amber-400">⚠️ Hinweis vor dem Wechsel</p>
+            <p className="text-muted-foreground">
+              Du bist aktuell auf <strong>Level {level}</strong>. Ein Downgrade bedeutet:
+              weniger Rabatt, geringere Gratis-Farbe-Menge und ggf. Verlust von Vorteilen wie Cashback oder Kundenvermittlung.
+            </p>
+            <p className="text-muted-foreground">
+              Änderungen werden <strong>manuell durch Alex Autoshop bestätigt</strong> und gelten ab dem nächsten Abrechnungsmonat.
+              Du erhältst eine Bestätigung per E-Mail.
+            </p>
+          </div>
+        )}
+
+        {/* Mitgliedschaftskarten — immer sichtbar wenn kein Level, sonst nur beim Wechsel */}
+        {(level === 0 || showChange) && (
+          <MembershipCards />
+        )}
+
+        {/* Aktuelle Module anzeigen wenn kein Wechsel aktiv */}
+        {level > 0 && !showChange && (
+          <CurrentModules level={level} profile={profile} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CurrentModules({ level, profile }: { level: number; profile: import("@/context/AuthContext").CompanyProfile }) {
+  const modules = profile.membership_modules ?? ["Autoteile", "Lackfarben", "Lackmaterial"];
+  const discounts = moduleDiscounts(level, modules);
+  const moduleLabels: Record<MembershipModule, string> = {
+    Autoteile: "Autoteile (im Teileportal)",
+    Lackfarben: "Lackfarben (Wunschfarbe, Spraydose)",
+    Lackmaterial: "Lackmaterial (Klarlack, Grundierung…)",
+  };
+  return (
+    <div className="space-y-2">
+      {MEMBERSHIP_MODULE_KEYS.map((mod) => {
+        const active = modules.includes(mod);
+        const d = discounts[mod];
+        return (
+          <div
+            key={mod}
+            className={cn(
+              "flex items-center gap-3 rounded-xl border px-4 py-3",
+              active ? "border-primary/40 bg-primary/5" : "border-border bg-secondary/30"
+            )}
+          >
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+              active ? "bg-primary text-primary-foreground" : "bg-border text-muted-foreground"
+            )}>
+              {active ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            </div>
+            <div>
+              <p className="text-sm font-semibold">{moduleLabels[mod]}</p>
+              <p className="text-xs text-muted-foreground">
+                {active ? `−${d}% auf alle ${mod}` : "Nicht aktiv — zubuchbar"}
+              </p>
+            </div>
+          </div>
+        );
+      })}
+      <p className="text-xs text-muted-foreground pt-1">
+        Module ändern? Klicke oben auf „Stufe wechseln" oder ruf uns an: 0202 82690.
+      </p>
     </div>
   );
 }
