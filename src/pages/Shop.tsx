@@ -20,6 +20,54 @@ const FEATURED_HANDLES = [
   "individuellen-lackstift-bestellen-20ml",
 ];
 
+// Produkt-Sortierung: Bestseller oben, FRIZ nach unten
+const PRODUCT_PRIORITY: string[] = [
+  // Tier 1: Bestseller
+  "mipa-cx4-express-klarlack",
+  "master-hs-2-1-klarlack-5l",
+  "mipa-cc-9-klarlack-1-l",
+  "mipa-cc9-2k-hs-klarlack-5l",
+  // Tier 2: Immer wieder — Verbrauchsmaterial
+  "master-hs-harter-2k",
+  "master-harter-hs-1-2-fast-0-5-l",
+  "master-hs-1-2-harter-standard",
+  "master-hs-1-2-harter-fast",
+  "mipa-hs-10-2k-hs-harter-kurz",
+  "mipa-hs-25-2k-harter-normal",
+  "mipa-hs25-harter-normal",
+  "avo-acrylverdunnung-profi-line",
+  "meyer-nitro-universalverdunnung",
+  "beiges-abdeckband-19-mm-prazise-kanten-perfektes-finish",
+  "beiges-abdeckband-30-mm-fur-breite-saubere-kanten",
+  "green-tape-19-mm-profi-abdeckband-fur-lackierer",
+  "green-tape-30-mm-abdeckband-fur-prazise-lackierarbeiten",
+  "green-tape-50-mm-extra-breit-fur-maximale-kontrolle",
+  "rhynogrip-p800-schleifscheiben",
+  "rhynogrip-p600-schleifscheiben",
+  "rhynogrip-p500-schleifscheiben",
+  "rhynogrip-p400-schleifscheiben",
+  "mp-schleifscheiben-goldfilm",
+  "app-ws-222-schleifvlies",
+  // Tier 3: Werkstatt-Standard
+  "crs-foam-tape",
+  "mipa-etch-filler-hb-der-1k-haftfuller-fur-schwierige-untergrunde",
+  "mipa-etch-primer-spray",
+  "mipa-acryl-lack-spray",
+  "a1-speed-polish-dr-wack",
+  "a1-speed-polish-glanz-in-rekordzeit",
+  "a1-polish-wax",
+  "a1-der-wax-schwamm",
+  "a1-speed-shampoo-schnell-schonend-stark",
+  "gewaffelte-polierpads",
+  // Tier 4: Mipa Spezial
+  "mipa-mipatherm-silber-hitzebestandiger-lack-bis-800-c-400-ml-spraydose",
+  "mipa-mipatherm-hitzebestandiger-lack-bis-800-c-400-ml-spraydose",
+  // FRIZ kommt zuletzt (automatisch via isFrizProduct)
+];
+
+const isFrizProduct = (handle: string) =>
+  handle.includes("friz") || handle.startsWith("hochglanz-antihologramm-politur") || handle.startsWith("schleifpaste-perfect-heavy-cut");
+
 export default function Shop() {
   const { category } = useParams();
   const [search, setSearch] = useState("");
@@ -56,6 +104,24 @@ export default function Shop() {
   const gridProducts = showFeatured
     ? products.filter((p) => !FEATURED_HANDLES.includes(p.node.handle))
     : products;
+
+  // Sortierung: Bestseller oben, FRIZ nach unten
+  const sortedGridProducts = useMemo(() => {
+    return [...gridProducts].sort((a, b) => {
+      const ah = a.node.handle;
+      const bh = b.node.handle;
+      const ai = PRODUCT_PRIORITY.indexOf(ah);
+      const bi = PRODUCT_PRIORITY.indexOf(bh);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      const aFriz = isFrizProduct(ah);
+      const bFriz = isFrizProduct(bh);
+      if (aFriz && !bFriz) return 1;
+      if (!aFriz && bFriz) return -1;
+      return 0;
+    });
+  }, [gridProducts]);
 
   const title = activeCategory ? activeCategory.label : "Shop";
 
@@ -132,7 +198,7 @@ export default function Shop() {
       )}
 
       <ProductGrid
-        products={gridProducts}
+        products={sortedGridProducts}
         isLoading={isLoading}
         error={error}
         hasNextPage={hasNextPage}
