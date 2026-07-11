@@ -1,5 +1,5 @@
 // Serverless (nicht Edge) — Intercars OAuth blockt Cloudflare/Edge IPs
-export const config = { runtime: 'nodejs' };
+export const config = { runtime: 'nodejs', maxDuration: 25 };
 
 /**
  * Intercars IC API Proxy — Vercel Edge Function
@@ -44,7 +44,10 @@ let _expiry = 0;
 
 async function getToken(clientId, clientSecret) {
   if (_token && Date.now() < _expiry) return _token;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
   const res = await fetch(IC_TOKEN_URL, {
+    signal: ctrl.signal,
     method:  "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -58,6 +61,7 @@ async function getToken(clientId, clientSecret) {
     // Cloudflare bot protection on is.webapi.intercars.eu requires a real User-Agent
     // Without it, the OAuth endpoint returns 403 "Just a moment..."
   });
+  clearTimeout(timer);
   if (!res.ok) throw new Error(`IC OAuth (${res.status}): ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
   _token  = data.access_token;

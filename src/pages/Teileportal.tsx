@@ -34,24 +34,30 @@ interface Article {
   source?: "intercars" | "static";
 }
 
+async function postJson(url: string, payload: Record<string, unknown>, timeoutMs: number) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`API-Fehler ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Beide mit hartem Timeout — nie wieder Endlos-Spinner
 async function tecdoc(payload: Record<string, unknown>) {
-  const res = await fetch("/api/tecdoc", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(`API-Fehler ${res.status}`);
-  return res.json();
+  return postJson("/api/tecdoc", payload, 12_000);
 }
 
 async function intercars(payload: Record<string, unknown>) {
-  const res = await fetch("/api/intercars", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(`Intercars API-Fehler ${res.status}`);
-  return res.json();
+  return postJson("/api/intercars", payload, 12_000);
 }
 
 const PRICE_MARKUP = 1.7;
