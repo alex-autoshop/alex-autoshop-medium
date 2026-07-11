@@ -9,6 +9,8 @@ export interface MembershipLevel {
   pricePerMonth: number;
   originalPrice?: number;
   discountPercent: number;
+  basePrice: number;         // Preis wenn 0 Module aktiv
+  baseDiscountPercent: number; // Rabatt wenn 0 Module aktiv (10/20/30%)
   tagline: string;
   modules: string[];
   defaultModules?: string[];
@@ -59,6 +61,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     name: "Level 1",
     pricePerMonth: 49,
     discountPercent: 15,
+    basePrice: 19,
+    baseDiscountPercent: 10,
     tagline: "Für Aufbereiter & kleine Werkstätten — clever ab Tag 1",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     defaultModules: ["Lackfarben", "Lackmaterial"],
@@ -99,6 +103,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     name: "Level 2",
     pricePerMonth: 228,
     discountPercent: 28,
+    basePrice: 69,
+    baseDiscountPercent: 20,
     tagline: "Der Bestseller für aktive Werkstätten",
     highlight: true,
     badge: "Beste Wahl",
@@ -145,6 +151,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     pricePerMonth: 430,
     originalPrice: 555,
     discountPercent: 40,
+    basePrice: 149,
+    baseDiscountPercent: 30,
     tagline: "Höchstrabatt & VIP-Service für Lackier- & Karosseriebetriebe",
     badge: "Premium",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],

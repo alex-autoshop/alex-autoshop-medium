@@ -35,22 +35,31 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const toggle = (mod: string) =>
     setModules((p) => (p.includes(mod) ? p.filter((x) => x !== mod) : [...p, mod]));
 
+  const isBase = modules.length === 0;
   const ratio = modules.length / m.modules.length;
-  const price = useMemo(
-    () => Math.round(m.pricePerMonth * ratio),
-    [modules.length, m.pricePerMonth, m.modules.length]
-  );
-  const originalPrice = m.originalPrice ? Math.round(m.originalPrice * ratio) : undefined;
-  const savings = useMemo(
-    () => Math.round(m.savingsExample * ratio),
-    [modules.length, m.savingsExample, m.modules.length]
-  );
+
+  // Preis & Rabatt abhängig vom Modul-Status
+  const activeDiscount = isBase ? m.baseDiscountPercent : m.discountPercent;
+
+  const price = useMemo(() => {
+    if (isBase) return m.basePrice;
+    return Math.round(m.pricePerMonth * ratio);
+  }, [isBase, modules.length, m.pricePerMonth, m.basePrice, ratio]);
+
+  const originalPrice = useMemo(() => {
+    if (isBase || !m.originalPrice) return undefined;
+    return Math.round(m.originalPrice * ratio);
+  }, [isBase, modules.length, m.originalPrice, ratio]);
+
+  const savings = useMemo(() => {
+    if (isBase) return null;
+    return Math.round(m.savingsExample * ratio);
+  }, [isBase, modules.length, m.savingsExample, ratio]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const mail = user?.email || email;
     if (!mail) return toast.error("Bitte E-Mail angeben");
-    if (modules.length === 0) return toast.error("Bitte mindestens ein Modul wählen");
     setLoading(true);
     const { error } = await requestMembership({
       level: m.level,
@@ -90,7 +99,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       <p className="mt-4">
         {originalPrice && (
           <span className="text-lg text-muted-foreground line-through mr-2">
-            {originalPrice!.toLocaleString("de-DE")} €
+            {originalPrice.toLocaleString("de-DE")} €
           </span>
         )}
         <span className="text-4xl font-display font-bold">
@@ -98,9 +107,16 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
         </span>
         <span className="text-muted-foreground"> / Monat</span>
       </p>
-      <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
-        <Zap className="w-4 h-4" /> Spare im Durchschnitt {savings.toLocaleString("de-DE")} € / Monat
-      </p>
+
+      {isBase ? (
+        <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
+          <Zap className="w-4 h-4" /> {activeDiscount}% Rabatt auf das gesamte Sortiment
+        </p>
+      ) : (
+        <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
+          <Zap className="w-4 h-4" /> Spare im Durchschnitt {savings!.toLocaleString("de-DE")} € / Monat
+        </p>
+      )}
 
       {!compact && (
         <>
@@ -122,7 +138,9 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
                       : "border-border bg-secondary/40 text-muted-foreground/60"
                   )}
                 >
-                  <span className={cn(!on && "line-through")}>{m.discountPercent} % auf {mod}</span>
+                  <span className={cn(!on && "line-through")}>
+                    {on ? m.discountPercent : activeDiscount} % auf {mod}
+                  </span>
                   {on ? (
                     <span className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center shrink-0">
                       <Check className="w-3 h-3 text-primary-foreground" />
@@ -136,6 +154,14 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
               );
             })}
           </div>
+
+          {/* Basis-Hinweis wenn kein Modul aktiv */}
+          {isBase && (
+            <div className="mt-3 rounded-lg bg-secondary/60 border border-border px-4 py-3 text-xs text-muted-foreground leading-relaxed">
+              <span className="font-semibold text-foreground">{activeDiscount}% auf alles</span> — Basis-Zugang ohne Modul-Pakete.
+              Aktiviere Module für bis zu {m.discountPercent}% und mehr Vorteile.
+            </div>
+          )}
 
           <ul className="space-y-2 mt-5 mb-5 flex-1">
             {m.features.map((f: Feature) => {
@@ -182,7 +208,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
             )}
             <button type="submit" disabled={loading} className={m.highlight ? "btn-primary w-full" : "btn-dark w-full"}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              Jetzt freischalten →
+              {isBase ? `Basis freischalten (${activeDiscount}%) →` : "Jetzt freischalten →"}
             </button>
           </form>
         </>
