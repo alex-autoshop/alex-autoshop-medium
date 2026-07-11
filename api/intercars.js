@@ -83,6 +83,48 @@ async function icFetch(path, token, payerId, recipientId, branch) {
   return res.json();
 }
 
+// ── Authenticated REST POST ───────────────────────────────────────────────────
+async function icPost(path, body, token, payerId, recipientId, branch) {
+  const res = await fetch(`${IC_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization:    `Bearer ${token}`,
+      "X-Payer-Id":     payerId,
+      "X-Recipient-Id": recipientId,
+      "X-Branch":       branch,
+      "Content-Type":   "application/json",
+      Accept:           "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    console.error(`[IC] POST ${path} → HTTP ${res.status}`, (await res.text()).slice(0, 200));
+    return null;
+  }
+  return res.json();
+}
+
+// ── Parallel in Batches (schont IC Rate-Limits) ──────────────────────────────
+async function inChunks(items, size, fn) {
+  const out = [];
+  for (let i = 0; i < items.length; i += size) {
+    const chunk = await Promise.all(items.slice(i, i + size).map(fn));
+    out.push(...chunk);
+  }
+  return out;
+}
+
+// ── Pricing: POST mit SKU-Liste zuerst, GET als Fallback ─────────────────────
+async function fetchPricing(skus, token, payerId, recipientId, branch) {
+  if (!skus.length) return null;
+  const body = buildPricingBody(skus.map((sku) => ({ sku, quantity: 1 })));
+  const viaPost = await icPost(`/catalog/products/pricing`, body, token, payerId, recipientId, branch)
+    .catch(() => null);
+  if (viaPost?.lines?.length) return viaPost;
+  return icFetch(`/catalog/products/pricing?${new URLSearchParams({ skus: skus.join(",") })}`, token, payerId, recipientId, branch)
+    .catch(() => null);
+}
+
 // ── Normalize confirmed IC API response shapes ────────────────────────────────
 //
 // ICProduct (from GET /catalog/products):
@@ -205,7 +247,9 @@ export default async function handler(req) {
     // Then enriches with stock + pricing in parallel
     // ──────────────────────────────────────────────────────────────────────────
     if (action === "search") {
-      const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      // Bis zu 50 Produkte pro Suche — alle Marken sichtbar, nicht nur 12
+      const cap = Math.min(Math.max(Number(limit) || 24, 1), 50);
+      const qs = new URLSearchParams({ limit: String(cap), offset: String(offset) });
       if (query)      qs.set("search",     query);
       if (categoryId) qs.set("categoryId", categoryId);
 
@@ -214,20 +258,18 @@ export default async function handler(req) {
 
       if (!products.length) return json([]);
 
-      // Enrich with stock + pricing in parallel (up to 12 products)
-      const slice = products.slice(0, 12);
+      const slice = products.slice(0, cap);
       const skus  = slice.map(p => p.sku).filter(Boolean);
 
       const [stockResults, pricingRaw] = await Promise.all([
-        // Stock: parallel per SKU
-        Promise.all(skus.map(s =>
+        // Stock: parallel in 10er-Batches (Rate-Limit-schonend)
+        inChunks(skus, 10, s =>
           icFetch(`/catalog/products/${encodeURIComponent(s)}/stock`, token, payerId, recipientId, branch)
             .then(r => Array.isArray(r) ? r[0] : r)
             .catch(() => null)
-        )),
-        // Pricing: batch call
-        icFetch(`/catalog/products/pricing`, token, payerId, recipientId, branch)
-          .catch(() => null),
+        ),
+        // Pricing: Batch-Call mit SKU-Liste
+        fetchPricing(skus, token, payerId, recipientId, branch),
       ]);
 
       // Pricing map: sku → priceLine
@@ -254,7 +296,7 @@ export default async function handler(req) {
       const p = products[0];
       const [stockRaw, pricingRaw] = await Promise.all([
         icFetch(`/catalog/products/${encodeURIComponent(p.sku)}/stock`, token, payerId, recipientId, branch),
-        icFetch(`/catalog/products/pricing`, token, payerId, recipientId, branch),
+        fetchPricing(products.map(x => x.sku).filter(Boolean), token, payerId, recipientId, branch),
       ]);
       const stockItem = Array.isArray(stockRaw) ? stockRaw[0] : stockRaw;
       const priceMap  = new Map();
@@ -277,7 +319,7 @@ export default async function handler(req) {
       const p = products[0];
       const [stockRaw, pricingRaw] = await Promise.all([
         icFetch(`/catalog/products/${encodeURIComponent(p.sku || p.index)}/stock`, token, payerId, recipientId, branch),
-        icFetch(`/catalog/products/pricing`, token, payerId, recipientId, branch),
+        fetchPricing(products.map(x => x.sku).filter(Boolean), token, payerId, recipientId, branch),
       ]);
       const stockItem = Array.isArray(stockRaw) ? stockRaw[0] : stockRaw;
       const priceMap  = new Map();
@@ -298,7 +340,7 @@ export default async function handler(req) {
       const [catalogRaw, stockRaw, pricingRaw] = await Promise.all([
         icFetch(`/catalog/products?sku=${encoded}`, token, payerId, recipientId, branch),
         icFetch(`/catalog/products/${encoded}/stock`, token, payerId, recipientId, branch),
-        icFetch(`/catalog/products/pricing`, token, payerId, recipientId, branch),
+        fetchPricing([rawSku], token, payerId, recipientId, branch),
       ]);
 
       const products  = catalogRaw?.products || (Array.isArray(catalogRaw) ? catalogRaw : []);

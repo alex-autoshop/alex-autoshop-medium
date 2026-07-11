@@ -4,6 +4,7 @@ import { Search, Car, Phone, MessageCircle, Loader2, Package } from "lucide-reac
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
+import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, type ApArticle } from "@/lib/autoparts";
 
 interface VehicleInfo {
   manufacturer?: string;
@@ -57,7 +58,7 @@ const PRICE_MARKUP = 1.7;
 
 function parseIntercarsArticles(data: any): Article[] {
   const items: any[] = data?.articles ?? data?.results ?? (Array.isArray(data) ? data : []);
-  return items.slice(0, 50).map((ic: any) => {
+  return items.map((ic: any) => {
     const ekPrice: number | undefined = ic.price;
     const sellPrice = ekPrice != null ? Math.ceil(ekPrice * PRICE_MARKUP * 100) / 100 : undefined;
     const imgRaw = ic.images?.[0];
@@ -82,6 +83,20 @@ function parseIntercarsArticles(data: any): Article[] {
       source: "intercars" as const,
     };
   });
+}
+
+function apToArticle(a: ApArticle): Article {
+  return {
+    id: a.id,
+    name: a.name,
+    brand: a.brand,
+    articleNumber: a.articleNumber,
+    imageUrl: a.imageUrl,
+    category: a.category,
+    oeNumbers: a.oeNumbers,
+    specs: a.specs,
+    source: "static" as const,
+  };
 }
 
 function parseVehicle(data: Record<string, unknown> | null): VehicleInfo | null {
@@ -144,7 +159,6 @@ function parseArticles(data: Record<string, unknown> | null): Article[] {
 type SearchMode = "plate" | "vin" | "kba";
 
 const MODES: { id: SearchMode; label: string }[] = [
-  { id: "plate", label: "Kennzeichen" },
   { id: "vin", label: "VIN / FIN" },
   { id: "kba", label: "Schlüsselnummer" },
 ];
@@ -156,6 +170,7 @@ export default function Teileportal() {
   const [hsn, setHsn] = useState("");
   const [tsn, setTsn] = useState("");
   const [vehicle, setVehicle] = useState<VehicleInfo | null>(null);
+  const [vehicleKtype, setVehicleKtype] = useState<number | null>(null);
   const [vehicleLoading, setVehicleLoading] = useState(false);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
 
@@ -185,7 +200,30 @@ export default function Teileportal() {
     setVehicleLoading(true);
     setVehicleError(null);
     setVehicle(null);
+    setVehicleKtype(null);
     try {
+      // 1) Neuer Teilekatalog (AutoPartsAPI): Schluesselnummer + VIN
+      try {
+        const veh =
+          mode === "kba" ? await apVehicleByKba(hsn.trim().padStart(4, "0"), tsn.trim().padStart(3, "0"))
+          : mode === "vin" ? await apVehicleByVin(vin.trim().toUpperCase().replace(/\s/g, ""))
+          : null;
+        if (veh) {
+          setVehicle({
+            manufacturer: veh.manufacturer,
+            model: veh.model,
+            typeName: veh.typeName,
+            power: veh.power,
+            fuel: veh.fuel,
+            raw: veh.raw,
+          });
+          setVehicleKtype(veh.vehicleId ?? null);
+          setVehicleLoading(false);
+          return;
+        }
+      } catch { /* Katalog nicht erreichbar -> alter Weg */ }
+
+      // 2) Fallback: alter Proxy (lokaler VIN-Decode)
       const data = await tecdoc(payload);
       if (data?.source === 'vin_decoded' && data?.vinBrand) {
         const brand = String(data.vinBrand);
@@ -226,14 +264,46 @@ export default function Teileportal() {
     try {
       let parsed: Article[] = [];
       let total = 0;
-      try {
-        const icData = await intercars({ action: "search", query: partQuery.trim(), limit: 20 });
-        parsed = parseIntercarsArticles(icData);
-        total = icData?.totalCount ?? parsed.length;
-      } catch {
-        // Intercars not configured or failed — fall through to static catalog
+      const norm = (x: string) => (x || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+      // 1) Fahrzeug erkannt -> Katalog: ALLE passenden Teile (alle Marken, mit Bildern)
+      if (vehicleKtype) {
+        try {
+          parsed = (await apArticlesForVehicle(vehicleKtype, partQuery.trim())).map(apToArticle);
+          total = parsed.length;
+        } catch { /* Katalog optional */ }
       }
 
+      // 2) Inter Cars (Preise + Verfuegbarkeit) laden und per Artikelnummer mergen
+      try {
+        const icData = await intercars({ action: "search", query: partQuery.trim(), limit: 48 });
+        const icArts = parseIntercarsArticles(icData);
+        if (parsed.length === 0) {
+          parsed = icArts;
+          total = icData?.totalCount ?? icArts.length;
+        } else if (icArts.length > 0) {
+          const icMap = new Map(icArts.map((ic) => [norm(ic.articleNumber), ic]));
+          parsed = parsed.map((a) => {
+            const hit = icMap.get(norm(a.articleNumber));
+            return hit
+              ? { ...a, price: hit.price, availability: hit.availability, deliveryDays: hit.deliveryDays, imageUrl: a.imageUrl ?? hit.imageUrl, source: "intercars" as const }
+              : a;
+          });
+          const known = new Set(parsed.map((a) => norm(a.articleNumber)));
+          parsed = [...parsed, ...icArts.filter((ic) => !known.has(norm(ic.articleNumber)))];
+          total = parsed.length;
+        }
+      } catch { /* IC optional */ }
+
+      // 3) Noch nichts? Nummern-Suche im Katalog (Artikel-/OE-Nummer)
+      if (parsed.length === 0 && /^[A-Za-z0-9._\-\/]{4,}$/.test(partQuery.trim())) {
+        try {
+          parsed = (await apArticlesByNumber(partQuery.trim())).map(apToArticle);
+          total = parsed.length;
+        } catch { /* weiter */ }
+      }
+
+      // 4) Letzter Fallback: alter tecdoc / statischer Katalog
       if (parsed.length === 0) {
         const tdData = await tecdoc({ action: "search", query: partQuery.trim() });
         parsed = parseArticles(tdData);
@@ -273,15 +343,15 @@ export default function Teileportal() {
   return (
     <div className="container py-8 sm:py-12">
       <Seo
-        title="Teileportal – Teile per Kennzeichen finden"
-        description="Kennzeichen eingeben, Fahrzeug erkennen, passende Autoteile finden. Anfrage direkt per WhatsApp oder Telefon an Alex Autoshop Wuppertal."
+        title="Teileportal – Autoteile per Schlüsselnummer oder VIN finden"
+        description="HSN/TSN oder VIN eingeben, Fahrzeug erkennen, alle passenden Autoteile mit Bild und Preis. Anfrage direkt per WhatsApp oder Telefon an Alex Autoshop Wuppertal."
       />
 
       <div className="max-w-2xl">
         <h1 className="text-3xl sm:text-4xl mb-3">Teileportal</h1>
         <p className="text-muted-foreground mb-8">
-          Kennzeichen eingeben → Fahrzeug erkennen → Teil anfragen. Wir prüfen Verfügbarkeit
-          und Preis und melden uns sofort — meist ist das Teil am selben Tag da.
+          Schlüsselnummer (HSN/TSN) oder VIN eingeben → Fahrzeug erkennen → alle passenden Teile
+          mit Bild und Preis. Wir prüfen Verfügbarkeit und melden uns sofort — meist ist das Teil am selben Tag da.
         </p>
       </div>
 
