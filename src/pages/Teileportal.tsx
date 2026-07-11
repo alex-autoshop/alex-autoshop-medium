@@ -6,6 +6,52 @@ import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, type ApArticle } from "@/lib/autoparts";
 
+// ─── Brand-Logo-Fallback (Clearbit CDN, kostenlos) ───────────────────────────
+const BRAND_DOMAINS: Record<string, string> = {
+  'BOSCH': 'bosch.com',
+  'BREMBO': 'brembo.com',
+  'ZIMMERMANN': 'zimmermann-brake.com',
+  'ATE': 'ate.eu',
+  'MEYLE': 'meyle.com',
+  'TRW': 'zf.com',
+  'JURID': 'jurid.com',
+  'TEXTAR': 'textar.com',
+  'MANN-FILTER': 'mann-hummel.com',
+  'MANN': 'mann-hummel.com',
+  'NGK': 'ngk.com',
+  'BILSTEIN': 'bilstein.de',
+  'LUK': 'schaeffler.com',
+  'GATES': 'gates.com',
+  'DOLZ': 'dolz.com',
+  'FEBI': 'febi.com',
+  'SKF': 'skf.com',
+  'FAG': 'schaeffler.com',
+  'INA': 'schaeffler.com',
+  'SACHS': 'zf.com',
+  'HELLA': 'hella.com',
+  'VALEO': 'valeo.com',
+  'DENSO': 'denso.com',
+  'CONTINENTAL': 'continental.com',
+  'MAHLE': 'mahle.com',
+  'OPTIMAL': 'optimal.de',
+  'SWAG': 'swag.eu',
+  'TOPRAN': 'topran.de',
+  'LEMFORDER': 'zf.com',
+  'RIDEX': 'ridex.eu',
+  'MAPCO': 'mapco.com',
+  'NK': 'nk.eu',
+  'DELPHI': 'delphi.com',
+  'VEMO': 'vemo.com',
+  'HERTH+BUSS': 'herth-buss.de',
+  'NISSENS': 'nissens.com',
+  'NTK': 'ngk.com',
+  'CHAMPION': 'championautoparts.com',
+};
+function getBrandLogo(brand: string): string | undefined {
+  const domain = BRAND_DOMAINS[(brand || '').toUpperCase().trim()];
+  return domain ? `https://logo.clearbit.com/${domain}` : undefined;
+}
+
 interface VehicleInfo {
   manufacturer?: string;
   model?: string;
@@ -546,7 +592,25 @@ export default function Teileportal() {
                         <div className="flex gap-4 p-4">
                           <div className="w-16 h-16 shrink-0 rounded-lg bg-secondary flex items-center justify-center overflow-hidden">
                             {a.imageUrl ? (
-                              <img src={a.imageUrl} alt={a.name} loading="lazy" className="w-full h-full object-contain" />
+                              <img
+                                src={a.imageUrl}
+                                alt={a.name}
+                                loading="lazy"
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  const logo = getBrandLogo(a.brand);
+                                  if (logo) { (e.target as HTMLImageElement).src = logo; (e.target as HTMLImageElement).className = "w-full h-full object-contain p-2"; }
+                                  else (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            ) : getBrandLogo(a.brand) ? (
+                              <img
+                                src={getBrandLogo(a.brand)!}
+                                alt={a.brand}
+                                loading="lazy"
+                                className="w-full h-full object-contain p-2"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
                             ) : (
                               <Package className="w-7 h-7 text-muted-foreground" />
                             )}
@@ -609,57 +673,4 @@ export default function Teileportal() {
                                   <>
                                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
                                       Auf Anfrage
-                                    </span>
-                                    <a
-                                      href={inquiry(a)}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1"
-                                    >
-                                      <MessageCircle className="w-3.5 h-3.5" />
-                                      Preis anfragen
-                                    </a>
-                                  </>
-                                )}
-                                <a
-                                  href={`tel:${SHOP_INFO.phoneIntl}`}
-                                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                                >
-                                  <Phone className="w-3 h-3" /> {SHOP_INFO.phone}
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })() : (
-            <p className="text-muted-foreground">Keine Teile gefunden — frag uns direkt, wir finden es.</p>
-          )}
-        </div>
-      )}
-
-      {/* Anfrage-CTA */}
-      <div className="section-dark rounded-3xl p-8 sm:p-10 mt-10 max-w-2xl">
-        <h2 className="text-xl sm:text-2xl mb-2">
-          Lieber direkt <span className="text-gold-accent">anfragen?</span>
-        </h2>
-        <p className="text-white/65 mb-6 text-sm leading-relaxed">
-          Schick uns Kennzeichen + Teilewunsch — wir prüfen Preis und Verfügbarkeit und melden uns sofort.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <a href={inquiry()} target="_blank" rel="noopener noreferrer" className="btn-gold-bright flex-1">
-            <MessageCircle className="w-5 h-5" /> Per WhatsApp anfragen
-          </a>
-          <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn bg-white/10 text-white hover:bg-white/20 flex-1">
-            <Phone className="w-5 h-5" /> {SHOP_INFO.phone}
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
+         
