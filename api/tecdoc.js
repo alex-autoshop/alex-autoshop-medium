@@ -122,7 +122,9 @@ export default async function handler(req) {
       result = await vrmLookup(plate, 'DE');
     } else if (action === 'vin' && vin) {
       const apiKey = process.env.TECALLIANCE_API_KEY;
-      const vrmRes = await fetch(`${VRM_BASE}/vehicles/vin/${encodeURIComponent(vin)}?lang=de`, {
+      // VINs dürfen keine I, O, Q enthalten — normalisieren
+      const vinNorm = vin.toUpperCase().replace(/\s/g, '').replace(/I/g,'1').replace(/O/g,'0').replace(/Q/g,'0');
+      const vrmRes = await fetch(`${VRM_BASE}/vehicles/vin/${encodeURIComponent(vinNorm)}?lang=de`, {
         headers: { "x-api-key": apiKey }
       });
       if (vrmRes.ok) {
@@ -136,6 +138,14 @@ export default async function handler(req) {
           'ZFA': 'Fiat', 'VSS': 'SEAT', 'TMB': 'Skoda', 'YV1': 'Volvo',
           'SAJ': 'Jaguar', 'SAL': 'Land Rover', 'VS6': 'Ford', 'VSE': 'Ford',
           'WF0': 'Ford', 'NM0': 'Ford',
+          'JDA': 'Daihatsu', 'JD1': 'Daihatsu', 'JD2': 'Daihatsu',
+          'JHM': 'Honda', 'JH4': 'Acura', 'JN1': 'Nissan', 'JN8': 'Nissan',
+          'JT2': 'Toyota', 'JT3': 'Toyota', 'JT4': 'Toyota', 'JTD': 'Toyota',
+          'JTK': 'Toyota', 'JTN': 'Toyota', 'JM1': 'Mazda', 'JM3': 'Mazda',
+          'KNA': 'Kia', 'KND': 'Kia', 'KNM': 'Kia',
+          'KMH': 'Hyundai', 'KME': 'Hyundai',
+          'ZAR': 'Alfa Romeo', 'ZFF': 'Ferrari', 'ZCG': 'Ferrari',
+          'VAN': 'Opel', 'W1N': 'Mercedes-Benz', 'YK1': 'Saab',
         };
         const YEAR_CHARS = {
           'A':2010,'B':2011,'C':2012,'D':2013,'E':2014,'F':2015,'G':2016,'H':2017,
@@ -149,7 +159,7 @@ export default async function handler(req) {
           'N':1992,'P':1993,'R':1994,'S':1995,'T':1996
         };
 
-        const vinUpper = vin.toUpperCase().replace(/[IOQ]/g, c => c==='I'?'1':c==='O'?'0':'0');
+        const vinUpper = vinNorm; // already normalized above
         const wmi = vinUpper.slice(0, 3);
         const yearChar = vinUpper[9] || '';
         let brand = WMI_MAP[wmi] || '';
@@ -189,11 +199,21 @@ export default async function handler(req) {
       }
     } else if (action === 'kba' && hsn) {
       const apiKey = process.env.TECALLIANCE_API_KEY;
+      // HSN muss 4-stellig sein, TSN 3-stellig (mit führender Null wenn nötig)
+      const hsnClean = hsn.trim().padStart(4, '0');
+      const tsnClean = (tsn || '').trim().padStart(3, '0');
       const res = await fetch(
-        `${VRM_BASE}/vehicles/kba/${encodeURIComponent(hsn)}/${encodeURIComponent(tsn || "")}?lang=de`,
+        `${VRM_BASE}/vehicles/kba/${encodeURIComponent(hsnClean)}/${encodeURIComponent(tsnClean)}?lang=de`,
         { headers: { "x-api-key": apiKey } }
       );
-      result = res.ok ? await res.json() : { error: `KBA error: ${res.status}` };
+      if (res.ok) {
+        result = await res.json();
+      } else if (res.status === 403 || res.status === 401) {
+        // KBA nicht freigeschaltet → Manuellen Hinweis zurückgeben
+        result = { error: 'kba_not_licensed', hsn: hsnClean, tsn: tsnClean };
+      } else {
+        result = { error: `KBA Fehler: ${res.status}`, hsn: hsnClean, tsn: tsnClean };
+      }
     } else if (action === 'search' && query) {
       // Try TecAlliance first; fall back to static catalog if not licensed (400)
       try {

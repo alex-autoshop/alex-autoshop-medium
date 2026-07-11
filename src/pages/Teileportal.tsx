@@ -176,10 +176,10 @@ export default function Teileportal() {
       payload = { action: "plate", plate: plate.trim().toUpperCase().replace(/\s|-/g, "") };
     } else if (mode === "vin") {
       if (!vin.trim()) return;
-      payload = { action: "vin", vin: vin.trim().toUpperCase().replace(/\s/g, "") };
+      payload = { action: "vin", vin: vin.trim().toUpperCase().replace(/\s/g, "").replace(/I/g,"1").replace(/O/g,"0").replace(/Q/g,"0") };
     } else {
       if (!hsn.trim()) return;
-      payload = { action: "kba", hsn: hsn.trim(), tsn: tsn.trim() };
+      payload = { action: "kba", hsn: hsn.trim().padStart(4,"0"), tsn: tsn.trim().padStart(3,"0") };
     }
 
     setVehicleLoading(true);
@@ -200,10 +200,17 @@ export default function Teileportal() {
         return;
       }
       const info = parseVehicle(data);
-      if (info) setVehicle(info);
-      else setVehicleError("Fahrzeug nicht gefunden. Prüfe deine Eingabe oder ruf uns an — wir finden es.");
+      if (info) {
+        setVehicle(info);
+      } else if (data?.error === 'kba_not_licensed') {
+        setVehicleError(`Schlüsselnummer-Suche ist in dieser Version nicht freigeschaltet. Ruf uns an: 0202 82690 — wir finden das Fahrzeug für dich.`);
+      } else if (data?.error && String(data.error).includes('unbekannt')) {
+        setVehicleError(`VIN-Hersteller nicht erkannt. Prüfe die VIN oder ruf uns an: 0202 82690`);
+      } else {
+        setVehicleError("Fahrzeug nicht gefunden. Prüfe deine Eingabe oder ruf uns an: 0202 82690");
+      }
     } catch {
-      setVehicleError("Abfrage fehlgeschlagen. Versuch es später erneut oder ruf uns an.");
+      setVehicleError("Abfrage fehlgeschlagen. Versuch es später erneut oder ruf uns an: 0202 82690");
     } finally {
       setVehicleLoading(false);
     }
