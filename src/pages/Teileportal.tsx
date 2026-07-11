@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Car, Phone, MessageCircle, Loader2, Package, ChevronRight, ArrowLeft,
@@ -178,6 +178,8 @@ export default function Teileportal() {
   const [vin, setVin] = useState('');
   const [hsn, setHsn] = useState('');
   const [tsn, setTsn] = useState('');
+  const tsnInputRef = useRef<HTMLInputElement>(null);
+  const tsnMobileRef = useRef<HTMLInputElement>(null);
   const [vehicle, setVehicle] = useState<VehicleInfo | null>(null);
   const [vehicleKtype, setVehicleKtype] = useState<number | null>(null);
   const [vehicleVin, setVehicleVin] = useState('');
@@ -328,11 +330,11 @@ export default function Teileportal() {
                     <div className="flex flex-col gap-2">
                       <div>
                         <label className="text-xs text-muted-foreground font-medium mb-1 block">Herstellerschlüssel (HSN)</label>
-                        <input value={hsn} onChange={e => setHsn(e.target.value)} placeholder="4-stellig" className="input-base w-full text-sm" maxLength={4} />
+                        <input value={hsn} onChange={e => { setHsn(e.target.value); if (e.target.value.length === 4) tsnInputRef.current?.focus(); }} placeholder="4-stellig" className="input-base w-full text-sm" maxLength={4} />
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground font-medium mb-1 block">Typschlüssel (TSN)</label>
-                        <input value={tsn} onChange={e => setTsn(e.target.value)} placeholder="3-stellig" className="input-base w-full text-sm" maxLength={3} />
+                        <input ref={tsnInputRef} value={tsn} onChange={e => setTsn(e.target.value)} placeholder="3-stellig" className="input-base w-full text-sm" maxLength={3} />
                       </div>
                       <p className="text-xs text-muted-foreground">Seite 1 der Zulassungsbescheinigung</p>
                     </div>
@@ -411,8 +413,8 @@ export default function Teileportal() {
                 <input value={vin} onChange={e => setVin(e.target.value)} placeholder="VIN eingeben" className="input-base flex-1 text-sm uppercase" maxLength={17} />
               ) : (
                 <div className="flex gap-2 flex-1">
-                  <input value={hsn} onChange={e => setHsn(e.target.value)} placeholder="HSN" className="input-base w-20 text-sm" maxLength={4} />
-                  <input value={tsn} onChange={e => setTsn(e.target.value)} placeholder="TSN" className="input-base w-20 text-sm" maxLength={3} />
+                  <input value={hsn} onChange={e => { setHsn(e.target.value); if (e.target.value.length === 4) tsnMobileRef.current?.focus(); }} placeholder="HSN" className="input-base w-20 text-sm" maxLength={4} />
+                  <input ref={tsnMobileRef} value={tsn} onChange={e => setTsn(e.target.value)} placeholder="TSN" className="input-base w-20 text-sm" maxLength={3} />
                 </div>
               )}
               <button type="submit" disabled={vehicleLoading} className="btn-primary px-3">
