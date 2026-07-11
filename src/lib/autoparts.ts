@@ -132,6 +132,42 @@ function toApVehicle(v: any): ApVehicle | null {
 
 // ─── Public API ─────────────────────────────────────────────
 
+/**
+ * KBA-/VIN-Antworten enthalten KEINE vehicleId — über die (edge-gecachte)
+ * Kaskade Marke → Modell → Motorvariante nachschlagen.
+ */
+async function resolveVehicleId(v: ApVehicle): Promise<number | undefined> {
+  try {
+    if (!v.manufacturer || !v.model) return undefined;
+    const manus = await ap(`/manufacturers/list/type-id/${TYPE_PC}`);
+    const mArr = pickArray(manus, 'manufacturers');
+    const manu = mArr.find((m: any) => String(m.manufacturerName).toUpperCase() === String(v.manufacturer).toUpperCase());
+    if (!manu) return undefined;
+    const models = await ap(`/models/list/type-id/${TYPE_PC}/manufacturer-id/${manu.manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`);
+    const modArr = pickArray(models, 'models');
+    const model =
+      modArr.find((m: any) => String(m.modelName) === v.model) ||
+      modArr.find((m: any) => String(m.modelName).split(' (')[0] === String(v.model).split(' (')[0]);
+    if (!model) return undefined;
+    const types = await ap(`/types/type-id/${TYPE_PC}/list-vehicles-types/${model.modelId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`);
+    const tArr = pickArray(types, 'modelTypes', 'types');
+    const raw: any = v.raw || {};
+    const wantEngine = String(raw.typeEngineName || v.typeName || '');
+    const wantPs = Math.round(parseFloat(String(raw.powerPs || ''))) || 0;
+    const wantStart = String(raw.constructionIntervalStart || '');
+    const cand = tArr.filter((t: any) =>
+      (!wantEngine || String(t.typeEngineName) === wantEngine) &&
+      (!wantPs || Math.round(parseFloat(String(t.powerPs))) === wantPs)
+    );
+    const exact =
+      cand.find((t: any) => wantStart && String(t.constructionIntervalStart) === wantStart) ||
+      cand[0] || tArr[0];
+    return exact ? Number(exact.vehicleId) || undefined : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Fahrzeug per deutscher Schlüsselnummer (HSN 2.1 + TSN 2.2). */
 export async function apVehicleByKba(hsn: string, tsn: string): Promise<ApVehicle | null> {
   const kba = `${hsn.trim()}${tsn.trim()}`.toUpperCase();
@@ -140,7 +176,9 @@ export async function apVehicleByKba(hsn: string, tsn: string): Promise<ApVehicl
     `/types/searching-the-passenger-car-by-ltn-number/lang-id/${LANG}/country-filter-id/${COUNTRY}/ltn-number/${encodeURIComponent(kba)}/number-type/1`
   );
   const arr = pickArray(r, 'modelTypes', 'vehicles', 'types', 'cars');
-  return toApVehicle(arr[0]);
+  const veh = toApVehicle(arr[0]);
+  if (veh && !veh.vehicleId) veh.vehicleId = await resolveVehicleId(veh);
+  return veh;
 }
 
 /** Fahrzeug per VIN (TecDoc-VIN-Check, Fallback strukturierter Decoder). */
@@ -151,6 +189,7 @@ export async function apVehicleByVin(vin: string): Promise<ApVehicle | null> {
     const r = await ap(`/vin/tecdoc-vin-check/${encodeURIComponent(v)}`);
     const arr = pickArray(r, 'vehicles', 'matchedVehicles');
     const veh = toApVehicle(arr[0] || r?.vehicle || r);
+    if (veh && !veh.vehicleId && veh.manufacturer) veh.vehicleId = await resolveVehicleId(veh);
     if (veh && (veh.vehicleId || veh.manufacturer)) return veh;
   } catch { /* Fallback */ }
   try {
