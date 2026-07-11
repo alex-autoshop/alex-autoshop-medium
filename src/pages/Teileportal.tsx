@@ -9,6 +9,8 @@ import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, type ApArticle } from "@/lib/autoparts";
+import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
+import { icPriceLookup } from "@/lib/intercarsGateway";
 
 const BRAND_DOMAINS: Record<string, string> = {
   'BOSCH': 'bosch.com', 'BREMBO': 'brembo.com', 'ZIMMERMANN': 'zimmermann-brake.com',
@@ -192,6 +194,35 @@ export default function Teileportal() {
   const [partsError, setPartsError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
+  const { garage, add: addToGarage, remove: removeFromGarage } = useGarage();
+  const cart = usePartsCart();
+  const [cartOpen, setCartOpen] = useState(false);
+  const [detailArticle, setDetailArticle] = useState<DetailArticle | null>(null);
+
+  const activateGarageVehicle = (g: GarageVehicle) => {
+    setVehicle({ manufacturer: g.manufacturer, model: g.model, typeName: g.typeName, power: g.power, fuel: g.fuel });
+    setVehicleKtype(g.ktype ?? null);
+    setVehicleVin(g.vin || '');
+    setArticles([]); setActiveCat(null); setPhase('categories');
+  };
+
+  const openDetail = (a: DetailArticle) => {
+    setDetailArticle(a);
+    if (a.price == null) {
+      icPriceLookup(a.articleNumber).then((live) => {
+        if (!live) return;
+        setDetailArticle((prev) => prev && prev.articleNumber === a.articleNumber
+          ? { ...prev, price: live.price, availability: live.availability } : prev);
+        setArticles((prev) => prev.map((x) => x.articleNumber === a.articleNumber
+          ? { ...x, price: live.price, availability: live.availability, source: 'intercars' as const } : x));
+      });
+    }
+  };
+
+  const addArticleToCart = (a: { name: string; brand: string; articleNumber: string; imageUrl?: string; price?: number }) => {
+    cart.add({ key: `${a.brand}::${a.articleNumber}`.toLowerCase(), name: a.name, brand: a.brand,
+      articleNumber: a.articleNumber, imageUrl: a.imageUrl, price: a.price, vehicleLabel });
+  };
 
   const vehicleLabel = vehicle ? [vehicle.manufacturer, vehicle.model, vehicle.typeName].filter(Boolean).join(' ') : '';
 
@@ -213,6 +244,9 @@ export default function Teileportal() {
           setVehicle({ manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power, fuel: veh.fuel, raw: veh.raw });
           setVehicleKtype(veh.vehicleId ?? null);
           setVehicleVin(searchMode === 'vin' ? normVin : '');
+          addToGarage({ label: [veh.manufacturer, veh.model, veh.typeName].filter(Boolean).join(' ').slice(0, 60),
+            manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power, fuel: veh.fuel,
+            vin: searchMode === 'vin' ? normVin : undefined, ktype: veh.vehicleId ?? null });
           setPhase('categories');
           setVehicleLoading(false);
           return;
@@ -345,6 +379,7 @@ export default function Teileportal() {
                   </button>
                 </form>
                 {vehicleError && <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-xs text-destructive">{vehicleError}</div>}
+                <GarageList garage={garage} onPick={activateGarageVehicle} onRemove={removeFromGarage} />
                 <div className="mt-auto pt-4 border-t border-border space-y-2">
                   <a href={`tel:${SHOP_INFO.phone}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
                     <Phone className="w-4 h-4" /> {SHOP_INFO.phone}
@@ -446,7 +481,12 @@ export default function Teileportal() {
                 </form>
                 {/* Tabs */}
                 <div className="flex gap-0 mb-6 border-b border-border">
-                  <button className="px-4 py-2.5 text-sm font-bold border-b-2 border-primary text-primary -mb-px">ALLE TEILE</button>
+                  <button className="px-4 py-2.5 text-sm font-bold border-b-2 border-primary text-primary -mb-px">AFTERMARKET-TEILE</button>
+                  <button disabled title="Original-Ersatzteilkatalog mit Explosionszeichnungen — kommt in Kürze"
+                    className="px-4 py-2.5 text-sm font-bold text-muted-foreground/50 cursor-not-allowed inline-flex items-center gap-2 -mb-px">
+                    ORIGINAL-KATALOG (OEM)
+                    <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-bold">BALD</span>
+                  </button>
                 </div>
                 {/* Grid */}
                 <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
@@ -533,7 +573,8 @@ export default function Teileportal() {
                           <motion.div key={a.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                             className="border border-border rounded-xl bg-card hover:border-primary/30 transition-all">
                             <div className="flex gap-4 p-4">
-                              <div className="w-16 h-16 shrink-0 rounded-lg bg-secondary flex items-center justify-center overflow-hidden">
+                              <div onClick={() => openDetail(a)} role="button" tabIndex={0}
+                                className="w-16 h-16 shrink-0 rounded-lg bg-secondary flex items-center justify-center overflow-hidden cursor-zoom-in">
                                 {a.imageUrl ? (
                                   <img src={a.imageUrl} alt={a.name} loading="lazy" className="w-full h-full object-contain"
                                     onError={e => { const logo = getBrandLogo(a.brand); if (logo) { (e.target as HTMLImageElement).src = logo; (e.target as HTMLImageElement).className = 'w-full h-full object-contain p-2'; } else (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -559,16 +600,19 @@ export default function Teileportal() {
                                           a.deliveryDays != null && a.deliveryDays <= 1 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400')}>
                                           {a.availability ?? 'Verfügbar'}
                                         </span>
-                                        <a href={inquiry(a)} target="_blank" rel="noopener noreferrer" className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
-                                          <MessageCircle className="w-3.5 h-3.5" /> Bestellen
-                                        </a>
+                                        <button onClick={() => addArticleToCart(a)} className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
+                                          <ShoppingBag className="w-3.5 h-3.5" /> In den Warenkorb
+                                        </button>
                                       </>
                                     ) : (
                                       <>
                                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Auf Anfrage</span>
-                                        <a href={inquiry(a)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:border-primary/50 hover:text-primary transition-colors">
-                                          <MessageCircle className="w-3.5 h-3.5" /> Preis anfragen
-                                        </a>
+                                        <button onClick={() => addArticleToCart(a)} className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
+                                          <ShoppingBag className="w-3.5 h-3.5" /> In den Warenkorb
+                                        </button>
+                                        <button onClick={() => openDetail(a)} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:border-primary/50 hover:text-primary transition-colors">
+                                          Details ansehen
+                                        </button>
                                         <a href={`tel:${SHOP_INFO.phone}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
                                           <Phone className="w-3.5 h-3.5" /> {SHOP_INFO.phone}
                                         </a>
@@ -606,6 +650,11 @@ export default function Teileportal() {
           )}
         </main>
       </div>
+
+      <PartDetailModal article={detailArticle} vehicleLabel={vehicleLabel} onClose={() => setDetailArticle(null)}
+        onAddToCart={(a) => addArticleToCart(a)} brandLogo={detailArticle ? getBrandLogo(detailArticle.brand) : undefined} />
+      <PartsCartButton count={cart.count} onClick={() => setCartOpen(true)} />
+      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin} />
     </>
   );
 }
