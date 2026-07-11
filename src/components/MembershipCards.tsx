@@ -137,7 +137,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
                   )}
                 >
                   <span className={cn(!on && "line-through")}>
-                    {m.discountPercent}% auf {mod}
+                    {m.discountPercent}% auf {mod === "Autoteile" ? "Autoteile (im Teileportal)" : mod}
                   </span>
                   {on ? (
                     <span className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center shrink-0">
