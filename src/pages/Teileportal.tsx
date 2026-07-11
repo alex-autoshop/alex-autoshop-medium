@@ -1,56 +1,72 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Search, Car, Phone, MessageCircle, Loader2, Package } from "lucide-react";
+import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Search, Car, Phone, MessageCircle, Loader2, Package, ChevronRight, ArrowLeft,
+  Filter, Settings, Disc, Zap, Wind, Thermometer, Battery, Radio, Fuel,
+  Wrench, Navigation, Layers, Lightbulb, Truck, Circle, ShoppingBag
+} from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, type ApArticle } from "@/lib/autoparts";
 
-// ─── Brand-Logo-Fallback (Clearbit CDN, kostenlos) ───────────────────────────
 const BRAND_DOMAINS: Record<string, string> = {
-  'BOSCH': 'bosch.com',
-  'BREMBO': 'brembo.com',
-  'ZIMMERMANN': 'zimmermann-brake.com',
-  'ATE': 'ate.eu',
-  'MEYLE': 'meyle.com',
-  'TRW': 'zf.com',
-  'JURID': 'jurid.com',
-  'TEXTAR': 'textar.com',
-  'MANN-FILTER': 'mann-hummel.com',
-  'MANN': 'mann-hummel.com',
-  'NGK': 'ngk.com',
-  'BILSTEIN': 'bilstein.de',
-  'LUK': 'schaeffler.com',
-  'GATES': 'gates.com',
-  'DOLZ': 'dolz.com',
-  'FEBI': 'febi.com',
-  'SKF': 'skf.com',
-  'FAG': 'schaeffler.com',
-  'INA': 'schaeffler.com',
-  'SACHS': 'zf.com',
-  'HELLA': 'hella.com',
-  'VALEO': 'valeo.com',
-  'DENSO': 'denso.com',
-  'CONTINENTAL': 'continental.com',
-  'MAHLE': 'mahle.com',
-  'OPTIMAL': 'optimal.de',
-  'SWAG': 'swag.eu',
-  'TOPRAN': 'topran.de',
-  'LEMFORDER': 'zf.com',
-  'RIDEX': 'ridex.eu',
-  'MAPCO': 'mapco.com',
-  'NK': 'nk.eu',
-  'DELPHI': 'delphi.com',
-  'VEMO': 'vemo.com',
-  'HERTH+BUSS': 'herth-buss.de',
-  'NISSENS': 'nissens.com',
-  'NTK': 'ngk.com',
-  'CHAMPION': 'championautoparts.com',
+  'BOSCH': 'bosch.com', 'BREMBO': 'brembo.com', 'ZIMMERMANN': 'zimmermann-brake.com',
+  'ATE': 'ate.eu', 'MEYLE': 'meyle.com', 'TRW': 'zf.com', 'JURID': 'jurid.com',
+  'TEXTAR': 'textar.com', 'MANN-FILTER': 'mann-hummel.com', 'MANN': 'mann-hummel.com',
+  'NGK': 'ngk.com', 'BILSTEIN': 'bilstein.de', 'LUK': 'schaeffler.com',
+  'GATES': 'gates.com', 'DOLZ': 'dolz.com', 'FEBI': 'febi.com', 'SKF': 'skf.com',
+  'FAG': 'schaeffler.com', 'INA': 'schaeffler.com', 'SACHS': 'zf.com',
+  'HELLA': 'hella.com', 'VALEO': 'valeo.com', 'DENSO': 'denso.com',
+  'CONTINENTAL': 'continental.com', 'MAHLE': 'mahle.com', 'OPTIMAL': 'optimal.de',
+  'SWAG': 'swag.eu', 'TOPRAN': 'topran.de', 'LEMFORDER': 'zf.com', 'RIDEX': 'ridex.eu',
+  'MAPCO': 'mapco.com', 'NK': 'nk.eu', 'DELPHI': 'delphi.com', 'VEMO': 'vemo.com',
+  'NISSENS': 'nissens.com', 'NTK': 'ngk.com', 'CHAMPION': 'championautoparts.com',
 };
 function getBrandLogo(brand: string): string | undefined {
   const domain = BRAND_DOMAINS[(brand || '').toUpperCase().trim()];
   return domain ? `https://logo.clearbit.com/${domain}` : undefined;
 }
+
+const CAR_BRAND_DOMAINS: Record<string, string> = {
+  'BMW': 'bmw.de', 'MERCEDES-BENZ': 'mercedes-benz.de', 'MERCEDES': 'mercedes-benz.de',
+  'VOLKSWAGEN': 'volkswagen.de', 'VW': 'volkswagen.de', 'AUDI': 'audi.de',
+  'PORSCHE': 'porsche.com', 'OPEL': 'opel.de', 'FORD': 'ford.de',
+  'TOYOTA': 'toyota.de', 'HONDA': 'honda.de', 'NISSAN': 'nissan.de',
+  'HYUNDAI': 'hyundai.de', 'KIA': 'kia.de', 'RENAULT': 'renault.de',
+  'PEUGEOT': 'peugeot.de', 'CITROEN': 'citroen.de', 'FIAT': 'fiat.de',
+  'SEAT': 'seat.de', 'SKODA': 'skoda.de', 'VOLVO': 'volvocars.de',
+  'JAGUAR': 'jaguar.de', 'LAND ROVER': 'landrover.de', 'MINI': 'mini.de',
+  'SMART': 'smart.com', 'ALFA ROMEO': 'alfaromeo.de', 'MAZDA': 'mazda.de',
+  'MITSUBISHI': 'mitsubishi.de', 'SUBARU': 'subaru.de', 'SUZUKI': 'suzuki.de',
+  'DAIHATSU': 'daihatsu.de', 'TESLA': 'tesla.com', 'LEXUS': 'lexus.de',
+};
+function getCarBrandLogo(brand: string): string | undefined {
+  const key = (brand || '').toUpperCase().trim();
+  const domain = CAR_BRAND_DOMAINS[key] || CAR_BRAND_DOMAINS[key.split(' ')[0]];
+  return domain ? `https://logo.clearbit.com/${domain}` : undefined;
+}
+
+const CATEGORIES = [
+  { id: 'filter',    name: 'Filter',                         Icon: Filter,      color: 'from-blue-500/25 to-blue-600/10',     keywords: ['filter', 'oelfilter', 'luftfilter', 'kraftstofffilter', 'innenraumfilter'] },
+  { id: 'motor',     name: 'Motor / Ausrüstung',             Icon: Settings,    color: 'from-orange-500/25 to-orange-600/10', keywords: ['motor', 'kolben', 'kurbelwelle', 'ventil', 'zylinderkopf'] },
+  { id: 'radaufh',   name: 'Radaufhängung',                  Icon: Circle,      color: 'from-purple-500/25 to-purple-600/10', keywords: ['radaufhaengung', 'querlenker', 'spurstange', 'koppelstange'] },
+  { id: 'schwing',   name: 'Fahrzeugschwingungsdämpfung',    Icon: Layers,      color: 'from-slate-500/25 to-slate-600/10',   keywords: ['stossdaempfer', 'federbein', 'feder', 'fahrwerk', 'daempfer'] },
+  { id: 'zuendung',  name: 'Zündungs- / Glühkerzensystem',   Icon: Zap,         color: 'from-yellow-500/25 to-yellow-600/10', keywords: ['zuendkerze', 'zuendkabel', 'gluehkerze', 'zuendspule'] },
+  { id: 'antrieb',   name: 'Antriebsübertragungssystem',     Icon: Wrench,      color: 'from-emerald-500/25 to-emerald-600/10', keywords: ['kupplung', 'getriebe', 'antriebswelle', 'gelenkwelle'] },
+  { id: 'bremse',    name: 'Bremsanlage',                    Icon: Disc,        color: 'from-red-500/25 to-red-600/10',       keywords: ['bremse', 'bremsscheibe', 'bremsbelag', 'bremssattel'] },
+  { id: 'lenkung',   name: 'Lenkungssystem',                 Icon: Navigation,  color: 'from-cyan-500/25 to-cyan-600/10',     keywords: ['lenkung', 'lenkgetriebe', 'servolenkung', 'lenksaeule'] },
+  { id: 'kuehlung',  name: 'Kühlsystem',                     Icon: Thermometer, color: 'from-teal-500/25 to-teal-600/10',    keywords: ['kuehlung', 'kuehler', 'wasserpumpe', 'thermostat'] },
+  { id: 'elektro',   name: 'Elektroanlage',                  Icon: Radio,       color: 'from-amber-500/25 to-amber-600/10',   keywords: ['lichtmaschine', 'anlasser', 'generator', 'sicherung', 'relais'] },
+  { id: 'auspuff',   name: 'Auspuffanlage / Ansaugsystem',   Icon: Wind,        color: 'from-stone-500/25 to-stone-600/10',   keywords: ['auspuff', 'katalysator', 'auspuffrohr', 'schalldaempfer'] },
+  { id: 'kraftstoff',name: 'Kraftstoffanlage',               Icon: Fuel,        color: 'from-green-500/25 to-green-600/10',   keywords: ['kraftstoff', 'einspritzung', 'kraftstoffpumpe', 'einspritzduese'] },
+  { id: 'heizung',   name: 'Heizung / Klima / Lüftung',     Icon: Thermometer, color: 'from-sky-500/25 to-sky-600/10',      keywords: ['heizung', 'klimaanlage', 'geblaese', 'heizungskern'] },
+  { id: 'aufbau',    name: 'Aufbau / Beleuchtung / Spiegel', Icon: Lightbulb,   color: 'from-violet-500/25 to-violet-600/10', keywords: ['scheinwerfer', 'ruecklicht', 'spiegel', 'scheibenwischer'] },
+  { id: 'batterie',  name: 'Batterien und Fahrzeugstart',    Icon: Battery,     color: 'from-lime-500/25 to-lime-600/10',    keywords: ['batterie', 'starterbatterie', 'anlasser', 'fahrzeugstart'] },
+  { id: 'reifen',    name: 'Reifen / Felgen / Zubehör',     Icon: Car,         color: 'from-neutral-500/25 to-neutral-600/10', keywords: ['reifen', 'felge', 'reifenventil', 'radmutter'] },
+  { id: 'karosserie',name: 'Karosserie / Anbauteile',        Icon: Truck,       color: 'from-rose-500/25 to-rose-600/10',    keywords: ['karosserie', 'stossstange', 'kotfluegel', 'motorhaube'] },
+  { id: 'innenraum', name: 'Innenausstattung / Zubehör',     Icon: ShoppingBag, color: 'from-pink-500/25 to-pink-600/10',    keywords: ['innenraum', 'sitz', 'fussmatten', 'innenausstattung'] },
+];
 
 interface VehicleInfo {
   manufacturer?: string;
@@ -71,8 +87,6 @@ interface Article {
   category?: string;
   oeNumbers?: string[];
   specs?: { name: string; value: string }[];
-  mountingInfo?: string;
-  // Intercars live data
   price?: number;
   priceOriginal?: number;
   availability?: string;
@@ -80,33 +94,21 @@ interface Article {
   source?: "intercars" | "static";
 }
 
-async function postJson(url: string, payload: Record<string, unknown>, timeoutMs: number) {
+type Phase = 'search' | 'categories' | 'articles';
+type SearchMode = 'vin' | 'kba';
+const PRICE_MARKUP = 1.7;
+
+async function postJson(url: string, payload: Record<string, unknown>, ms: number) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: ctrl.signal,
-    });
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), signal: ctrl.signal });
     if (!res.ok) throw new Error(`API-Fehler ${res.status}`);
     return await res.json();
-  } finally {
-    clearTimeout(timer);
-  }
+  } finally { clearTimeout(t); }
 }
-
-// Beide mit hartem Timeout — nie wieder Endlos-Spinner
-async function tecdoc(payload: Record<string, unknown>) {
-  return postJson("/api/tecdoc", payload, 12_000);
-}
-
-async function intercars(payload: Record<string, unknown>) {
-  return postJson("/api/intercars", payload, 12_000);
-}
-
-const PRICE_MARKUP = 1.7;
+const tecdoc = (p: Record<string, unknown>) => postJson("/api/tecdoc", p, 12_000);
+const intercarsApi = (p: Record<string, unknown>) => postJson("/api/intercars", p, 12_000);
 
 function parseIntercarsArticles(data: any): Article[] {
   const items: any[] = data?.articles ?? data?.results ?? (Array.isArray(data) ? data : []);
@@ -114,41 +116,17 @@ function parseIntercarsArticles(data: any): Article[] {
     const ekPrice: number | undefined = ic.price;
     const sellPrice = ekPrice != null ? Math.ceil(ekPrice * PRICE_MARKUP * 100) / 100 : undefined;
     const imgRaw = ic.images?.[0];
-    const imageUrl: string | undefined =
-      typeof imgRaw === "string" ? imgRaw : imgRaw?.url ?? imgRaw?.imageURL ?? undefined;
-    return {
-      id: ic.id ?? ic._sku ?? Math.random(),
-      name: ic.name ?? "Artikel",
-      brand: ic.brand ?? "",
-      articleNumber: ic._sku ?? ic._index ?? ic.id ?? "",
-      imageUrl,
-      category: undefined,
-      oeNumbers: ic.oemNumbers ?? [],
-      specs: ic.specs
-        ? Object.entries(ic.specs).map(([name, value]) => ({ name, value: String(value) }))
-        : [],
-      mountingInfo: undefined,
-      price: sellPrice,
-      priceOriginal: undefined,
-      availability: ic.availability,
-      deliveryDays: ic.deliveryDays,
-      source: "intercars" as const,
-    };
+    const imageUrl: string | undefined = typeof imgRaw === "string" ? imgRaw : imgRaw?.url ?? imgRaw?.imageURL;
+    return { id: ic.id ?? ic._sku ?? Math.random(), name: ic.name ?? "Artikel", brand: ic.brand ?? "",
+      articleNumber: ic._sku ?? ic._index ?? ic.id ?? "", imageUrl, oeNumbers: ic.oemNumbers ?? [],
+      specs: ic.specs ? Object.entries(ic.specs).map(([name, value]) => ({ name, value: String(value) })) : [],
+      price: sellPrice, availability: ic.availability, deliveryDays: ic.deliveryDays, source: "intercars" as const };
   });
 }
 
 function apToArticle(a: ApArticle): Article {
-  return {
-    id: a.id,
-    name: a.name,
-    brand: a.brand,
-    articleNumber: a.articleNumber,
-    imageUrl: a.imageUrl,
-    category: a.category,
-    oeNumbers: a.oeNumbers,
-    specs: a.specs,
-    source: "static" as const,
-  };
+  return { id: a.id, name: a.name, brand: a.brand, articleNumber: a.articleNumber,
+    imageUrl: a.imageUrl, category: a.category, oeNumbers: a.oeNumbers, specs: a.specs, source: "static" as const };
 }
 
 function parseVehicle(data: Record<string, unknown> | null): VehicleInfo | null {
@@ -158,27 +136,20 @@ function parseVehicle(data: Record<string, unknown> | null): VehicleInfo | null 
     if (Array.isArray(obj)) obj.forEach(dig);
     else if (obj && typeof obj === "object") {
       const o = obj as Record<string, unknown>;
-      if (o.make || o.manufacturer || o.manufacturerName || o.vehicleDetails) candidates.push(o);
+      if (o.make || o.manufacturer || o.manufacturerName) candidates.push(o);
       Object.values(o).forEach(dig);
     }
   };
   dig(data);
-  const v = candidates[0] ?? (data as Record<string, unknown>);
-  const pick = (...keys: string[]) => {
-    for (const k of keys) {
-      const val = (v as Record<string, unknown>)[k];
-      if (typeof val === "string" && val) return val;
-      if (typeof val === "number") return String(val);
-    }
-    return undefined;
-  };
+  const v = candidates[0] ?? data;
+  const pick = (...keys: string[]) => { for (const k of keys) { const val = (v as any)[k]; if (typeof val === "string" && val) return val; if (typeof val === "number") return String(val); } return undefined; };
   const info: VehicleInfo = {
     manufacturer: pick("make", "manufacturer", "manufacturerName", "mfrName"),
-    model: pick("model", "modelName", "vehicleModelSeriesName"),
-    typeName: pick("typeName", "type", "description", "fullName"),
+    model: pick("model", "modelName"),
+    typeName: pick("typeName", "type", "description"),
     power: pick("powerKW", "powerKw", "power"),
     fuel: pick("fuelType", "fuel"),
-    firstRegistration: pick("firstRegistrationDate", "firstRegistration", "registrationDate"),
+    firstRegistration: pick("firstRegistrationDate", "firstRegistration"),
     raw: data,
   };
   if (!info.manufacturer && !info.model && !info.typeName) return null;
@@ -186,491 +157,453 @@ function parseVehicle(data: Record<string, unknown> | null): VehicleInfo | null 
 }
 
 function parseArticles(data: Record<string, unknown> | null): Article[] {
-  const articles =
-    (data as any)?.articles ??
-    (data as any)?.data?.array ??
-    (data as any)?.LIST_ARTICLES_BY_QUICK_SEARCH?.articles ??
-    [];
-  if (!Array.isArray(articles)) return [];
-  return articles.slice(0, 50).map((a: any, i: number) => ({
+  const arts = (data as any)?.articles ?? (data as any)?.data?.array ?? [];
+  if (!Array.isArray(arts)) return [];
+  return arts.slice(0, 50).map((a: any, i: number) => ({
     id: a.legacyArticleId ?? a.articleId ?? i,
-    name: a.genericArticles?.[0]?.genericArticleDescription ?? a.genericArticleDescription ?? a.articleText ?? "Artikel",
-    brand: a.mfrName ?? a.brandName ?? "",
-    articleNumber: a.articleNumber ?? a.articleNo ?? "",
-    imageUrl: a.images?.[0]?.imageURL200 ?? a.images?.[0]?.imageURL100 ?? undefined,
-    category: a.genericArticles?.[0]?.assemblyGroupDescription ?? undefined,
+    name: a.genericArticles?.[0]?.genericArticleDescription ?? a.articleText ?? "Artikel",
+    brand: a.mfrName ?? "", articleNumber: a.articleNumber ?? "",
+    imageUrl: a.images?.[0]?.imageURL200 ?? a.images?.[0]?.imageURL100,
+    category: a.genericArticles?.[0]?.assemblyGroupDescription,
     oeNumbers: ((a.oeNumbers ?? []) as any[]).slice(0, 3).map((oe: any) => oe.oeNumber ?? String(oe)).filter(Boolean),
-    specs: ((a.immediateAttributs ?? a.articleAttributes ?? []) as any[]).slice(0, 5).map((attr: any) => ({
-      name: attr.attrName ?? attr.attributeName ?? "",
-      value: `${attr.attrValue ?? attr.value ?? ""}${attr.attrUnit ?? attr.unit ?? ""}`,
-    })).filter((s: { name: string; value: string }) => s.name && s.value),
-    mountingInfo: a.immediateAttributs?.find((a: any) => a.attrName?.toLowerCase().includes("montage"))?.attrValue ?? undefined,
+    specs: ((a.immediateAttributs ?? []) as any[]).slice(0, 5)
+      .map((attr: any) => ({ name: attr.attrName ?? "", value: `${attr.attrValue ?? ""}${attr.attrUnit ?? ""}` }))
+      .filter((s: any) => s.name && s.value),
   }));
 }
 
-type SearchMode = "plate" | "vin" | "kba";
-
-const MODES: { id: SearchMode; label: string }[] = [
-  { id: "vin", label: "VIN / FIN" },
-  { id: "kba", label: "Schlüsselnummer" },
-];
-
 export default function Teileportal() {
-  const [mode, setMode] = useState<SearchMode>("kba");
-  const [plate, setPlate] = useState("");
-  const [vin, setVin] = useState("");
-  const [hsn, setHsn] = useState("");
-  const [tsn, setTsn] = useState("");
+  const [phase, setPhase] = useState<Phase>('search');
+  const [searchMode, setSearchMode] = useState<SearchMode>('kba');
+  const [vin, setVin] = useState('');
+  const [hsn, setHsn] = useState('');
+  const [tsn, setTsn] = useState('');
   const [vehicle, setVehicle] = useState<VehicleInfo | null>(null);
   const [vehicleKtype, setVehicleKtype] = useState<number | null>(null);
+  const [vehicleVin, setVehicleVin] = useState('');
   const [vehicleLoading, setVehicleLoading] = useState(false);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
-
-  const [partQuery, setPartQuery] = useState("");
+  const [activeCat, setActiveCat] = useState<typeof CATEGORIES[0] | null>(null);
+  const [partQuery, setPartQuery] = useState('');
   const [articles, setArticles] = useState<Article[]>([]);
   const [partsLoading, setPartsLoading] = useState(false);
   const [partsError, setPartsError] = useState<string | null>(null);
-  const [searched, setSearched] = useState(false);
-  const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
   const [totalCount, setTotalCount] = useState(0);
+  const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
+
+  const vehicleLabel = vehicle ? [vehicle.manufacturer, vehicle.model, vehicle.typeName].filter(Boolean).join(' ') : '';
 
   const lookupVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    let payload: Record<string, unknown> | null = null;
-    if (mode === "plate") {
-      if (!plate.trim()) return;
-      payload = { action: "plate", plate: plate.trim().toUpperCase().replace(/\s|-/g, "") };
-    } else if (mode === "vin") {
-      if (!vin.trim()) return;
-      payload = { action: "vin", vin: vin.trim().toUpperCase().replace(/\s/g, "").replace(/I/g,"1").replace(/O/g,"0").replace(/Q/g,"0") };
-    } else {
-      if (!hsn.trim()) return;
-      payload = { action: "kba", hsn: hsn.trim().padStart(4,"0"), tsn: tsn.trim().padStart(3,"0") };
-    }
-
     setVehicleLoading(true);
     setVehicleError(null);
     setVehicle(null);
     setVehicleKtype(null);
+    setArticles([]);
+    setActiveCat(null);
+    const normVin = vin.trim().toUpperCase().replace(/\s/g,'').replace(/I/g,'1').replace(/O/g,'0').replace(/Q/g,'0');
     try {
-      // 1) Neuer Teilekatalog (AutoPartsAPI): Schluesselnummer + VIN
       try {
-        const veh =
-          mode === "kba" ? await apVehicleByKba(hsn.trim().padStart(4, "0"), tsn.trim().padStart(3, "0"))
-          : mode === "vin" ? await apVehicleByVin(vin.trim().toUpperCase().replace(/\s/g, ""))
-          : null;
+        const veh = searchMode === 'kba'
+          ? await apVehicleByKba(hsn.trim().padStart(4,'0'), tsn.trim().padStart(3,'0'))
+          : await apVehicleByVin(normVin);
         if (veh) {
-          setVehicle({
-            manufacturer: veh.manufacturer,
-            model: veh.model,
-            typeName: veh.typeName,
-            power: veh.power,
-            fuel: veh.fuel,
-            raw: veh.raw,
-          });
+          setVehicle({ manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power, fuel: veh.fuel, raw: veh.raw });
           setVehicleKtype(veh.vehicleId ?? null);
+          setVehicleVin(searchMode === 'vin' ? normVin : '');
+          setPhase('categories');
           setVehicleLoading(false);
           return;
         }
-      } catch { /* Katalog nicht erreichbar -> alter Weg */ }
-
-      // 2) Fallback: alter Proxy (lokaler VIN-Decode)
+      } catch { /* weiter */ }
+      const payload = searchMode === 'vin'
+        ? { action: 'vin', vin: normVin }
+        : { action: 'kba', hsn: hsn.trim().padStart(4,'0'), tsn: tsn.trim().padStart(3,'0') };
       const data = await tecdoc(payload);
       if (data?.source === 'vin_decoded' && data?.vinBrand) {
-        const brand = String(data.vinBrand);
-        const year = data.vinYear ? String(data.vinYear) : undefined;
-        setVehicle({
-          manufacturer: brand,
-          model: undefined,
-          typeName: year ? String(year) : undefined,
-          raw: data,
-        });
-        setVehicleLoading(false);
-        return;
-      }
-      const info = parseVehicle(data);
-      if (info) {
-        setVehicle(info);
-      } else if (data?.error === 'kba_not_licensed') {
-        setVehicleError(`Schlüsselnummer-Suche ist in dieser Version nicht freigeschaltet. Ruf uns an: 0202 82690 — wir finden das Fahrzeug für dich.`);
-      } else if (data?.error && String(data.error).includes('unbekannt')) {
-        setVehicleError(`VIN-Hersteller nicht erkannt. Prüfe die VIN oder ruf uns an: 0202 82690`);
+        setVehicle({ manufacturer: String(data.vinBrand), typeName: data.vinYear ? String(data.vinYear) : undefined, raw: data });
+        setVehicleVin(normVin);
+        setPhase('categories');
       } else {
-        setVehicleError("Fahrzeug nicht gefunden. Prüfe deine Eingabe oder ruf uns an: 0202 82690");
+        const info = parseVehicle(data);
+        if (info) { setVehicle(info); setVehicleVin(searchMode === 'vin' ? normVin : ''); setPhase('categories'); }
+        else setVehicleError(data?.error === 'kba_not_licensed'
+          ? 'Schlüsselnummer-Suche nicht freigeschaltet. Ruf uns an: 0202 82690'
+          : 'Fahrzeug nicht gefunden. Prüfe die Eingabe oder ruf uns an: 0202 82690');
       }
-    } catch {
-      setVehicleError("Abfrage fehlgeschlagen. Versuch es später erneut oder ruf uns an: 0202 82690");
-    } finally {
-      setVehicleLoading(false);
-    }
+    } catch { setVehicleError('Abfrage fehlgeschlagen. Versuch es später oder ruf uns an: 0202 82690'); }
+    finally { setVehicleLoading(false); }
   };
 
-  const searchParts = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!partQuery.trim()) return;
+  const loadParts = async (query: string) => {
     setPartsLoading(true);
     setPartsError(null);
-    setSearched(true);
     setSelectedBrands(new Set());
     try {
       let parsed: Article[] = [];
       let total = 0;
-      const norm = (x: string) => (x || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-
-      // 1) Fahrzeug erkannt -> Katalog: ALLE passenden Teile (alle Marken, mit Bildern)
+      const norm = (x: string) => (x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
       if (vehicleKtype) {
-        try {
-          parsed = (await apArticlesForVehicle(vehicleKtype, partQuery.trim())).map(apToArticle);
-          total = parsed.length;
-        } catch { /* Katalog optional */ }
+        try { parsed = (await apArticlesForVehicle(vehicleKtype, query)).map(apToArticle); total = parsed.length; } catch {}
       }
-
-      // 2) Inter Cars (Preise + Verfuegbarkeit) laden und per Artikelnummer mergen
       try {
-        const icData = await intercars({ action: "search", query: partQuery.trim(), limit: 48 });
+        const icData = await intercarsApi({ action: 'search', query, limit: 48 });
         const icArts = parseIntercarsArticles(icData);
-        if (parsed.length === 0) {
-          parsed = icArts;
-          total = icData?.totalCount ?? icArts.length;
-        } else if (icArts.length > 0) {
-          const icMap = new Map(icArts.map((ic) => [norm(ic.articleNumber), ic]));
-          parsed = parsed.map((a) => {
-            const hit = icMap.get(norm(a.articleNumber));
-            return hit
-              ? { ...a, price: hit.price, availability: hit.availability, deliveryDays: hit.deliveryDays, imageUrl: a.imageUrl ?? hit.imageUrl, source: "intercars" as const }
-              : a;
-          });
-          const known = new Set(parsed.map((a) => norm(a.articleNumber)));
-          parsed = [...parsed, ...icArts.filter((ic) => !known.has(norm(ic.articleNumber)))];
+        if (parsed.length === 0) { parsed = icArts; total = icData?.totalCount ?? icArts.length; }
+        else if (icArts.length > 0) {
+          const icMap = new Map(icArts.map(ic => [norm(ic.articleNumber), ic]));
+          parsed = parsed.map(a => { const hit = icMap.get(norm(a.articleNumber)); return hit ? { ...a, price: hit.price, availability: hit.availability, deliveryDays: hit.deliveryDays, imageUrl: a.imageUrl ?? hit.imageUrl, source: 'intercars' as const } : a; });
+          const known = new Set(parsed.map(a => norm(a.articleNumber)));
+          parsed = [...parsed, ...icArts.filter(ic => !known.has(norm(ic.articleNumber)))];
           total = parsed.length;
         }
-      } catch { /* IC optional */ }
-
-      // 3) Noch nichts? Nummern-Suche im Katalog (Artikel-/OE-Nummer)
-      if (parsed.length === 0 && /^[A-Za-z0-9._\-\/]{4,}$/.test(partQuery.trim())) {
-        try {
-          parsed = (await apArticlesByNumber(partQuery.trim())).map(apToArticle);
-          total = parsed.length;
-        } catch { /* weiter */ }
-      }
-
-      // 4) Letzter Fallback: alter tecdoc / statischer Katalog
+      } catch {}
       if (parsed.length === 0) {
-        const tdData = await tecdoc({ action: "search", query: partQuery.trim() });
+        try { parsed = (await apArticlesByNumber(query)).map(apToArticle); total = parsed.length; } catch {}
+      }
+      if (parsed.length === 0) {
+        const tdData = await tecdoc({ action: 'search', query });
         parsed = parseArticles(tdData);
         total = (tdData as any)?.totalMatchingArticles ?? parsed.length;
       }
-
-      setArticles(parsed);
-      setTotalCount(total);
-    } catch {
-      setPartsError("Suche fehlgeschlagen. Versuch es später erneut.");
-      setArticles([]);
-    } finally {
-      setPartsLoading(false);
-    }
+      setArticles(parsed); setTotalCount(total);
+    } catch { setPartsError('Suche fehlgeschlagen.'); }
+    finally { setPartsLoading(false); }
   };
 
-  const vehicleLabel = vehicle
-    ? [vehicle.manufacturer, vehicle.model, vehicle.typeName].filter(Boolean).join(" ")
-    : "";
+  const handleCategoryClick = (cat: typeof CATEGORIES[0]) => {
+    setActiveCat(cat); setPartQuery(''); setPhase('articles');
+    loadParts(cat.keywords.join(' '));
+  };
 
-  const vehicleId =
-    mode === "plate"
-      ? plate && `Kennzeichen: ${plate}`
-      : mode === "vin"
-      ? vin && `VIN/FIN: ${vin}`
-      : hsn && `Schlüsselnummer: HSN ${hsn}${tsn ? ` / TSN ${tsn}` : ""}`;
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!partQuery.trim()) return;
+    setActiveCat(null); setPhase('articles');
+    loadParts(partQuery.trim());
+  };
+
+  const allBrands = useMemo(() => [...new Set(articles.map(a => a.brand).filter(Boolean))].sort(), [articles]);
+  const filtered = useMemo(() => selectedBrands.size > 0 ? articles.filter(a => selectedBrands.has(a.brand)) : articles, [articles, selectedBrands]);
 
   const inquiry = (article?: Article) => {
-    const lines = [
-      "Hallo Alex Autoshop, ich brauche ein Teil:",
-      article ? `Teil: ${article.brand} ${article.name} (Art.-Nr. ${article.articleNumber})` : `Teil: ${partQuery}`,
-      vehicleLabel ? `Fahrzeug: ${vehicleLabel}` : vehicleId || "",
-    ].filter(Boolean);
-    return whatsappLink(lines.join("\n"));
+    const lines = ['Hallo Alex Autoshop, ich brauche ein Teil:',
+      article ? `Teil: ${article.brand} ${article.name} (Art.-Nr. ${article.articleNumber})` : `Teil: ${partQuery || activeCat?.name}`,
+      vehicleLabel ? `Fahrzeug: ${vehicleLabel}` : '', vehicleVin ? `FIN: ${vehicleVin}` : ''].filter(Boolean);
+    return whatsappLink(lines.join('\n'));
   };
 
   return (
-    <div className="container py-8 sm:py-12">
-      <Seo
-        title="Teileportal – Autoteile per Schlüsselnummer oder VIN finden"
-        description="HSN/TSN oder VIN eingeben, Fahrzeug erkennen, alle passenden Autoteile mit Bild und Preis. Anfrage direkt per WhatsApp oder Telefon an Alex Autoshop Wuppertal."
-      />
+    <>
+      <Seo title="Teileportal – Autoteile per Schlüsselnummer oder VIN finden"
+        description="HSN/TSN oder VIN eingeben, Fahrzeug erkennen, alle passenden Autoteile mit Bild und Preis." />
 
-      <div className="max-w-2xl">
-        <h1 className="text-3xl sm:text-4xl mb-3">Teileportal</h1>
-        <p className="text-muted-foreground mb-8">
-          Schlüsselnummer (HSN/TSN) oder VIN eingeben → Fahrzeug erkennen → alle passenden Teile
-          mit Bild und Preis. Wir prüfen Verfügbarkeit und melden uns sofort — meist ist das Teil am selben Tag da.
-        </p>
-      </div>
+      <div className="flex min-h-[calc(100vh-4rem)]">
 
-      {/* Schritt 1: Kennzeichen */}
-      <div className="card-tilt p-6 sm:p-8 hover:translate-y-0 max-w-2xl">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center text-sm">1</span>
-          <h2 className="text-xl">Fahrzeug finden</h2>
-        </div>
+        {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
+        <aside className="w-72 shrink-0 border-r border-border bg-card/60 flex-col sticky top-0 h-screen overflow-y-auto hidden md:flex">
+          <div className="p-5 border-b border-border">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-0.5">Alex Autoshop</p>
+            <h1 className="text-lg font-bold">Teileportal</h1>
+          </div>
 
-        {/* Mode tabs */}
-        <div className="flex gap-2 mb-4">
-          {MODES.map(m => (
-            <button
-              key={m.id}
-              onClick={() => { setMode(m.id); setVehicle(null); setVehicleError(null); }}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                mode === m.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
+          <AnimatePresence mode="wait">
+            {phase === 'search' ? (
+              <motion.div key="sp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5 flex flex-col gap-4 flex-1">
+                <div className="flex rounded-lg overflow-hidden border border-border">
+                  {(['vin','kba'] as SearchMode[]).map(m => (
+                    <button key={m} onClick={() => setSearchMode(m)}
+                      className={cn('flex-1 py-2 text-xs font-semibold transition-colors', searchMode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>
+                      {m === 'vin' ? 'VIN / FIN' : 'Schlüsselnummer'}
+                    </button>
+                  ))}
+                </div>
+                <form onSubmit={lookupVehicle} className="flex flex-col gap-3">
+                  {searchMode === 'vin' ? (
+                    <div>
+                      <label className="text-xs text-muted-foreground font-medium mb-1 block">VIN / Fahrgestellnummer</label>
+                      <input value={vin} onChange={e => setVin(e.target.value)} placeholder="17 Zeichen" className="input-base w-full uppercase text-sm" maxLength={17} />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <div>
+                        <label className="text-xs text-muted-foreground font-medium mb-1 block">Herstellerschlüssel (HSN)</label>
+                        <input value={hsn} onChange={e => setHsn(e.target.value)} placeholder="4-stellig" className="input-base w-full text-sm" maxLength={4} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground font-medium mb-1 block">Typschlüssel (TSN)</label>
+                        <input value={tsn} onChange={e => setTsn(e.target.value)} placeholder="3-stellig" className="input-base w-full text-sm" maxLength={3} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Seite 1 der Zulassungsbescheinigung</p>
+                    </div>
+                  )}
+                  <button type="submit" disabled={vehicleLoading} className="btn-primary w-full gap-2">
+                    {vehicleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}
+                    Fahrzeug suchen
+                  </button>
+                </form>
+                {vehicleError && <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-xs text-destructive">{vehicleError}</div>}
+                <div className="mt-auto pt-4 border-t border-border space-y-2">
+                  <a href={`tel:${SHOP_INFO.phone}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                    <Phone className="w-4 h-4" /> {SHOP_INFO.phone}
+                  </a>
+                  <a href={whatsappLink("Hallo, ich brauche Hilfe bei der Teilesuche.")} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                    <MessageCircle className="w-4 h-4" /> WhatsApp
+                  </a>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div key="vp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col flex-1">
+                {/* Fahrzeugbild */}
+                <div className="relative flex items-center justify-center bg-gradient-to-b from-secondary/60 to-secondary/20" style={{ height: 160 }}>
+                  {vehicle?.manufacturer && getCarBrandLogo(vehicle.manufacturer) ? (
+                    <img src={getCarBrandLogo(vehicle.manufacturer)!} alt={vehicle.manufacturer}
+                      className="w-24 h-24 object-contain opacity-85"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  ) : (
+                    <Car className="w-20 h-20 text-muted-foreground/30" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-card/50 to-transparent" />
+                </div>
+
+                <div className="p-5 flex flex-col gap-4 flex-1">
+                  <div>
+                    {vehicle?.manufacturer && <p className="text-primary text-sm font-semibold flex items-center gap-0.5 cursor-default">{vehicle.manufacturer} <ChevronRight className="w-3.5 h-3.5" /></p>}
+                    {vehicle?.model && <p className="text-foreground font-bold text-base flex items-center gap-0.5 cursor-default">{vehicle.model} <ChevronRight className="w-3.5 h-3.5" /></p>}
+                    {vehicle?.typeName && <p className="text-muted-foreground text-sm flex items-center gap-0.5 cursor-default">{vehicle.typeName} <ChevronRight className="w-3.5 h-3.5" /></p>}
+                  </div>
+
+                  <div className="rounded-lg bg-secondary/40 border border-border divide-y divide-border/60 text-xs overflow-hidden">
+                    {vehicle?.firstRegistration && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Baujahr</span><span className="font-medium">{vehicle.firstRegistration}</span></div>}
+                    {vehicle?.power && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Leistung</span><span className="font-medium">{vehicle.power} kW</span></div>}
+                    {vehicle?.fuel && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Kraftstoff</span><span className="font-medium">{vehicle.fuel}</span></div>}
+                    {vehicleVin && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">FIN</span><span className="font-mono font-medium text-[10px] truncate max-w-[130px]">{vehicleVin}</span></div>}
+                  </div>
+
+                  <div className="flex flex-col gap-2 mt-auto">
+                    <button onClick={() => { setPhase('search'); setVehicle(null); setVehicleKtype(null); setArticles([]); setActiveCat(null); }}
+                      className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors">
+                      FAHRZEUG WECHSELN
+                    </button>
+                    <a href={whatsappLink(`Fahrzeuganfrage: ${vehicleLabel}`)} target="_blank" rel="noopener noreferrer"
+                      className="w-full py-2.5 rounded-lg border border-border text-sm font-medium text-center hover:bg-secondary transition-colors">
+                      ZUM VOLLEN ANGEBOT
+                    </a>
+                  </div>
+
+                  <div className="border-t border-border pt-3 flex gap-4">
+                    <a href={`tel:${SHOP_INFO.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"><Phone className="w-3.5 h-3.5" /> Anruf</a>
+                    <a href={whatsappLink('')} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"><MessageCircle className="w-3.5 h-3.5" /> WhatsApp</a>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </aside>
+
+        {/* ── HAUPTBEREICH ─────────────────────────────────────────────────── */}
+        <main className="flex-1 min-w-0">
+
+          {/* Mobile Kopfzeile */}
+          <div className="md:hidden border-b border-border p-4 bg-card/50 space-y-3">
+            <form onSubmit={lookupVehicle} className="flex gap-2">
+              {searchMode === 'vin' ? (
+                <input value={vin} onChange={e => setVin(e.target.value)} placeholder="VIN eingeben" className="input-base flex-1 text-sm uppercase" maxLength={17} />
+              ) : (
+                <div className="flex gap-2 flex-1">
+                  <input value={hsn} onChange={e => setHsn(e.target.value)} placeholder="HSN" className="input-base w-20 text-sm" maxLength={4} />
+                  <input value={tsn} onChange={e => setTsn(e.target.value)} placeholder="TSN" className="input-base w-20 text-sm" maxLength={3} />
+                </div>
               )}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-
-        <form onSubmit={lookupVehicle} className="flex flex-col gap-3">
-          {mode === "plate" && (
-            <input
-              value={plate}
-              onChange={e => setPlate(e.target.value)}
-              placeholder="z. B. W-AA1234"
-              className="input-base uppercase"
-              aria-label="Kennzeichen"
-            />
-          )}
-          {mode === "vin" && (
-            <input
-              value={vin}
-              onChange={e => setVin(e.target.value)}
-              placeholder="17-stellige VIN / FIN"
-              className="input-base uppercase"
-              maxLength={17}
-              aria-label="VIN"
-            />
-          )}
-          {mode === "kba" && (
+              <button type="submit" disabled={vehicleLoading} className="btn-primary px-3">
+                {vehicleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}
+              </button>
+            </form>
             <div className="flex gap-2">
-              <input
-                value={hsn}
-                onChange={e => setHsn(e.target.value)}
-                placeholder="HSN (4-stellig)"
-                className="input-base w-36"
-                maxLength={4}
-                aria-label="HSN"
-              />
-              <input
-                value={tsn}
-                onChange={e => setTsn(e.target.value)}
-                placeholder="TSN (3-stellig)"
-                className="input-base w-36"
-                maxLength={3}
-                aria-label="TSN"
-              />
+              {(['vin','kba'] as SearchMode[]).map(m => (
+                <button key={m} onClick={() => setSearchMode(m)} className={cn('px-3 py-1 rounded text-xs font-medium', searchMode === m ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground')}>
+                  {m === 'vin' ? 'VIN' : 'HSN/TSN'}
+                </button>
+              ))}
+            </div>
+            {vehicle && <div className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-sm font-semibold text-primary">📋 {vehicleLabel}</div>}
+            {vehicleError && <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-xs text-destructive">{vehicleError}</div>}
+          </div>
+
+          {/* ── CATEGORIES ───────────────────────────────────────────────── */}
+          {phase === 'categories' && (
+            <AnimatePresence mode="wait">
+              <motion.div key="cat" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-6">
+                {/* Suchfeld */}
+                <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-5">
+                  <input value={partQuery} onChange={e => setPartQuery(e.target.value)} placeholder="Teilekategorie eingeben …" className="input-base flex-1" />
+                  <button type="submit" disabled={partsLoading} className="btn-dark px-5 gap-2">
+                    {partsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                    Suchen
+                  </button>
+                </form>
+                {/* Tabs */}
+                <div className="flex gap-0 mb-6 border-b border-border">
+                  <button className="px-4 py-2.5 text-sm font-bold border-b-2 border-primary text-primary -mb-px">ALLE TEILE</button>
+                </div>
+                {/* Grid */}
+                <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+                  {CATEGORIES.map((cat, i) => (
+                    <motion.button key={cat.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
+                      onClick={() => handleCategoryClick(cat)}
+                      className="group flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:border-primary/50 hover:shadow-sm transition-all text-left">
+                      <div className={cn('w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 transition-transform group-hover:scale-105', cat.color)}>
+                        <cat.Icon className="w-6 h-6 text-foreground/70" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold leading-tight line-clamp-2">{cat.name}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary shrink-0 transition-colors" />
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          )}
+
+          {/* ── ARTICLES ─────────────────────────────────────────────────── */}
+          {phase === 'articles' && (
+            <AnimatePresence mode="wait">
+              <motion.div key="arts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-6">
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-2 mb-4">
+                  <button onClick={() => { setPhase(vehicle ? 'categories' : 'search'); setArticles([]); setActiveCat(null); }}
+                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
+                    <ArrowLeft className="w-4 h-4" />
+                    {vehicle ? 'Alle Teile' : 'Zurück'}
+                  </button>
+                  {activeCat && <><span className="text-muted-foreground/50">/</span><span className="text-sm font-medium">{activeCat.name}</span></>}
+                </div>
+                {/* Suchfeld */}
+                <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-5">
+                  <input value={partQuery} onChange={e => setPartQuery(e.target.value)} placeholder="Andere Kategorie oder Teilenummer …" className="input-base flex-1" />
+                  <button type="submit" disabled={partsLoading} className="btn-dark px-4">
+                    {partsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  </button>
+                </form>
+
+                {partsLoading && (
+                  <div className="flex items-center gap-3 text-muted-foreground py-16 justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>Teile werden geladen …</span>
+                  </div>
+                )}
+                {partsError && <p className="text-destructive text-sm">{partsError}</p>}
+
+                {!partsLoading && articles.length > 0 && (
+                  <div className="flex gap-5">
+                    {/* Brand Filter */}
+                    {allBrands.length > 1 && (
+                      <aside className="w-44 shrink-0 hidden lg:block">
+                        <div className="border border-border rounded-xl p-4 sticky top-6">
+                          <h3 className="font-bold text-xs mb-3 uppercase tracking-widest text-muted-foreground">Hersteller</h3>
+                          <div className="space-y-1.5 max-h-96 overflow-y-auto">
+                            {allBrands.map(brand => (
+                              <label key={brand} className="flex items-center gap-2 cursor-pointer group">
+                                <input type="checkbox" className="w-3.5 h-3.5 accent-primary" checked={selectedBrands.has(brand)}
+                                  onChange={() => { const n = new Set(selectedBrands); n.has(brand) ? n.delete(brand) : n.add(brand); setSelectedBrands(n); }} />
+                                <span className="text-xs group-hover:text-primary transition-colors flex-1 truncate">{brand}</span>
+                                <span className="text-xs text-muted-foreground">({articles.filter(a => a.brand === brand).length})</span>
+                              </label>
+                            ))}
+                          </div>
+                          {selectedBrands.size > 0 && <button onClick={() => setSelectedBrands(new Set())} className="mt-3 text-xs text-primary hover:underline">Zurücksetzen</button>}
+                        </div>
+                      </aside>
+                    )}
+
+                    {/* Artikelliste */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+                        <span className="font-bold">{activeCat ? activeCat.name : 'Suchergebnisse'}
+                          <span className="text-muted-foreground font-normal text-sm ml-2">({totalCount > articles.length ? totalCount : articles.length})</span>
+                        </span>
+                        {selectedBrands.size > 0 && <span className="text-sm text-muted-foreground">{filtered.length} gefiltert</span>}
+                      </div>
+
+                      <div className="space-y-2">
+                        {filtered.map(a => (
+                          <motion.div key={a.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                            className="border border-border rounded-xl bg-card hover:border-primary/30 transition-all">
+                            <div className="flex gap-4 p-4">
+                              <div className="w-16 h-16 shrink-0 rounded-lg bg-secondary flex items-center justify-center overflow-hidden">
+                                {a.imageUrl ? (
+                                  <img src={a.imageUrl} alt={a.name} loading="lazy" className="w-full h-full object-contain"
+                                    onError={e => { const logo = getBrandLogo(a.brand); if (logo) { (e.target as HTMLImageElement).src = logo; (e.target as HTMLImageElement).className = 'w-full h-full object-contain p-2'; } else (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                ) : getBrandLogo(a.brand) ? (
+                                  <img src={getBrandLogo(a.brand)!} alt={a.brand} loading="lazy" className="w-full h-full object-contain p-2"
+                                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                ) : <Package className="w-7 h-7 text-muted-foreground" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="font-bold text-sm text-primary truncate">{a.articleNumber}</p>
+                                    <p className="font-semibold text-sm leading-snug mt-0.5">{a.name}</p>
+                                    {a.brand && <span className="inline-block mt-1 px-2 py-0.5 rounded bg-secondary text-xs font-bold tracking-wide uppercase">{a.brand}</span>}
+                                    {a.specs && a.specs.length > 0 && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{a.specs.map(s => `${s.name}: ${s.value}`).join(' · ')}</p>}
+                                    {a.oeNumbers && a.oeNumbers.length > 0 && <p className="text-xs text-muted-foreground mt-0.5">OE: {a.oeNumbers.join(', ')}</p>}
+                                  </div>
+                                  <div className="shrink-0 text-right flex flex-col items-end gap-2">
+                                    {a.price != null ? (
+                                      <>
+                                        <p className="font-bold text-lg leading-none">{a.price.toFixed(2).replace('.', ',')} €</p>
+                                        <span className={cn('inline-flex items-center px-2 py-1 rounded text-xs font-medium',
+                                          a.deliveryDays != null && a.deliveryDays <= 1 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400')}>
+                                          {a.availability ?? 'Verfügbar'}
+                                        </span>
+                                        <a href={inquiry(a)} target="_blank" rel="noopener noreferrer" className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
+                                          <MessageCircle className="w-3.5 h-3.5" /> Bestellen
+                                        </a>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Auf Anfrage</span>
+                                        <a href={inquiry(a)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:border-primary/50 hover:text-primary transition-colors">
+                                          <MessageCircle className="w-3.5 h-3.5" /> Preis anfragen
+                                        </a>
+                                        <a href={`tel:${SHOP_INFO.phone}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                                          <Phone className="w-3.5 h-3.5" /> {SHOP_INFO.phone}
+                                        </a>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!partsLoading && articles.length === 0 && !partsError && (
+                  <div className="text-center py-20 text-muted-foreground">
+                    <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                    <p className="font-medium">Keine Teile gefunden</p>
+                    <p className="text-sm mt-1">Versuch eine andere Suchanfrage oder ruf uns an: <a href={`tel:${SHOP_INFO.phone}`} className="text-primary hover:underline">{SHOP_INFO.phone}</a></p>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          )}
+
+          {/* Search Phase (Desktop leer, zeigt Sidebar-Hinweis) */}
+          {phase === 'search' && (
+            <div className="hidden md:flex flex-col items-center justify-center h-full text-center p-12 text-muted-foreground">
+              <Car className="w-16 h-16 mb-5 opacity-20" />
+              <h2 className="text-xl font-bold mb-2 text-foreground">Fahrzeug suchen</h2>
+              <p className="text-sm max-w-xs">VIN / FIN oder Schlüsselnummer (HSN/TSN) in der Seitenleiste eingeben</p>
             </div>
           )}
-          <button type="submit" disabled={vehicleLoading} className="btn-primary self-start gap-2">
-            {vehicleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}
-            Fahrzeug suchen
-          </button>
-        </form>
-
-        {vehicleError && (
-          <p className="text-destructive text-sm mt-3">{vehicleError}</p>
-        )}
-
-        {vehicle && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-4 rounded-xl bg-primary/10 border border-primary/20 p-4"
-          >
-            <p className="font-bold text-primary text-sm mb-1">Fahrzeug erkannt</p>
-            <p className="font-semibold">
-              {[vehicle.manufacturer, vehicle.model, vehicle.typeName].filter(Boolean).join(" ")}
-            </p>
-            {(vehicle.power || vehicle.fuel || vehicle.firstRegistration) && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {[
-                  vehicle.power && `${vehicle.power} kW`,
-                  vehicle.fuel,
-                  vehicle.firstRegistration && `ab ${vehicle.firstRegistration}`,
-                ].filter(Boolean).join(" · ")}
-              </p>
-            )}
-          </motion.div>
-        )}
+        </main>
       </div>
-
-      {/* Schritt 2: Teil suchen */}
-      <div className="card-tilt p-6 sm:p-8 hover:translate-y-0 max-w-2xl mt-6">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center text-sm">2</span>
-          <h2 className="text-xl">Teil suchen</h2>
-        </div>
-        <form onSubmit={searchParts} className="flex gap-2">
-          <input
-            value={partQuery}
-            onChange={e => setPartQuery(e.target.value)}
-            placeholder="z. B. Bremsbeläge vorne, Ölfilter, Stoßdämpfer …"
-            className="input-base flex-1"
-            aria-label="Teilesuche"
-          />
-          <button type="submit" disabled={partsLoading} className="btn-dark sm:px-8">
-            {partsLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-            Suchen
-          </button>
-        </form>
-        {partsError && <p className="text-destructive text-sm mt-3">{partsError}</p>}
-      </div>
-
-      {/* Ergebnisse */}
-      {searched && !partsLoading && (
-        <div className="mt-8">
-          {articles.length > 0 ? (() => {
-            const allBrands = [...new Set(articles.map(a => a.brand).filter(Boolean))].sort();
-            const filtered = selectedBrands.size > 0
-              ? articles.filter(a => selectedBrands.has(a.brand))
-              : articles;
-            return (
-              <div className="flex gap-6">
-                {/* Sidebar */}
-                <aside className="w-52 shrink-0 hidden lg:block">
-                  <div className="border border-border rounded-xl p-4 sticky top-24">
-                    <h3 className="font-bold text-sm mb-3 uppercase tracking-wide text-muted-foreground">Hersteller</h3>
-                    <div className="space-y-2 max-h-80 overflow-y-auto">
-                      {allBrands.map(brand => (
-                        <label key={brand} className="flex items-center gap-2 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 accent-primary"
-                            checked={selectedBrands.has(brand)}
-                            onChange={() => {
-                              const next = new Set(selectedBrands);
-                              next.has(brand) ? next.delete(brand) : next.add(brand);
-                              setSelectedBrands(next);
-                            }}
-                          />
-                          <span className="text-sm group-hover:text-primary transition-colors">{brand}</span>
-                          <span className="ml-auto text-xs text-muted-foreground">
-                            ({articles.filter(a => a.brand === brand).length})
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    {selectedBrands.size > 0 && (
-                      <button
-                        onClick={() => setSelectedBrands(new Set())}
-                        className="mt-3 text-xs text-primary hover:underline"
-                      >
-                        Filter zurücksetzen
-                      </button>
-                    )}
-                  </div>
-                </aside>
-
-                {/* Hauptbereich */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
-                    <div>
-                      <span className="font-bold text-lg">ALLE ({totalCount > articles.length ? totalCount : articles.length})</span>
-                      {selectedBrands.size > 0 && (
-                        <span className="ml-2 text-sm text-muted-foreground">— {filtered.length} gefiltert</span>
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground hidden sm:block">
-                      {vehicleLabel && <span className="font-medium">📋 {vehicleLabel}</span>}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {filtered.map((a) => (
-                      <div key={a.id} className="border border-border rounded-xl bg-card hover:border-primary/40 transition-colors overflow-hidden">
-                        <div className="flex gap-4 p-4">
-                          <div className="w-16 h-16 shrink-0 rounded-lg bg-secondary flex items-center justify-center overflow-hidden">
-                            {a.imageUrl ? (
-                              <img
-                                src={a.imageUrl}
-                                alt={a.name}
-                                loading="lazy"
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                  const logo = getBrandLogo(a.brand);
-                                  if (logo) { (e.target as HTMLImageElement).src = logo; (e.target as HTMLImageElement).className = "w-full h-full object-contain p-2"; }
-                                  else (e.target as HTMLImageElement).style.display = 'none';
-                                }}
-                              />
-                            ) : getBrandLogo(a.brand) ? (
-                              <img
-                                src={getBrandLogo(a.brand)!}
-                                alt={a.brand}
-                                loading="lazy"
-                                className="w-full h-full object-contain p-2"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                              />
-                            ) : (
-                              <Package className="w-7 h-7 text-muted-foreground" />
-                            )}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="font-bold text-sm text-primary truncate">{a.articleNumber}</p>
-                                <p className="font-semibold text-sm leading-snug mt-0.5">{a.name}</p>
-                                {a.brand && (
-                                  <span className="inline-block mt-1 px-2 py-0.5 rounded bg-secondary text-xs font-bold tracking-wide uppercase">
-                                    {a.brand}
-                                  </span>
-                                )}
-                                {a.specs && a.specs.length > 0 && (
-                                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                                    {a.specs.map(s => `${s.name}: ${s.value}`).join(" · ")}
-                                  </p>
-                                )}
-                                {a.oeNumbers && a.oeNumbers.length > 0 && (
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    OE: {a.oeNumbers.join(", ")}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="shrink-0 text-right flex flex-col items-end gap-2">
-                                {a.price != null ? (
-                                  <>
-                                    <div className="text-right">
-                                      <p className="font-bold text-lg leading-none">
-                                        {a.price.toFixed(2).replace(".", ",")} €
-                                      </p>
-                                      {a.priceOriginal != null && a.priceOriginal > a.price && (
-                                        <p className="text-xs text-muted-foreground line-through">
-                                          {a.priceOriginal.toFixed(2).replace(".", ",")} €
-                                        </p>
-                                      )}
-                                    </div>
-                                    <span className={cn(
-                                      "inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium",
-                                      a.deliveryDays != null && a.deliveryDays <= 1
-                                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                        : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                                    )}>
-                                      {a.availability ?? "Auf Anfrage"}
-                                    </span>
-                                    <a
-                                      href={inquiry(a)}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1"
-                                    >
-                                      <MessageCircle className="w-3.5 h-3.5" />
-                                      Bestellen
-                                    </a>
-                                  </>
-                                ) : (
-                                  <>
-                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                                      Auf Anfrage
-         
+    </>
+  );
+}
