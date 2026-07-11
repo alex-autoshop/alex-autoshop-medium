@@ -68,7 +68,7 @@ function pickArray(obj: any, ...keys: string[]): any[] {
 }
 
 function pickImage(a: any): string | undefined {
-  const direct = first(a?.imageUrl, a?.imageLink, a?.imgUrl, a?.image, a?.pictureUrl, a?.s3ImageLink, a?.mediaUrl);
+  const direct = first(a?.s3image, a?.imageUrl, a?.imageLink, a?.imgUrl, a?.image, a?.pictureUrl, a?.s3ImageLink, a?.mediaUrl);
   if (typeof direct === 'string' && /^https?:/.test(direct)) return direct;
   for (const key of ['images', 'allMedia', 'media', 'pictures']) {
     const arr = a?.[key];
@@ -117,14 +117,14 @@ function toApVehicle(v: any): ApVehicle | null {
   const vehicleId = Number(first(v.vehicleId, v.carId, v.id, v.ktype)) || undefined;
   const manufacturer = first(v.manufacturerName, v.manuName, v.brand, v.make);
   const model = first(v.modelName, v.modelSeriesName, v.model);
-  const typeName = first(v.typeName, v.vehicleName, v.description, v.commercialName);
+  const typeName = first(v.typeEngineName, v.typeName, v.vehicleName, v.description, v.commercialName);
   if (!vehicleId && !manufacturer && !model) return null;
   return {
     vehicleId,
     manufacturer: manufacturer ? String(manufacturer) : undefined,
     model: model ? String(model) : undefined,
     typeName: typeName ? String(typeName) : undefined,
-    power: first(v.powerKw, v.kw) ? String(first(v.powerKw, v.kw)) : undefined,
+    power: first(v.powerKw, v.kw) ? String(Math.round(parseFloat(String(first(v.powerKw, v.kw))))) : undefined,
     fuel: first(v.fuelType, v.fuel) ? String(first(v.fuelType, v.fuel)) : undefined,
     raw: v,
   };
@@ -139,7 +139,7 @@ export async function apVehicleByKba(hsn: string, tsn: string): Promise<ApVehicl
   const r = await ap(
     `/types/searching-the-passenger-car-by-ltn-number/lang-id/${LANG}/country-filter-id/${COUNTRY}/ltn-number/${encodeURIComponent(kba)}/number-type/1`
   );
-  const arr = pickArray(r, 'vehicles', 'types', 'cars');
+  const arr = pickArray(r, 'modelTypes', 'vehicles', 'types', 'cars');
   return toApVehicle(arr[0]);
 }
 
@@ -170,18 +170,24 @@ async function apCategoryIds(query: string): Promise<number[]> {
     const tree = await ap(
       `/category/search-for-the-commodity-group-tree-by-description/type-id/${TYPE_PC}/lang-id/${LANG}/search-text/${encodeURIComponent(query)}`
     );
-    const ids: number[] = [];
+    // Baum: { "Name": { categoryId, categoryName, level, productId, children: { "Name": {...} } } }
+    const hits: Array<{ id: number; level: number; leaf: boolean }> = [];
     const walk = (node: any) => {
       if (!node || typeof node !== 'object') return;
       if (Array.isArray(node)) return node.forEach(walk);
-      const children = first(node.children, node.subCategories, node.childs);
-      const id = Number(first(node.categoryId, node.id, node.nodeId));
-      if (Array.isArray(children) && children.length) children.forEach(walk);
-      else if (id) ids.push(id);
-      else for (const v of Object.values(node)) { if (v && typeof v === 'object') walk(v); }
+      const id = Number(node.categoryId);
+      const children = node.children;
+      const childVals = children && typeof children === 'object' ? Object.values(children) : [];
+      if (id) hits.push({ id, level: Number(node.level) || 0, leaf: childVals.length === 0 });
+      if (childVals.length) childVals.forEach(walk);
+      if (node.categoryId === undefined && !children) {
+        for (const v of Object.values(node)) { if (v && typeof v === 'object') walk(v); }
+      }
     };
     walk(tree);
-    return [...new Set(ids)].slice(0, 3);
+    // Tiefste Knoten zuerst (spezifischste Produktgruppen), Blätter bevorzugt
+    hits.sort((a, b) => (Number(b.leaf) - Number(a.leaf)) || (b.level - a.level));
+    return [...new Set(hits.map((h) => h.id))].slice(0, 3);
   } catch {
     return [];
   }
@@ -197,7 +203,7 @@ export async function apArticlesForVehicle(vehicleId: number, query: string): Pr
   const raw: any[] = [];
   for (const s of settled) if (s.status === 'fulfilled') raw.push(...pickArray(s.value, 'articles'));
   const seen = new Set<string>();
-  return raw
+  const all = raw
     .map(toApArticle)
     .filter((a): a is ApArticle => !!a && !!a.articleNumber)
     .filter((a) => {
@@ -206,6 +212,17 @@ export async function apArticlesForVehicle(vehicleId: number, query: string): Pr
       seen.add(k);
       return true;
     });
+  // Relevanz: Produktname muss zum Suchbegriff passen (Kategorie-Baum ist teils unscharf)
+  const clean = (x: string) => x.toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]/g, '');
+  const q = clean(query);
+  const stem = q.length > 5 ? q.slice(0, q.length - 2) : q;
+  const relevant = all.filter((a) => {
+    const n = clean(`${a.name} ${a.category || ''}`);
+    return n.includes(q) || n.includes(stem) || q.includes(clean(a.name).slice(0, 6));
+  });
+  return relevant.length > 0 ? relevant : all;
 }
 
 /** Artikel-/OE-Nummern-Suche (ohne Fahrzeug). */
