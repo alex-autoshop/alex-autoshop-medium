@@ -418,3 +418,64 @@ export function ArticleExpander({ articleId, articleNumber, specs, oeNumbers, on
     </div>
   );
 }
+
+// ─── HERSTELLER-FILTER im Inter-Cars-Look (Logos, Suche, Sortierung) ─
+
+import { ArrowDownAZ, ArrowDown01 } from "lucide-react";
+
+function BrandLogo({ name, logo }: { name: string; logo?: string }) {
+  const [err, setErr] = useState(false);
+  const src = logo || `https://logo.clearbit.com/${name.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`;
+  if (err || !name) {
+    return <span className="w-10 h-5 rounded bg-secondary text-[8px] font-bold flex items-center justify-center shrink-0 uppercase">{name.slice(0, 4)}</span>;
+  }
+  return <img src={src} alt={name} loading="lazy" onError={() => setErr(true)}
+    className="w-10 h-5 object-contain shrink-0 bg-white rounded border border-border/60 p-px" />;
+}
+
+export function BrandFilter({ brands, selected, onToggle, onReset }: {
+  brands: Array<{ name: string; count: number; logo?: string }>;
+  selected: Set<string>;
+  onToggle: (brand: string) => void;
+  onReset: () => void;
+}) {
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState<"az" | "count">("az");
+  const shown = brands
+    .filter((b) => !q || b.name.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => (sort === "az" ? a.name.localeCompare(b.name) : b.count - a.count));
+  return (
+    <aside className="w-56 shrink-0 hidden lg:block">
+      <div className="border border-border rounded-xl p-4 sticky top-6">
+        <h3 className="font-bold text-xs mb-2 uppercase tracking-widest text-muted-foreground">Filter</h3>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nach Filtern suchen"
+          className="input-base w-full text-xs mb-3 py-1.5" />
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Hersteller</span>
+          <div className="flex gap-1">
+            <button onClick={() => setSort("az")} title="Alphabetisch"
+              className={cn("p-1 rounded border", sort === "az" ? "border-primary text-primary" : "border-border text-muted-foreground")}>
+              <ArrowDownAZ className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setSort("count")} title="Nach Anzahl"
+              className={cn("p-1 rounded border", sort === "count" ? "border-primary text-primary" : "border-border text-muted-foreground")}>
+              <ArrowDown01 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+        <div className="space-y-1 max-h-[26rem] overflow-y-auto pr-1">
+          {shown.map((b) => (
+            <label key={b.name} className="flex items-center gap-2 cursor-pointer group py-0.5">
+              <input type="checkbox" className="w-3.5 h-3.5 accent-primary shrink-0" checked={selected.has(b.name)} onChange={() => onToggle(b.name)} />
+              <BrandLogo name={b.name} logo={b.logo} />
+              <span className="text-xs group-hover:text-primary transition-colors flex-1 truncate font-medium">{b.name}</span>
+              <span className="text-[11px] text-muted-foreground">({b.count})</span>
+            </label>
+          ))}
+          {shown.length === 0 && <p className="text-xs text-muted-foreground py-2">Kein Hersteller gefunden.</p>}
+        </div>
+        {selected.size > 0 && <button onClick={onReset} className="mt-3 text-xs text-primary hover:underline">Zurücksetzen</button>}
+      </div>
+    </aside>
+  );
+}

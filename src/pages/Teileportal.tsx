@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, type ApArticle } from "@/lib/autoparts";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
 import { icPriceLookup } from "@/lib/intercarsGateway";
-import { ArticleExpander } from "@/components/TeileportalExtras";
+import { ArticleExpander, BrandFilter } from "@/components/TeileportalExtras";
 
 const BRAND_DOMAINS: Record<string, string> = {
   'BOSCH': 'bosch.com', 'BREMBO': 'brembo.com', 'ZIMMERMANN': 'zimmermann-brake.com',
@@ -542,22 +542,12 @@ export default function Teileportal() {
                   <div className="flex gap-5">
                     {/* Brand Filter */}
                     {allBrands.length > 1 && (
-                      <aside className="w-44 shrink-0 hidden lg:block">
-                        <div className="border border-border rounded-xl p-4 sticky top-6">
-                          <h3 className="font-bold text-xs mb-3 uppercase tracking-widest text-muted-foreground">Hersteller</h3>
-                          <div className="space-y-1.5 max-h-96 overflow-y-auto">
-                            {allBrands.map(brand => (
-                              <label key={brand} className="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" className="w-3.5 h-3.5 accent-primary" checked={selectedBrands.has(brand)}
-                                  onChange={() => { const n = new Set(selectedBrands); n.has(brand) ? n.delete(brand) : n.add(brand); setSelectedBrands(n); }} />
-                                <span className="text-xs group-hover:text-primary transition-colors flex-1 truncate">{brand}</span>
-                                <span className="text-xs text-muted-foreground">({articles.filter(a => a.brand === brand).length})</span>
-                              </label>
-                            ))}
-                          </div>
-                          {selectedBrands.size > 0 && <button onClick={() => setSelectedBrands(new Set())} className="mt-3 text-xs text-primary hover:underline">Zurücksetzen</button>}
-                        </div>
-                      </aside>
+                      <BrandFilter
+                        brands={allBrands.map(b => ({ name: b, count: articles.filter(a => a.brand === b).length, logo: getBrandLogo(b) }))}
+                        selected={selectedBrands}
+                        onToggle={(b) => { const n = new Set(selectedBrands); n.has(b) ? n.delete(b) : n.add(b); setSelectedBrands(n); }}
+                        onReset={() => setSelectedBrands(new Set())}
+                      />
                     )}
 
                     {/* Artikelliste */}
