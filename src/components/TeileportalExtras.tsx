@@ -502,12 +502,12 @@ export function SubCatList({ nodes, onPick, depth = 0 }: {
             <button
               onClick={() => {
                 if (hasKids) { const s = new Set(open); isOpen ? s.delete(key) : s.add(key); setOpen(s); }
-                else if (n.id) onPick(n);
+                else onPick(n);
               }}
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left hover:bg-secondary/60 hover:text-primary transition-colors group">
               <ChevronRight className={cn("w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform", isOpen && "rotate-90")} />
               <span className="font-medium">{n.name}</span>
-              {!hasKids && n.id && <span className="text-xs text-muted-foreground group-hover:text-primary ml-auto">Teile anzeigen →</span>}
+              {!hasKids && <span className="text-xs text-muted-foreground group-hover:text-primary ml-auto">Teile anzeigen →</span>}
             </button>
             {hasKids && isOpen && (
               <>

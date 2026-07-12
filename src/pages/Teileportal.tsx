@@ -9,6 +9,7 @@ import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, type ApArticle, type ApCategoryNode } from "@/lib/autoparts";
+import { STATIC_CAT_TREE } from "@/lib/catTreeStatic";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
 import { icPriceLookup } from "@/lib/intercarsGateway";
 import { ArticleExpander, BrandFilter, SubCatList } from "@/components/TeileportalExtras";
@@ -81,8 +82,8 @@ const CAT_ALIASES: Record<string, string[]> = {
   motor:      ['motor'],
   radaufh:    ['achsaufhaengung', 'radfuehrung', 'radaufhaengung'],
   schwing:    ['federung', 'daempfung', 'stossdaempfer'],
-  zuendung:   ['zuendanlage', 'gluehanlage', 'zuendung'],
-  antrieb:    ['kupplung', 'achsantrieb', 'getriebe'],
+  zuendung:   ['zuendgluehanlage', 'zuendanlage', 'gluehanlage', 'zuendung'],
+  antrieb:    ['kupplung', 'achsantrieb', 'getriebe', 'radantrieb'],
   bremse:     ['bremsanlage', 'bremse'],
   lenkung:    ['lenkung'],
   kuehlung:   ['kuehlung', 'kuehler'],
@@ -90,18 +91,18 @@ const CAT_ALIASES: Record<string, string[]> = {
   auspuff:    ['abgasanlage', 'auspuff', 'ansaugsystem'],
   kraftstoff: ['kraftstofffoerderanlage', 'kraftstoffaufbereitung', 'kraftstoffanlage'],
   heizung:    ['heizung', 'klimaanlage', 'lueftung'],
-  aufbau:     ['beleuchtung', 'scheibenreinigung', 'signalanlage', 'scheinwerfer', 'spiegel'],
+  aufbau:     ['karosserie', 'scheibenreinigung', 'schliessanlage'],
   batterie:   ['starterbatterie', 'startanlage', 'batterie'],
-  reifen:     ['raeder', 'reifen', 'felge'],
+  reifen:     ['raederreifen', 'raeder', 'reifen'],
   karosserie: ['karosserie'],
-  innenraum:  ['innenausstattung', 'komfortsysteme'],
+  innenraum:  ['innenausstattung', 'komfortsysteme', 'zubehoer'],
 };
 
 const normCat = (x: string) => x.toLowerCase()
   .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
   .replace(/[^a-z0-9]/g, '');
 
-/** Findet die best-passenden Baum-Knoten (erst L1, dann L2). Exakt > Präfix > enthält. */
+/** Findet die best-passenden Baum-Knoten (erst L1, dann L2). Exakt/Präfix > enthält. */
 function findCatNodes(tree: ApCategoryNode[], aliases: string[]): ApCategoryNode[] {
   const score = (n: ApCategoryNode) => {
     const nn = normCat(n.name);
@@ -114,14 +115,17 @@ function findCatNodes(tree: ApCategoryNode[], aliases: string[]): ApCategoryNode
     }
     return best;
   };
-  let hits = tree.map(n => ({ n, s: score(n) })).filter(h => h.s > 0);
-  if (hits.length === 0) {
-    // eine Ebene tiefer (z.B. "Starterbatterie" unter "Elektrik")
-    hits = tree.flatMap(t => t.children).map(n => ({ n, s: score(n) })).filter(h => h.s > 0);
+  const pass = (nodes: ApCategoryNode[]) => {
+    const hits = nodes.map(n => ({ n, s: score(n) })).filter(h => h.s > 0);
+    const strong = hits.filter(h => h.s >= 2);
+    return (strong.length ? strong : hits).map(h => h.n);
+  };
+  let res = pass(tree);
+  if (res.length === 0) {
+    // eine Ebene tiefer (z.B. "Batterie"/"Startanlage" unter "Elektrik")
+    res = pass(tree.flatMap(t => t.children));
   }
-  if (hits.length === 0) return [];
-  const max = Math.max(...hits.map(h => h.s));
-  return hits.filter(h => h.s === max).map(h => h.n);
+  return res;
 }
 
 interface VehicleInfo {
@@ -250,7 +254,8 @@ export default function Teileportal() {
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
   const { garage, add: addToGarage, remove: removeFromGarage } = useGarage();
   const [catTree, setCatTree] = useState<ApCategoryNode[] | null>(null);
-  const [subCat, setSubCat] = useState<ApCategoryNode | null>(null);
+  const [openCatId, setOpenCatId] = useState<string | null>(null);
+  const [catNodes, setCatNodes] = useState<Record<string, ApCategoryNode[]>>({});
   const cart = usePartsCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [detailArticle, setDetailArticle] = useState<DetailArticle | null>(null);
@@ -259,6 +264,7 @@ export default function Teileportal() {
     setVehicle({ manufacturer: g.manufacturer, model: g.model, typeName: g.typeName, power: g.power, fuel: g.fuel });
     setVehicleKtype(g.ktype ?? null);
     setVehicleVin(g.vin || '');
+    setCatTree(null); setCatNodes({}); setOpenCatId(null);
     setArticles([]); setActiveCat(null); setPhase('categories');
   };
 
@@ -288,6 +294,7 @@ export default function Teileportal() {
     setVehicleError(null);
     setVehicle(null);
     setVehicleKtype(null);
+    setCatTree(null); setCatNodes({}); setOpenCatId(null);
     setArticles([]);
     setActiveCat(null);
     const normVin = vin.trim().toUpperCase().replace(/\s/g,'').replace(/I/g,'1').replace(/O/g,'0').replace(/Q/g,'0');
@@ -364,7 +371,7 @@ export default function Teileportal() {
   };
 
   const loadPartsByCategory = async (categoryId: number, catName: string) => {
-    setSubCat(null); setPhase('articles'); setPartsLoading(true); setPartsError(null); setSelectedBrands(new Set());
+    setPhase('articles'); setPartsLoading(true); setPartsError(null); setSelectedBrands(new Set());
     try {
       const parsed = (await apArticlesByCategory(vehicleKtype!, categoryId)).map(apToArticle);
       setArticles(parsed); setTotalCount(parsed.length);
@@ -372,31 +379,32 @@ export default function Teileportal() {
     finally { setPartsLoading(false); }
   };
 
+  /** Klick auf Kategorie: Unterkategorien inline auf-/zuklappen (wie Inter Cars). */
   const handleCategoryClick = async (cat: typeof CATEGORIES[0]) => {
     setPartQuery('');
+    if (openCatId === cat.id) { setOpenCatId(null); return; }
     setActiveCat(cat);
-    if (vehicleKtype) {
-      let tree = catTree;
-      if (!tree) {
-        setPartsLoading(true);
-        try { tree = await apCategoryTree(vehicleKtype); setCatTree(tree); } catch { tree = null; }
-        finally { setPartsLoading(false); }
-      }
-      if (tree && tree.length > 0) {
-        const matches = findCatNodes(tree, CAT_ALIASES[cat.id] || []);
-        if (matches.length === 1) {
-          const node = matches[0];
-          if (node.children.length > 0) { setSubCat(node); return; }
-          if (node.id) { loadPartsByCategory(node.id, node.name); return; }
-        }
-        if (matches.length > 1) { setSubCat({ id: null, name: cat.name, children: matches }); return; }
-        // Kein Treffer → kompletten Baum zur Auswahl zeigen statt unpassender Volltextsuche
-        setSubCat({ id: null, name: cat.name, children: tree });
-        return;
-      }
+    // Fahrzeugspezifischen Baum laden (falls Fahrzeug mit ktype), sonst statischen nutzen
+    let tree = catTree;
+    if (vehicleKtype && !tree) {
+      setPartsLoading(true);
+      try { tree = await apCategoryTree(vehicleKtype); if (tree.length > 0) setCatTree(tree); } catch { tree = null; }
+      finally { setPartsLoading(false); }
     }
+    if (!tree || tree.length === 0) tree = STATIC_CAT_TREE;
+    const matches = findCatNodes(tree, CAT_ALIASES[cat.id] || []);
+    const nodes = matches.length === 1 && matches[0].children.length > 0 ? matches[0].children : matches;
+    if (nodes.length === 0) { setPhase('articles'); loadParts(cat.keywords[0]); return; }
+    setCatNodes(prev => ({ ...prev, [cat.id]: nodes }));
+    setOpenCatId(cat.id);
+  };
+
+  /** Klick auf Unterkategorie: mit Fahrzeug exakte Kategorie-Artikel, sonst Textsuche. */
+  const pickSubCat = (n: ApCategoryNode) => {
+    setOpenCatId(null);
+    if (vehicleKtype && n.id) { loadPartsByCategory(n.id, n.name); return; }
     setPhase('articles');
-    loadParts(cat.keywords[0]);
+    loadParts(n.name);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -495,6 +503,7 @@ export default function Teileportal() {
                     {vehicle?.manufacturer && <p className="text-primary text-sm font-semibold flex items-center gap-0.5 cursor-default">{vehicle.manufacturer} <ChevronRight className="w-3.5 h-3.5" /></p>}
                     {vehicle?.model && <p className="text-foreground font-bold text-base flex items-center gap-0.5 cursor-default">{vehicle.model} <ChevronRight className="w-3.5 h-3.5" /></p>}
                     {vehicle?.typeName && <p className="text-muted-foreground text-sm flex items-center gap-0.5 cursor-default">{vehicle.typeName} <ChevronRight className="w-3.5 h-3.5" /></p>}
+                    {!vehicle && <p className="text-sm text-muted-foreground">Kein Fahrzeug ausgewählt</p>}
                   </div>
 
                   <div className="rounded-lg bg-secondary/40 border border-border divide-y divide-border/60 text-xs overflow-hidden">
@@ -505,9 +514,9 @@ export default function Teileportal() {
                   </div>
 
                   <div className="flex flex-col gap-2 mt-auto">
-                    <button onClick={() => { setPhase('search'); setVehicle(null); setVehicleKtype(null); setArticles([]); setActiveCat(null); }}
+                    <button onClick={() => { setPhase('search'); setVehicle(null); setVehicleKtype(null); setCatTree(null); setCatNodes({}); setOpenCatId(null); setArticles([]); setActiveCat(null); }}
                       className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors">
-                      FAHRZEUG WECHSELN
+                      {vehicle ? 'FAHRZEUG WECHSELN' : 'FAHRZEUG WÄHLEN'}
                     </button>
                     <a href={whatsappLink(`Fahrzeuganfrage: ${vehicleLabel}`)} target="_blank" rel="noopener noreferrer"
                       className="w-full py-2.5 rounded-lg border border-border text-sm font-medium text-center hover:bg-secondary transition-colors">
@@ -575,36 +584,47 @@ export default function Teileportal() {
                     <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-bold">BALD</span>
                   </button>
                 </div>
-                {subCat ? (
-                  <div className="max-w-2xl">
-                    <button onClick={() => setSubCat(null)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mb-3">
-                      <ArrowLeft className="w-4 h-4" /> Alle Kategorien
-                    </button>
-                    <h2 className="font-bold text-lg mb-3">{subCat.name}</h2>
-                    <SubCatList nodes={subCat.children} onPick={(n) => n.id && loadPartsByCategory(n.id, n.name)} />
-                    {subCat.id && (
-                      <button onClick={() => loadPartsByCategory(subCat.id!, subCat.name)} className="mt-4 text-sm text-primary hover:underline">
-                        Alle Teile in „{subCat.name}" anzeigen
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
-                  {CATEGORIES.map((cat, i) => (
-                    <motion.button key={cat.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
-                      onClick={() => handleCategoryClick(cat)}
-                      className="group flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:border-primary/50 hover:shadow-sm transition-all text-left">
-                      <div className={cn('w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 transition-transform group-hover:scale-105', cat.color)}>
-                        <cat.Icon className="w-6 h-6 text-foreground/70" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold leading-tight line-clamp-2">{cat.name}</p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:text-primary shrink-0 transition-colors" />
-                    </motion.button>
-                  ))}
+                {/* Kategorien mit inline aufklappbaren Unterkategorien (wie Inter Cars) */}
+                <div className="md:columns-2 xl:columns-3 gap-3">
+                  {CATEGORIES.map((cat, i) => {
+                    const isOpen = openCatId === cat.id;
+                    const nodes = catNodes[cat.id] ?? [];
+                    return (
+                      <motion.div key={cat.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
+                        className="break-inside-avoid mb-3">
+                        <div className={cn('rounded-xl border bg-card transition-all overflow-hidden',
+                          isOpen ? 'border-primary/60 shadow-sm' : 'border-border hover:border-primary/50 hover:shadow-sm')}>
+                          <button onClick={() => handleCategoryClick(cat)}
+                            className="group w-full flex items-center gap-3 p-4 text-left">
+                            <div className={cn('w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 transition-transform group-hover:scale-105', cat.color)}>
+                              <cat.Icon className="w-6 h-6 text-foreground/70" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold leading-tight line-clamp-2">{cat.name}</p>
+                            </div>
+                            <ChevronRight className={cn('w-4 h-4 text-muted-foreground/50 group-hover:text-primary shrink-0 transition-transform',
+                              isOpen && 'rotate-90 text-primary')} />
+                          </button>
+                          <AnimatePresence>
+                            {isOpen && (
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.18 }} className="overflow-hidden">
+                                <div className="px-3 pb-3 border-t border-border/60 pt-2">
+                                  <SubCatList nodes={nodes} onPick={pickSubCat} />
+                                  {!vehicleKtype && (
+                                    <p className="text-[11px] text-muted-foreground mt-2 px-2">
+                                      Tipp: Fahrzeug wählen, um nur exakt passende Teile zu sehen.
+                                    </p>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
-                )}
               </motion.div>
             </AnimatePresence>
           )}
@@ -615,10 +635,10 @@ export default function Teileportal() {
               <motion.div key="arts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-6">
                 {/* Breadcrumb */}
                 <div className="flex items-center gap-2 mb-4">
-                  <button onClick={() => { setPhase(vehicle ? 'categories' : 'search'); setArticles([]); setActiveCat(null); }}
+                  <button onClick={() => { setPhase('categories'); setArticles([]); setActiveCat(null); }}
                     className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
                     <ArrowLeft className="w-4 h-4" />
-                    {vehicle ? 'Alle Teile' : 'Zurück'}
+                    Alle Teile
                   </button>
                   {activeCat && <><span className="text-muted-foreground/50">/</span><span className="text-sm font-medium">{activeCat.name}</span></>}
                 </div>
@@ -703,4 +723,55 @@ export default function Teileportal() {
                                         </button>
                                         <button onClick={() => openDetail(a)} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:border-primary/50 hover:text-primary transition-colors">
                                           Details ansehen
-           
+                                        </button>
+                                        <a href={`tel:${SHOP_INFO.phone}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                                          <Phone className="w-3.5 h-3.5" /> {SHOP_INFO.phone}
+                                        </a>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <ArticleExpander articleId={a.id} articleNumber={a.articleNumber} specs={a.specs} oeNumbers={a.oeNumbers}
+                              onSearchNumber={(no) => { setPartQuery(no); setActiveCat(null); setPhase('articles'); loadParts(no); }} />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!partsLoading && articles.length === 0 && !partsError && (
+                  <div className="text-center py-20 text-muted-foreground">
+                    <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                    <p className="font-medium">Keine Teile gefunden</p>
+                    <p className="text-sm mt-1">Versuch eine andere Suchanfrage oder ruf uns an: <a href={`tel:${SHOP_INFO.phone}`} className="text-primary hover:underline">{SHOP_INFO.phone}</a></p>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          )}
+
+          {/* Search Phase (Desktop leer, zeigt Sidebar-Hinweis) */}
+          {phase === 'search' && (
+            <div className="hidden md:flex flex-col items-center justify-center h-full text-center p-12 text-muted-foreground">
+              <Car className="w-16 h-16 mb-5 opacity-20" />
+              <h2 className="text-xl font-bold mb-2 text-foreground">Fahrzeug suchen</h2>
+              <p className="text-sm max-w-xs">VIN / FIN oder Schlüsselnummer (HSN/TSN) in der Seitenleiste eingeben</p>
+              <button onClick={() => setPhase('categories')}
+                className="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-border bg-card text-sm font-semibold text-foreground hover:border-primary/50 hover:text-primary transition-colors">
+                Katalog ohne Fahrzeug durchstöbern <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </main>
+      </div>
+
+      <PartDetailModal article={detailArticle} vehicleLabel={vehicleLabel} onClose={() => setDetailArticle(null)}
+        onAddToCart={(a) => addArticleToCart(a)} brandLogo={detailArticle ? getBrandLogo(detailArticle.brand) : undefined} />
+      <PartsCartButton count={cart.count} onClick={() => setCartOpen(true)} />
+      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin} />
+    </>
+  );
+}
