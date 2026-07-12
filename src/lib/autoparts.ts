@@ -13,8 +13,14 @@ export interface ApVehicle {
   manufacturer?: string;
   model?: string;
   typeName?: string;
-  power?: string;
+  power?: string;       // kW
+  ps?: string;
+  ccm?: string;
   fuel?: string;
+  bodyType?: string;
+  buildFrom?: string;   // z.B. 2006-11-01
+  buildTo?: string;
+  engineCodes?: string; // z.B. "9HZ (DV6TED4)"
   raw?: Record<string, unknown>;
 }
 
@@ -119,13 +125,20 @@ function toApVehicle(v: any): ApVehicle | null {
   const model = first(v.modelName, v.modelSeriesName, v.model);
   const typeName = first(v.typeEngineName, v.typeName, v.vehicleName, v.description, v.commercialName);
   if (!vehicleId && !manufacturer && !model) return null;
+  const num = (x: any) => (x !== undefined && x !== null && x !== '' && !isNaN(parseFloat(String(x)))) ? String(Math.round(parseFloat(String(x)))) : undefined;
   return {
     vehicleId,
     manufacturer: manufacturer ? String(manufacturer) : undefined,
     model: model ? String(model) : undefined,
     typeName: typeName ? String(typeName) : undefined,
-    power: first(v.powerKw, v.kw) ? String(Math.round(parseFloat(String(first(v.powerKw, v.kw))))) : undefined,
+    power: num(first(v.powerKw, v.kw)),
+    ps: num(v.powerPs),
+    ccm: num(first(v.capacityTech, v.capacityCC, v.cylinderCapacity)),
     fuel: first(v.fuelType, v.fuel) ? String(first(v.fuelType, v.fuel)) : undefined,
+    bodyType: v.bodyType ? String(v.bodyType) : undefined,
+    buildFrom: v.constructionIntervalStart ? String(v.constructionIntervalStart) : undefined,
+    buildTo: v.constructionIntervalEnd ? String(v.constructionIntervalEnd) : undefined,
+    engineCodes: v.engineCodes ? String(v.engineCodes) : undefined,
     raw: v,
   };
 }
@@ -136,7 +149,7 @@ function toApVehicle(v: any): ApVehicle | null {
  * KBA-/VIN-Antworten enthalten KEINE vehicleId — über die (edge-gecachte)
  * Kaskade Marke → Modell → Motorvariante nachschlagen.
  */
-async function resolveVehicleId(v: ApVehicle): Promise<number | undefined> {
+async function resolveVehicleType(v: ApVehicle): Promise<any | undefined> {
   try {
     if (!v.manufacturer || !v.model) return undefined;
     const manus = await ap(`/manufacturers/list/type-id/${TYPE_PC}`);
@@ -162,10 +175,37 @@ async function resolveVehicleId(v: ApVehicle): Promise<number | undefined> {
     const exact =
       cand.find((t: any) => wantStart && String(t.constructionIntervalStart) === wantStart) ||
       cand[0] || tArr[0];
-    return exact ? Number(exact.vehicleId) || undefined : undefined;
+    return exact || undefined;
   } catch {
     return undefined;
   }
+}
+
+/** Details des aufgelösten Typ-Eintrags (Baujahr, ccm, PS, Motorcodes …) ins Fahrzeug mergen. */
+function mergeTypeDetails(veh: ApVehicle, typeEntry: any): void {
+  const d = toApVehicle(typeEntry);
+  if (!d) return;
+  veh.vehicleId = veh.vehicleId ?? d.vehicleId;
+  veh.typeName = veh.typeName || d.typeName;
+  veh.power = d.power || veh.power;
+  veh.ps = d.ps || veh.ps;
+  veh.ccm = d.ccm || veh.ccm;
+  veh.fuel = d.fuel || veh.fuel;
+  veh.bodyType = d.bodyType || veh.bodyType;
+  veh.buildFrom = d.buildFrom || veh.buildFrom;
+  veh.buildTo = d.buildTo || veh.buildTo;
+  veh.engineCodes = d.engineCodes || veh.engineCodes;
+}
+
+/** Fehlende Detaildaten (Baujahr, ccm, Motorcodes …) nachladen — edge-gecachte Calls. */
+export async function apEnrichVehicle(v: ApVehicle): Promise<ApVehicle> {
+  try {
+    if (!v.buildFrom || !v.engineCodes) {
+      const t = await resolveVehicleType(v);
+      if (t) mergeTypeDetails(v, t);
+    }
+  } catch { /* optional */ }
+  return v;
 }
 
 /** Fahrzeug per deutscher Schlüsselnummer (HSN 2.1 + TSN 2.2). */
@@ -177,7 +217,10 @@ export async function apVehicleByKba(hsn: string, tsn: string): Promise<ApVehicl
   );
   const arr = pickArray(r, 'modelTypes', 'vehicles', 'types', 'cars');
   const veh = toApVehicle(arr[0]);
-  if (veh && !veh.vehicleId) veh.vehicleId = await resolveVehicleId(veh);
+  if (veh && (!veh.vehicleId || !veh.buildFrom)) {
+    const t = await resolveVehicleType(veh);
+    if (t) mergeTypeDetails(veh, t);
+  }
   return veh;
 }
 
@@ -189,7 +232,10 @@ export async function apVehicleByVin(vin: string): Promise<ApVehicle | null> {
     const r = await ap(`/vin/tecdoc-vin-check/${encodeURIComponent(v)}`);
     const arr = pickArray(r, 'vehicles', 'matchedVehicles');
     const veh = toApVehicle(arr[0] || r?.vehicle || r);
-    if (veh && !veh.vehicleId && veh.manufacturer) veh.vehicleId = await resolveVehicleId(veh);
+    if (veh && (!veh.vehicleId || !veh.buildFrom) && veh.manufacturer) {
+      const t = await resolveVehicleType(veh);
+      if (t) mergeTypeDetails(veh, t);
+    }
     if (veh && (veh.vehicleId || veh.manufacturer)) return veh;
   } catch { /* Fallback */ }
   try {

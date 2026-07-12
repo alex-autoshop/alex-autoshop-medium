@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Car, Phone, MessageCircle, Loader2, Package, ChevronRight, ArrowLeft,
@@ -8,7 +8,7 @@ import {
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
-import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, type ApArticle, type ApCategoryNode } from "@/lib/autoparts";
+import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, apEnrichVehicle, type ApArticle, type ApCategoryNode } from "@/lib/autoparts";
 import { STATIC_CAT_TREE } from "@/lib/catTreeStatic";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
 import { icPriceLookup } from "@/lib/intercarsGateway";
@@ -46,10 +46,15 @@ const BRAND_DOMAINS: Record<string, string> = {
   'UFI': 'ufifilters.com', 'FRAM': 'fram.com', 'WIX': 'wixfilters.com', 'FILTRON': 'filtron.eu',
   'KNECHT': 'mahle.com', 'AISIN': 'aisin.com', 'METZGER': 'metzger-autoteile.de', 'AL-KO': 'alko-tech.com',
 };
-function getBrandLogo(brand: string): string | undefined {
+// Clearbit wurde abgeschaltet → Favicon-Dienste (keine API-Keys nötig).
+// 'd' = DuckDuckGo für lange Listen (Sidebar-Filter), 'g' = Google für Karten —
+// verteilt die Last, da beide Dienste bei ~60 parallelen Requests drosseln.
+function getBrandLogo(brand: string, prov: 'g' | 'd' = 'g'): string | undefined {
   const domain = BRAND_DOMAINS[(brand || '').toUpperCase().trim()];
-  // Clearbit wurde abgeschaltet → Google-Favicon-Dienst (keine API-Keys nötig)
-  return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : undefined;
+  if (!domain) return undefined;
+  return prov === 'd'
+    ? `https://icons.duckduckgo.com/ip3/${domain}.ico`
+    : `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 }
 
 const CAR_BRAND_DOMAINS: Record<string, string> = {
@@ -153,9 +158,45 @@ interface VehicleInfo {
   model?: string;
   typeName?: string;
   power?: string;
+  ps?: string;
+  ccm?: string;
   fuel?: string;
+  bodyType?: string;
+  buildFrom?: string;
+  buildTo?: string;
+  engineCodes?: string;
   firstRegistration?: string;
   raw?: Record<string, unknown>;
+}
+
+/** "2006-11-01" → "2006/11" (IC-Format für Baujahr). */
+const fmtBau = (d?: string) => (d ? d.slice(0, 7).replace('-', '/') : '');
+
+/** Echtes Fahrzeugfoto über die Wikipedia-API (kostenlos, keine Keys). Fallback: Markenlogo. */
+function CarImage({ manufacturer, model, fallbackLogo }: { manufacturer?: string; model?: string; fallbackLogo?: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setSrc(null); setFailed(false);
+    if (!manufacturer) { setFailed(true); return; }
+    const q = [manufacturer, model].filter(Boolean).join(' ');
+    fetch(`https://de.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=480&format=json&origin=*`)
+      .then(r => r.json())
+      .then(j => {
+        if (!alive) return;
+        const p: any = Object.values(j?.query?.pages || {})[0];
+        const u = p?.thumbnail?.source;
+        if (u) setSrc(String(u)); else setFailed(true);
+      })
+      .catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, [manufacturer, model]);
+  if (src) return <img src={src} alt={[manufacturer, model].filter(Boolean).join(' ')} className="max-h-[150px] max-w-full object-contain drop-shadow-md" onError={() => { setSrc(null); setFailed(true); }} />;
+  if (!failed) return <Car className="w-16 h-16 text-muted-foreground/20 animate-pulse" />;
+  return fallbackLogo
+    ? <img src={fallbackLogo} alt={manufacturer || ''} className="w-24 h-24 object-contain opacity-85" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+    : <Car className="w-20 h-20 text-muted-foreground/30" />;
 }
 
 interface Article {
@@ -281,7 +322,19 @@ export default function Teileportal() {
   const [detailArticle, setDetailArticle] = useState<DetailArticle | null>(null);
 
   const activateGarageVehicle = (g: GarageVehicle) => {
-    setVehicle({ manufacturer: g.manufacturer, model: g.model, typeName: g.typeName, power: g.power, fuel: g.fuel });
+    setVehicle({ manufacturer: g.manufacturer, model: g.model, typeName: g.typeName, power: g.power,
+      ps: g.ps, ccm: g.ccm, fuel: g.fuel, bodyType: g.bodyType,
+      buildFrom: g.buildFrom, buildTo: g.buildTo, engineCodes: g.engineCodes });
+    // Ältere Garage-Einträge haben noch keine Detaildaten → nachladen (edge-gecacht)
+    if (!g.buildFrom && g.manufacturer && g.model) {
+      apEnrichVehicle({ manufacturer: g.manufacturer, model: g.model, typeName: g.typeName, vehicleId: g.ktype ?? undefined })
+        .then(d => setVehicle(prev => prev && prev.model === g.model
+          ? { ...prev, ps: prev.ps || d.ps, ccm: prev.ccm || d.ccm, bodyType: prev.bodyType || d.bodyType,
+              buildFrom: d.buildFrom, buildTo: d.buildTo, engineCodes: d.engineCodes,
+              power: prev.power || d.power, fuel: prev.fuel || d.fuel }
+          : prev))
+        .catch(() => {});
+    }
     setVehicleKtype(g.ktype ?? null);
     setVehicleVin(g.vin || '');
     setCatTree(null); setCatNodes({}); setOpenCatId(null);
@@ -324,11 +377,15 @@ export default function Teileportal() {
           ? await apVehicleByKba(hsn.trim().padStart(4,'0'), tsn.trim().padStart(3,'0'))
           : await apVehicleByVin(normVin);
         if (veh) {
-          setVehicle({ manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power, fuel: veh.fuel, raw: veh.raw });
+          setVehicle({ manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power,
+            ps: veh.ps, ccm: veh.ccm, fuel: veh.fuel, bodyType: veh.bodyType,
+            buildFrom: veh.buildFrom, buildTo: veh.buildTo, engineCodes: veh.engineCodes, raw: veh.raw });
           setVehicleKtype(veh.vehicleId ?? null);
           setVehicleVin(searchMode === 'vin' ? normVin : '');
           addToGarage({ label: [veh.manufacturer, veh.model, veh.typeName].filter(Boolean).join(' ').slice(0, 60),
-            manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power, fuel: veh.fuel,
+            manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power,
+            ps: veh.ps, ccm: veh.ccm, fuel: veh.fuel, bodyType: veh.bodyType,
+            buildFrom: veh.buildFrom, buildTo: veh.buildTo, engineCodes: veh.engineCodes,
             vin: searchMode === 'vin' ? normVin : undefined, ktype: veh.vehicleId ?? null });
           setPhase('categories');
           setVehicleLoading(false);
@@ -506,29 +563,37 @@ export default function Teileportal() {
               </motion.div>
             ) : (
               <motion.div key="vp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col flex-1">
-                {/* Fahrzeugbild */}
-                <div className="relative flex items-center justify-center bg-gradient-to-b from-secondary/60 to-secondary/20" style={{ height: 160 }}>
-                  {vehicle?.manufacturer && getCarBrandLogo(vehicle.manufacturer) ? (
-                    <img src={getCarBrandLogo(vehicle.manufacturer)!} alt={vehicle.manufacturer}
-                      className="w-24 h-24 object-contain opacity-85"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  ) : (
-                    <Car className="w-20 h-20 text-muted-foreground/30" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-card/50 to-transparent" />
+                {/* Fahrzeugbild (echtes Foto via Wikipedia, Fallback Markenlogo) */}
+                <div className="relative flex items-center justify-center bg-gradient-to-b from-secondary/60 to-secondary/20 p-3" style={{ height: 170 }}>
+                  <CarImage manufacturer={vehicle?.manufacturer} model={vehicle?.model}
+                    fallbackLogo={vehicle?.manufacturer ? getCarBrandLogo(vehicle.manufacturer) : undefined} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-card/40 to-transparent pointer-events-none" />
                 </div>
 
                 <div className="p-5 flex flex-col gap-4 flex-1">
-                  <div>
-                    {vehicle?.manufacturer && <p className="text-primary text-sm font-semibold flex items-center gap-0.5 cursor-default">{vehicle.manufacturer} <ChevronRight className="w-3.5 h-3.5" /></p>}
-                    {vehicle?.model && <p className="text-foreground font-bold text-base flex items-center gap-0.5 cursor-default">{vehicle.model} <ChevronRight className="w-3.5 h-3.5" /></p>}
-                    {vehicle?.typeName && <p className="text-muted-foreground text-sm flex items-center gap-0.5 cursor-default">{vehicle.typeName} <ChevronRight className="w-3.5 h-3.5" /></p>}
-                    {!vehicle && <p className="text-sm text-muted-foreground">Kein Fahrzeug ausgewählt</p>}
+                  <div className="divide-y divide-border/60">
+                    {vehicle?.manufacturer && <p className="text-primary text-sm font-semibold flex items-center gap-0.5 cursor-default py-1.5">{vehicle.manufacturer} <ChevronRight className="w-3.5 h-3.5" /></p>}
+                    {vehicle?.model && <p className="text-foreground font-bold text-base flex items-center gap-0.5 cursor-default py-1.5">{vehicle.model} <ChevronRight className="w-3.5 h-3.5" /></p>}
+                    {vehicle?.typeName && (
+                      <p className="text-sm flex items-center gap-0.5 cursor-default py-1.5 flex-wrap">
+                        <span className="font-medium">{vehicle.typeName}</span>
+                        {(vehicle.ccm || vehicle.power || vehicle.ps) && (
+                          <span className="text-muted-foreground">
+                            &nbsp;({[vehicle.ccm && `${vehicle.ccm} ccm`, vehicle.power && `${vehicle.power} kW`, vehicle.ps && `${vehicle.ps} PS`].filter(Boolean).join(' / ')})
+                          </span>
+                        )}
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </p>
+                    )}
+                    {!vehicle && <p className="text-sm text-muted-foreground py-1.5">Kein Fahrzeug ausgewählt</p>}
                   </div>
 
                   <div className="rounded-lg bg-secondary/40 border border-border divide-y divide-border/60 text-xs overflow-hidden">
-                    {vehicle?.firstRegistration && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Baujahr</span><span className="font-medium">{vehicle.firstRegistration}</span></div>}
-                    {vehicle?.power && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Leistung</span><span className="font-medium">{vehicle.power} kW</span></div>}
+                    {(vehicle?.buildFrom || vehicle?.buildTo) && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Baujahr</span><span className="font-medium">{fmtBau(vehicle.buildFrom)} – {fmtBau(vehicle.buildTo) || 'heute'}</span></div>}
+                    {!vehicle?.buildFrom && vehicle?.firstRegistration && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Baujahr</span><span className="font-medium">{vehicle.firstRegistration}</span></div>}
+                    {vehicle?.engineCodes && <div className="flex justify-between gap-2 px-3 py-2"><span className="text-muted-foreground shrink-0">Maschinencodes</span><span className="font-medium text-right">{vehicle.engineCodes}</span></div>}
+                    {vehicle?.bodyType && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Karosserie</span><span className="font-medium">{vehicle.bodyType}</span></div>}
+                    {!vehicle?.ccm && vehicle?.power && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Leistung</span><span className="font-medium">{vehicle.power} kW</span></div>}
                     {vehicle?.fuel && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Kraftstoff</span><span className="font-medium">{vehicle.fuel}</span></div>}
                     {vehicleVin && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">FIN</span><span className="font-mono font-medium text-[10px] truncate max-w-[130px]">{vehicleVin}</span></div>}
                   </div>
@@ -683,7 +748,7 @@ export default function Teileportal() {
                     {/* Brand Filter */}
                     {allBrands.length > 1 && (
                       <BrandFilter
-                        brands={allBrands.map(b => ({ name: b, count: articles.filter(a => a.brand === b).length, logo: getBrandLogo(b) }))}
+                        brands={allBrands.map(b => ({ name: b, count: articles.filter(a => a.brand === b).length, logo: getBrandLogo(b, 'd') }))}
                         selected={selectedBrands}
                         onToggle={(b) => { const n = new Set(selectedBrands); n.has(b) ? n.delete(b) : n.add(b); setSelectedBrands(n); }}
                         onReset={() => setSelectedBrands(new Set())}

@@ -17,7 +17,13 @@ export interface GarageVehicle {
   model?: string;
   typeName?: string;
   power?: string;
+  ps?: string;
+  ccm?: string;
   fuel?: string;
+  bodyType?: string;
+  buildFrom?: string;
+  buildTo?: string;
+  engineCodes?: string;
   vin?: string;
   ktype?: number | null;
   addedAt: number;
@@ -425,7 +431,7 @@ import { ArrowDownAZ, ArrowDown01 } from "lucide-react";
 
 function BrandLogo({ name, logo }: { name: string; logo?: string }) {
   const [err, setErr] = useState(false);
-  const src = logo || `https://www.google.com/s2/favicons?domain=${name.toLowerCase().replace(/[^a-z0-9]/g, "")}.com&sz=64`;
+  const src = logo || `https://icons.duckduckgo.com/ip3/${name.toLowerCase().replace(/[^a-z0-9]/g, "")}.com.ico`;
   if (err || !name) {
     return <span className="w-10 h-5 rounded bg-secondary text-[8px] font-bold flex items-center justify-center shrink-0 uppercase">{name.slice(0, 4)}</span>;
   }
