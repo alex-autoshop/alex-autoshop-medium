@@ -13,6 +13,7 @@ import { STATIC_CAT_TREE } from "@/lib/catTreeStatic";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
 import { icPriceLookup } from "@/lib/intercarsGateway";
 import { ArticleExpander, BrandFilter, SubCatList } from "@/components/TeileportalExtras";
+import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip } from "@/components/TeileportalPricing";
 
 const BRAND_DOMAINS: Record<string, string> = {
   'BOSCH': 'bosch.com', 'BREMBO': 'brembo.com', 'ZIMMERMANN': 'zimmermann-brake.com',
@@ -45,6 +46,19 @@ const BRAND_DOMAINS: Record<string, string> = {
   'FERODO': 'ferodo.com', 'MINTEX': 'mintex.com', 'PAGID': 'pagid.com', 'FTE': 'fte.de',
   'UFI': 'ufifilters.com', 'FRAM': 'fram.com', 'WIX': 'wixfilters.com', 'FILTRON': 'filtron.eu',
   'KNECHT': 'mahle.com', 'AISIN': 'aisin.com', 'METZGER': 'metzger-autoteile.de', 'AL-KO': 'alko-tech.com',
+  'LUCAS': 'lucaselectrical.com', 'LUCAS FILTERS': 'lucaselectrical.com', 'LYNXAUTO': 'lynxauto.com',
+  'MANDO': 'mando.com', 'MASTER-SPORT': 'master-sport.de', 'MASTER-SPORT GERMANY': 'master-sport.de',
+  'MEAT & DORIA': 'meat-doria.com', 'MEAT&DORIA': 'meat-doria.com', 'MECAFILTER': 'mecafilter.com',
+  'MFILTER': 'mfilter.eu', 'M-FILTER': 'mfilter.eu', 'JC PREMIUM': 'jcpremium.eu',
+  'PURFLUX': 'purflux.com', 'COMLINE': 'comline.uk.com', 'DENCKERMANN': 'denckermann.com',
+  'JAPKO': 'japko.eu', 'ALCO FILTER': 'alcofilters.com', 'ALCO': 'alcofilters.com',
+  'SCT': 'sct-germany.de', 'SCT GERMANY': 'sct-germany.de', 'SCT - MANNOL': 'sct-germany.de',
+  'BORG & BECK': 'borgandbeck.com', 'FEBI BILSTEIN': 'febi.com', 'KAVO PARTS': 'kavoparts.com', 'KAVO': 'kavoparts.com',
+  'BLUE PRINT ADL': 'blue-print.com', 'HELLA PAGID': 'hella.com', 'BOSCH AUTOMOTIVE': 'bosch.com',
+  'MAGNETI MARELLI PARTS': 'magnetimarelli.com', 'A.B.S.': 'abs-allbrakesystems.com', 'ABS': 'abs-allbrakesystems.com',
+  'STELLOX AUTOMOTIVE': 'stellox.com', 'PATRON': 'patron-parts.com', 'ZAFFO': 'zaffo.com',
+  'MULLER FILTER': 'mullerfilter.com', 'MÜLLER FILTER': 'mullerfilter.com', 'SOFIMA': 'sofimafilter.com',
+  'TECNOCAR': 'tecnocar.net', 'FIL FILTER': 'filfilter.com',
 };
 // Clearbit wurde abgeschaltet → Favicon-Dienste (keine API-Keys nötig).
 // 'd' = DuckDuckGo für lange Listen (Sidebar-Filter), 'g' = Google für Karten —
@@ -172,6 +186,17 @@ interface VehicleInfo {
 /** "2006-11-01" → "2006/11" (IC-Format für Baujahr). */
 const fmtBau = (d?: string) => (d ? d.slice(0, 7).replace('-', '/') : '');
 
+/** Wikipedia-Suche nach einem ECHTEN Fahrzeugfoto — filtert Logos/Embleme (SVG) heraus. */
+async function wikiCarThumb(q: string, lang: 'de' | 'en'): Promise<string | null> {
+  try {
+    const j = await fetch(`https://${lang}.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrlimit=5&prop=pageimages&piprop=thumbnail&pithumbsize=480&format=json&origin=*`).then(r => r.json());
+    const pages: any[] = Object.values(j?.query?.pages || {});
+    pages.sort((a, b) => (a?.index ?? 9) - (b?.index ?? 9));
+    const good = pages.find(p => p?.thumbnail?.source && !/\.svg|logo|badge|emblem|wordmark/i.test(String(p.thumbnail.source)));
+    return good ? String(good.thumbnail.source) : null;
+  } catch { return null; }
+}
+
 /** Echtes Fahrzeugfoto über die Wikipedia-API (kostenlos, keine Keys). Fallback: Markenlogo. */
 function CarImage({ manufacturer, model, fallbackLogo }: { manufacturer?: string; model?: string; fallbackLogo?: string }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -181,15 +206,12 @@ function CarImage({ manufacturer, model, fallbackLogo }: { manufacturer?: string
     setSrc(null); setFailed(false);
     if (!manufacturer) { setFailed(true); return; }
     const q = [manufacturer, model].filter(Boolean).join(' ');
-    fetch(`https://de.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(q)}&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=480&format=json&origin=*`)
-      .then(r => r.json())
-      .then(j => {
-        if (!alive) return;
-        const p: any = Object.values(j?.query?.pages || {})[0];
-        const u = p?.thumbnail?.source;
-        if (u) setSrc(String(u)); else setFailed(true);
-      })
-      .catch(() => { if (alive) setFailed(true); });
+    (async () => {
+      // Erst deutsche, dann englische Wikipedia (dort gibt es mehr Modell-Artikel mit Fotos)
+      const u = (await wikiCarThumb(q, 'de')) || (await wikiCarThumb(q, 'en'));
+      if (!alive) return;
+      if (u) setSrc(u); else setFailed(true);
+    })();
     return () => { alive = false; };
   }, [manufacturer, model]);
   if (src) return <img src={src} alt={[manufacturer, model].filter(Boolean).join(' ')} className="max-h-[150px] max-w-full object-contain drop-shadow-md" onError={() => { setSrc(null); setFailed(true); }} />;
@@ -319,6 +341,7 @@ export default function Teileportal() {
   const [catNodes, setCatNodes] = useState<Record<string, ApCategoryNode[]>>({});
   const cart = usePartsCart();
   const [cartOpen, setCartOpen] = useState(false);
+  const [memberLevel, setMemberLevel] = useMembership();
   const [detailArticle, setDetailArticle] = useState<DetailArticle | null>(null);
 
   const activateGarageVehicle = (g: GarageVehicle) => {
@@ -761,11 +784,14 @@ export default function Teileportal() {
                         <span className="font-bold">{activeCat ? activeCat.name : 'Suchergebnisse'}
                           <span className="text-muted-foreground font-normal text-sm ml-2">({totalCount > articles.length ? totalCount : articles.length})</span>
                         </span>
-                        {selectedBrands.size > 0 && <span className="text-sm text-muted-foreground">{filtered.length} gefiltert</span>}
+                        <div className="flex items-center gap-3">
+                          <MembershipSelect level={memberLevel} onChange={setMemberLevel} />
+                          {selectedBrands.size > 0 && <span className="text-sm text-muted-foreground">{filtered.length} gefiltert</span>}
+                        </div>
                       </div>
 
                       <div className="space-y-2">
-                        {filtered.map(a => (
+                        {filtered.map((a, aIdx) => (
                           <motion.div key={a.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                             className="border border-border rounded-xl bg-card hover:border-primary/30 transition-all">
                             <div className="flex gap-4 p-4">
@@ -795,18 +821,16 @@ export default function Teileportal() {
                                     )}
                                     {a.price != null ? (
                                       <>
-                                        <p className="font-bold text-lg leading-none">{a.price.toFixed(2).replace('.', ',')} €</p>
-                                        <span className={cn('inline-flex items-center px-2 py-1 rounded text-xs font-medium',
-                                          a.deliveryDays != null && a.deliveryDays <= 1 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400')}>
-                                          {a.availability ?? 'Verfügbar'}
-                                        </span>
+                                        <DeliveryBadge deliveryDays={a.deliveryDays} availability={a.availability} />
+                                        <PriceBlock price={a.price} level={memberLevel} />
                                         <button onClick={() => addArticleToCart(a)} className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
                                           <ShoppingBag className="w-3.5 h-3.5" /> In den Warenkorb
                                         </button>
                                       </>
                                     ) : (
                                       <>
-                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Auf Anfrage</span>
+                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Preis auf Anfrage</span>
+                                        <DeliveryBadge />
                                         <button onClick={() => addArticleToCart(a)} className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
                                           <ShoppingBag className="w-3.5 h-3.5" /> In den Warenkorb
                                         </button>
@@ -822,16 +846,7 @@ export default function Teileportal() {
                                 </div>
                               </div>
                             </div>
-                            {a.specs && a.specs.length > 0 && (
-                              <div className="px-4 pb-2 pt-2 border-t border-border/40 text-xs text-muted-foreground flex flex-wrap items-center gap-y-1">
-                                {a.specs.map((s, si) => (
-                                  <span key={si} className="whitespace-nowrap">
-                                    {si > 0 && <span className="mx-2 text-border">|</span>}
-                                    {s.name}: <span className="font-semibold text-primary">{s.value}</span>
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                            <SpecStrip articleId={a.id} specs={a.specs} auto={aIdx < 12} />
                             <ArticleExpander articleId={a.id} articleNumber={a.articleNumber} specs={a.specs} oeNumbers={a.oeNumbers}
                               onSearchNumber={(no) => { setPartQuery(no); setActiveCat(null); setPhase('articles'); loadParts(no); }} />
                           </motion.div>

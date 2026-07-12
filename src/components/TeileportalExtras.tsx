@@ -437,11 +437,12 @@ import { ArrowDownAZ, ArrowDown01 } from "lucide-react";
 
 function BrandLogo({ name, logo }: { name: string; logo?: string }) {
   const [err, setErr] = useState(false);
-  const src = logo || `https://icons.duckduckgo.com/ip3/${name.toLowerCase().replace(/[^a-z0-9]/g, "")}.com.ico`;
-  if (err || !name) {
-    return <span className="w-10 h-5 rounded bg-secondary text-[8px] font-bold flex items-center justify-center shrink-0 uppercase">{name.slice(0, 4)}</span>;
+  // Ohne bekannte Domain KEIN Rate-Guessing mehr (erzeugte graue Platzhalter) —
+  // stattdessen sauberer Initialen-Chip.
+  if (!logo || err || !name) {
+    return <span className="w-10 h-5 rounded bg-secondary text-[8px] font-bold flex items-center justify-center shrink-0 uppercase tracking-tight">{(name || '?').slice(0, 5)}</span>;
   }
-  return <img src={src} alt={name} loading="lazy" onError={() => setErr(true)}
+  return <img src={logo} alt={name} loading="lazy" onError={() => setErr(true)}
     className="w-10 h-5 object-contain shrink-0 bg-white rounded border border-border/60 p-px" />;
 }
 
