@@ -257,7 +257,11 @@ export default async function handler(req, res) {
       const r = await fetch(IC_TOKEN_URL, {
         signal: ctrl.signal,
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0 (compatible; IC-API-Client/1.0)" },
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+        "Origin": "https://www.alex-autoshop.de",
+        "Referer": "https://www.alex-autoshop.de/" },
         body: new URLSearchParams({ grant_type: "client_credentials", client_id: cId, client_secret: cSec }),
       });
       clearTimeout(timer);
