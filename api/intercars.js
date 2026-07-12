@@ -244,7 +244,47 @@ const CORS = {
 export default async function handler(req, res) {
   for (const [k, v] of Object.entries(CORS)) res.setHeader(k, v);
   if (req.method === "OPTIONS") { res.status(204).end(); return; }
-  if (req.method !== "POST")   { res.status(405).send("Method not allowed"); return; }
+  // ── GET ?diag=1 — Token-Test via Browser/web_fetch ───────────────────────
+  if (req.method === "GET") {
+    const qs = new URLSearchParams(req.url?.split("?")[1] || "");
+    if (qs.get("diag") !== "1") { res.status(405).send("Use POST or GET ?diag=1"); return; }
+    const cId  = process.env.INTERCARS_CLIENT_ID;
+    const cSec = process.env.INTERCARS_CLIENT_SECRET;
+    if (!cId || !cSec) { res.status(500).json({ ok: false, error: "env vars missing" }); return; }
+    const ctrl  = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 9000);
+    try {
+      const r = await fetch(IC_TOKEN_URL, {
+        signal: ctrl.signal,
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0 (compatible; IC-API-Client/1.0)" },
+        body: new URLSearchParams({ grant_type: "client_credentials", client_id: cId, client_secret: cSec }),
+      });
+      clearTimeout(timer);
+      const text = await r.text();
+      let parsed = null;
+      try { parsed = JSON.parse(text); } catch {}
+      res.status(200).json({
+        ok: r.ok, httpStatus: r.status,
+        tokenUrl: IC_TOKEN_URL,
+        clientIdPrefix: cId.slice(0, 8) + "…",
+        payerId: process.env.INTERCARS_PAYER_ID || "F00099 (default)",
+        branch:  process.env.INTERCARS_BRANCH   || "FA1 (default)",
+        hasToken: !!(parsed?.access_token),
+        tokenType: parsed?.token_type,
+        expiresIn: parsed?.expires_in,
+        icError:   parsed?.error,
+        icErrorDesc: parsed?.error_description,
+        rawSnippet: text.slice(0, 300),
+      });
+    } catch(e) {
+      clearTimeout(timer);
+      res.status(500).json({ ok: false, error: String(e.message), tokenUrl: IC_TOKEN_URL });
+    }
+    return;
+  }
+
+  if (req.method !== "POST") { res.status(405).send("Method not allowed"); return; }
 
   const json = (data, status = 200) => { res.status(status).json(data); };
 
