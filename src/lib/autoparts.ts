@@ -173,6 +173,8 @@ async function resolveVehicleType(v: ApVehicle): Promise<any | undefined> {
       (!wantPs || Math.round(parseFloat(String(t.powerPs))) === wantPs)
     );
     const exact =
+      // Bekannte vehicleId hat IMMER Vorrang (sonst droht falsche Motorvariante!)
+      (v.vehicleId ? tArr.find((t: any) => Number(t.vehicleId) === Number(v.vehicleId)) : undefined) ||
       cand.find((t: any) => wantStart && String(t.constructionIntervalStart) === wantStart) ||
       cand[0] || tArr[0];
     return exact || undefined;
