@@ -261,7 +261,9 @@ export async function apArticlesForVehicle(vehicleId: number, query: string): Pr
     const n = clean(`${a.name} ${a.category || ''}`);
     return n.includes(q) || n.includes(stem) || q.includes(clean(a.name).slice(0, 6));
   });
-  return relevant.length > 0 ? relevant : all;
+  // KEIN Fallback auf `all`: lieber leer zurückgeben (loadParts probiert dann
+  // Inter Cars / Nummernsuche) als unpassende Teile (z.B. Ölwannen bei "Bremse").
+  return relevant;
 }
 
 /** Artikel-/OE-Nummern-Suche (ohne Fahrzeug). */
@@ -335,23 +337,24 @@ export async function apCategoryTree(vehicleId: number): Promise<ApCategoryNode[
   const r = await ap(`/category/type-id/${TYPE_PC}/products-groups-variant-2/${vehicleId}/lang-id/${LANG}`);
   const walk = (obj: any): ApCategoryNode[] => {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return [];
-    return Object.entries(obj)
-      .filter(([, v]) => v && typeof v === 'object')
-      .map(([key, node]: [string, any]) => ({
+    const out: ApCategoryNode[] = [];
+    for (const [key, node] of Object.entries<any>(obj)) {
+      if (!node || typeof node !== 'object') continue;
+      // Wrapper-Objekte ohne categoryId (z.B. das äußere `{ categories: {...} }`)
+      // sind keine echten Knoten → deren Inhalt direkt hochziehen.
+      if (node.categoryId === undefined && !node.children) { out.push(...walk(node)); continue; }
+      const name = key || String(node.categoryName || '');
+      if (!name) continue;
+      out.push({
         id: Number(node.categoryId) || null,
-        name: key || String(node.categoryName || ''),
+        name,
         children: node.children && typeof node.children === 'object' ? walk(node.children) : [],
-      }))
-      .filter((n) => n.name);
+      });
+    }
+    return out;
   };
   return walk(r);
 }
 
 /** Artikel einer konkreten Kategorie-ID (ohne Relevanzfilter — exakte Gruppe). */
-export async function apArticlesByCategory(vehicleId: number, categoryId: number): Promise<ApArticle[]> {
-  const r = await ap(`/articles/list/type-id/${TYPE_PC}/vehicle-id/${vehicleId}/category-id/${categoryId}/lang-id/${LANG}`);
-  const seen = new Set<string>();
-  return pickArray(r, 'articles').map(toApArticle)
-    .filter((a): a is ApArticle => !!a && !!a.articleNumber)
-    .filter((a) => { const k = `${a.brand}::${a.articleNumber}`.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
-}
+export async function apArticlesByCategory(vehicleId: 

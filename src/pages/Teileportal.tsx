@@ -71,6 +71,59 @@ const CATEGORIES = [
   { id: 'innenraum', name: 'Innenausstattung / Zubehör',     Icon: ShoppingBag, color: 'from-pink-500/25 to-pink-600/10',    keywords: ['innenraum', 'sitz', 'fussmatten', 'innenausstattung'] },
 ];
 
+// ─── Kategorie → echte TecDoc-Baumknoten (AutoPartsAPI, Namen normalisiert) ──
+// L1-Namen der API: Abgasanlage, Achsantrieb, Achsaufhängung/Radführung/Räder,
+// Bremsanlage, Elektrik, Federung/Dämpfung, Filter, Getriebe, Heizung/Lüftung,
+// Karosserie, Klimaanlage, Kraftstoffaufbereitung, Kraftstoffförderanlage,
+// Kühlung, Kupplung/-anbauteile, Lenkung, Motor, Innenausstattung, …
+const CAT_ALIASES: Record<string, string[]> = {
+  filter:     ['filter'],
+  motor:      ['motor'],
+  radaufh:    ['achsaufhaengung', 'radfuehrung', 'radaufhaengung'],
+  schwing:    ['federung', 'daempfung', 'stossdaempfer'],
+  zuendung:   ['zuendanlage', 'gluehanlage', 'zuendung'],
+  antrieb:    ['kupplung', 'achsantrieb', 'getriebe'],
+  bremse:     ['bremsanlage', 'bremse'],
+  lenkung:    ['lenkung'],
+  kuehlung:   ['kuehlung', 'kuehler'],
+  elektro:    ['elektrik', 'elektroanlage', 'generator', 'anlasser'],
+  auspuff:    ['abgasanlage', 'auspuff', 'ansaugsystem'],
+  kraftstoff: ['kraftstofffoerderanlage', 'kraftstoffaufbereitung', 'kraftstoffanlage'],
+  heizung:    ['heizung', 'klimaanlage', 'lueftung'],
+  aufbau:     ['beleuchtung', 'scheibenreinigung', 'signalanlage', 'scheinwerfer', 'spiegel'],
+  batterie:   ['starterbatterie', 'startanlage', 'batterie'],
+  reifen:     ['raeder', 'reifen', 'felge'],
+  karosserie: ['karosserie'],
+  innenraum:  ['innenausstattung', 'komfortsysteme'],
+};
+
+const normCat = (x: string) => x.toLowerCase()
+  .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+  .replace(/[^a-z0-9]/g, '');
+
+/** Findet die best-passenden Baum-Knoten (erst L1, dann L2). Exakt > Präfix > enthält. */
+function findCatNodes(tree: ApCategoryNode[], aliases: string[]): ApCategoryNode[] {
+  const score = (n: ApCategoryNode) => {
+    const nn = normCat(n.name);
+    let best = 0;
+    for (const a of aliases) {
+      if (a.length < 4) continue;
+      if (nn === a) best = Math.max(best, 3);
+      else if (nn.startsWith(a)) best = Math.max(best, 2);
+      else if (nn.includes(a)) best = Math.max(best, 1);
+    }
+    return best;
+  };
+  let hits = tree.map(n => ({ n, s: score(n) })).filter(h => h.s > 0);
+  if (hits.length === 0) {
+    // eine Ebene tiefer (z.B. "Starterbatterie" unter "Elektrik")
+    hits = tree.flatMap(t => t.children).map(n => ({ n, s: score(n) })).filter(h => h.s > 0);
+  }
+  if (hits.length === 0) return [];
+  const max = Math.max(...hits.map(h => h.s));
+  return hits.filter(h => h.s === max).map(h => h.n);
+}
+
 interface VehicleInfo {
   manufacturer?: string;
   model?: string;
@@ -329,11 +382,17 @@ export default function Teileportal() {
         try { tree = await apCategoryTree(vehicleKtype); setCatTree(tree); } catch { tree = null; }
         finally { setPartsLoading(false); }
       }
-      const stems = [cat.name.toLowerCase().slice(0, 5), ...cat.keywords.map(k => k.slice(0, 5))];
-      const node = tree?.find(n => { const nn = n.name.toLowerCase(); return stems.some(st => st.length >= 4 && (nn.includes(st) || st.includes(nn.slice(0, 5)))); });
-      if (node) {
-        if (node.children.length > 0) { setSubCat(node); return; }
-        if (node.id) { loadPartsByCategory(node.id, node.name); return; }
+      if (tree && tree.length > 0) {
+        const matches = findCatNodes(tree, CAT_ALIASES[cat.id] || []);
+        if (matches.length === 1) {
+          const node = matches[0];
+          if (node.children.length > 0) { setSubCat(node); return; }
+          if (node.id) { loadPartsByCategory(node.id, node.name); return; }
+        }
+        if (matches.length > 1) { setSubCat({ id: null, name: cat.name, children: matches }); return; }
+        // Kein Treffer → kompletten Baum zur Auswahl zeigen statt unpassender Volltextsuche
+        setSubCat({ id: null, name: cat.name, children: tree });
+        return;
       }
     }
     setPhase('articles');
@@ -644,51 +703,4 @@ export default function Teileportal() {
                                         </button>
                                         <button onClick={() => openDetail(a)} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:border-primary/50 hover:text-primary transition-colors">
                                           Details ansehen
-                                        </button>
-                                        <a href={`tel:${SHOP_INFO.phone}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
-                                          <Phone className="w-3.5 h-3.5" /> {SHOP_INFO.phone}
-                                        </a>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <ArticleExpander articleId={a.id} articleNumber={a.articleNumber} specs={a.specs} oeNumbers={a.oeNumbers}
-                              onSearchNumber={(no) => { setPartQuery(no); setActiveCat(null); setPhase('articles'); loadParts(no); }} />
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {!partsLoading && articles.length === 0 && !partsError && (
-                  <div className="text-center py-20 text-muted-foreground">
-                    <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                    <p className="font-medium">Keine Teile gefunden</p>
-                    <p className="text-sm mt-1">Versuch eine andere Suchanfrage oder ruf uns an: <a href={`tel:${SHOP_INFO.phone}`} className="text-primary hover:underline">{SHOP_INFO.phone}</a></p>
-                  </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          )}
-
-          {/* Search Phase (Desktop leer, zeigt Sidebar-Hinweis) */}
-          {phase === 'search' && (
-            <div className="hidden md:flex flex-col items-center justify-center h-full text-center p-12 text-muted-foreground">
-              <Car className="w-16 h-16 mb-5 opacity-20" />
-              <h2 className="text-xl font-bold mb-2 text-foreground">Fahrzeug suchen</h2>
-              <p className="text-sm max-w-xs">VIN / FIN oder Schlüsselnummer (HSN/TSN) in der Seitenleiste eingeben</p>
-            </div>
-          )}
-        </main>
-      </div>
-
-      <PartDetailModal article={detailArticle} vehicleLabel={vehicleLabel} onClose={() => setDetailArticle(null)}
-        onAddToCart={(a) => addArticleToCart(a)} brandLogo={detailArticle ? getBrandLogo(detailArticle.brand) : undefined} />
-      <PartsCartButton count={cart.count} onClick={() => setCartOpen(true)} />
-      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin} />
-    </>
-  );
-}
+           
