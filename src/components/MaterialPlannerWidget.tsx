@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { ClipboardList, X } from "lucide-react";
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useCartStore } from "@/stores/cartStore";
@@ -10,6 +11,9 @@ export function MaterialPlannerWidget() {
   const count = usePlannerStore((s) => s.items.filter((i) => !i.done).length);
   // Wenn der Warenkorb offen ist, das Widget ausblenden — sonst überdeckt es die Kasse-Buttons.
   const cartOpen = useCartStore((s) => s.isOpen);
+  // Im Teileportal ausgeblendet — dort sitzt der Teile-Warenkorb an derselben Stelle.
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/teileportal")) return null;
 
   return (
     <>
