@@ -465,16 +465,37 @@ export default function Teileportal() {
         parsed = parseArticles(tdData);
         total = (tdData as any)?.totalMatchingArticles ?? parsed.length;
       }
+      parsed = sortKnownBrandsFirst(parsed);
       setArticles(parsed); setTotalCount(total);
+      enrichTopWithIc(parsed);
     } catch { setPartsError('Suche fehlgeschlagen.'); }
     finally { setPartsLoading(false); }
+  };
+
+  /** Bekannte Marken (ATE, BOSCH, BREMBO …) nach oben — wie bei Inter Cars. */
+  const sortKnownBrandsFirst = (arts: Article[]) =>
+    [...arts].sort((a, b) => Number(!!getBrandLogo(b.brand)) - Number(!!getBrandLogo(a.brand)));
+
+  /** Top-Artikel gestaffelt mit echten IC-Daten anreichern (UVP, Bestand, Lieferzeit). */
+  const enrichTopWithIc = (arts: Article[]) => {
+    arts.filter((a) => a.price == null && a.articleNumber).slice(0, 10).forEach((a, i) => {
+      setTimeout(() => {
+        icPriceLookup(a.articleNumber).then((live) => {
+          if (!live) return;
+          setArticles((prev) => prev.map((x) => x.articleNumber === a.articleNumber
+            ? { ...x, price: live.price, availability: live.availability, deliveryDays: live.deliveryDays, source: 'intercars' as const }
+            : x));
+        }).catch(() => {});
+      }, i * 400);
+    });
   };
 
   const loadPartsByCategory = async (categoryId: number, catName: string) => {
     setPhase('articles'); setPartsLoading(true); setPartsError(null); setSelectedBrands(new Set());
     try {
-      const parsed = (await apArticlesByCategory(vehicleKtype!, categoryId)).map(apToArticle);
+      const parsed = sortKnownBrandsFirst((await apArticlesByCategory(vehicleKtype!, categoryId)).map(apToArticle));
       setArticles(parsed); setTotalCount(parsed.length);
+      enrichTopWithIc(parsed);
     } catch { setPartsError('Suche fehlgeschlagen.'); }
     finally { setPartsLoading(false); }
   };

@@ -3,8 +3,12 @@
  * Vercel-IPs bei der IC-OAuth, Supabase nicht). Actions als Query-Param,
  * Responses kommen in { data: ... } gewrappt.
  */
-const SUPA_URL = (import.meta.env.VITE_SUPABASE_URL as string) || "https://zasbdvtsxgimcezotlsi.supabase.co";
-const SUPA_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || "sb_publishable_hMoY8Rgjjb9cvmeMaTEJoQ_AkBoF3FX";
+// WICHTIG: Die intercars-api-Funktion läuft auf dem ALTEN Supabase-Projekt
+// (hfkjgxmmcqtgzapubxvu) — dort liegen die IC-Secrets und die ic_tokens-Tabelle.
+// Verifiziert 2026-07-12: liefert echte Preise (UVP/EK) + Lagerbestand in <2s.
+// Der Anon-Key ist per Design öffentlich (nur Function-Aufrufe, RLS geschützt).
+const SUPA_URL = "https://hfkjgxmmcqtgzapubxvu.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhma2pneG1tY3F0Z3phcHVieHZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MzIzMjcsImV4cCI6MjA4OTAwODMyN30.T7GO851P2K96s6erlfCf0iiE-JV2Wuj2uFEgsayUHDw";
 const PRICE_MARKUP = 1.7;
 
 const _cache = new Map<string, { v: unknown; ts: number }>();
