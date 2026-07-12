@@ -426,11 +426,14 @@ export default function Teileportal() {
       } else {
         const info = parseVehicle(data);
         if (info) { setVehicle(info); setVehicleVin(searchMode === 'vin' ? normVin : ''); setPhase('categories'); }
-        else setVehicleError(data?.error === 'kba_not_licensed'
-          ? 'Schlüsselnummer-Suche nicht freigeschaltet. Ruf uns an: 0202 82690'
-          : 'Fahrzeug nicht gefunden. Prüfe die Eingabe oder ruf uns an: 0202 82690');
+        else {
+          setPhase('search');
+          setVehicleError(data?.error === 'kba_not_licensed'
+            ? 'Schlüsselnummer-Suche nicht freigeschaltet. Ruf uns an: 0202 82690'
+            : 'Fahrzeug nicht gefunden. Prüfe die Eingabe oder ruf uns an: 0202 82690');
+        }
       }
-    } catch { setVehicleError('Abfrage fehlgeschlagen. Versuch es später oder ruf uns an: 0202 82690'); }
+    } catch { setPhase('search'); setVehicleError('Abfrage fehlgeschlagen. Versuch es später oder ruf uns an: 0202 82690'); }
     finally { setVehicleLoading(false); }
   };
 
@@ -906,7 +909,4 @@ export default function Teileportal() {
       <PartDetailModal article={detailArticle} vehicleLabel={vehicleLabel} onClose={() => setDetailArticle(null)}
         onAddToCart={(a) => addArticleToCart(a)} brandLogo={detailArticle ? getBrandLogo(detailArticle.brand) : undefined} />
       <PartsCartButton count={cart.count} onClick={() => setCartOpen(true)} />
-      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin} />
-    </>
-  );
-}
+      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={
