@@ -42,16 +42,26 @@ const IC_CATALOG_URL = "https://katalog.intercars.com.pl/api/v2/External";
 let _token  = null;
 let _expiry = 0;
 
+// Harter Timeout auch wenn fetch-abort hängt (Cloudflare hält Verbindungen offen)
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(`${label} Timeout nach ${ms}ms`)), ms)),
+  ]);
+}
+
 async function getToken(clientId, clientSecret) {
   if (_token && Date.now() < _expiry) return _token;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
-  const res = await fetch(IC_TOKEN_URL, {
+  const res = await withTimeout(fetch(IC_TOKEN_URL, {
     signal: ctrl.signal,
     method:  "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent":   "Mozilla/5.0 (compatible; IC-API-Client/1.0)",
+      "User-Agent":   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+      "Accept":       "application/json",
+      "Accept-Language": "de-DE,de;q=0.9",
     },
     body:    new URLSearchParams({
       grant_type:    "client_credentials",
@@ -60,7 +70,7 @@ async function getToken(clientId, clientSecret) {
     }),
     // Cloudflare bot protection on is.webapi.intercars.eu requires a real User-Agent
     // Without it, the OAuth endpoint returns 403 "Just a moment..."
-  });
+  }), 9000, "IC OAuth");
   clearTimeout(timer);
   if (!res.ok) throw new Error(`IC OAuth (${res.status}): ${(await res.text()).slice(0, 200)}`);
   const data = await res.json();
@@ -71,15 +81,19 @@ async function getToken(clientId, clientSecret) {
 
 // ── Authenticated REST fetch ──────────────────────────────────────────────────
 async function icFetch(path, token, payerId, recipientId, branch) {
-  const res = await fetch(`${IC_BASE_URL}${path}`, {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 7000);
+  const res = await withTimeout(fetch(`${IC_BASE_URL}${path}`, {
+    signal: ctrl.signal,
     headers: {
       Authorization:    `Bearer ${token}`,
       "X-Payer-Id":     payerId,
       "X-Recipient-Id": recipientId,
       "X-Branch":       branch,
       Accept:           "application/json",
+      "User-Agent":     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
     },
-  });
+  }), 8000, `IC ${path.slice(0, 40)}`).finally(() => clearTimeout(timer));
   if (!res.ok) {
     console.error(`[IC] ${path} → HTTP ${res.status}`, (await res.text()).slice(0, 200));
     return null;
@@ -89,7 +103,10 @@ async function icFetch(path, token, payerId, recipientId, branch) {
 
 // ── Authenticated REST POST ───────────────────────────────────────────────────
 async function icPost(path, body, token, payerId, recipientId, branch) {
-  const res = await fetch(`${IC_BASE_URL}${path}`, {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 7000);
+  const res = await withTimeout(fetch(`${IC_BASE_URL}${path}`, {
+    signal: ctrl.signal,
     method: "POST",
     headers: {
       Authorization:    `Bearer ${token}`,
@@ -98,9 +115,10 @@ async function icPost(path, body, token, payerId, recipientId, branch) {
       "X-Branch":       branch,
       "Content-Type":   "application/json",
       Accept:           "application/json",
+      "User-Agent":     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
     },
     body: JSON.stringify(body),
-  });
+  }), 8000, `IC POST ${path.slice(0, 40)}`).finally(() => clearTimeout(timer));
   if (!res.ok) {
     console.error(`[IC] POST ${path} → HTTP ${res.status}`, (await res.text()).slice(0, 200));
     return null;
@@ -241,6 +259,26 @@ export default async function handler(req) {
   catch { return json({ error: "Invalid JSON" }, 400); }
 
   const { action, query, sku, index: productIndex, categoryId, limit = 12, offset = 0, items, orderId, from, to } = body;
+
+  // ── DIAGNOSE: wo genau klemmt es? (Credentials → OAuth → Catalog) ──────────
+  if (action === "diag") {
+    const out = { hasCreds: true, payerId, branch, runtime: "nodejs" };
+    const t0 = Date.now();
+    try {
+      const token = await getToken(clientId, clientSecret);
+      out.oauth = { ok: true, ms: Date.now() - t0, tokenLen: (token || "").length };
+      const t1 = Date.now();
+      try {
+        const cat = await icFetch(`/catalog/products?search=filter&limit=1`, token, payerId, recipientId, branch);
+        out.catalog = { ok: !!cat, ms: Date.now() - t1, total: cat?.totalResults, sampleSku: cat?.products?.[0]?.sku };
+      } catch (e) {
+        out.catalog = { ok: false, ms: Date.now() - t1, error: String(e.message).slice(0, 200) };
+      }
+    } catch (e) {
+      out.oauth = { ok: false, ms: Date.now() - t0, error: String(e.message).slice(0, 250) };
+    }
+    return json(out);
+  }
 
   try {
     const token = await getToken(clientId, clientSecret);
