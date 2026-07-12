@@ -26,6 +26,25 @@ const BRAND_DOMAINS: Record<string, string> = {
   'SWAG': 'swag.eu', 'TOPRAN': 'topran.de', 'LEMFORDER': 'zf.com', 'RIDEX': 'ridex.eu',
   'MAPCO': 'mapco.com', 'NK': 'nk.eu', 'DELPHI': 'delphi.com', 'VEMO': 'vemo.com',
   'NISSENS': 'nissens.com', 'NTK': 'ngk.com', 'CHAMPION': 'championautoparts.com',
+  'AJUSA': 'ajusa.es', 'BLUE PRINT': 'blue-print.com', 'CORTECO': 'corteco.com',
+  'ELRING': 'elring.de', 'HENGST': 'hengst.com', 'HENGST FILTER': 'hengst.com',
+  'HERTH+BUSS': 'herthundbuss.com', 'HERTH+BUSS ELPARTS': 'herthundbuss.com', 'HERTH+BUSS JAKOPARTS': 'herthundbuss.com',
+  'VICTOR REINZ': 'reinz.com', 'REINZ': 'reinz.com', 'VAICO': 'vaico.de', 'VDO': 'vdo.com',
+  'PIERBURG': 'ms-motorservice.com', 'KOLBENSCHMIDT': 'ms-motorservice.com', 'MAGNETI MARELLI': 'magnetimarelli.com',
+  'NRF': 'nrf.eu', 'KYB': 'kyb-europe.com', 'MONROE': 'monroe.com', 'KONI': 'koni.com', 'EIBACH': 'eibach.com',
+  'VARTA': 'varta-automotive.com', 'EXIDE': 'exide.com', 'BANNER': 'bannerbatterien.com',
+  'OSRAM': 'osram.de', 'PHILIPS': 'philips.de', 'LIQUI MOLY': 'liqui-moly.com', 'CASTROL': 'castrol.com',
+  'MOTUL': 'motul.com', 'FUCHS': 'fuchs.com', 'MOBIL': 'mobil.com', 'DAYCO': 'dayco.com', 'CONTITECH': 'continental.com',
+  'RUVILLE': 'ruville.de', 'GKN': 'gkn.com', 'SPIDAN': 'gkn.com', 'LÖBRO': 'gkn.com', 'LOBRO': 'gkn.com',
+  'SNR': 'ntn-snr.com', 'NTN': 'ntn-snr.com', 'NSK': 'nsk.com', 'BOSAL': 'bosal.com', 'HJS': 'hjs.com',
+  'EBERSPÄCHER': 'eberspaecher.com', 'EBERSPACHER': 'eberspaecher.com', 'JP GROUP': 'jpgroup.dk',
+  'NIPPARTS': 'nipparts.com', 'ASHIKA': 'ashika.com', 'JAPANPARTS': 'japanparts.com',
+  'MAXGEAR': 'maxgear.eu', 'KAMOKA': 'kamoka.eu', 'STELLOX': 'stellox.com', 'VAN WEZEL': 'vanwezel.com',
+  'PRASCO': 'prasco.com', 'ALKAR': 'alkar.es', 'KLOKKERHOLM': 'klokkerholm.com', 'BERU': 'borgwarner.com',
+  'STABILUS': 'stabilus.com', 'HANS PRIES': 'topran.de', 'SIDEM': 'sidem.be', 'TRISCAN': 'triscan.dk',
+  'FERODO': 'ferodo.com', 'MINTEX': 'mintex.com', 'PAGID': 'pagid.com', 'FTE': 'fte.de',
+  'UFI': 'ufifilters.com', 'FRAM': 'fram.com', 'WIX': 'wixfilters.com', 'FILTRON': 'filtron.eu',
+  'KNECHT': 'mahle.com', 'AISIN': 'aisin.com', 'METZGER': 'metzger-autoteile.de', 'AL-KO': 'alko-tech.com',
 };
 function getBrandLogo(brand: string): string | undefined {
   const domain = BRAND_DOMAINS[(brand || '').toUpperCase().trim()];
@@ -700,10 +719,14 @@ export default function Teileportal() {
                                     <p className="font-bold text-sm text-primary truncate">{a.articleNumber}</p>
                                     <p className="font-semibold text-sm leading-snug mt-0.5">{a.name}</p>
                                     {a.brand && <span className="inline-block mt-1 px-2 py-0.5 rounded bg-secondary text-xs font-bold tracking-wide uppercase">{a.brand}</span>}
-                                    {a.specs && a.specs.length > 0 && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{a.specs.map(s => `${s.name}: ${s.value}`).join(' · ')}</p>}
                                     {a.oeNumbers && a.oeNumbers.length > 0 && <p className="text-xs text-muted-foreground mt-0.5">OE: {a.oeNumbers.join(', ')}</p>}
                                   </div>
                                   <div className="shrink-0 text-right flex flex-col items-end gap-2">
+                                    {getBrandLogo(a.brand) && (
+                                      <img src={getBrandLogo(a.brand)!} alt={a.brand} loading="lazy"
+                                        className="h-6 max-w-[100px] object-contain"
+                                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                    )}
                                     {a.price != null ? (
                                       <>
                                         <p className="font-bold text-lg leading-none">{a.price.toFixed(2).replace('.', ',')} €</p>
@@ -733,6 +756,16 @@ export default function Teileportal() {
                                 </div>
                               </div>
                             </div>
+                            {a.specs && a.specs.length > 0 && (
+                              <div className="px-4 pb-2 pt-2 border-t border-border/40 text-xs text-muted-foreground flex flex-wrap items-center gap-y-1">
+                                {a.specs.map((s, si) => (
+                                  <span key={si} className="whitespace-nowrap">
+                                    {si > 0 && <span className="mx-2 text-border">|</span>}
+                                    {s.name}: <span className="font-semibold text-primary">{s.value}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                             <ArticleExpander articleId={a.id} articleNumber={a.articleNumber} specs={a.specs} oeNumbers={a.oeNumbers}
                               onSearchNumber={(no) => { setPartQuery(no); setActiveCat(null); setPhase('articles'); loadParts(no); }} />
                           </motion.div>
