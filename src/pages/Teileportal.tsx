@@ -486,7 +486,7 @@ export default function Teileportal() {
         icPriceLookup(a.articleNumber).then((live) => {
           if (!live) return;
           setArticles((prev) => prev.map((x) => x.articleNumber === a.articleNumber
-            ? { ...x, price: live.price, availability: live.availability, deliveryDays: live.deliveryDays, source: 'intercars' as const }
+            ? { ...x, price: live.price, availability: live.availability, deliveryDays: live.deliveryDays, imageUrl: x.imageUrl ?? live.imageUrl, source: 'intercars' as const }
             : x));
         }).catch(() => {});
       }, i * 400);

@@ -43,11 +43,23 @@ function digNumber(obj: any, key: string): number | undefined {
   return undefined;
 }
 
+/** Extrahiert Bild-URL aus einem IC-Produkt-Objekt (verschiedene Feldnamen). */
+function extractImage(p: any): string | undefined {
+  if (!p) return undefined;
+  const candidates = [
+    p.imageUrl, p.imageURL, p.image, p.thumbnailUrl, p.pictureUrl, p.photo,
+    p.images?.[0]?.url, p.images?.[0]?.imageURL, p.images?.[0]?.link,
+    p.media?.[0]?.url, p.media?.[0]?.imageURL,
+  ];
+  return candidates.find((c) => typeof c === "string" && c.startsWith("http"));
+}
+
 export interface IcLiveInfo {
-  price: number;
-  availability: string;
-  deliveryDays: number;
+  price: number;        // UVP / Einzelhandelspreis von Inter Cars
+  availability: string; // z.B. "1 Werktag · 5 Stück"
+  deliveryDays: number; // 1 = lokal verfügbar, 2 = Zentrallager
   icSku: string;
+  imageUrl?: string;    // Produktbild von IC (falls vorhanden)
 }
 
 /**
@@ -65,7 +77,7 @@ function artVariants(artNo: string): string[] {
   return [...variants];
 }
 
-/** Live-Preis + Bestand zu einer Hersteller-Artikelnummer (best effort). */
+/** Live-Preis + Bestand + Bild zu einer Hersteller-Artikelnummer (best effort). */
 export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo | null> {
   const artNo = (articleNumber || "").trim();
   if (artNo.length < 3) return null;
@@ -74,12 +86,14 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
 
   let result: IcLiveInfo | null = null;
   try {
+    // Varianten parallel suchen — IC ist case-sensitiv und formatabhängig
     const variants = artVariants(artNo);
     const searches = await Promise.all(variants.map(v => icCall("search", { index: v, pageSize: 1 })));
     const prods: any[] = searches.flatMap(s => s?.products || []).filter(Boolean);
     const p = prods[0];
     if (p?.sku) {
       const d = await icCall("product-detail", { sku: p.sku });
+      // UVP ("Einzelhandel") anzeigen — NICHT den EK. Fallback: EK x Markup.
       const uvp = digNumber(d?.pricing, "listPriceGross");
       const ek = digNumber(d?.pricing, "customerPriceGross");
       const price = uvp && uvp > 0 ? uvp : ek && ek > 0 ? Math.ceil(ek * PRICE_MARKUP * 100) / 100 : undefined;
@@ -92,6 +106,7 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
             : "2 Werktage · Zentrallager",
           deliveryDays: avail > 0 ? 1 : 2,
           icSku: String(p.sku),
+          imageUrl: extractImage(p) ?? extractImage(d),
         };
       }
     }

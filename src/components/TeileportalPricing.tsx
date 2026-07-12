@@ -94,23 +94,42 @@ export function deliveryForecast(days: number): string {
 export function DeliveryBadge({ deliveryDays, availability }: { deliveryDays?: number; availability?: string }) {
   if (deliveryDays == null) {
     return (
-      <div className="text-right space-y-0.5">
-        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-secondary text-muted-foreground">Lieferzeit auf Anfrage</span>
-        <p className="text-[11px] text-muted-foreground max-w-[190px] ml-auto">Meist schon {deliveryForecast(1)} bei dir — wir bestätigen sofort.</p>
+      <div className="text-right space-y-1">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-secondary border border-border text-muted-foreground">
+          <Truck className="w-3.5 h-3.5" /> Lieferzeit auf Anfrage
+        </span>
+        <p className="text-[11px] text-muted-foreground max-w-[200px] ml-auto leading-snug">
+          Meist schon {deliveryForecast(1)} bei dir — wir bestätigen sofort.
+        </p>
       </div>
     );
   }
-  const farbe = deliveryDays <= 1
-    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-    : deliveryDays <= 2
-      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-      : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
+
+  const is1day = deliveryDays <= 1;
+  const is2day = deliveryDays === 2;
+
+  const badgeClass = is1day
+    ? "bg-green-500 text-white border-green-600 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
+    : is2day
+      ? "bg-yellow-400 text-yellow-900 border-yellow-500"
+      : "bg-amber-400 text-amber-900 border-amber-500";
+
   return (
-    <div className="text-right space-y-0.5">
-      <span className={cn("inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold", farbe)}>
-        <Truck className="w-3 h-3" /> {deliveryDays <= 1 ? "1 Werktag" : `${deliveryDays} Werktage`}
+    <div className="text-right space-y-1">
+      <span className={cn(
+        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold border",
+        badgeClass
+      )}>
+        {is1day && (
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+          </span>
+        )}
+        <Truck className="w-4 h-4 shrink-0" />
+        {is1day ? "1 Werktag" : `${deliveryDays} Werktage`}
       </span>
-      <p className="text-[11px] font-medium">Wäre {deliveryForecast(deliveryDays)} da</p>
+      <p className="text-[11px] font-medium text-foreground/70">Wäre {deliveryForecast(deliveryDays)} da</p>
       {availability && <p className="text-[11px] text-muted-foreground">Lager: {availability}</p>}
     </div>
   );
