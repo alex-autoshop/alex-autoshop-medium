@@ -1,5 +1,7 @@
-// Serverless (nicht Edge) — Intercars OAuth blockt Cloudflare/Edge IPs
-export const config = { runtime: 'nodejs', maxDuration: 25 };
+// Serverless (nicht Edge) — Intercars OAuth blockt Cloudflare/Edge IPs.
+// WICHTIG: Node-Runtime nutzt die (req, res)-Signatur! Der frühere Web-API-Handler
+// (Request→Response) wurde nie beantwortet → JEDER Request lief in den 25s-Timeout.
+export const config = { maxDuration: 25 };
 
 /**
  * Intercars IC API Proxy — Vercel Edge Function
@@ -234,15 +236,16 @@ const CORS = {
   "Access-Control-Allow-Headers": "content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const json = (data, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MAIN HANDLER
+// MAIN HANDLER — Node-Serverless-Signatur (req, res)
 // ─────────────────────────────────────────────────────────────────────────────
-export default async function handler(req) {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
-  if (req.method !== "POST")   return new Response("Method not allowed", { status: 405, headers: CORS });
+export default async function handler(req, res) {
+  for (const [k, v] of Object.entries(CORS)) res.setHeader(k, v);
+  if (req.method === "OPTIONS") { res.status(204).end(); return; }
+  if (req.method !== "POST")   { res.status(405).send("Method not allowed"); return; }
+
+  const json = (data, status = 200) => { res.status(status).json(data); };
 
   const clientId     = process.env.INTERCARS_CLIENT_ID;
   const clientSecret = process.env.INTERCARS_CLIENT_SECRET;
@@ -254,9 +257,9 @@ export default async function handler(req) {
   const recipientId = process.env.INTERCARS_RECIPIENT_ID || payerId;
   const branch      = process.env.INTERCARS_BRANCH       || "FA1";
 
-  let body;
-  try { body = await req.json(); }
-  catch { return json({ error: "Invalid JSON" }, 400); }
+  let body = req.body;
+  if (typeof body === "string") { try { body = JSON.parse(body); } catch { return json({ error: "Invalid JSON" }, 400); } }
+  if (!body || typeof body !== "object") return json({ error: "Invalid JSON" }, 400);
 
   const { action, query, sku, index: productIndex, categoryId, limit = 12, offset = 0, items, orderId, from, to } = body;
 
@@ -496,10 +499,11 @@ export default async function handler(req) {
         ? `${IC_CATALOG_URL}/GetInvoices?from=${(from || "").replace(/-/g, "")}&to=${(to || "").replace(/-/g, "")}`
         : `${IC_CATALOG_URL}/GetInvoice?id=${encodeURIComponent(orderId || "")}`;
 
-      const res = await fetch(url, { headers: { kh_kod: khKod, token: catalogToken } });
-      if (!res.ok) return json({ error: `IC Katalog API: ${res.status}` }, res.status);
-      const xml = await res.text();
-      return new Response(xml, { status: 200, headers: { ...CORS, "Content-Type": "application/xml" } });
+      const r = await fetch(url, { headers: { kh_kod: khKod, token: catalogToken } });
+      if (!r.ok) return json({ error: `IC Katalog API: ${r.status}` }, r.status);
+      const xml = await r.text();
+      res.status(200).setHeader("Content-Type", "application/xml").send(xml);
+      return;
     }
 
     return json({ error: `Unbekannte Aktion: "${action}"` }, 400);
