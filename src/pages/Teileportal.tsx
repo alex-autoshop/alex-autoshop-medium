@@ -8,10 +8,10 @@ import {
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
-import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, type ApArticle } from "@/lib/autoparts";
+import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, type ApArticle, type ApCategoryNode } from "@/lib/autoparts";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
 import { icPriceLookup } from "@/lib/intercarsGateway";
-import { ArticleExpander, BrandFilter } from "@/components/TeileportalExtras";
+import { ArticleExpander, BrandFilter, SubCatList } from "@/components/TeileportalExtras";
 
 const BRAND_DOMAINS: Record<string, string> = {
   'BOSCH': 'bosch.com', 'BREMBO': 'brembo.com', 'ZIMMERMANN': 'zimmermann-brake.com',
@@ -196,6 +196,8 @@ export default function Teileportal() {
   const [totalCount, setTotalCount] = useState(0);
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
   const { garage, add: addToGarage, remove: removeFromGarage } = useGarage();
+  const [catTree, setCatTree] = useState<ApCategoryNode[] | null>(null);
+  const [subCat, setSubCat] = useState<ApCategoryNode | null>(null);
   const cart = usePartsCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [detailArticle, setDetailArticle] = useState<DetailArticle | null>(null);
@@ -308,9 +310,34 @@ export default function Teileportal() {
     finally { setPartsLoading(false); }
   };
 
-  const handleCategoryClick = (cat: typeof CATEGORIES[0]) => {
-    setActiveCat(cat); setPartQuery(''); setPhase('articles');
-    loadParts(cat.keywords.join(' '));
+  const loadPartsByCategory = async (categoryId: number, catName: string) => {
+    setSubCat(null); setPhase('articles'); setPartsLoading(true); setPartsError(null); setSelectedBrands(new Set());
+    try {
+      const parsed = (await apArticlesByCategory(vehicleKtype!, categoryId)).map(apToArticle);
+      setArticles(parsed); setTotalCount(parsed.length);
+    } catch { setPartsError('Suche fehlgeschlagen.'); }
+    finally { setPartsLoading(false); }
+  };
+
+  const handleCategoryClick = async (cat: typeof CATEGORIES[0]) => {
+    setPartQuery('');
+    setActiveCat(cat);
+    if (vehicleKtype) {
+      let tree = catTree;
+      if (!tree) {
+        setPartsLoading(true);
+        try { tree = await apCategoryTree(vehicleKtype); setCatTree(tree); } catch { tree = null; }
+        finally { setPartsLoading(false); }
+      }
+      const stems = [cat.name.toLowerCase().slice(0, 5), ...cat.keywords.map(k => k.slice(0, 5))];
+      const node = tree?.find(n => { const nn = n.name.toLowerCase(); return stems.some(st => st.length >= 4 && (nn.includes(st) || st.includes(nn.slice(0, 5)))); });
+      if (node) {
+        if (node.children.length > 0) { setSubCat(node); return; }
+        if (node.id) { loadPartsByCategory(node.id, node.name); return; }
+      }
+    }
+    setPhase('articles');
+    loadParts(cat.keywords[0]);
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -489,7 +516,20 @@ export default function Teileportal() {
                     <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-bold">BALD</span>
                   </button>
                 </div>
-                {/* Grid */}
+                {subCat ? (
+                  <div className="max-w-2xl">
+                    <button onClick={() => setSubCat(null)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors mb-3">
+                      <ArrowLeft className="w-4 h-4" /> Alle Kategorien
+                    </button>
+                    <h2 className="font-bold text-lg mb-3">{subCat.name}</h2>
+                    <SubCatList nodes={subCat.children} onPick={(n) => n.id && loadPartsByCategory(n.id, n.name)} />
+                    {subCat.id && (
+                      <button onClick={() => loadPartsByCategory(subCat.id!, subCat.name)} className="mt-4 text-sm text-primary hover:underline">
+                        Alle Teile in „{subCat.name}" anzeigen
+                      </button>
+                    )}
+                  </div>
+                ) : (
                 <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
                   {CATEGORIES.map((cat, i) => (
                     <motion.button key={cat.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
@@ -505,6 +545,7 @@ export default function Teileportal() {
                     </motion.button>
                   ))}
                 </div>
+                )}
               </motion.div>
             </AnimatePresence>
           )}

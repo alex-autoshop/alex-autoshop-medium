@@ -479,3 +479,47 @@ export function BrandFilter({ brands, selected, onToggle, onReset }: {
     </aside>
   );
 }
+
+// ─── UNTERKATEGORIEN-LISTE (aufklappbar wie Inter Cars) ─────
+
+import type { ApCategoryNode } from "@/lib/autoparts";
+import { ChevronRight } from "lucide-react";
+
+export function SubCatList({ nodes, onPick, depth = 0 }: {
+  nodes: ApCategoryNode[];
+  onPick: (n: ApCategoryNode) => void;
+  depth?: number;
+}) {
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  return (
+    <div className={cn("space-y-0.5", depth > 0 && "ml-5 border-l border-border/60 pl-3 mt-1")}>
+      {nodes.map((n) => {
+        const key = `${n.name}|${n.id}`;
+        const hasKids = n.children.length > 0;
+        const isOpen = open.has(key);
+        return (
+          <div key={key}>
+            <button
+              onClick={() => {
+                if (hasKids) { const s = new Set(open); isOpen ? s.delete(key) : s.add(key); setOpen(s); }
+                else if (n.id) onPick(n);
+              }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-left hover:bg-secondary/60 hover:text-primary transition-colors group">
+              <ChevronRight className={cn("w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform", isOpen && "rotate-90")} />
+              <span className="font-medium">{n.name}</span>
+              {!hasKids && n.id && <span className="text-xs text-muted-foreground group-hover:text-primary ml-auto">Teile anzeigen →</span>}
+            </button>
+            {hasKids && isOpen && (
+              <>
+                {n.id && (
+                  <button onClick={() => onPick(n)} className="ml-9 text-xs text-primary hover:underline">Alle in „{n.name}" anzeigen</button>
+                )}
+                <SubCatList nodes={n.children} onPick={onPick} depth={depth + 1} />
+              </>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}

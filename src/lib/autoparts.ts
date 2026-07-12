@@ -326,3 +326,32 @@ export async function apCompatibleCars(articleNo: string): Promise<Array<{ brand
       .sort((a, b) => b.count - a.count).slice(0, 20);
   } catch { return []; }
 }
+
+// ─── FAHRZEUG-KATEGORIEBAUM (echte Unterkategorien wie Inter Cars) ─
+
+export interface ApCategoryNode { id: number | null; name: string; children: ApCategoryNode[]; }
+
+export async function apCategoryTree(vehicleId: number): Promise<ApCategoryNode[]> {
+  const r = await ap(`/category/type-id/${TYPE_PC}/products-groups-variant-2/${vehicleId}/lang-id/${LANG}`);
+  const walk = (obj: any): ApCategoryNode[] => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return [];
+    return Object.entries(obj)
+      .filter(([, v]) => v && typeof v === 'object')
+      .map(([key, node]: [string, any]) => ({
+        id: Number(node.categoryId) || null,
+        name: key || String(node.categoryName || ''),
+        children: node.children && typeof node.children === 'object' ? walk(node.children) : [],
+      }))
+      .filter((n) => n.name);
+  };
+  return walk(r);
+}
+
+/** Artikel einer konkreten Kategorie-ID (ohne Relevanzfilter — exakte Gruppe). */
+export async function apArticlesByCategory(vehicleId: number, categoryId: number): Promise<ApArticle[]> {
+  const r = await ap(`/articles/list/type-id/${TYPE_PC}/vehicle-id/${vehicleId}/category-id/${categoryId}/lang-id/${LANG}`);
+  const seen = new Set<string>();
+  return pickArray(r, 'articles').map(toApArticle)
+    .filter((a): a is ApArticle => !!a && !!a.articleNumber)
+    .filter((a) => { const k = `${a.brand}::${a.articleNumber}`.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+}
