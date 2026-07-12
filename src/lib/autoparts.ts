@@ -96,7 +96,7 @@ function toApArticle(a: any, i: number): ApArticle | null {
   const specs = (Array.isArray(critRaw) ? critRaw : [])
     .map((c: any) => ({
       name: String(first(c?.criteriaName, c?.name, c?.specificationName, c?.attrName) || ''),
-      value: String(first(c?.formattedValue, c?.value, c?.specificationValue, c?.attrValue) ?? ''),
+      value: String(first(c?.formattedValue, c?.value, c?.criteriaValue, c?.specificationValue, c?.attrValue) ?? ''),
     }))
     .filter((s) => s.name && s.value)
     .slice(0, 6);
@@ -293,7 +293,7 @@ export async function apArticleSpecs(articleId: string | number): Promise<{ name
     const arr = pickArray(r, 'criteria', 'specifications', 'articleCriteria');
     return arr.map((c: any) => ({
       name: String(first(c?.criteriaName, c?.name, c?.specificationName, c?.criteriaDescription) || ''),
-      value: String(first(c?.formattedValue, c?.value, c?.specificationValue, c?.rawValue) ?? ''),
+      value: String(first(c?.formattedValue, c?.value, c?.criteriaValue, c?.specificationValue, c?.rawValue) ?? ''),
     })).filter((s) => s.name && s.value).slice(0, 20);
   } catch { return []; }
 }
