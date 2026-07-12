@@ -357,4 +357,10 @@ export async function apCategoryTree(vehicleId: number): Promise<ApCategoryNode[
 }
 
 /** Artikel einer konkreten Kategorie-ID (ohne Relevanzfilter — exakte Gruppe). */
-export async function apArticlesByCategory(vehicleId: 
+export async function apArticlesByCategory(vehicleId: number, categoryId: number): Promise<ApArticle[]> {
+  const r = await ap(`/articles/list/type-id/${TYPE_PC}/vehicle-id/${vehicleId}/category-id/${categoryId}/lang-id/${LANG}`);
+  const seen = new Set<string>();
+  return pickArray(r, 'articles').map(toApArticle)
+    .filter((a): a is ApArticle => !!a && !!a.articleNumber)
+    .filter((a) => { const k = `${a.brand}::${a.articleNumber}`.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+}
