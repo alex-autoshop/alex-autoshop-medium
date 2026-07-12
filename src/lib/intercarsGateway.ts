@@ -3,12 +3,12 @@
  * Vercel-IPs bei der IC-OAuth, Supabase nicht). Actions als Query-Param,
  * Responses kommen in { data: ... } gewrappt.
  */
-// WICHTIG: Die intercars-api-Funktion läuft auf dem ALTEN Supabase-Projekt
-// (hfkjgxmmcqtgzapubxvu) — dort liegen die IC-Secrets und die ic_tokens-Tabelle.
-// Verifiziert 2026-07-12: liefert echte Preise (UVP/EK) + Lagerbestand in <2s.
+// WICHTIG: intercars-api läuft auf dem NEUEN Supabase-Projekt (zasbdvtsxgimcezotlsi) —
+// Alexs eigenes Projekt, IC-Secrets gesetzt (2026-07-13), Funktion aktiv (v7).
+// Supabase Deno-IPs sind nicht von Inter Cars geblockt (anders als Vercel/AWS).
 // Der Anon-Key ist per Design öffentlich (nur Function-Aufrufe, RLS geschützt).
-const SUPA_URL = "https://hfkjgxmmcqtgzapubxvu.supabase.co";
-const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhma2pneG1tY3F0Z3phcHVieHZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MzIzMjcsImV4cCI6MjA4OTAwODMyN30.T7GO851P2K96s6erlfCf0iiE-JV2Wuj2uFEgsayUHDw";
+const SUPA_URL = "https://zasbdvtsxgimcezotlsi.supabase.co";
+const SUPA_KEY = "sb_publishable_hMoY8Rgjjb9cvmeMaTEJoQ_AkBoF3FX";
 const PRICE_MARKUP = 1.7;
 
 const _cache = new Map<string, { v: unknown; ts: number }>();
@@ -74,13 +74,4 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
           price,
           availability: avail > 0
             ? `1 Werktag · ${avail >= 10 ? ">10" : avail} Stück`
-            : "2 Werktage · Zentrallager",
-          deliveryDays: avail > 0 ? 1 : 2,
-          icSku: String(p.sku),
-        };
-      }
-    }
-  } catch { /* best effort */ }
-  _cache.set(artNo, { v: result, ts: Date.now() });
-  return result;
-}
+            : "2 Werkt
