@@ -575,7 +575,7 @@ export default function Teileportal() {
                             className="border border-border rounded-xl bg-card hover:border-primary/30 transition-all">
                             <div className="flex gap-4 p-4">
                               <div onClick={() => openDetail(a)} role="button" tabIndex={0}
-                                className="w-16 h-16 shrink-0 rounded-lg bg-secondary flex items-center justify-center overflow-hidden cursor-zoom-in">
+                                className="w-24 h-24 sm:w-32 sm:h-32 shrink-0 rounded-lg bg-white border border-border flex items-center justify-center overflow-hidden cursor-zoom-in p-1.5 hover:border-primary/50 transition-colors">
                                 {a.imageUrl ? (
                                   <img src={a.imageUrl} alt={a.name} loading="lazy" className="w-full h-full object-contain"
                                     onError={e => { const logo = getBrandLogo(a.brand); if (logo) { (e.target as HTMLImageElement).src = logo; (e.target as HTMLImageElement).className = 'w-full h-full object-contain p-2'; } else (e.target as HTMLImageElement).style.display = 'none'; }} />
