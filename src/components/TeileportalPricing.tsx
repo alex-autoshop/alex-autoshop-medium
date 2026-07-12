@@ -95,8 +95,8 @@ export function DeliveryBadge({ deliveryDays, availability }: { deliveryDays?: n
   if (deliveryDays == null) {
     return (
       <div className="text-right space-y-1">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-secondary border border-border text-muted-foreground">
-          <Truck className="w-3.5 h-3.5" /> Lieferzeit auf Anfrage
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">
+          <Truck className="w-4 h-4" /> Lieferzeit auf Anfrage
         </span>
         <p className="text-[11px] text-muted-foreground max-w-[200px] ml-auto leading-snug">
           Meist schon {deliveryForecast(1)} bei dir — wir bestätigen sofort.

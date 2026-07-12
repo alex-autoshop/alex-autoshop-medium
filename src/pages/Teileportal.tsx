@@ -853,7 +853,7 @@ export default function Teileportal() {
                                       </>
                                     ) : (
                                       <>
-                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Preis auf Anfrage</span>
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">Preis auf Anfrage</span>
                                         <DeliveryBadge />
                                         <button onClick={() => addArticleToCart(a)} className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
                                           <ShoppingBag className="w-3.5 h-3.5" /> In den Warenkorb
