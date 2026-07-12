@@ -3,6 +3,7 @@
  * Vorbereitet für Livepreise (Inter Cars) und PartsLink24-OEM-Katalog.
  */
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Car, X, Plus, Minus, Trash2, ShoppingCart, MessageCircle, Package, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -143,7 +144,7 @@ export function PartDetailModal({ article, vehicleLabel, onClose, onAddToCart, b
     `${article.brand} ${article.name} (Art.-Nr. ${article.articleNumber})`,
     vehicleLabel ? `Fahrzeug: ${vehicleLabel}` : "",
   ].filter(Boolean).join("\n"));
-  return (
+  return createPortal(
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
@@ -207,7 +208,8 @@ export function PartDetailModal({ article, vehicleLabel, onClose, onAddToCart, b
           </div>
         </motion.div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
@@ -215,13 +217,16 @@ export function PartDetailModal({ article, vehicleLabel, onClose, onAddToCart, b
 
 export function PartsCartButton({ count, onClick }: { count: number; onClick: () => void }) {
   if (count === 0) return null;
-  return (
+  // Portal in <body>: `position: fixed` bricht sonst innerhalb von
+  // Framer-Motion-Transform-Containern (Button hing halb außerhalb des Bildschirms).
+  return createPortal(
     <button onClick={onClick}
-      className="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-primary text-primary-foreground font-bold shadow-xl hover:scale-105 transition-transform">
+      className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-primary text-primary-foreground font-bold shadow-xl hover:scale-105 transition-transform">
       <ShoppingCart className="w-5 h-5" />
       <span className="text-sm">Teile-Warenkorb</span>
       <span className="w-6 h-6 rounded-full bg-background text-foreground text-xs flex items-center justify-center font-bold">{count}</span>
-    </button>
+    </button>,
+    document.body
   );
 }
 
@@ -243,7 +248,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin 
     allPriced ? `Zwischensumme: ${subtotal.toFixed(2)} €` : "Bitte Preise und Verfügbarkeit bestätigen.",
   ].filter((l) => l !== null).join("\n");
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50" onClick={onClose}>
@@ -297,7 +302,8 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin 
           </motion.aside>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 
