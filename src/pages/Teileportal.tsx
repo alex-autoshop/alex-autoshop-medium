@@ -48,7 +48,8 @@ const BRAND_DOMAINS: Record<string, string> = {
 };
 function getBrandLogo(brand: string): string | undefined {
   const domain = BRAND_DOMAINS[(brand || '').toUpperCase().trim()];
-  return domain ? `https://logo.clearbit.com/${domain}` : undefined;
+  // Clearbit wurde abgeschaltet → Google-Favicon-Dienst (keine API-Keys nötig)
+  return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : undefined;
 }
 
 const CAR_BRAND_DOMAINS: Record<string, string> = {
@@ -67,7 +68,7 @@ const CAR_BRAND_DOMAINS: Record<string, string> = {
 function getCarBrandLogo(brand: string): string | undefined {
   const key = (brand || '').toUpperCase().trim();
   const domain = CAR_BRAND_DOMAINS[key] || CAR_BRAND_DOMAINS[key.split(' ')[0]];
-  return domain ? `https://logo.clearbit.com/${domain}` : undefined;
+  return domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : undefined;
 }
 
 const CATEGORIES = [
