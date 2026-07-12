@@ -1,4 +1,4 @@
-// TEMPORÄRER Migrations-Endpoint — wird nach dem Umzug sofort wieder gelöscht.
+// TEMPORÄRER Migrations-Endpoint — wird nach dem Umzug sofort wieder gelöscht. (v3)
 // Kopiert die Inter-Cars-Secrets aus den Vercel-Env-Vars in die Supabase-Secrets
 // des NEUEN Projekts (fest verdrahtet). Die Werte werden dabei NIE ausgegeben.
 // Sicherheit: Wirkt nur mit einem Supabase-Access-Token, der Schreibrecht auf
@@ -43,7 +43,8 @@ export default async function handler(req, res) {
   res.status(200).json({
     ok: r.ok,
     status: r.status,
-    // Nur Fehlertexte durchreichen — nie Werte
+    // Diagnose ohne Werte: nur Länge + erste 4 Zeichen der Client-ID
+    idHint: `${id.slice(0, 4)}… (${id.length} Zeichen)`,
     detail: r.ok ? "Secrets im Zielprojekt gesetzt" : text.slice(0, 200),
   });
 }
