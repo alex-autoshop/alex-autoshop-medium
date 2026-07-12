@@ -50,6 +50,21 @@ export interface IcLiveInfo {
   icSku: string;
 }
 
+/**
+ * IC sucht case-sensitiv und erwartet Hersteller-Originalformat.
+ * TecDoc liefert manchmal lowercase Suffix (z.B. "HU 7020 z") oder Spaces wo IC
+ * keinen erwartet (z.B. "OX 787D" → IC braucht "OX787D").
+ * Deshalb: 4 Varianten parallel probieren, ersten Treffer nehmen.
+ */
+function artVariants(artNo: string): string[] {
+  const variants = new Set<string>();
+  variants.add(artNo);
+  variants.add(artNo.toUpperCase());
+  variants.add(artNo.replace(/\s+/g, ""));
+  variants.add(artNo.toUpperCase().replace(/\s+/g, ""));
+  return [...variants];
+}
+
 /** Live-Preis + Bestand zu einer Hersteller-Artikelnummer (best effort). */
 export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo | null> {
   const artNo = (articleNumber || "").trim();
@@ -59,19 +74,7 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
 
   let result: IcLiveInfo | null = null;
   try {
-    const s = await icCall("search", { index: artNo, pageSize: 3 });
-    const prods: any[] = s?.products || [];
-    const p = prods[0] || (await icCall("search", { sku: artNo, pageSize: 3 }))?.products?.[0];
-    if (p?.sku) {
-      const d = await icCall("product-detail", { sku: p.sku });
-      // UVP ("Einzelhandel") anzeigen — NICHT den EK. Fallback: EK x Markup.
-      const uvp = digNumber(d?.pricing, "listPriceGross");
-      const ek = digNumber(d?.pricing, "customerPriceGross");
-      const price = uvp && uvp > 0 ? uvp : ek && ek > 0 ? Math.ceil(ek * PRICE_MARKUP * 100) / 100 : undefined;
-      const avail = digNumber(d?.stock, "availability") ?? 0;
-      if (price) {
-        result = {
-          price,
-          availability: avail > 0
-            ? `1 Werktag · ${avail >= 10 ? ">10" : avail} Stück`
-            : "2 Werkt
+    // Varianten parallel suchen — IC ist case-sensitiv und formatabhängig
+    const variants = artVariants(artNo);
+    const searches = await Promise.all(variants.map(v => icCall("search", { index: v, pageSize: 1 })));
+    const prods: any[] = searches.flatMap(s => s?.products || [])
