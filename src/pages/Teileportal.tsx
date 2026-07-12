@@ -909,4 +909,7 @@ export default function Teileportal() {
       <PartDetailModal article={detailArticle} vehicleLabel={vehicleLabel} onClose={() => setDetailArticle(null)}
         onAddToCart={(a) => addArticleToCart(a)} brandLogo={detailArticle ? getBrandLogo(detailArticle.brand) : undefined} />
       <PartsCartButton count={cart.count} onClick={() => setCartOpen(true)} />
-      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={
+      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin} />
+    </>
+  );
+}
