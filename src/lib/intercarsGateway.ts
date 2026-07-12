@@ -44,9 +44,9 @@ function digNumber(obj: any, key: string): number | undefined {
 }
 
 export interface IcLiveInfo {
-  price: number;        // UVP / Einzelhandelspreis von Inter Cars
-  availability: string; // z.B. "1 Werktag · 5 Stück"
-  deliveryDays: number; // 1 = lokal verfügbar, 2 = Zentrallager
+  price: number;
+  availability: string;
+  deliveryDays: number;
   icSku: string;
 }
 
@@ -74,7 +74,28 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
 
   let result: IcLiveInfo | null = null;
   try {
-    // Varianten parallel suchen — IC ist case-sensitiv und formatabhängig
     const variants = artVariants(artNo);
     const searches = await Promise.all(variants.map(v => icCall("search", { index: v, pageSize: 1 })));
-    const prods: any[] = searches.flatMap(s => s?.products || [])
+    const prods: any[] = searches.flatMap(s => s?.products || []).filter(Boolean);
+    const p = prods[0];
+    if (p?.sku) {
+      const d = await icCall("product-detail", { sku: p.sku });
+      const uvp = digNumber(d?.pricing, "listPriceGross");
+      const ek = digNumber(d?.pricing, "customerPriceGross");
+      const price = uvp && uvp > 0 ? uvp : ek && ek > 0 ? Math.ceil(ek * PRICE_MARKUP * 100) / 100 : undefined;
+      const avail = digNumber(d?.stock, "availability") ?? 0;
+      if (price) {
+        result = {
+          price,
+          availability: avail > 0
+            ? `1 Werktag · ${avail >= 10 ? ">10" : avail} Stück`
+            : "2 Werktage · Zentrallager",
+          deliveryDays: avail > 0 ? 1 : 2,
+          icSku: String(p.sku),
+        };
+      }
+    }
+  } catch { /* best effort */ }
+  _cache.set(artNo, { v: result, ts: Date.now() });
+  return result;
+}
