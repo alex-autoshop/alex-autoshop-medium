@@ -99,12 +99,14 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
       const price = uvp && uvp > 0 ? uvp : ek && ek > 0 ? Math.ceil(ek * PRICE_MARKUP * 100) / 100 : undefined;
       const avail = digNumber(d?.stock, "availability") ?? 0;
       if (price) {
+        // IC liefert aus Zweigstelle ODER Zentrallager (KOM/HSN/HZA) — immer 1 Werktag.
+        // avail=0 heißt nur FA1-Lager leer, nicht Out-of-Stock.
         result = {
           price,
           availability: avail > 0
             ? `1 Werktag · ${avail >= 10 ? ">10" : avail} Stück`
-            : "2 Werktage · Zentrallager",
-          deliveryDays: avail > 0 ? 1 : 2,
+            : "1 Werktag · Zentrallager",
+          deliveryDays: 1,
           icSku: String(p.sku),
           imageUrl: extractImage(p) ?? extractImage(d),
         };

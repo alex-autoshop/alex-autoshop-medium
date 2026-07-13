@@ -481,7 +481,7 @@ export default function Teileportal() {
 
   /** Top-Artikel gestaffelt mit echten IC-Daten anreichern (UVP, Bestand, Lieferzeit). */
   const enrichTopWithIc = (arts: Article[]) => {
-    arts.filter((a) => a.price == null && a.articleNumber).slice(0, 10).forEach((a, i) => {
+    arts.filter((a) => a.price == null && a.articleNumber).slice(0, 20).forEach((a, i) => {
       setTimeout(() => {
         icPriceLookup(a.articleNumber).then((live) => {
           if (!live) return;
@@ -489,7 +489,7 @@ export default function Teileportal() {
             ? { ...x, price: live.price, availability: live.availability, deliveryDays: live.deliveryDays, imageUrl: x.imageUrl ?? live.imageUrl, source: 'intercars' as const }
             : x));
         }).catch(() => {});
-      }, i * 400);
+      }, i * 200);
     });
   };
 
