@@ -1,4 +1,10 @@
 {
+  "redirects": [
+    { "source": "/products/:slug*", "destination": "https://shop.alex-autoshop.de/products/:slug*", "permanent": true },
+    { "source": "/collections/:slug*", "destination": "https://shop.alex-autoshop.de/collections/:slug*", "permanent": true },
+    { "source": "/cart", "destination": "https://shop.alex-autoshop.de/cart", "permanent": true },
+    { "source": "/pages/:slug*", "destination": "https://shop.alex-autoshop.de/pages/:slug*", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
