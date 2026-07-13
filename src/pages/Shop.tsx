@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Search, Palette } from "lucide-react";
+import { Search, Palette, Droplets, Layers, Pipette, FlaskConical } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { ProductGrid } from "@/components/ProductGrid";
 import { ProductCard } from "@/components/ProductCard";
@@ -20,36 +20,75 @@ const FEATURED_HANDLES = [
   "individuellen-lackstift-bestellen-20ml",
 ];
 
-// Produkt-Sortierung: Bestseller oben, FRIZ nach unten
+// Produkte die komplett ausgeblendet werden (FRIZ + grau UBS)
+const HIDDEN_HANDLES = new Set<string>([
+  // Alle FRIZ-Produkte verstecken
+  "friz-2k-klarlack-glanzender-schutz-fur-perfekten-finish",
+  "friz-harter-10",
+  "friz-2k-harter-25-standard-harter-fur-klarlack-und-2k-lacke",
+  "friz-silikonentferner-mild",
+  "friz-silikonentferner-mild-1",
+  "friz-ubs-steinschlagschutz-schwarz-robuster-schutz-uberlackierbar",
+  "friz-ubs-steinschlagschutz-robuster-schutz-uberlackierbar-vielseitig",
+  "friz-multi-spachtel-rot",
+  "friz-profi-pe-multi-green",
+  "friz-2k-acrylverdunnung-n-5-liter",
+  "friz-nitroverdunnung-5l",
+  "friz-bc-verdunnung-5l",
+  "friz-silikonentferner-5l",
+  "friz-1k-dickschicht-grundierung-weiss",
+  "friz-1k-dickschicht-grundierung-schwarz",
+  "friz-1k-dickschicht-grundierung",
+  "friz-1k-klarlack-glanzend",
+  "friz-rallye-spray-schwarz-matt",
+  "friz-schleifpaste-perfect-heavy-cut-250-g",
+  "hochglanz-antihologramm-politur-750g-friz",
+  "schleifpaste-perfect-heavy-cut-750g-silikonfrei-friz",
+  "schleifpaste-perfect-heavy-cut-friz",
+  // Grau UBS — Schleifschwamm kommt stattdessen
+  "troton-ubs-steinschlagschutz-korrosionsschutz-unterbodenschutz-grau-500ml",
+]);
+
+// Produkt-Sortierung: Bestseller oben
 const PRODUCT_PRIORITY: string[] = [
-  // Tier 1: Bestseller
+  // Tier 1: Bestseller Klarlack
+  "mipa-cc9-2k-hs-klarlack-5l",
   "mipa-cx4-express-klarlack",
   "master-hs-2-1-klarlack-5l",
   "mipa-cc-9-klarlack-1-l",
-  "mipa-cc9-2k-hs-klarlack-5l",
-  // Tier 2: Immer wieder — Verbrauchsmaterial
+  // Tier 2: Lackstift + Konfiguratoren
+  "individuellen-lackstift-bestellen-20ml",
+  // Tier 3: Härter — Mipa zuerst
+  "mipa-hs-25-2k-harter-normal",
+  "mipa-hs25-harter-normal",
+  "mipa-hs-10-2k-hs-harter-kurz",
+  "mipa-hs-35-2k-hs-harter-lang",
+  "mipa-h5-2k-harter-extra-schnell",
   "master-hs-harter-2k",
   "master-harter-hs-1-2-fast-0-5-l",
   "master-hs-1-2-harter-standard",
   "master-hs-1-2-harter-fast",
-  "mipa-hs-10-2k-hs-harter-kurz",
-  "mipa-hs-25-2k-harter-normal",
-  "mipa-hs25-harter-normal",
+  // Tier 4: Verdünnung
   "avo-acrylverdunnung-profi-line",
   "meyer-nitro-universalverdunnung",
-  "beiges-abdeckband-19-mm-prazise-kanten-perfektes-finish",
-  "beiges-abdeckband-30-mm-fur-breite-saubere-kanten",
-  "green-tape-19-mm-profi-abdeckband-fur-lackierer",
-  "green-tape-30-mm-abdeckband-fur-prazise-lackierarbeiten",
-  "green-tape-50-mm-extra-breit-fur-maximale-kontrolle",
+  // Tier 5: Schleif & UBS
+  "feiner-schleifschwamm-p220-p400",
+  "troton-ubs-steinschlagschutz-korrosionsschutz-unterbodenschutz-500ml",
+  "mipa-steinschlagschutz-ubs-uberlackierbar-schwarz",
   "rhynogrip-p800-schleifscheiben",
   "rhynogrip-p600-schleifscheiben",
   "rhynogrip-p500-schleifscheiben",
   "rhynogrip-p400-schleifscheiben",
   "mp-schleifscheiben-goldfilm",
   "app-ws-222-schleifvlies",
-  // Tier 3: Werkstatt-Standard
+  // Tier 6: Abdeckmaterial
+  "beiges-abdeckband-19-mm-prazise-kanten-perfektes-finish",
+  "beiges-abdeckband-30-mm-fur-breite-saubere-kanten",
+  "green-tape-19-mm-profi-abdeckband-fur-lackierer",
+  "green-tape-30-mm-abdeckband-fur-prazise-lackierarbeiten",
+  "green-tape-50-mm-extra-breit-fur-maximale-kontrolle",
   "crs-foam-tape",
+  // Tier 7: Werkstatt-Standard
   "mipa-etch-filler-hb-der-1k-haftfuller-fur-schwierige-untergrunde",
   "mipa-etch-primer-spray",
   "mipa-acryl-lack-spray",
@@ -59,10 +98,8 @@ const PRODUCT_PRIORITY: string[] = [
   "a1-der-wax-schwamm",
   "a1-speed-shampoo-schnell-schonend-stark",
   "gewaffelte-polierpads",
-  // Tier 4: Mipa Spezial
   "mipa-mipatherm-silber-hitzebestandiger-lack-bis-800-c-400-ml-spraydose",
   "mipa-mipatherm-hitzebestandiger-lack-bis-800-c-400-ml-spraydose",
-  // FRIZ kommt zuletzt (automatisch via isFrizProduct)
 ];
 
 const isFrizProduct = (handle: string) =>
@@ -100,10 +137,13 @@ export default function Shop() {
   // nur in der "Alle"-Ansicht (keine Kategorie, keine Suche)
   const showFeatured = !category && !submittedSearch.trim();
 
-  // im Hauptraster die Konfigurator-Produkte rausfiltern (keine Dopplung)
-  const gridProducts = showFeatured
-    ? products.filter((p) => !FEATURED_HANDLES.includes(p.node.handle))
-    : products;
+  // im Hauptraster: Konfiguratoren + versteckte Produkte rausfiltern
+  const gridProducts = products.filter((p) => {
+    if (HIDDEN_HANDLES.has(p.node.handle)) return false;
+    if (isFrizProduct(p.node.handle)) return false;
+    if (showFeatured && FEATURED_HANDLES.includes(p.node.handle)) return false;
+    return true;
+  });
 
   // Sortierung: Bestseller oben, FRIZ nach unten
   const sortedGridProducts = useMemo(() => {
@@ -179,6 +219,32 @@ export default function Shop() {
           </Link>
         ))}
       </div>
+
+      {/* Schnellzugriff: Klarlack · Härter · Wunschfarbe · Verdünnung */}
+      {showFeatured && (
+        <section className="mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { slug: "klarlacke", label: "Klarlack", sub: "2K HS & Express", icon: <Layers className="w-7 h-7" />, color: "from-blue-500/20 to-blue-400/5" },
+              { slug: "haerter", label: "Härter", sub: "Standard · Fast · Slow", icon: <FlaskConical className="w-7 h-7" />, color: "from-amber-500/20 to-amber-400/5" },
+              { slug: "wunschfarben", label: "Wunschfarbe", sub: "Mipa · Standox · Sikkens", icon: <Pipette className="w-7 h-7" />, color: "from-primary/20 to-primary/5" },
+              { slug: "verduennungen", label: "Verdünnung", sub: "Acryl · Nitro · Uni", icon: <Droplets className="w-7 h-7" />, color: "from-emerald-500/20 to-emerald-400/5" },
+            ].map(({ slug, label, sub, icon, color }) => (
+              <Link
+                key={slug}
+                to={`/shop/${slug}`}
+                className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${color} p-5 flex flex-col gap-3 hover:border-primary/50 transition-all duration-200 hover:scale-[1.02] min-h-[130px]`}
+              >
+                <span className="text-primary opacity-80 group-hover:opacity-100 transition-opacity">{icon}</span>
+                <div>
+                  <p className="font-bold text-base leading-tight">{label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{sub}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Eigene Farbe konfigurieren — Top 3 */}
       {showFeatured && featured.length > 0 && (

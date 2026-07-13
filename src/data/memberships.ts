@@ -94,7 +94,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       },
       {
         label: "7 % Cashback ab 500 € Teileumsatz",
-        info: "Erreichst du im Monat mind. 500 € Umsatz über das Teileportal, bekommst du 7 % zurück als Guthaben für deine nächste Bestellung.",
+        info: "Erreichst du im Monat mind. 500 € Umsatz über das Teileportal, bekommst du 7 % zurück als Guthaben für deine nächste Bestellung. ⚡ Früheinsteiger-Konditionen: Da das Mitgliedschaftsprogramm neu ist, starten wir mit niedrigen Einstiegsschwellen. Ab 2027 werden die Mindest­umsätze angehoben — wer jetzt einsteigt, sichert sich dauerhaft die aktuellen Konditionen.",
       },
     ],
   },
@@ -141,7 +141,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       },
       {
         label: "8,5 % Cashback ab 1.200 € Teileumsatz",
-        info: "Erreichst du im Monat mind. 1.200 € Umsatz über das Teileportal, bekommst du 8,5 % zurück als Guthaben.",
+        info: "Erreichst du im Monat mind. 1.200 € Umsatz über das Teileportal, bekommst du 8,5 % zurück als Guthaben. ⚡ Früheinsteiger-Konditionen: Das Mitgliedschaftsprogramm ist neu — deshalb gelten aktuell noch niedrige Einstiegsschwellen. Ab 2027 werden die Mindest­umsätze für das Cashback angehoben. Wer jetzt Mitglied wird, behält die heutigen Bedingungen dauerhaft.",
       },
     ],
   },
@@ -188,7 +188,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       },
       {
         label: "12,5 % Cashback ab 2.500 € Teileumsatz",
-        info: "Erreichst du im Monat mind. 2.500 € Umsatz über das Teileportal, bekommst du 12,5 % zurück als Guthaben.",
+        info: "Erreichst du im Monat mind. 2.500 € Umsatz über das Teileportal, bekommst du 12,5 % zurück als Guthaben. ⚡ Früheinsteiger-Konditionen: Da das Programm noch neu ist, bieten wir bewusst niedrige Einstiegsschwellen — als echten Mehrwert für frühe Mitglieder. Ab 2027 steigen die Mindest­umsätze. Level-3-Mitglieder die heute einsteigen, sind dauerhaft zu diesen Konditionen eingefroren.",
       },
     ],
   },
