@@ -76,9 +76,9 @@ export function getCategoryBySlug(slug: string) {
 // Homepage collections
 export const collections = [
   { label: "Günstige Autoteile bestellen", slug: "autoteile", image: "/images/collection-autoteile.png", query: "title:Autoteile" },
-  { label: "Alle Produkte", slug: "alle", image: "/images/collection-wunschfarben.png", query: "" },
+  { label: "Alle Produkte", slug: "alle", image: "/images/collection-filter.png", query: "" },
   { label: "Günstige Lackierprodukte", slug: "lackierprodukte", image: "/images/collection-lackierprodukte.webp", query: "tag:Klarlack OR tag:Grundierung OR tag:Härter OR tag:Verdünnung OR tag:Spachtel" },
   { label: "Öle & Flüssigkeiten", slug: "oele", image: "/images/collection-oele.webp", query: "tag:Motoröl OR title:Bremsenreiniger" },
   { label: "Karosserie & Reparaturmaterial", slug: "karosserie", image: "/images/collection-karosserie.webp", query: "tag:Steinschlagschutz OR tag:Dichtmasse OR tag:Spachtel OR tag:Strukturlack" },
-  { label: "Wunschfarben erstellen", slug: "wunschfarben", image: "/images/collection-filter.png", query: "product_type:Autolack" },
+  { label: "Wunschfarben erstellen", slug: "wunschfarben", image: "/images/collection-wunschfarben.png", query: "product_type:Autolack" },
 ];
