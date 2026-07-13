@@ -5,7 +5,6 @@ import type { Feature } from "@/data/memberships";
 import { toast } from "sonner";
 import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
 import { useAuth } from "@/context/AuthContext";
-import { requestMembership } from "@/lib/inbox";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { cn } from "@/lib/utils";
 
@@ -70,18 +69,29 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
     const mail = user?.email || email;
     if (!mail) return toast.error("Bitte E-Mail angeben");
     setLoading(true);
-    const { error } = await requestMembership({
-      level: m.level,
-      modules,
-      email: mail,
-      userId: user?.id,
-    });
-    setLoading(false);
-    if (error) return toast.error("Anfrage fehlgeschlagen", { description: error });
-    toast.success("Anfrage gesendet!", {
-      description: user ? "Du findest die Bestätigung in deiner Inbox." : "Wir melden uns per E-Mail.",
-    });
-    setEmail("");
+    try {
+      const res = await fetch("/api/membership-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: mail,
+          level: m.level,
+          modules,
+          price,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Unbekannter Fehler");
+      toast.success("E-Mails versendet! 📬", {
+        description: "Bitte prüfe dein Postfach — du bekommst 2 E-Mails (Verifikation + Zugangsdaten).",
+      });
+      setEmail("");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error("Anfrage fehlgeschlagen", { description: msg });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
