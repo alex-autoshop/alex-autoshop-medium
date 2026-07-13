@@ -114,7 +114,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     badge: "Beste Wahl",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     // Autoteile günstigst · Lackmaterial mittig · Lackfarben teuerst → Summe = 228 - 69 = 159 €
-    modulePrices: { Autoteile: 39, Lackmaterial: 49, Lackfarben: 71 },
+    modulePrices: { Autoteile: 22, Lackmaterial: 58, Lackfarben: 79 },
     savingsExample: 2347,
     features: [
       {
@@ -163,7 +163,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     badge: "Premium",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     // Autoteile günstigst · Lackmaterial mittig · Lackfarben teuerst → Summe = 430 - 149 = 281 €
-    modulePrices: { Autoteile: 69, Lackmaterial: 89, Lackfarben: 123 },
+    modulePrices: { Autoteile: 41, Lackmaterial: 105, Lackfarben: 135 },
     savingsExample: 5930,
     features: [
       {

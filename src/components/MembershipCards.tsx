@@ -55,8 +55,10 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
   const originalPrice = useMemo(() => {
     if (isBase || !m.originalPrice) return undefined;
-    return Math.round(m.originalPrice * moduleRatio);
-  }, [isBase, moduleRatio, m.originalPrice]);
+    // originalPrice muss immer > actual price — proportional zum vollen Preisverhältnis
+    const fullRatio = m.originalPrice / m.pricePerMonth;
+    return Math.round((m.basePrice + moduleSum) * fullRatio);
+  }, [isBase, moduleSum, m.originalPrice, m.pricePerMonth, m.basePrice]);
 
   const savings = useMemo(() => {
     if (isBase) return null;
