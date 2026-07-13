@@ -14,6 +14,8 @@ export interface MembershipLevel {
   tagline: string;
   modules: string[];
   defaultModules?: string[];
+  /** Einzelpreise je Modul (Autoteile günstigst, Lackmaterial mittig, Lackfarben teuerst) */
+  modulePrices: Record<string, number>;
   features: Feature[];
   savingsExample: number;
   highlight?: boolean;
@@ -66,6 +68,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     tagline: "Für Aufbereiter & kleine Werkstätten — clever ab Tag 1",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     defaultModules: ["Lackfarben", "Lackmaterial"],
+    // Autoteile günstigst · Lackmaterial mittig · Lackfarben teuerst → Summe = 49 - 19 = 30 €
+    modulePrices: { Autoteile: 8, Lackmaterial: 10, Lackfarben: 12 },
     savingsExample: 467,
     features: [
       {
@@ -109,6 +113,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     highlight: true,
     badge: "Beste Wahl",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
+    // Autoteile günstigst · Lackmaterial mittig · Lackfarben teuerst → Summe = 228 - 69 = 159 €
+    modulePrices: { Autoteile: 39, Lackmaterial: 49, Lackfarben: 71 },
     savingsExample: 2347,
     features: [
       {
@@ -156,6 +162,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     tagline: "Höchstrabatt & VIP-Service für Lackier- & Karosseriebetriebe",
     badge: "Premium",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
+    // Autoteile günstigst · Lackmaterial mittig · Lackfarben teuerst → Summe = 430 - 149 = 281 €
+    modulePrices: { Autoteile: 69, Lackmaterial: 89, Lackfarben: 123 },
     savingsExample: 5930,
     features: [
       {

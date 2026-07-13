@@ -39,20 +39,29 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const ratio = modules.length / m.modules.length;
   const activeDiscount = isBase ? m.baseDiscountPercent : m.discountPercent;
 
+  // Per-Modul-Preis: Autoteile günstigst, Lackmaterial mittig, Lackfarben teuerst
+  const moduleSum = useMemo(() => {
+    if (isBase) return 0;
+    return modules.reduce((sum, mod) => sum + (m.modulePrices[mod] ?? 0), 0);
+  }, [isBase, modules, m.modulePrices]);
+
+  const totalModuleCost = Object.values(m.modulePrices).reduce((s, v) => s + v, 0);
+  const moduleRatio = totalModuleCost > 0 ? moduleSum / totalModuleCost : ratio;
+
   const price = useMemo(() => {
     if (isBase) return m.basePrice;
-    return Math.round(m.pricePerMonth * ratio);
-  }, [isBase, modules.length, m.pricePerMonth, m.basePrice, ratio]);
+    return m.basePrice + moduleSum;
+  }, [isBase, moduleSum, m.basePrice]);
 
   const originalPrice = useMemo(() => {
     if (isBase || !m.originalPrice) return undefined;
-    return Math.round(m.originalPrice * ratio);
-  }, [isBase, modules.length, m.originalPrice, ratio]);
+    return Math.round(m.originalPrice * moduleRatio);
+  }, [isBase, moduleRatio, m.originalPrice]);
 
   const savings = useMemo(() => {
     if (isBase) return null;
-    return Math.round(m.savingsExample * ratio);
-  }, [isBase, modules.length, m.savingsExample, ratio]);
+    return Math.round(m.savingsExample * moduleRatio);
+  }, [isBase, moduleRatio, m.savingsExample]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
