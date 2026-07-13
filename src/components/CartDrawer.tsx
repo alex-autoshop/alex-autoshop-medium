@@ -124,6 +124,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
 
   const [placing, setPlacing] = useState(false);
   const [confirmed, setConfirmed] = useState<ConfirmedOrder | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   const total = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
   const currency = items[0]?.price.currencyCode ?? "EUR";
@@ -200,7 +201,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     if (user) {
       recordOrder({ userId: user.id, items: toOrderItems(), total, currency });
     }
-    window.location.href = shopifyCartUrl;
+    setRedirecting(true);
+    setTimeout(() => {
+      window.location.href = shopifyCartUrl;
+    }, 1800);
   };
 
   const openInvoicePdf = () => {
@@ -418,7 +422,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 )}
 
                 <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Sichere Bezahlung über Shopify
+                  <ShieldCheck className="w-3.5 h-3.5" /> Sichere Bezahlung über Shopify · shop.alex-autoshop.de
                 </p>
               </div>
             )}
@@ -426,6 +430,43 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             )}
           </motion.aside>
         </>
+      )}
+      {redirecting && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="bg-background border border-primary/30 rounded-2xl p-8 flex flex-col items-center gap-5 max-w-xs mx-4 text-center shadow-2xl"
+          >
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <ShieldCheck className="w-8 h-8 text-primary animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold">Weiterleitung zum Checkout</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                Sie werden zu unserem sicheren Shopify-Checkout weitergeleitet.
+              </p>
+              <p className="text-xs text-primary mt-3 font-mono font-semibold">
+                shop.alex-autoshop.de
+              </p>
+            </div>
+            <div className="flex gap-1.5">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                />
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
   );
