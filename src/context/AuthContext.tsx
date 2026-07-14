@@ -28,6 +28,12 @@ export interface CompanyProfile {
   referral_code?: string;      // Eindeutiger Referral-Code des Users
   affiliate_credit?: number;   // Gesamtes Guthaben in € (20% vom Umsatz der Empfohlenen)
   referred_by?: string;        // Referral-Code des Users, der diesen User empfohlen hat
+  // Zahlung / Express-Kauf
+  iban?: string;               // IBAN für SEPA-Lastschrift / Express-Kauf
+  bic?: string;                // BIC (optional)
+  account_holder?: string;     // Kontoinhaber
+  sepa_mandate_accepted?: boolean; // SEPA-Mandat erteilt
+  delivery_plz?: string;       // PLZ für Lieferung auf Rechnung (nur 42xxx = Wuppertal)
 }
 
 interface AuthState {
@@ -62,6 +68,12 @@ function readProfile(user: User | null): CompanyProfile {
     referral_code: m.referral_code,
     affiliate_credit: typeof m.affiliate_credit === "number" ? m.affiliate_credit : 0,
     referred_by: m.referred_by,
+    // Zahlung / Express-Kauf
+    iban: m.iban,
+    bic: m.bic,
+    account_holder: m.account_holder,
+    sepa_mandate_accepted: m.sepa_mandate_accepted ?? false,
+    delivery_plz: m.delivery_plz,
   };
 }
 

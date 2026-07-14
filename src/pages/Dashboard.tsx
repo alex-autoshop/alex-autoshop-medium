@@ -25,6 +25,12 @@ import {
   Copy,
   TrendingUp,
   Zap,
+  Settings,
+  CreditCard,
+  MapPin,
+  Info,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { B2BProductCard } from "@/components/B2BProductCard";
@@ -40,11 +46,11 @@ import { formatPrice } from "@/lib/shopify";
 import { MEMBERSHIP_LEVELS, moduleDiscounts, MEMBERSHIP_MODULE_KEYS, type MembershipModule } from "@/data/memberships";
 import { allCategories } from "@/lib/categories";
 import { whatsappLink } from "@/data/shopInfo";
-import { requestMembership } from "@/lib/inbox";
+import { requestMembership, sendMessage } from "@/lib/inbox";
 import { MembershipCards } from "@/components/MembershipCards";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "shop" | "teileportal" | "inbox" | "planner" | "orders" | "affiliate" | "profile";
+type Tab = "overview" | "shop" | "teileportal" | "inbox" | "planner" | "orders" | "affiliate" | "profile" | "settings";
 
 const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
@@ -55,6 +61,7 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "orders", label: "Bestellungen", icon: ClipboardList },
   { id: "affiliate", label: "Affiliate", icon: Users2 },
   { id: "profile", label: "Firmendaten", icon: Building2 },
+  { id: "settings", label: "Einstellungen", icon: Settings },
 ];
 
 export default function Dashboard() {
@@ -74,6 +81,26 @@ export default function Dashboard() {
     !!profile.trial_expires_at &&
     new Date(profile.trial_expires_at) > now;
   const effectiveLevel = trialActive ? (profile.trial_level ?? level) : level;
+
+  // Willkommens-Benachrichtigung über Express-Kauf / Bankdaten (einmalig pro Browser)
+  useEffect(() => {
+    if (!user) return;
+    const key = `iban_notif_${user.id}`;
+    if (localStorage.getItem(key)) return;
+    if (profile.iban) { localStorage.setItem(key, "1"); return; }
+    // Kleine Verzögerung — erst nach kurzer Zeit senden
+    const timer = setTimeout(async () => {
+      await sendMessage({
+        recipient: user.id,
+        type: "system",
+        title: "💳 Bankdaten hinterlegen — mehr Vorteile!",
+        body: "Hinterlege deine IBAN einmalig in den Einstellungen und schalte Express-Kauf frei: bestelle ohne Umweg über PayPal, direkt per SEPA vom Bankkonto. Außerdem: Lieferung auf Rechnung (Wuppertal), schnellere Abwicklung und Affiliate-Auszahlung. Einstellungen → Dashboard → ⚙️ Einstellungen.",
+      });
+      localStorage.setItem(key, "1");
+    }, 3000);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   return (
     <div className="container py-8 sm:py-12">
@@ -129,6 +156,7 @@ export default function Dashboard() {
       {tab === "orders" && <Orders />}
       {tab === "affiliate" && <AffiliateTab user={user} profile={profile} />}
       {tab === "profile" && <ProfileForm />}
+      {tab === "settings" && <PaymentSettings />}
     </div>
   );
 }
@@ -723,6 +751,284 @@ function Orders() {
           </button>
         </div>
       ))}
+    </div>
+  );
+}
+
+function PaymentSettings() {
+  const { profile, updateProfile } = useAuth();
+  const [iban, setIban] = useState(profile.iban || "");
+  const [bic, setBic] = useState(profile.bic || "");
+  const [accountHolder, setAccountHolder] = useState(profile.account_holder || "");
+  const [mandateAccepted, setMandateAccepted] = useState(profile.sepa_mandate_accepted || false);
+  const [deliveryPlz, setDeliveryPlz] = useState(profile.delivery_plz || "");
+  const [showIban, setShowIban] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const plzClean = deliveryPlz.replace(/\D/g, "").slice(0, 5);
+  const isWuppertal = plzClean.length === 5 && plzClean.startsWith("42");
+  const ibanDisplay = showIban
+    ? iban
+    : iban
+    ? `${iban.slice(0, 4)} •••• •••• •••• ${iban.slice(-4)}`
+    : "";
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (iban && !mandateAccepted) {
+      toast.error("Bitte SEPA-Mandat bestätigen", { description: "Aktiviere das Häkchen für das Lastschrift-Mandat." });
+      return;
+    }
+    setSaving(true);
+    const { error } = await updateProfile({
+      iban: iban.replace(/\s/g, "").toUpperCase(),
+      bic: bic.toUpperCase(),
+      account_holder: accountHolder,
+      sepa_mandate_accepted: mandateAccepted,
+      delivery_plz: plzClean,
+    });
+    setSaving(false);
+    if (error) toast.error("Speichern fehlgeschlagen", { description: error });
+    else toast.success("Einstellungen gespeichert ✓", { description: "Express-Kauf & Rechnung-Lieferung jetzt verfügbar." });
+  };
+
+  return (
+    <div className="max-w-2xl space-y-6">
+
+      {/* Hero-Banner: Status */}
+      <div className="section-dark rounded-2xl p-6">
+        <div className="flex items-start gap-4 mb-5">
+          <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+            <Settings className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-display font-bold text-white mb-1">Zahlungs-Einstellungen</h2>
+            <p className="text-white/55 text-sm leading-relaxed">
+              Hinterlege deine Bankdaten für Express-Kauf per SEPA, Lieferung auf Rechnung und Affiliate-Auszahlung.
+              Deine Daten werden verschlüsselt gespeichert und nur von Alex Autoshop verwendet.
+            </p>
+          </div>
+        </div>
+
+        {/* Status-Chips */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[
+            {
+              icon: <Zap className="w-4 h-4" />,
+              label: "Express-Kauf",
+              active: !!profile.iban,
+              activeText: `IBAN ••••${profile.iban?.slice(-4)}`,
+              inactiveText: "IBAN hinterlegen",
+            },
+            {
+              icon: <Truck className="w-4 h-4" />,
+              label: "Liefern auf Rechnung",
+              active: !!profile.delivery_plz && profile.delivery_plz.startsWith("42"),
+              activeText: `PLZ ${profile.delivery_plz} — Wuppertal ✓`,
+              inactiveText: "PLZ eintragen",
+            },
+            {
+              icon: <TrendingUp className="w-4 h-4" />,
+              label: "Affiliate-Auszahlung",
+              active: !!profile.iban,
+              activeText: "Aktiv",
+              inactiveText: "IBAN erforderlich",
+            },
+          ].map(({ icon, label, active, activeText, inactiveText }) => (
+            <div
+              key={label}
+              className={cn(
+                "rounded-xl border px-3 py-2.5 flex items-center gap-2 text-sm",
+                active ? "border-green-500/40 bg-green-500/10" : "border-amber-400/30 bg-amber-400/8"
+              )}
+            >
+              <div className={cn("shrink-0", active ? "text-green-500" : "text-amber-400")}>{icon}</div>
+              <div className="min-w-0">
+                <p className="font-semibold text-xs text-foreground">{label}</p>
+                <p className={cn("text-xs truncate", active ? "text-green-500" : "text-amber-500")}>{active ? activeText : inactiveText}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* IBAN / Bankdaten Formular */}
+      <form onSubmit={save} className="card-tilt hover:translate-y-0 p-6 space-y-5">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2 mb-1">
+            <CreditCard className="w-5 h-5 text-primary" /> Bankdaten für Express-Kauf & SEPA
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Für den Express-Kauf im Shop wird der Betrag direkt per SEPA-Lastschrift von deinem Konto abgebucht — ohne Umleitung zu PayPal.
+          </p>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Kontoinhaber *</label>
+          <input
+            value={accountHolder}
+            onChange={(e) => setAccountHolder(e.target.value)}
+            placeholder="Max Mustermann oder Mustermann GmbH"
+            className="input-base"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">IBAN *</label>
+          <div className="relative flex gap-2">
+            <input
+              value={showIban ? iban : ibanDisplay}
+              onChange={(e) => setIban(e.target.value.replace(/\s/g, ""))}
+              onFocus={() => setShowIban(true)}
+              onBlur={() => setShowIban(false)}
+              placeholder="DE00 0000 0000 0000 0000 00"
+              className="input-base flex-1 font-mono tracking-wider"
+              maxLength={34}
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              onClick={() => setShowIban(!showIban)}
+              className="shrink-0 w-11 h-11 flex items-center justify-center border border-border rounded-xl hover:bg-secondary"
+              aria-label={showIban ? "IBAN verbergen" : "IBAN anzeigen"}
+            >
+              {showIban ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1.5">Format: DE + 20 Ziffern, z.B. DE89370400440532013000</p>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">BIC <span className="text-muted-foreground font-normal">(optional)</span></label>
+          <input
+            value={bic}
+            onChange={(e) => setBic(e.target.value.toUpperCase())}
+            placeholder="z.B. COBADEFFXXX"
+            className="input-base font-mono"
+            maxLength={11}
+          />
+        </div>
+
+        {/* SEPA-Mandat */}
+        {(iban || profile.iban) && (
+          <label className="flex items-start gap-3 rounded-xl border border-border bg-secondary/40 p-4 cursor-pointer hover:border-primary/40 transition-colors">
+            <input
+              type="checkbox"
+              checked={mandateAccepted}
+              onChange={(e) => setMandateAccepted(e.target.checked)}
+              className="w-5 h-5 mt-0.5 accent-primary shrink-0"
+            />
+            <span className="text-sm text-muted-foreground leading-relaxed">
+              Ich erteile <strong className="text-foreground">Alex Autoshop</strong> ein SEPA-Lastschrift-Mandat.
+              Alex Autoshop ist berechtigt, Bestellbeträge von meinem o.g. Konto einzuziehen.
+              Ich kann innerhalb von 8 Wochen Rückbuchung verlangen.
+              <a href="/agb" target="_blank" rel="noopener noreferrer" className="text-primary underline ml-1">AGB lesen</a>
+            </span>
+          </label>
+        )}
+
+        <button
+          type="submit"
+          disabled={saving || (!!iban && !mandateAccepted)}
+          className="btn-primary w-full"
+        >
+          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+          Bankdaten speichern
+        </button>
+      </form>
+
+      {/* Lieferung auf Rechnung */}
+      <div className="card-tilt hover:translate-y-0 p-6 space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2 mb-1">
+          <Truck className="w-5 h-5 text-primary" /> Lieferung auf Rechnung
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Für Kunden in Wuppertal bieten wir Lieferung auf Rechnung an — Zahlung innerhalb von 14 Tagen nach Lieferung.
+          Trage deine PLZ ein, damit der Button im Warenkorb erscheint.
+        </p>
+
+        <div>
+          <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+            <MapPin className="w-4 h-4 text-primary" /> Deine Lieferungs-PLZ
+          </label>
+          <input
+            value={plzClean}
+            onChange={(e) => setDeliveryPlz(e.target.value.replace(/\D/g, "").slice(0, 5))}
+            placeholder="z.B. 42277"
+            className="input-base"
+            maxLength={5}
+          />
+        </div>
+
+        {plzClean.length === 5 && (
+          <div className={cn(
+            "rounded-xl px-4 py-3 text-sm flex items-center gap-2",
+            isWuppertal
+              ? "bg-green-500/10 border border-green-500/30 text-green-500"
+              : "bg-amber-400/10 border border-amber-400/30 text-amber-600 dark:text-amber-400"
+          )}>
+            {isWuppertal ? (
+              <><Check className="w-4 h-4 shrink-0" /> <span>Wuppertal erkannt — <strong>Lieferung auf Rechnung</strong> verfügbar! Der Button erscheint ab sofort im Warenkorb.</span></>
+            ) : (
+              <><Info className="w-4 h-4 shrink-0" /> <span>Außerhalb Wuppertal — Lieferung auf Rechnung derzeit nur für PLZ 42xxx (Wuppertal) verfügbar. Erweiterung auf NRW geplant.</span></>
+            )}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={async () => {
+            setSaving(true);
+            const { error } = await updateProfile({ delivery_plz: plzClean });
+            setSaving(false);
+            if (error) toast.error("Fehler", { description: error });
+            else toast.success(isWuppertal ? "Wuppertal-Lieferung aktiviert ✓" : "PLZ gespeichert");
+          }}
+          disabled={saving || plzClean.length !== 5}
+          className="btn-outline w-full disabled:opacity-40"
+        >
+          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+          PLZ speichern
+        </button>
+      </div>
+
+      {/* Vorteils-Übersicht */}
+      <div className="card-tilt hover:translate-y-0 p-6">
+        <h3 className="text-base font-semibold mb-4">Alle Vorteile mit hinterlegten Daten</h3>
+        <div className="space-y-3">
+          {[
+            {
+              icon: <Zap className="w-4 h-4 text-primary" />,
+              title: "⚡ Express-Kauf ohne PayPal",
+              desc: "1 Klick bestellen — Zahlung läuft per SEPA automatisch im Hintergrund. Kein Redirect, kein Warten.",
+            },
+            {
+              icon: <Truck className="w-4 h-4 text-primary" />,
+              title: "🚚 Lieferung auf Rechnung (Wuppertal)",
+              desc: "Ware kommt zuerst, Zahlung 14 Tage später per Überweisung. Nur für Wuppertal (PLZ 42xxx).",
+            },
+            {
+              icon: <TrendingUp className="w-4 h-4 text-primary" />,
+              title: "💸 Affiliate-Guthaben auszahlen",
+              desc: "Dein Guthaben aus Empfehlungen kann direkt auf dein Bankkonto ausgezahlt werden.",
+            },
+            {
+              icon: <ShieldCheck className="w-4 h-4 text-primary" />,
+              title: "🔒 Reibungslose Geschäftsabwicklung",
+              desc: "Als Stammkunde mit hinterlegten Daten bekommst du Priorität bei Lieferung und Support.",
+            },
+          ].map(({ icon, title, desc }) => (
+            <div key={title} className="flex gap-3 items-start">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">{icon}</div>
+              <div>
+                <p className="font-semibold text-sm">{title}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }

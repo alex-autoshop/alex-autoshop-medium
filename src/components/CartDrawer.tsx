@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard, Lock } from "lucide-react";
+import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard, Lock, Truck, MapPin, Info, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
@@ -24,6 +25,7 @@ interface ConfirmedOrder {
   date: string;
   companyName?: string;
   email?: string;
+  mode?: "abholung" | "auf_rechnung" | "sepa";
 }
 
 function generateInvoiceHtml(order: ConfirmedOrder): string {
@@ -99,11 +101,28 @@ function generateInvoiceHtml(order: ConfirmedOrder): string {
     </tbody>
   </table>
 
+  ${order.mode === "auf_rechnung" ? `
+  <div class="info-box" style="background:#fff8e1;border-color:#f5c518;">
+    <strong>Zahlung auf Rechnung (14 Tage)</strong><br>
+    Bitte überweise den Betrag innerhalb von 14 Tagen nach Lieferung:<br><br>
+    <strong>Empfänger:</strong> Alex Autoshop · Alexander Haritopoulos<br>
+    <strong>IBAN:</strong> [wird nach Bestellbestätigung per E-Mail mitgeteilt]<br>
+    <strong>Verwendungszweck:</strong> Bestellung AA-${order.orderId ? order.orderId.slice(0, 8).toUpperCase() : "XXXXXX"}<br><br>
+    <em>Lieferung erfolgt nach Auftragsbestätigung durch Alex Autoshop.</em>
+  </div>
+  ` : order.mode === "sepa" ? `
+  <div class="info-box" style="background:#e8f5e9;border-color:#4caf50;">
+    <strong>Zahlung per SEPA-Lastschrift</strong><br>
+    Der Betrag wird von deinem hinterlegten Bankkonto eingezogen.<br>
+    Buchungsdatum: innerhalb von 2–3 Werktagen.
+  </div>
+  ` : `
   <div class="info-box">
     <strong>Zahlung bei Abholung</strong><br>
     Bitte bringen Sie diese Bestätigung mit. Bezahlt wird an der Theke — bar oder Karte.<br>
     Öffnungszeiten: Mo–Fr 9–17:30 Uhr · Sa 9–14 Uhr
   </div>
+  `}
 
   <div class="footer">
     Alex Autoshop · Handelstraße 64 · 42277 Wuppertal · USt-IdNr: auf Anfrage<br>
@@ -121,15 +140,25 @@ function generateInvoiceHtml(order: ConfirmedOrder): string {
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const { items, isLoading, updateQuantity, removeItem, clearCart } = useCartStore();
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
 
   const [placing, setPlacing] = useState(false);
   const [confirmed, setConfirmed] = useState<ConfirmedOrder | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [plz, setPlz] = useState(profile.delivery_plz || "");
+  const [showInvoicePanel, setShowInvoicePanel] = useState(false);
 
   const total = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
   const currency = items[0]?.price.currencyCode ?? "EUR";
   const discount = user ? discountForLevel(profile.membership_level) : 0;
   const memberSaving = total * (discount / 100);
+
+  // PLZ-Check: Wuppertal = 42xxx
+  const plzClean = plz.replace(/\D/g, "").slice(0, 5);
+  const isWuppertal = plzClean.length === 5 && plzClean.startsWith("42");
+
+  // Express-Kauf: IBAN vorhanden?
+  const hasIban = !!profile.iban;
 
   const toOrderItems = (): OrderItem[] =>
     items.map((i) => ({
@@ -142,9 +171,16 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       quantity: i.quantity,
     }));
 
-  // Express-Kauf: sofortige Bestätigung, Zahlung bei Abholung
+  // Express-Kauf: SEPA (wenn IBAN) oder Abholung
   const handleExpressOrder = async () => {
     if (!user || items.length === 0 || placing) return;
+    if (!hasIban) {
+      toast.info("Bankdaten für Express-Kauf hinterlegen", {
+        description: "Trage deine IBAN einmalig in den Dashboard-Einstellungen ein.",
+        action: { label: "Jetzt eintragen →", onClick: () => { onClose(); navigate("/dashboard?tab=settings"); } },
+      });
+      return;
+    }
     setPlacing(true);
     const count = items.reduce((n, i) => n + i.quantity, 0);
     const orderItems = toOrderItems();
@@ -154,7 +190,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       items: orderItems,
       total,
       currency,
-      status: "bestaetigt",
+      status: "sepa_pending",
     });
 
     if (error) {
@@ -166,25 +202,59 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     await sendMessage({
       recipient: user.id,
       type: "system",
-      title: "Bestellung bestätigt ✓",
-      body: `Deine Bestellung über ${formatPrice(String(total), currency)} (${count} Position${count === 1 ? "" : "en"}) ist bei uns eingegangen. Wir legen sie für dich bereit — bezahlt wird bei Abholung an der Theke.`,
+      title: "Express-Kauf bestätigt ✓ — SEPA-Einzug",
+      body: `Deine Express-Bestellung über ${formatPrice(String(total), currency)} (${count} Position${count === 1 ? "" : "en"}) ist bestätigt. Der Betrag wird per SEPA-Lastschrift von deinem hinterlegten Bankkonto (••••${profile.iban?.slice(-4)}) eingezogen. Buchungsdatum: 2–3 Werktage.`,
     });
 
     const snapshot: ConfirmedOrder = {
-      total,
-      currency,
-      count,
-      orderId,
-      items: orderItems,
+      total, currency, count, orderId, items: orderItems, mode: "sepa",
       date: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      companyName: profile?.company_name,
-      email: user.email,
+      companyName: profile?.company_name, email: user.email,
     };
-
     clearCart();
     setConfirmed(snapshot);
     setPlacing(false);
-    toast.success("Bestellung bestätigt", { description: "Zahlung bei Abholung an der Theke." });
+    toast.success("Express-Kauf bestätigt", { description: `SEPA-Einzug von ••••${profile.iban?.slice(-4)}` });
+  };
+
+  // Lieferung auf Rechnung — nur Wuppertal (PLZ 42xxx)
+  const handleInvoiceOrder = async () => {
+    if (!user || items.length === 0 || placing || !isWuppertal) return;
+    setPlacing(true);
+    const count = items.reduce((n, i) => n + i.quantity, 0);
+    const orderItems = toOrderItems();
+
+    const { error, orderId } = await recordOrder({
+      userId: user.id,
+      items: orderItems,
+      total,
+      currency,
+      status: "auf_rechnung",
+    });
+
+    if (error) {
+      toast.error("Bestellung fehlgeschlagen", { description: error });
+      setPlacing(false);
+      return;
+    }
+
+    await sendMessage({
+      recipient: user.id,
+      type: "system",
+      title: "Lieferbestellung auf Rechnung ✓",
+      body: `Deine Bestellung über ${formatPrice(String(total), currency)} (PLZ ${plzClean}) wird geliefert. Zahlungsziel: 14 Tage nach Lieferung. Die Bankdaten für die Überweisung erhältst du per E-Mail. Bestellnr: AA-${orderId?.slice(0, 8).toUpperCase() ?? "XXXXXX"}`,
+    });
+
+    const snapshot: ConfirmedOrder = {
+      total, currency, count, orderId, items: orderItems, mode: "auf_rechnung",
+      date: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      companyName: profile?.company_name, email: user.email,
+    };
+    clearCart();
+    setConfirmed(snapshot);
+    setPlacing(false);
+    setShowInvoicePanel(false);
+    toast.success("Lieferbestellung bestätigt", { description: "Zahlung auf Rechnung innerhalb 14 Tage." });
   };
 
   // Normaler Shopify Checkout — direkte Cart-URL ohne API-Call, 100% zuverlässig
@@ -283,8 +353,23 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 </div>
 
                 <div className="mt-5 rounded-xl bg-secondary/60 border border-border p-4 text-sm text-left w-full max-w-xs">
-                  <p className="flex items-center gap-2 font-semibold"><FileText className="w-4 h-4 text-primary" /> Zahlung bei Abholung</p>
-                  <p className="text-muted-foreground mt-1">Wir legen deine Bestellung bereit. Bezahlt wird an der Theke — bar oder Karte.</p>
+                  {confirmed.mode === "auf_rechnung" ? (
+                    <>
+                      <p className="flex items-center gap-2 font-semibold"><Truck className="w-4 h-4 text-primary" /> Lieferung auf Rechnung</p>
+                      <p className="text-muted-foreground mt-1">Wir liefern deine Bestellung. Bezahle innerhalb von <strong className="text-foreground">14 Tagen</strong> nach Erhalt per Überweisung.</p>
+                      <p className="text-muted-foreground mt-1 text-xs">Bankdaten kommen per E-Mail. Verwendungszweck: AA-{confirmed.orderId?.slice(0, 8).toUpperCase()}</p>
+                    </>
+                  ) : confirmed.mode === "sepa" ? (
+                    <>
+                      <p className="flex items-center gap-2 font-semibold"><Zap className="w-4 h-4 text-primary" /> SEPA-Einzug</p>
+                      <p className="text-muted-foreground mt-1">Zahlung wird per SEPA-Lastschrift von deinem Bankkonto eingezogen — innerhalb von 2–3 Werktagen.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="flex items-center gap-2 font-semibold"><FileText className="w-4 h-4 text-primary" /> Zahlung bei Abholung</p>
+                      <p className="text-muted-foreground mt-1">Wir legen deine Bestellung bereit. Bezahlt wird an der Theke — bar oder Karte.</p>
+                    </>
+                  )}
                 </div>
 
                 {/* PDF / Drucken */}
@@ -391,7 +476,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   </div>
                 )}
 
-                {/* NORMALER ONLINE-CHECKOUT — für ALLE Kunden */}
+                {/* ── 1. NORMALER ONLINE-CHECKOUT ── */}
                 <button
                   onClick={handleOnlineCheckout}
                   className="btn-gold-bright w-full text-base font-bold gap-2"
@@ -400,29 +485,107 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   Jetzt kaufen (Kreditkarte / PayPal)
                 </button>
 
-                {/* EXPRESS-KAUF — für Registrierte sofort, sonst gesperrt */}
+                {/* ── 2. EXPRESS-KAUF (SEPA / IBAN) ── */}
                 {user ? (
-                  <button
-                    onClick={handleExpressOrder}
-                    disabled={placing}
-                    className="btn-outline w-full gap-2 disabled:opacity-60"
-                  >
-                    <Zap className="w-5 h-5" />
-                    {placing ? "Wird bestätigt …" : "⚡ Express-Kauf — zahlen bei Abholung"}
-                  </button>
+                  hasIban ? (
+                    <button
+                      onClick={handleExpressOrder}
+                      disabled={placing}
+                      className="btn-outline w-full gap-2 disabled:opacity-60 border-primary/40 hover:border-primary"
+                    >
+                      <Zap className="w-4 h-4 text-primary" />
+                      {placing ? "Wird bestätigt …" : `⚡ Express-Kauf · SEPA ••••${profile.iban?.slice(-4)}`}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        toast.info("IBAN für Express-Kauf hinterlegen", {
+                          description: "Einmalig eintragen — dann blitzschnell bestellen ohne PayPal.",
+                          action: { label: "Einstellungen →", onClick: () => { onClose(); navigate("/dashboard?tab=settings"); } },
+                        });
+                      }}
+                      className="btn-outline w-full gap-2 opacity-70 hover:opacity-100"
+                    >
+                      <Zap className="w-4 h-4" />
+                      ⚡ Express-Kauf
+                      <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
+                        <Info className="w-3 h-3" /> IBAN hinterlegen
+                      </span>
+                    </button>
+                  )
                 ) : (
                   <button
-                    disabled
-                    title="Nur für registrierte Kunden"
-                    className="btn-outline w-full gap-2 opacity-40 cursor-not-allowed"
+                    onClick={() => { onClose(); navigate("/konto"); }}
+                    className="btn-outline w-full gap-2 opacity-60"
                   >
                     <Lock className="w-4 h-4" />
-                    Express-Kauf — <a href="/auth" className="text-primary underline" onClick={e => e.stopPropagation()}>Anmelden</a>
+                    ⚡ Express-Kauf — Anmelden
+                  </button>
+                )}
+
+                {/* ── 3. LIEFERN & AUF RECHNUNG (nur Wuppertal) ── */}
+                {user ? (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowInvoicePanel(!showInvoicePanel)}
+                      className="btn-dark w-full gap-2 text-sm"
+                    >
+                      <Truck className="w-4 h-4" />
+                      Bitte Liefern & auf Rechnung!
+                      <ChevronDown className={`w-4 h-4 ml-auto transition-transform ${showInvoicePanel ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {showInvoicePanel && (
+                      <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                          <input
+                            type="text"
+                            value={plzClean}
+                            onChange={(e) => setPlz(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                            placeholder="Deine PLZ (z.B. 42277)"
+                            className="input-base text-sm flex-1"
+                            maxLength={5}
+                          />
+                        </div>
+                        {plzClean.length === 5 && !isWuppertal && (
+                          <p className="text-xs text-amber-500 flex items-center gap-1.5 px-1">
+                            <Info className="w-3 h-3 shrink-0" />
+                            Lieferung auf Rechnung derzeit nur in Wuppertal (PLZ 42xxx) verfügbar.
+                          </p>
+                        )}
+                        {isWuppertal && (
+                          <>
+                            <p className="text-xs text-green-500 flex items-center gap-1.5 px-1">
+                              <ShieldCheck className="w-3 h-3 shrink-0" />
+                              Wuppertal erkannt — Lieferung auf Rechnung (14 Tage) möglich!
+                            </p>
+                            <button
+                              onClick={handleInvoiceOrder}
+                              disabled={placing}
+                              className="btn-primary w-full gap-2 text-sm"
+                            >
+                              <Truck className="w-4 h-4" />
+                              {placing ? "Bestätigung …" : "Bestätigen & auf Rechnung bestellen"}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { onClose(); navigate("/konto"); }}
+                    className="btn-dark w-full gap-2 text-sm opacity-60"
+                  >
+                    <Truck className="w-4 h-4" />
+                    Liefern & auf Rechnung — Anmelden
                   </button>
                 )}
 
                 <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Sichere Bezahlung über Shopify · shop.alex-autoshop.de
+                  <ShieldCheck className="w-3.5 h-3.5" /> Sichere Bezahlung · alex-autoshop.de
                 </p>
               </div>
             )}
