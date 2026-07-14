@@ -10,6 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { discountForLevel } from "@/data/memberships";
 import { recordOrder, type OrderItem } from "@/lib/orders";
 import { sendMessage } from "@/lib/inbox";
+import { AuthModal } from "@/components/AuthModal";
 
 interface CartDrawerProps {
   open: boolean;
@@ -145,6 +146,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [placing, setPlacing] = useState(false);
   const [confirmed, setConfirmed] = useState<ConfirmedOrder | null>(null);
   const [redirecting, setRedirecting] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const total = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
   const currency = items[0]?.price.currencyCode ?? "EUR";
@@ -519,22 +521,24 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   )
                 ) : (
                   <button
-                    onClick={() => { onClose(); navigate("/konto"); }}
-                    className="btn-outline w-full gap-2 opacity-60"
+                    onClick={() => setShowAuthModal(true)}
+                    className="btn-outline w-full gap-2 opacity-60 hover:opacity-100"
                   >
                     <Lock className="w-4 h-4" />
-                    ⚡ Express-Kauf — Anmelden
+                    ⚡ Express-Kauf —{" "}
+                    <span className="underline underline-offset-2">Anmelden</span>
                   </button>
                 )}
 
                 {/* ── 3. LIEFERN & AUF RECHNUNG (nur Wuppertal, PLZ aus Profil) ── */}
                 {!user ? (
                   <button
-                    onClick={() => { onClose(); navigate("/konto"); }}
-                    className="btn-dark w-full gap-2 text-sm opacity-60"
+                    onClick={() => setShowAuthModal(true)}
+                    className="btn-dark w-full gap-2 text-sm opacity-60 hover:opacity-100"
                   >
                     <Truck className="w-4 h-4" />
-                    Liefern & auf Rechnung — Anmelden
+                    Liefern & auf Rechnung —{" "}
+                    <span className="underline underline-offset-2">Anmelden</span>
                   </button>
                 ) : isWuppertal ? (
                   <button
@@ -575,6 +579,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           </motion.aside>
         </>
       )}
+      <AuthModal
+        open={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => setShowAuthModal(false)}
+      />
       {redirecting && (
         <motion.div
           initial={{ opacity: 0 }}
