@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard, Lock, Truck, MapPin, Info, ChevronDown } from "lucide-react";
+import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard, Lock, Truck, Info } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
@@ -145,17 +145,15 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [placing, setPlacing] = useState(false);
   const [confirmed, setConfirmed] = useState<ConfirmedOrder | null>(null);
   const [redirecting, setRedirecting] = useState(false);
-  const [plz, setPlz] = useState(profile.delivery_plz || "");
-  const [showInvoicePanel, setShowInvoicePanel] = useState(false);
 
   const total = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
   const currency = items[0]?.price.currencyCode ?? "EUR";
   const discount = user ? discountForLevel(profile.membership_level) : 0;
   const memberSaving = total * (discount / 100);
 
-  // PLZ-Check: Wuppertal = 42xxx
-  const plzClean = plz.replace(/\D/g, "").slice(0, 5);
-  const isWuppertal = plzClean.length === 5 && plzClean.startsWith("42");
+  // PLZ-Check NUR aus gespeichertem Profil — kein manuelles Eingabefeld im Warenkorb
+  const profilePlz = (profile.delivery_plz || "").replace(/\D/g, "");
+  const isWuppertal = profilePlz.length === 5 && profilePlz.startsWith("42");
 
   // Express-Kauf: IBAN vorhanden?
   const hasIban = !!profile.iban;
@@ -217,9 +215,16 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     toast.success("Express-Kauf bestätigt", { description: `SEPA-Einzug von ••••${profile.iban?.slice(-4)}` });
   };
 
-  // Lieferung auf Rechnung — nur Wuppertal (PLZ 42xxx)
+  // Lieferung auf Rechnung — nur wenn Wuppertal-PLZ im gespeicherten Profil steht
   const handleInvoiceOrder = async () => {
-    if (!user || items.length === 0 || placing || !isWuppertal) return;
+    if (!user || items.length === 0 || placing) return;
+    // Doppelte Absicherung: PLZ muss aus Profil kommen, nicht aus Userinput
+    if (!isWuppertal) {
+      toast.error("Lieferung auf Rechnung nicht verfügbar", {
+        description: "Nur für Kunden mit gespeicherter Wuppertal-Adresse (PLZ 42xxx) in den Einstellungen.",
+      });
+      return;
+    }
     setPlacing(true);
     const count = items.reduce((n, i) => n + i.quantity, 0);
     const orderItems = toOrderItems();
@@ -242,7 +247,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       recipient: user.id,
       type: "system",
       title: "Lieferbestellung auf Rechnung ✓",
-      body: `Deine Bestellung über ${formatPrice(String(total), currency)} (PLZ ${plzClean}) wird geliefert. Zahlungsziel: 14 Tage nach Lieferung. Die Bankdaten für die Überweisung erhältst du per E-Mail. Bestellnr: AA-${orderId?.slice(0, 8).toUpperCase() ?? "XXXXXX"}`,
+      body: `Deine Bestellung über ${formatPrice(String(total), currency)} (PLZ ${profilePlz}) wird geliefert. Zahlungsziel: 14 Tage nach Lieferung. Die Bankdaten für die Überweisung erhältst du per E-Mail. Bestellnr: AA-${orderId?.slice(0, 8).toUpperCase() ?? "XXXXXX"}`,
     });
 
     const snapshot: ConfirmedOrder = {
@@ -523,64 +528,41 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   </button>
                 )}
 
-                {/* ── 3. LIEFERN & AUF RECHNUNG (nur Wuppertal) ── */}
-                {user ? (
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowInvoicePanel(!showInvoicePanel)}
-                      className="btn-dark w-full gap-2 text-sm"
-                    >
-                      <Truck className="w-4 h-4" />
-                      Bitte Liefern & auf Rechnung!
-                      <ChevronDown className={`w-4 h-4 ml-auto transition-transform ${showInvoicePanel ? "rotate-180" : ""}`} />
-                    </button>
-
-                    {showInvoicePanel && (
-                      <div className="rounded-xl border border-border bg-secondary/30 p-3 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
-                          <input
-                            type="text"
-                            value={plzClean}
-                            onChange={(e) => setPlz(e.target.value.replace(/\D/g, "").slice(0, 5))}
-                            placeholder="Deine PLZ (z.B. 42277)"
-                            className="input-base text-sm flex-1"
-                            maxLength={5}
-                          />
-                        </div>
-                        {plzClean.length === 5 && !isWuppertal && (
-                          <p className="text-xs text-amber-500 flex items-center gap-1.5 px-1">
-                            <Info className="w-3 h-3 shrink-0" />
-                            Lieferung auf Rechnung derzeit nur in Wuppertal (PLZ 42xxx) verfügbar.
-                          </p>
-                        )}
-                        {isWuppertal && (
-                          <>
-                            <p className="text-xs text-green-500 flex items-center gap-1.5 px-1">
-                              <ShieldCheck className="w-3 h-3 shrink-0" />
-                              Wuppertal erkannt — Lieferung auf Rechnung (14 Tage) möglich!
-                            </p>
-                            <button
-                              onClick={handleInvoiceOrder}
-                              disabled={placing}
-                              className="btn-primary w-full gap-2 text-sm"
-                            >
-                              <Truck className="w-4 h-4" />
-                              {placing ? "Bestätigung …" : "Bestätigen & auf Rechnung bestellen"}
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
+                {/* ── 3. LIEFERN & AUF RECHNUNG (nur Wuppertal, PLZ aus Profil) ── */}
+                {!user ? (
                   <button
                     onClick={() => { onClose(); navigate("/konto"); }}
                     className="btn-dark w-full gap-2 text-sm opacity-60"
                   >
                     <Truck className="w-4 h-4" />
                     Liefern & auf Rechnung — Anmelden
+                  </button>
+                ) : isWuppertal ? (
+                  <button
+                    onClick={handleInvoiceOrder}
+                    disabled={placing}
+                    className="btn-dark w-full gap-2 text-sm"
+                  >
+                    <Truck className="w-4 h-4" />
+                    {placing ? "Bestätigung …" : `Bitte Liefern & auf Rechnung! (PLZ ${profilePlz})`}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      toast.info("Wuppertal-Adresse im Profil hinterlegen", {
+                        description: profilePlz
+                          ? `Deine PLZ ${profilePlz} liegt außerhalb Wuppertal. Lieferung auf Rechnung nur für PLZ 42xxx.`
+                          : "Trage deine Liefer-PLZ einmalig in den Einstellungen ein. Nur Wuppertal (PLZ 42xxx) berechtigt.",
+                        action: { label: "Einstellungen →", onClick: () => { onClose(); navigate("/dashboard?tab=settings"); } },
+                      });
+                    }}
+                    className="btn-dark w-full gap-2 text-sm opacity-60"
+                  >
+                    <Truck className="w-4 h-4" />
+                    Bitte Liefern & auf Rechnung!
+                    <span className="ml-auto text-xs flex items-center gap-1 opacity-80">
+                      <Info className="w-3 h-3" /> Wuppertal-Adresse erforderlich
+                    </span>
                   </button>
                 )}
 
