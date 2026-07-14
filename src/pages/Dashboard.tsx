@@ -516,7 +516,8 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
         <div>
           <h2 className="text-xl font-display font-bold text-white mb-1">Empfehle Kollegen — verdiene mit</h2>
           <p className="text-white/55 text-sm leading-relaxed">
-            Du verdienst <strong className="text-primary">20% vom Einkaufsumsatz</strong> jedes Lackierers, den du über deinen persönlichen Link zu Alex Autoshop bringst.
+            Du verdienst <strong className="text-primary">20% vom Einkaufsumsatz</strong> jedes Kunden, den du über deinen persönlichen Link zu Alex Autoshop bringst —
+            egal ob Lackierer, Karosseriebetrieb, Aufbereiter, KFZ-Werkstatt, Händler oder Hobby-Bastler.
             Alles automatisch — du musst nichts tun außer deinen Link teilen.
           </p>
         </div>
