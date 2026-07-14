@@ -6,9 +6,9 @@ const SUPABASE_URL     = process.env.VITE_SUPABASE_URL;
 const SUPABASE_SVC_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const FROM_EMAIL       = 'Alex Autoshop <mitgliedschaft@alex-autoshop.de>';
 const REPLY_TO         = 'info@alex-autoshop.de';
-const LOGIN_URL        = 'https://clever-cart-fixer.vercel.app/auth';
+const LOGIN_URL        = 'https://www.alex-autoshop.de/auth';
 const SHOP_URL         = 'https://shop.alex-autoshop.de';
-const SITE_URL         = 'https://clever-cart-fixer.vercel.app';
+const SITE_URL         = 'https://www.alex-autoshop.de';
 
 const LEVEL_INFO = {
   1: { name: 'Level 1',  tagline: 'Für Aufbereiter & kleine Werkstätten', discount: 15, welcome: 50,  cashback: '7 %',   cashbackMin: 500  },
