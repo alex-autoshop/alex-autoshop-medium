@@ -20,6 +20,11 @@ import {
   Truck,
   ShieldCheck,
   Check,
+  Clock,
+  Users2,
+  Copy,
+  TrendingUp,
+  Zap,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { B2BProductCard } from "@/components/B2BProductCard";
@@ -39,7 +44,7 @@ import { requestMembership } from "@/lib/inbox";
 import { MembershipCards } from "@/components/MembershipCards";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "shop" | "teileportal" | "inbox" | "planner" | "orders" | "profile";
+type Tab = "overview" | "shop" | "teileportal" | "inbox" | "planner" | "orders" | "affiliate" | "profile";
 
 const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
@@ -48,6 +53,7 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "inbox", label: "Nachrichten", icon: InboxIcon },
   { id: "planner", label: "Materialplaner", icon: ClipboardCheck },
   { id: "orders", label: "Bestellungen", icon: ClipboardList },
+  { id: "affiliate", label: "Affiliate", icon: Users2 },
   { id: "profile", label: "Firmendaten", icon: Building2 },
 ];
 
@@ -60,6 +66,14 @@ export default function Dashboard() {
   const level = profile.membership_level ?? 0;
   const levelInfo = MEMBERSHIP_LEVELS.find((m) => m.level === level);
   const greeting = profile.contact_name || profile.company_name || user?.email?.split("@")[0] || "Willkommen";
+
+  // Trial: wenn aktiv → effektives Level für den Shop erhöhen
+  const now = new Date();
+  const trialActive =
+    !!profile.trial_level &&
+    !!profile.trial_expires_at &&
+    new Date(profile.trial_expires_at) > now;
+  const effectiveLevel = trialActive ? (profile.trial_level ?? level) : level;
 
   return (
     <div className="container py-8 sm:py-12">
@@ -94,8 +108,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {tab === "overview" && <Overview level={level} profile={profile} />}
-      {tab === "shop" && <DashboardShop level={level} profile={profile} />}
+      {tab === "overview" && <Overview level={level} profile={profile} trialActive={trialActive} effectiveLevel={effectiveLevel} />}
+      {tab === "shop" && <DashboardShop level={effectiveLevel} profile={profile} trialActive={trialActive} />}
       {tab === "teileportal" && (
         <div className="-mt-4">
           <Teileportal />
@@ -113,18 +127,42 @@ export default function Dashboard() {
         </div>
       )}
       {tab === "orders" && <Orders />}
+      {tab === "affiliate" && <AffiliateTab user={user} profile={profile} />}
       {tab === "profile" && <ProfileForm />}
     </div>
   );
 }
 
-function Overview({ level, profile }: { level: number; profile: import("@/context/AuthContext").CompanyProfile }) {
+function Overview({ level, profile, trialActive, effectiveLevel }: {
+  level: number;
+  profile: import("@/context/AuthContext").CompanyProfile;
+  trialActive: boolean;
+  effectiveLevel: number;
+}) {
   const levelInfo = MEMBERSHIP_LEVELS.find((m) => m.level === level);
+  const effectiveLevelInfo = MEMBERSHIP_LEVELS.find((m) => m.level === effectiveLevel);
   const pct = levelInfo?.discountPercent ?? 0;
   const [showChange, setShowChange] = useState(false);
 
   return (
     <div className="space-y-5">
+      {/* Trial-Banner */}
+      {trialActive && profile.trial_expires_at && (
+        <div className="rounded-xl border border-primary/50 bg-primary/8 p-4 flex items-center gap-3 flex-wrap">
+          <Clock className="w-5 h-5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">
+              Level {profile.trial_level} Trial aktiv
+              {effectiveLevelInfo && <span className="text-primary ml-1">· {effectiveLevelInfo.discountPercent}% Rabatt</span>}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Läuft ab: {new Date(profile.trial_expires_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr · Jetzt Mitglied werden und dauerhaft sparen
+            </p>
+          </div>
+          <Link to="/mitgliedschaft" className="btn-primary text-xs py-2 shrink-0">Mitglied werden →</Link>
+        </div>
+      )}
+
       {/* Top: Stufe + Mehr sparen */}
       <div className="grid sm:grid-cols-3 gap-5">
         <div className="card-tilt hover:translate-y-0 p-6 sm:col-span-1">
@@ -241,7 +279,7 @@ function CurrentModules({ level, profile }: { level: number; profile: import("@/
   );
 }
 
-function DashboardShop({ level, profile }: { level: number; profile: import("@/context/AuthContext").CompanyProfile }) {
+function DashboardShop({ level, profile, trialActive }: { level: number; profile: import("@/context/AuthContext").CompanyProfile; trialActive?: boolean }) {
   const [category, setCategory] = useState<string>("");
   const [search, setSearch] = useState("");
   const [submitted, setSubmitted] = useState("");
@@ -260,7 +298,11 @@ function DashboardShop({ level, profile }: { level: number; profile: import("@/c
           <h2 className="text-xl sm:text-2xl">B2B Shop</h2>
           <p className="text-white/65 text-sm mt-1">
             {discount > 0 ? (
-              <>Deine Netto-Preise als <span className="text-gold-accent font-semibold">Mitglied · −{discount}%</span> sind schon eingerechnet — einfach Menge wählen und bestellen.</>
+              <>
+                {trialActive && <span className="inline-flex items-center gap-1 text-xs font-semibold bg-primary/20 text-primary rounded-full px-2 py-0.5 mr-2"><Clock className="w-3 h-3" />Trial</span>}
+                Deine Netto-Preise als <span className="text-gold-accent font-semibold">Mitglied · −{discount}%</span> sind schon eingerechnet — einfach Menge wählen und bestellen.
+                {trialActive && <> <Link to="/mitgliedschaft" className="text-gold-accent underline">Jetzt dauerhaft Mitglied werden →</Link></>}
+              </>
             ) : (
               <>Das komplette Profi-Sortiment für deine Werkstatt. <Link to="/mitgliedschaft" className="text-gold-accent font-semibold underline">Mitglied werden</Link> und bei jeder Bestellung bis 40% sparen.</>
             )}
@@ -445,6 +487,154 @@ function Planner() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js").User | null; profile: import("@/context/AuthContext").CompanyProfile }) {
+  const referralCode  = profile.referral_code || user?.id?.slice(0, 8).toUpperCase() || "ALEX0000";
+  const referralLink  = `https://www.alex-autoshop.de/mitgliedschaft?ref=${referralCode}`;
+  const credit        = profile.affiliate_credit ?? 0;
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      toast.success("Link kopiert! 🔗", { description: "Jetzt an Kollegen teilen." });
+    } catch {
+      toast.error("Kopieren fehlgeschlagen — bitte manuell kopieren.");
+    }
+  };
+
+  return (
+    <div className="space-y-5 max-w-2xl">
+
+      {/* Hero */}
+      <div className="section-dark rounded-2xl p-6 flex items-start gap-4">
+        <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0">
+          <TrendingUp className="w-6 h-6 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-xl font-display font-bold text-white mb-1">Empfehle Kollegen — verdiene mit</h2>
+          <p className="text-white/55 text-sm leading-relaxed">
+            Du verdienst <strong className="text-primary">20% vom Einkaufsumsatz</strong> jedes Lackierers, den du über deinen persönlichen Link zu Alex Autoshop bringst.
+            Alles automatisch — du musst nichts tun außer deinen Link teilen.
+          </p>
+        </div>
+      </div>
+
+      {/* Guthaben + Stats */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div className="card-tilt hover:translate-y-0 p-6">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">Dein Guthaben</p>
+          <p className={cn("text-4xl font-display font-bold", credit > 0 ? "text-primary" : "text-foreground")}>
+            {credit.toFixed(2).replace(".", ",")} €
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">Wird bei deiner nächsten Bestellung automatisch angerechnet</p>
+        </div>
+        <div className="card-tilt hover:translate-y-0 p-6">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">Empfohlene Kollegen</p>
+          <p className="text-4xl font-display font-bold">0</p>
+          <p className="text-xs text-muted-foreground mt-2">Live-Tracking — aktualisiert sich automatisch</p>
+        </div>
+      </div>
+
+      {/* Referral-Link */}
+      <div className="card-tilt hover:translate-y-0 p-6">
+        <h3 className="text-base font-semibold mb-1">Dein persönlicher Referral-Link</h3>
+        <p className="text-sm text-muted-foreground mb-3">Teile diesen Link mit jedem Lackierer, Karosseriebetrieb oder Aufbereiter den du kennst:</p>
+        <div className="flex gap-2">
+          <code className="flex-1 bg-secondary/60 border border-border rounded-lg px-3 py-2.5 text-sm font-mono text-muted-foreground truncate">
+            {referralLink}
+          </code>
+          <button onClick={copyLink} className="btn-outline shrink-0 px-4 min-h-[44px]" aria-label="Link kopieren">
+            <Copy className="w-4 h-4" />
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">Dein Code: <span className="font-mono text-foreground">{referralCode}</span></p>
+      </div>
+
+      {/* Wie es funktioniert */}
+      <div className="card-tilt hover:translate-y-0 p-6">
+        <h3 className="text-base font-semibold mb-4">So funktioniert's</h3>
+        <div className="space-y-4">
+          {[
+            {
+              step: "1",
+              icon: <Users2 className="w-4 h-4 text-primary" />,
+              title: "Link teilen",
+              desc: "Schick deinen Referral-Link an Lackier-Kollegen, Karosseriebetriebe oder Aufbereiter. Per WhatsApp, Instagram, oder einfach im Gespräch.",
+            },
+            {
+              step: "2",
+              icon: <Zap className="w-4 h-4 text-primary" />,
+              title: "Kollege wird Mitglied",
+              desc: "Dein Kollege klickt auf deinen Link und meldet sich als Alex Autoshop Mitglied an. Fertig — ab jetzt läuft alles automatisch.",
+            },
+            {
+              step: "3",
+              icon: <TrendingUp className="w-4 h-4 text-primary" />,
+              title: "Du verdienst 20% — dauerhaft",
+              desc: "Von jedem Euro, den dein Kollege bei Alex Autoshop einkauft, bekommst du 20% als Guthaben auf dein Konto. Unbegrenzt, ohne Limit.",
+            },
+          ].map(({ step, icon, title, desc }) => (
+            <div key={step} className="flex gap-4">
+              <div className="w-9 h-9 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0">
+                <span className="text-primary font-bold text-sm">{step}</span>
+              </div>
+              <div className="pt-0.5">
+                <div className="flex items-center gap-2 mb-1">
+                  {icon}
+                  <p className="font-semibold text-sm">{title}</p>
+                </div>
+                <p className="text-muted-foreground text-sm leading-relaxed">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Earning-Tabelle */}
+      <div className="card-tilt hover:translate-y-0 p-6">
+        <h3 className="text-base font-semibold mb-1">Das Potenzial — konkret gerechnet</h3>
+        <p className="text-sm text-muted-foreground mb-4">Was du monatlich verdienst, je nachdem wie aktiv dein Kollege einkauft:</p>
+        <div className="overflow-hidden rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-secondary/60 border-b border-border">
+                <th className="text-left px-4 py-3 text-xs text-muted-foreground font-semibold uppercase tracking-wide">Kollege kauft / Monat</th>
+                <th className="text-right px-4 py-3 text-xs text-muted-foreground font-semibold uppercase tracking-wide">Dein Guthaben</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { spend: "500 €", earn: "100 €" },
+                { spend: "1.500 €", earn: "300 €" },
+                { spend: "3.000 €", earn: "600 €" },
+                { spend: "5.000 €", earn: "1.000 €" },
+              ].map(({ spend, earn }, i) => (
+                <tr key={spend} className={cn("border-b border-border last:border-0", i % 2 === 0 ? "bg-background" : "bg-secondary/20")}>
+                  <td className="px-4 py-3 font-medium">{spend}</td>
+                  <td className="px-4 py-3 text-right font-bold text-primary">+{earn}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3">
+          Pro empfohlenem Kollegen — je mehr Kollegen du empfiehlst, desto mehr verdienst du. Kein Limit. Guthaben wird gegen zukünftige Bestellungen verrechnet.
+        </p>
+      </div>
+
+      {/* Referred-by Info */}
+      {profile.referred_by && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-5 py-4">
+          <p className="text-sm text-muted-foreground">
+            Du wurdest von einem Kollegen empfohlen (Code: <span className="font-mono text-foreground">{profile.referred_by}</span>).
+            Dein Kollege verdient 20% von deinen Einkäufen.
+          </p>
+        </div>
+      )}
+
     </div>
   );
 }

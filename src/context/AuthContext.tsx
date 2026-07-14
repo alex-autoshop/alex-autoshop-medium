@@ -20,6 +20,14 @@ export interface CompanyProfile {
   membership_level?: number;
   membership_modules?: string[]; // aktive Module: Autoteile, Lackfarben, Lackmaterial
   vehicles?: Vehicle[];
+  // Trial (1h kostenlos testen, einmalig pro Konto)
+  trial_level?: number;        // Welches Level getestet wird
+  trial_expires_at?: string;   // ISO-Timestamp wann Trial abläuft
+  trial_used?: boolean;        // Ob Trial jemals gestartet wurde (einmalig)
+  // Affiliate
+  referral_code?: string;      // Eindeutiger Referral-Code des Users
+  affiliate_credit?: number;   // Gesamtes Guthaben in € (20% vom Umsatz der Empfohlenen)
+  referred_by?: string;        // Referral-Code des Users, der diesen User empfohlen hat
 }
 
 interface AuthState {
@@ -46,6 +54,14 @@ function readProfile(user: User | null): CompanyProfile {
     membership_level: typeof m.membership_level === "number" ? m.membership_level : 0,
     membership_modules: Array.isArray(m.membership_modules) ? m.membership_modules : ["Autoteile", "Lackfarben", "Lackmaterial"],
     vehicles: Array.isArray(m.vehicles) ? m.vehicles : [],
+    // Trial
+    trial_level: typeof m.trial_level === "number" ? m.trial_level : undefined,
+    trial_expires_at: m.trial_expires_at,
+    trial_used: m.trial_used ?? false,
+    // Affiliate
+    referral_code: m.referral_code,
+    affiliate_credit: typeof m.affiliate_credit === "number" ? m.affiliate_credit : 0,
+    referred_by: m.referred_by,
   };
 }
 

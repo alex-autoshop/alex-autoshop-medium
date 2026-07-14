@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { Check, Zap, Loader2, Info } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Check, Zap, Loader2, Info, Clock } from "lucide-react";
 import type { Feature } from "@/data/memberships";
 import { toast } from "sonner";
 import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
@@ -25,11 +25,60 @@ export function MembershipCards({ compact = false }: { compact?: boolean }) {
 }
 
 function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
-  const { user } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
+  const navigate = useNavigate();
   const [modules, setModules] = useState<string[]>(m.defaultModules ?? m.modules);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [trialLoading, setTrialLoading] = useState(false);
   const [openInfo, setOpenInfo] = useState<string | null>(null);
+
+  // Trial-Status für dieses Level
+  const now = new Date();
+  const trialRunning =
+    profile.trial_level === m.level &&
+    !!profile.trial_expires_at &&
+    new Date(profile.trial_expires_at) > now;
+
+  const activateTrial = async () => {
+    if (!user) {
+      toast.info("Bitte zuerst anmelden", {
+        description: `Melde dich an — dann kannst du Level ${m.level} 1 Stunde gratis testen.`,
+      });
+      navigate("/konto");
+      return;
+    }
+    if (trialRunning) {
+      navigate("/dashboard?tab=shop");
+      return;
+    }
+    if (profile.trial_used) {
+      toast.error("Trial bereits genutzt", {
+        description: "Du hast deine kostenlose Teststunde bereits genutzt. Jetzt Mitglied werden und dauerhaft sparen!",
+      });
+      return;
+    }
+    setTrialLoading(true);
+    try {
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const { error } = await updateProfile({
+        trial_level:      m.level,
+        trial_expires_at: expiresAt,
+        trial_used:       true,
+      });
+      if (error) throw new Error(error);
+      toast.success(`Level ${m.level} Trial gestartet — 1 Stunde! 🎉`, {
+        description: "Du siehst jetzt alle Mitglieder-Preise. Viel Spaß beim Testen!",
+      });
+      navigate("/dashboard?tab=shop");
+    } catch (err: unknown) {
+      toast.error("Fehler beim Aktivieren", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setTrialLoading(false);
+    }
+  };
 
   const toggle = (mod: string) =>
     setModules((p) => (p.includes(mod) ? p.filter((x) => x !== mod) : [...p, mod]));
@@ -82,8 +131,8 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unbekannter Fehler");
-      toast.success("E-Mails versendet! 📬", {
-        description: "Bitte prüfe dein Postfach — du bekommst 2 E-Mails (Verifikation + Zugangsdaten).",
+      toast.success("E-Mail versendet! 📬", {
+        description: "Klick auf 'Zum Dashboard' in der Mail — du wirst automatisch eingeloggt.",
       });
       setEmail("");
     } catch (err: unknown) {
@@ -227,6 +276,32 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
             <button type="submit" disabled={loading} className={m.highlight ? "btn-primary w-full" : "btn-dark w-full"}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
               {isBase ? `Basis freischalten (${activeDiscount}%) →` : "Jetzt freischalten →"}
+            </button>
+
+            {/* Trial-Button — 1 Stunde gratis testen */}
+            <button
+              type="button"
+              onClick={activateTrial}
+              disabled={trialLoading || (profile.trial_used && !trialRunning)}
+              className={cn(
+                "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-colors min-h-[48px]",
+                trialRunning
+                  ? "border-primary bg-primary/10 text-primary"
+                  : profile.trial_used
+                  ? "border-border bg-secondary/20 text-muted-foreground/40 cursor-not-allowed"
+                  : "border-border bg-secondary/40 hover:border-primary hover:bg-primary/5 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {trialLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Clock className={cn("w-4 h-4", trialRunning ? "text-primary" : "")} />
+              )}
+              {trialRunning
+                ? "Trial aktiv — Zum Shop →"
+                : profile.trial_used
+                ? "Trial bereits genutzt"
+                : "1 Std. gratis testen →"}
             </button>
           </form>
         </>
