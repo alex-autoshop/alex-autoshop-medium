@@ -258,7 +258,6 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     clearCart();
     setConfirmed(snapshot);
     setPlacing(false);
-    setShowInvoicePanel(false);
     toast.success("Lieferbestellung bestätigt", { description: "Zahlung auf Rechnung innerhalb 14 Tage." });
   };
 
