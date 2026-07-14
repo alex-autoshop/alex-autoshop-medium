@@ -65,7 +65,7 @@ export function Seo({ title, description, image, jsonLd }: SeoProps) {
 
     // Google Analytics: Seitenaufruf tracken (falls GA4 aktiv)
     if (typeof window !== "undefined" && (window as any).gtag) {
-      (window as any).gtag("config", "DEINE_GA4_ID", { page_path: window.location.pathname });
+      (window as any).gtag("config", "G-BSRV5EWBJG", { page_path: window.location.pathname });
     }
 
     // Structured Data
