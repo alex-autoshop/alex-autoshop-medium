@@ -6,8 +6,8 @@ const SUPABASE_URL     = process.env.VITE_SUPABASE_URL;
 const SUPABASE_SVC_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const FROM_EMAIL       = 'Alex Autoshop <mitgliedschaft@alex-autoshop.de>';
 const REPLY_TO         = 'info@alex-autoshop.de';
-const LOGIN_URL        = 'https://www.alex-autoshop.de/auth';
-const SHOP_URL         = 'https://shop.alex-autoshop.de';
+const LOGIN_URL        = 'https://www.alex-autoshop.de/konto';
+const SHOP_URL         = 'https://www.alex-autoshop.de/shop';
 const SITE_URL         = 'https://www.alex-autoshop.de';
 
 const LEVEL_INFO = {
