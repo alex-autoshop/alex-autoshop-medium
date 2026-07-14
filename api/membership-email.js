@@ -51,11 +51,11 @@ function formatDate(d) {
 // ─── Gemeinsamer E-Mail-Header (Logo + Nav-Strip) ────────────────────────────
 const emailHeader = `
 <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(180deg,#0f0f0f 0%,#0a0a0a 100%);border-bottom:1px solid #1e1e1e;">
-  <tr><td style="padding:28px 40px;text-align:center;">
-    <table cellpadding="0" cellspacing="0" style="display:inline-table;border:2px solid #D4A017;border-radius:10px;padding:9px 20px;">
-      <tr><td style="color:#D4A017;font-size:19px;font-weight:900;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">alex autoshop</td></tr>
-    </table>
-    <p style="color:#444;font-size:10px;margin:7px 0 0;letter-spacing:2.5px;text-transform:uppercase;font-family:-apple-system,sans-serif;">Lackierprodukte · Autoteile · Werkstattbedarf · Wuppertal</p>
+  <tr><td style="padding:24px 40px;text-align:center;">
+    <a href="https://www.alex-autoshop.de" style="display:inline-block;text-decoration:none;">
+      <img src="https://www.alex-autoshop.de/images/logo-cropped.png" alt="Alex Autoshop" width="160" style="height:auto;display:block;margin:0 auto;" />
+    </a>
+    <p style="color:#444;font-size:10px;margin:8px 0 0;letter-spacing:2.5px;text-transform:uppercase;font-family:-apple-system,sans-serif;">Lackierprodukte · Autoteile · Werkstattbedarf · Wuppertal</p>
   </td></tr>
 </table>`;
 
@@ -63,7 +63,7 @@ const emailHeader = `
 const emailFooter = `
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#080808;border-top:1px solid #1a1a1a;">
   <tr><td style="padding:32px 40px;text-align:center;">
-    <p style="color:#D4A017;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 10px;font-family:-apple-system,sans-serif;">Alex Autoshop</p>
+    <img src="https://www.alex-autoshop.de/images/logo-cropped.png" alt="Alex Autoshop" width="100" style="height:auto;display:block;margin:0 auto 10px;" />
     <p style="color:#333;font-size:12px;margin:0 0 6px;line-height:1.8;font-family:-apple-system,sans-serif;">
       Handelstraße 64 · 42277 Wuppertal · Deutschland<br>
       Tel: <a href="tel:020282690" style="color:#444;text-decoration:none;">0202 82690</a> ·
