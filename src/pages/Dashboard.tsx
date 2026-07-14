@@ -121,18 +121,34 @@ export default function Dashboard() {
 
       {/* Tab-Leiste */}
       <div className="flex gap-2 overflow-x-auto pb-3 mb-8 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "shrink-0 inline-flex items-center gap-2 px-4 min-h-[48px] rounded-full border font-medium text-sm transition-colors",
-              tab === t.id ? "bg-night text-white border-night" : "bg-card border-border hover:border-primary"
-            )}
-          >
-            <t.icon className="w-4 h-4" /> {t.label}
-          </button>
-        ))}
+        {TABS.map((t) => {
+          const isAffiliate = t.id === "affiliate";
+          const isActive = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "shrink-0 inline-flex items-center gap-2 px-4 min-h-[48px] rounded-full border font-medium text-sm transition-all duration-200",
+                isAffiliate && !isActive
+                  ? "bg-gradient-to-r from-amber-500/15 to-yellow-400/10 border-amber-400/60 text-amber-400 hover:border-amber-400 hover:from-amber-500/25 hover:to-yellow-400/20 shadow-[0_0_12px_rgba(251,191,36,0.15)]"
+                  : isAffiliate && isActive
+                  ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-black border-transparent shadow-[0_0_18px_rgba(251,191,36,0.4)] font-bold"
+                  : isActive
+                  ? "bg-night text-white border-night"
+                  : "bg-card border-border hover:border-primary"
+              )}
+            >
+              <t.icon className="w-4 h-4" />
+              {t.label}
+              {isAffiliate && !isActive && (
+                <span className="ml-0.5 text-[10px] font-bold bg-amber-400 text-black rounded-full px-1.5 py-0.5 leading-none">
+                  €€€
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {tab === "overview" && <Overview level={level} profile={profile} trialActive={trialActive} effectiveLevel={effectiveLevel} />}
