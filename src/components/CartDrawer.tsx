@@ -153,6 +153,14 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const discount = user ? discountForLevel(profile.membership_level) : 0;
   const memberSaving = total * (discount / 100);
 
+  // Versandlogik
+  const FREE_THRESHOLD = 150;
+  const DHL_RATE = 5.9;
+  const isMember = user && (profile.membership_level === "level1" || profile.membership_level === "level2" || profile.membership_level === "level3");
+  const shippingCost = isMember ? 0 : total >= FREE_THRESHOLD ? 0 : DHL_RATE;
+  const remainingForFree = Math.max(0, FREE_THRESHOLD - total);
+  const freeProgress = Math.min(100, (total / FREE_THRESHOLD) * 100);
+
   // PLZ-Check NUR aus gespeichertem Profil — kein manuelles Eingabefeld im Warenkorb
   const profilePlz = (profile.delivery_plz || "").replace(/\D/g, "");
   const isWuppertal = profilePlz.length === 5 && profilePlz.startsWith("42");
@@ -466,9 +474,47 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             {/* ── Kassen-Bereich ── */}
             {items.length > 0 && (
               <div className="border-t border-border p-4 space-y-3">
-                <div className="flex justify-between font-bold text-lg">
+                {/* ── Versand-Fortschrittsbalken (nur für Nicht-Mitglieder unter Freigrenze) ── */}
+                {!isMember && total < FREE_THRESHOLD && total > 0 && (
+                  <div className="rounded-lg bg-secondary/60 border border-border p-3 space-y-2">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Noch <strong className="text-foreground">{formatPrice(String(remainingForFree), currency)}</strong> bis kostenlosem Versand</span>
+                      <span className="text-primary font-semibold">ab 150 €</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-border overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${freeProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Zwischensumme + Versand ── */}
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Zwischensumme</span>
+                    <span>{formatPrice(String(total), currency)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Versand</span>
+                    {isMember ? (
+                      <span className="text-primary font-semibold text-xs flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Kostenlos (Mitglied)
+                      </span>
+                    ) : shippingCost === 0 ? (
+                      <span className="text-primary font-semibold text-xs flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Kostenlos
+                      </span>
+                    ) : (
+                      <span>{formatPrice(String(shippingCost), currency)}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex justify-between font-bold text-lg border-t border-border pt-2">
                   <span>Gesamt</span>
-                  <span>{formatPrice(String(total), currency)}</span>
+                  <span>{formatPrice(String(total + shippingCost), currency)}</span>
                 </div>
 
                 {discount > 0 && (
