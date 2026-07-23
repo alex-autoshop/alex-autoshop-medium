@@ -141,11 +141,11 @@ function CategoryDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          "flex items-center gap-2 h-[52px] px-4 rounded-2xl border text-sm font-medium transition-all duration-200",
-          "bg-card/80 backdrop-blur-sm",
+          "flex items-center gap-2 h-[44px] px-4 rounded-xl border text-sm font-medium transition-all duration-200",
+          "bg-muted/50",
           open
-            ? "border-primary/60 shadow-[0_0_0_3px_hsl(var(--primary)/0.12)] text-foreground"
-            : "border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground",
+            ? "border-primary/50 text-foreground"
+            : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border",
         )}
       >
         <SlidersHorizontal className="w-4 h-4 shrink-0" />
@@ -342,12 +342,17 @@ export default function Shop() {
       {/* ── Sticky Search Bar ───────────────────────────────────────────── */}
       <div
         className={cn(
-          "sticky top-20 sm:top-24 z-30 -mx-4 sm:mx-0 px-4 sm:px-0 pt-3 pb-3",
-          "bg-background/95 backdrop-blur-md transition-all duration-300",
-          isStuck && "shadow-[0_4px_32px_rgba(0,0,0,0.12)] border-b border-border/50",
+          "sticky top-20 sm:top-24 z-30 py-3",
+          "transition-all duration-300",
         )}
       >
-        <div className="flex items-center gap-3">
+        <div className={cn(
+          "flex items-center gap-3 rounded-2xl border px-3 py-2",
+          "bg-card border-border/80 backdrop-blur-md transition-all duration-300",
+          isStuck
+            ? "shadow-[0_8px_32px_rgba(0,0,0,0.18)] border-border"
+            : "shadow-[0_2px_12px_rgba(0,0,0,0.08)]",
+        )}>
           {/* Search input */}
           <div className="relative flex-1 group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
@@ -357,12 +362,10 @@ export default function Shop() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Produkt suchen …"
               className={cn(
-                "w-full h-[52px] pl-11 pr-10 rounded-2xl border text-sm",
-                "bg-card/80 backdrop-blur-sm",
-                "border-border/60 focus:border-primary/60",
-                "focus:shadow-[0_0_0_3px_hsl(var(--primary)/0.12)]",
+                "w-full h-[44px] pl-10 pr-10 rounded-xl border-0 text-sm",
+                "bg-transparent",
                 "outline-none transition-all duration-200",
-                "placeholder:text-muted-foreground/60",
+                "placeholder:text-muted-foreground/50",
               )}
               aria-label="Produktsuche"
               autoComplete="off"
@@ -408,7 +411,8 @@ export default function Shop() {
 
           {/* Category dropdown */}
           <CategoryDropdown activeCategory={activeCategory} activeSlug={category} />
-        </div>
+        </div>{/* end card row */}
+
 
         {/* Active category breadcrumb */}
         <AnimatePresence>
