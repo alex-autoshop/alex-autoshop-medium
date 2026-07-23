@@ -564,6 +564,35 @@ export default async function handler(req) {
   });
   if (!r1.ok) return jsonError(`Resend Fehler (Email 1): ${await r1.text()}`, 502);
 
+  // ── Email 0: Admin-Benachrichtigung an Alex (sofort) ─────────────────────
+  const adminHtml = `<!DOCTYPE html><html lang="de"><body style="font-family:system-ui,sans-serif;background:#0D0D0D;color:#EDE9E3;padding:32px 24px;max-width:520px;margin:0 auto;">
+    <div style="background:#141414;border:1px solid #222;border-radius:16px;padding:28px 32px;">
+      <p style="color:#f1eb5b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:3px;margin:0 0 16px;">🔔 Neuer Mitgliedschaftsantrag</p>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr><td style="color:#888;font-size:13px;padding:8px 0;border-bottom:1px solid #1a1a1a;">E-Mail</td><td style="color:#fff;font-size:13px;font-weight:600;text-align:right;padding:8px 0;border-bottom:1px solid #1a1a1a;">${email}</td></tr>
+        <tr><td style="color:#888;font-size:13px;padding:8px 0;border-bottom:1px solid #1a1a1a;">Paket</td><td style="color:#f1eb5b;font-size:13px;font-weight:700;text-align:right;padding:8px 0;border-bottom:1px solid #1a1a1a;">${LEVEL_INFO[level]?.name ?? `Level ${level}`} — ${price},00 €/Mo</td></tr>
+        <tr><td style="color:#888;font-size:13px;padding:8px 0;border-bottom:1px solid #1a1a1a;">Module</td><td style="color:#fff;font-size:13px;text-align:right;padding:8px 0;border-bottom:1px solid #1a1a1a;">${modules.length ? modules.join(', ') : 'Basis'}</td></tr>
+        <tr><td style="color:#888;font-size:13px;padding:8px 0;border-bottom:1px solid #1a1a1a;">Mitgliedsnr.</td><td style="color:#fff;font-size:12px;font-family:monospace;text-align:right;padding:8px 0;border-bottom:1px solid #1a1a1a;">${memberNo}</td></tr>
+        <tr><td style="color:#888;font-size:13px;padding:8px 0;">Rechnung</td><td style="color:#fff;font-size:12px;font-family:monospace;text-align:right;padding:8px 0;">${invoiceNo}</td></tr>
+      </table>
+      <p style="color:#444;font-size:11px;margin:20px 0 0;line-height:1.7;">
+        Onboarding-Email + Magic Link wurde an den Kunden gesendet.<br>
+        Mitgliedschaft wird nach Zahlungseingang freigeschaltet.
+      </p>
+    </div>
+  </body></html>`;
+
+  await fetch('https://api.resend.com/emails', {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from:    'Alex Autoshop System <mitgliedschaft@alex-autoshop.de>',
+      to:      ['alexanderharitopoulos@gmail.com'],
+      subject: `🔔 Neues Mitglied: ${email} — ${LEVEL_INFO[level]?.name ?? `Level ${level}`} (${price}€/Mo)`,
+      html:    adminHtml,
+    }),
+  }).catch(e => console.error('Admin notification failed (non-fatal):', e?.message));
+
   // ── Email 2: Affiliate Upsell (10 Minuten später via Resend scheduled_at) ─
   const affiliateAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   const r2 = await fetch('https://api.resend.com/emails', {
