@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Search, Palette, Droplets, Layers, Pipette, FlaskConical } from "lucide-react";
 import { Seo } from "@/components/Seo";
@@ -165,6 +165,20 @@ export default function Shop() {
 
   const title = activeCategory ? activeCategory.label : "Shop";
 
+  // Schatten wenn sticky-Bar gescrollt ist
+  const [isStuck, setIsStuck] = useState(false);
+  const stickyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = stickyRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsStuck(!entry.isIntersecting),
+      { threshold: 1, rootMargin: "-81px 0px 0px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="container py-8 sm:py-12">
       <Seo
@@ -174,51 +188,66 @@ export default function Shop() {
 
       <h1 className="text-3xl sm:text-4xl mb-6">{title}</h1>
 
-      <form
-        className="relative mb-5 max-w-xl"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setSubmittedSearch(search);
-        }}
-      >
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-        <input
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            if (e.target.value === "") setSubmittedSearch("");
-          }}
-          placeholder="Produkt suchen … (z.B. Klarlack)"
-          className="input-base pl-12"
-          aria-label="Produktsuche"
-        />
-      </form>
+      {/* Sentinel-Element — wird vom IntersectionObserver beobachtet */}
+      <div ref={stickyRef} className="h-px -mt-px" />
 
-      <div className="flex gap-2 overflow-x-auto pb-3 mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-        <Link
-          to="/shop"
-          className={cn(
-            "shrink-0 px-5 py-3 rounded-full border font-medium text-sm min-h-[48px] flex items-center transition-colors",
-            !category ? "bg-night text-white border-night" : "bg-card border-border hover:border-primary"
-          )}
+      {/* Sticky Suchleiste + Kategorie-Filter */}
+      <div
+        className={cn(
+          "sticky top-20 sm:top-24 z-30 -mx-4 sm:mx-0 px-4 sm:px-0 pt-3 pb-3",
+          "bg-background/95 backdrop-blur-md transition-shadow duration-200",
+          isStuck && "shadow-[0_4px_24px_rgba(0,0,0,0.10)] border-b border-border/60"
+        )}
+      >
+        <form
+          className="relative mb-3 max-w-xl"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setSubmittedSearch(search);
+          }}
         >
-          Alle
-        </Link>
-        {allCategories.map((cat) => (
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              if (e.target.value === "") setSubmittedSearch("");
+            }}
+            placeholder="Produkt suchen … (z.B. Klarlack)"
+            className="input-base pl-12"
+            aria-label="Produktsuche"
+            autoComplete="off"
+          />
+        </form>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap no-scrollbar">
           <Link
-            key={cat.slug}
-            to={`/shop/${cat.slug}`}
+            to="/shop"
             className={cn(
-              "shrink-0 px-5 py-3 rounded-full border font-medium text-sm min-h-[48px] flex items-center transition-colors",
-              category === cat.slug
-                ? "bg-night text-white border-night"
-                : "bg-card border-border hover:border-primary"
+              "shrink-0 px-5 py-2.5 rounded-full border font-medium text-sm min-h-[44px] flex items-center transition-colors",
+              !category ? "bg-night text-white border-night" : "bg-card border-border hover:border-primary"
             )}
           >
-            {cat.label}
+            Alle
           </Link>
-        ))}
+          {allCategories.map((cat) => (
+            <Link
+              key={cat.slug}
+              to={`/shop/${cat.slug}`}
+              className={cn(
+                "shrink-0 px-5 py-2.5 rounded-full border font-medium text-sm min-h-[44px] flex items-center transition-colors",
+                category === cat.slug
+                  ? "bg-night text-white border-night"
+                  : "bg-card border-border hover:border-primary"
+              )}
+            >
+              {cat.label}
+            </Link>
+          ))}
+        </div>
       </div>
+
+      <div className="mb-4" />
 
       {/* Schnellzugriff: Klarlack · Härter · Wunschfarbe · Verdünnung */}
       {showFeatured && (

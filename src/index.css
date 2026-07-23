@@ -127,6 +127,10 @@ font[style] {
   box-shadow: none !important;
 }
 
+/* Scrollbar ausblenden (Kategorie-Pills im Shop) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Barrierefreiheit: Nutzer mit reduzierter Bewegung bekommen keine Animationen */
 @media (prefers-reduced-motion: reduce) {
   *,
