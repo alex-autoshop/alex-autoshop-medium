@@ -19,7 +19,7 @@ export function MaterialPlannerWidget() {
     <>
       {/* Panel — bei offenem Warenkorb ausgeblendet, damit nichts überdeckt wird */}
       {open && !cartOpen && (
-        <div className="fixed bottom-24 right-4 sm:right-6 z-50 w-[min(92vw,400px)] bg-card rounded-2xl border border-border shadow-2xl flex flex-col max-h-[78vh] animate-fade-up">
+        <div className="fixed bottom-24 left-4 sm:left-6 z-50 w-[min(92vw,400px)] bg-card rounded-2xl border border-border shadow-2xl flex flex-col max-h-[78vh] animate-fade-up">
           <div className="section-dark rounded-t-2xl px-5 py-4 flex items-center justify-between">
             <div>
               <p className="font-display font-bold text-white">Materialplaner</p>
@@ -44,7 +44,7 @@ export function MaterialPlannerWidget() {
             ? { width: 48, height: 48, paddingLeft: 0, paddingRight: 0, gap: 0 }
             : { height: 56, paddingLeft: 20, paddingRight: 20, gap: 8 }
         }
-        className="fixed bottom-5 right-4 sm:right-6 z-50 inline-flex items-center justify-center rounded-full bg-night text-white shadow-xl hover:bg-neutral-800 active:scale-95 transition-colors"
+        className="fixed bottom-5 left-4 sm:left-6 z-50 inline-flex items-center justify-center rounded-full bg-night text-white shadow-xl hover:bg-neutral-800 active:scale-95 transition-colors"
         aria-label="Materialplaner öffnen"
       >
         <ClipboardList className="w-6 h-6 text-gold-bright" />
