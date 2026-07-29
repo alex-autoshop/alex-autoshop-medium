@@ -35,6 +35,19 @@ export interface ApArticle {
   specs?: { name: string; value: string }[];
 }
 
+/** Ein Motor-/Typ-Kandidat aus der VIN-Auflösung (inkl. Modellreihe zur Auswahl). */
+export interface ApVinCandidate extends ApVehicle {
+  modelName?: string;
+}
+
+export interface ApVinResult {
+  manufacturer: string;
+  model: string;
+  /** true, wenn per nativem TecDoc-VIN-Check exakt bestimmt (nur eine Variante). */
+  exact?: boolean;
+  candidates: ApVinCandidate[];
+}
+
 // ─── Fetch über Proxy ───────────────────────────────────────
 
 async function ap(path: string, params?: Record<string, string | number>): Promise<any> {
@@ -249,6 +262,94 @@ export async function apVehicleByVin(vin: string): Promise<ApVehicle | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * VIN → Fahrzeug-Auflösung mit Motorvarianten zur Auswahl.
+ * 1) Nativer TecDoc-VIN-Check (exakt) — greift nur wenn serverseitig VIN_API_KEY gesetzt ist.
+ * 2) Fallback decoder-v3 (Fahrzeugregister): Marke + Modell (+ Hubraum/Kraftstoff),
+ *    dann Marke→Modellreihe→Motorvarianten auflösen. Der Nutzer wählt die exakte Variante.
+ */
+export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
+  const v = vin.trim().toUpperCase();
+  if (v.length !== 17) return null;
+
+  // 1) Nativer, exakter TecDoc-VIN-Check
+  try {
+    const r = await ap(`/vin/tecdoc-vin-check/${encodeURIComponent(v)}`);
+    const arr = pickArray(r, 'vehicles', 'matchedVehicles');
+    const one = toApVehicle(arr[0] || r?.vehicle || r);
+    if (one && one.vehicleId) {
+      return { manufacturer: one.manufacturer || '', model: one.model || '', exact: true, candidates: [one] };
+    }
+  } catch { /* Fallback */ }
+
+  // 2) decoder-v3 → Marke/Modell/Hubraum/Kraftstoff
+  let make = '', model = '', ccm = 0, fuel = '';
+  try {
+    const r3 = await ap(`/vin/decoder-v3/${encodeURIComponent(v)}`);
+    const info: Record<string, string> = {};
+    if (Array.isArray(r3)) for (const sec of r3) if (sec && sec.information) Object.assign(info, sec.information);
+    make = String(info['Make'] || '');
+    model = String(info['Model'] || '');
+    const dsi = String(info['Displacement SI'] || info['Displacement'] || '');
+    const cm = dsi.match(/\d{3,4}/); if (cm) ccm = parseInt(cm[0], 10);
+    const ft = String(info['Fuel type'] || '').toLowerCase();
+    if (/diesel/.test(ft)) fuel = 'diesel';
+    else if (/gas|petrol|benz/.test(ft)) fuel = 'benzin';
+  } catch { /* */ }
+  if (!make || !model) return null;
+
+  // 3) Hersteller
+  const manus = pickArray(await ap(`/manufacturers/list/type-id/${TYPE_PC}`), 'manufacturers');
+  const MK = make.toUpperCase();
+  const manu = manus.find((x: any) => String(x.manufacturerName).toUpperCase() === MK)
+            || manus.find((x: any) => String(x.manufacturerName).toUpperCase().includes(MK));
+  if (!manu) return { manufacturer: make, model, candidates: [] };
+
+  // 4) Modellreihe(n) — unscharfer Namensvergleich
+  const models = pickArray(
+    await ap(`/models/list/type-id/${TYPE_PC}/manufacturer-id/${manu.manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`),
+    'models'
+  );
+  const nModel = normCat(model);
+  let matched = models.filter((m: any) => normCat(String(m.modelName)).includes(nModel));
+  if (matched.length === 0) matched = models.filter((m: any) => nModel.includes(normCat(String(m.modelName))));
+  if (matched.length === 0) return { manufacturer: make, model, candidates: [] };
+  matched = matched.slice(0, 6);
+
+  // 5) Motorvarianten sammeln
+  const cands: ApVinCandidate[] = [];
+  const seen = new Set<number>();
+  for (const mdl of matched) {
+    let types: any[] = [];
+    try {
+      types = pickArray(
+        await ap(`/types/type-id/${TYPE_PC}/list-vehicles-types/${mdl.modelId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`),
+        'modelTypes', 'types'
+      );
+    } catch { continue; }
+    for (const t of types) {
+      const veh = toApVehicle(t) as ApVinCandidate | null;
+      if (!veh || !veh.vehicleId || seen.has(veh.vehicleId)) continue;
+      // Kraftstoff-Filter (weich): klar unpassende Varianten aussortieren, wenn bekannt
+      if (fuel) {
+        const tf = String(veh.fuel || '').toLowerCase();
+        if (fuel === 'diesel' && tf && !/diesel/.test(tf)) continue;
+        if (fuel === 'benzin' && /diesel/.test(tf)) continue;
+      }
+      seen.add(veh.vehicleId);
+      veh.modelName = String(mdl.modelName);
+      cands.push(veh);
+    }
+  }
+  // Nach Hubraum-Nähe sortieren (wenn bekannt), sonst nach Modell + Motorname
+  if (ccm) {
+    cands.sort((a, b) => Math.abs(parseInt(a.ccm || '0', 10) - ccm) - Math.abs(parseInt(b.ccm || '0', 10) - ccm));
+  } else {
+    cands.sort((a, b) => (a.modelName || '').localeCompare(b.modelName || '') || (a.typeName || '').localeCompare(b.typeName || ''));
+  }
+  return { manufacturer: make, model, candidates: cands.slice(0, 60) };
 }
 
 /** Kategorie-IDs per Textsuche (z.B. "Bremsscheibe" → Kategorie-Baum-Treffer). */

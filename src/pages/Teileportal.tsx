@@ -8,7 +8,7 @@ import {
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
-import { apVehicleByKba, apVehicleByVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, apEnrichVehicle, type ApArticle, type ApCategoryNode } from "@/lib/autoparts";
+import { apVehicleByKba, apResolveVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, apEnrichVehicle, type ApArticle, type ApCategoryNode, type ApVinCandidate } from "@/lib/autoparts";
 import { STATIC_CAT_TREE } from "@/lib/catTreeStatic";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
 import { icPriceLookup } from "@/lib/intercarsGateway";
@@ -358,6 +358,9 @@ export default function Teileportal() {
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
   const { garage, add: addToGarage, remove: removeFromGarage } = useGarage();
   const { user } = useAuth();
+  // VIN-Auflösung: Motorvarianten zur Auswahl (wenn VIN nicht exakt eine Variante trifft)
+  const [vinCandidates, setVinCandidates] = useState<ApVinCandidate[]>([]);
+  const [vinBase, setVinBase] = useState<{ manufacturer: string; model: string; vin: string } | null>(null);
   const [catTree, setCatTree] = useState<ApCategoryNode[] | null>(null);
   const [openCatId, setOpenCatId] = useState<string | null>(null);
   const [catNodes, setCatNodes] = useState<Record<string, ApCategoryNode[]>>({});
@@ -407,6 +410,22 @@ export default function Teileportal() {
 
   const vehicleLabel = vehicle ? [vehicle.manufacturer, vehicle.model, vehicle.typeName].filter(Boolean).join(' ') : '';
 
+  /** Aufgelöstes Fahrzeug übernehmen → Garage + Kategorien-Phase. */
+  const applyVehicle = (veh: ApVinCandidate, vinStr: string) => {
+    setVehicle({ manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power,
+      ps: veh.ps, ccm: veh.ccm, fuel: veh.fuel, bodyType: veh.bodyType,
+      buildFrom: veh.buildFrom, buildTo: veh.buildTo, engineCodes: veh.engineCodes, raw: veh.raw });
+    setVehicleKtype(veh.vehicleId ?? null);
+    setVehicleVin(vinStr);
+    addToGarage({ label: [veh.manufacturer, veh.model, veh.typeName].filter(Boolean).join(' ').slice(0, 60),
+      manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power,
+      ps: veh.ps, ccm: veh.ccm, fuel: veh.fuel, bodyType: veh.bodyType,
+      buildFrom: veh.buildFrom, buildTo: veh.buildTo, engineCodes: veh.engineCodes,
+      vin: vinStr || undefined, ktype: veh.vehicleId ?? null });
+    setVinCandidates([]); setVinBase(null);
+    setPhase('categories');
+  };
+
   const lookupVehicle = async (e: React.FormEvent, modeOverride?: SearchMode) => {
     e.preventDefault();
     const mode = modeOverride ?? searchMode;
@@ -417,28 +436,31 @@ export default function Teileportal() {
     setCatTree(null); setCatNodes({}); setOpenCatId(null);
     setArticles([]);
     setActiveCat(null);
+    setVinCandidates([]); setVinBase(null);
     const normVin = vin.trim().toUpperCase().replace(/\s/g,'').replace(/I/g,'1').replace(/O/g,'0').replace(/Q/g,'0');
     try {
-      try {
-        const veh = mode === 'kba'
-          ? await apVehicleByKba(hsn.trim().padStart(4,'0'), tsn.trim().padStart(3,'0'))
-          : await apVehicleByVin(normVin);
-        if (veh) {
-          setVehicle({ manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power,
-            ps: veh.ps, ccm: veh.ccm, fuel: veh.fuel, bodyType: veh.bodyType,
-            buildFrom: veh.buildFrom, buildTo: veh.buildTo, engineCodes: veh.engineCodes, raw: veh.raw });
-          setVehicleKtype(veh.vehicleId ?? null);
-          setVehicleVin(mode === 'vin' ? normVin : '');
-          addToGarage({ label: [veh.manufacturer, veh.model, veh.typeName].filter(Boolean).join(' ').slice(0, 60),
-            manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power,
-            ps: veh.ps, ccm: veh.ccm, fuel: veh.fuel, bodyType: veh.bodyType,
-            buildFrom: veh.buildFrom, buildTo: veh.buildTo, engineCodes: veh.engineCodes,
-            vin: mode === 'vin' ? normVin : undefined, ktype: veh.vehicleId ?? null });
-          setPhase('categories');
-          setVehicleLoading(false);
-          return;
-        }
-      } catch { /* weiter */ }
+      // ── VIN: Marke+Modell auflösen, Motorvarianten zur Auswahl anbieten ──
+      if (mode === 'vin') {
+        try {
+          const res = await apResolveVin(normVin);
+          if (res && res.candidates.length === 1) { applyVehicle(res.candidates[0], normVin); setVehicleLoading(false); return; }
+          if (res && res.candidates.length > 1) {
+            setVinBase({ manufacturer: res.manufacturer, model: res.model, vin: normVin });
+            setVinCandidates(res.candidates);
+            setVehicleLoading(false);
+            return;
+          }
+          if (res && res.candidates.length === 0 && res.manufacturer) {
+            setVehicleError(`${res.manufacturer}${res.model ? ' ' + res.model : ''} per VIN erkannt, aber keine passende TecDoc-Variante gefunden. Bitte HSN/TSN nutzen oder ruf uns an: ${SHOP_INFO.phone}`);
+            setPhase('search'); setVehicleLoading(false); return;
+          }
+        } catch { /* weiter zu Fallback */ }
+      } else {
+        try {
+          const veh = await apVehicleByKba(hsn.trim().padStart(4,'0'), tsn.trim().padStart(3,'0'));
+          if (veh) { applyVehicle(veh as ApVinCandidate, ''); setVehicleLoading(false); return; }
+        } catch { /* weiter */ }
+      }
       const payload = mode === 'vin'
         ? { action: 'vin', vin: normVin }
         : { action: 'kba', hsn: hsn.trim().padStart(4,'0'), tsn: tsn.trim().padStart(3,'0') };
@@ -1357,6 +1379,50 @@ export default function Teileportal() {
         onAddToCart={(a) => addArticleToCart(a)} brandLogo={detailArticle ? getBrandLogo(detailArticle.brand) : undefined} />
       <PartsCartButton count={cart.count} onClick={() => setCartOpen(true)} />
       <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin} />
+
+      {/* ── VIN-Variantenauswahl ─────────────────────────────────── */}
+      {vinCandidates.length > 0 && vinBase && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-night/60 backdrop-blur-sm p-0 sm:p-6"
+          onClick={() => { setVinCandidates([]); setVinBase(null); }}>
+          <div className="bg-card w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-border shadow-xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-border">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-primary">VIN erkannt</p>
+                  <h3 className="text-lg font-bold leading-tight">{vinBase.manufacturer} {vinBase.model}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Wähle deine genaue Motorvariante für exakt passende Teile.</p>
+                </div>
+                <button onClick={() => { setVinCandidates([]); setVinBase(null); }}
+                  className="shrink-0 w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-y-auto p-2">
+              {vinCandidates.map((c) => (
+                <button key={c.vehicleId}
+                  onClick={() => applyVehicle(c, vinBase.vin)}
+                  className="w-full text-left px-3 py-3 rounded-xl hover:bg-primary/5 border border-transparent hover:border-primary/40 transition-colors flex items-center gap-3 min-h-[56px]">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold leading-tight">{c.typeName || c.modelName}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {[c.modelName, [c.ps && `${c.ps} PS`, c.ccm && `${c.ccm} ccm`, c.fuel].filter(Boolean).join(' · ')].filter(Boolean).join(' — ')}
+                    </p>
+                    {(c.buildFrom || c.buildTo) && (
+                      <p className="text-[11px] text-muted-foreground/70">{fmtBau(c.buildFrom)} – {fmtBau(c.buildTo) || 'heute'}</p>
+                    )}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                </button>
+              ))}
+            </div>
+            <div className="p-3 border-t border-border text-center">
+              <p className="text-[11px] text-muted-foreground">Nicht dabei? <a href={`tel:${SHOP_INFO.phone}`} className="text-primary font-medium">{SHOP_INFO.phone} anrufen</a></p>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
