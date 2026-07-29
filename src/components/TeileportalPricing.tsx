@@ -11,8 +11,8 @@ import { apArticleSpecs } from "@/lib/autoparts";
 
 export const MEMBER_LEVELS = [
   { id: "L1", name: "Level 1", pct: 15 },
-  { id: "L2", name: "Level 2", pct: 33 },
-  { id: "L3", name: "Level 3", pct: 46 },
+  { id: "L2", name: "Level 2", pct: 28 },
+  { id: "L3", name: "Level 3", pct: 40 },
 ] as const;
 export type MemberLevelId = "none" | "L1" | "L2" | "L3";
 
