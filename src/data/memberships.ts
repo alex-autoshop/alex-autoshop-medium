@@ -16,6 +16,8 @@ export interface MembershipLevel {
   defaultModules?: string[];
   /** Einzelpreise je Modul (Autoteile günstigst, Lackmaterial mittig, Lackfarben teuerst) */
   modulePrices: Record<string, number>;
+  /** Monatlicher Abzug wenn das Mitglied die Gratis-Farbe abwählt (nur möglich wenn kein Lack-Modul aktiv) */
+  freePaintValue: number;
   features: Feature[];
   savingsExample: number;
   highlight?: boolean;
@@ -70,6 +72,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     defaultModules: ["Lackfarben", "Lackmaterial"],
     // Autoteile günstigst · Lackmaterial mittig · Lackfarben teuerst → Summe = 49 - 19 = 30 €
     modulePrices: { Autoteile: 8, Lackmaterial: 10, Lackfarben: 12 },
+    freePaintValue: 6,
     savingsExample: 467,
     features: [
       {
@@ -115,6 +118,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     // Autoteile günstigst · Lackmaterial mittig · Lackfarben teuerst → Summe = 228 - 69 = 159 €
     modulePrices: { Autoteile: 22, Lackmaterial: 58, Lackfarben: 79 },
+    freePaintValue: 15,
     savingsExample: 2347,
     features: [
       {
@@ -164,6 +168,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     // Autoteile günstigst · Lackmaterial mittig · Lackfarben teuerst → Summe = 430 - 149 = 281 €
     modulePrices: { Autoteile: 41, Lackmaterial: 105, Lackfarben: 135 },
+    freePaintValue: 25,
     savingsExample: 5930,
     features: [
       {

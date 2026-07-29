@@ -28,6 +28,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const { user, profile, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [modules, setModules] = useState<string[]>(m.defaultModules ?? m.modules);
+  const [wantFreePaint, setWantFreePaint] = useState(true);
   const [email, setEmail] = useState("");
   const [payMethod, setPayMethod] = useState<"gocardless" | "stripe">("gocardless");
   const [loading, setLoading] = useState(false);
@@ -88,6 +89,13 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const ratio = modules.length / m.modules.length;
   const activeDiscount = isBase ? m.baseDiscountPercent : m.discountPercent;
 
+  // Gratis-Farbe ist nur abwählbar wenn KEIN Lack-Modul aktiv ist (nur Teileportal oder Basis).
+  // Sobald Lackfarben/Lackmaterial gebucht sind, gehört die Gratis-Farbe fest dazu.
+  const noPaint = !modules.includes("Lackfarben") && !modules.includes("Lackmaterial");
+  const freePaintFeature = m.features.find((f) => f.label.startsWith("Gratis Farbe"));
+  const freePaintOff = noPaint && !wantFreePaint;
+  const freePaintDeduction = freePaintOff ? m.freePaintValue : 0;
+
   // Per-Modul-Preis: Autoteile günstigst, Lackmaterial mittig, Lackfarben teuerst
   const moduleSum = useMemo(() => {
     if (isBase) return 0;
@@ -98,16 +106,16 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const moduleRatio = totalModuleCost > 0 ? moduleSum / totalModuleCost : ratio;
 
   const price = useMemo(() => {
-    if (isBase) return m.basePrice;
-    return m.basePrice + moduleSum;
-  }, [isBase, moduleSum, m.basePrice]);
+    const base = isBase ? m.basePrice : m.basePrice + moduleSum;
+    return Math.max(0, base - freePaintDeduction);
+  }, [isBase, moduleSum, m.basePrice, freePaintDeduction]);
 
   const originalPrice = useMemo(() => {
     if (isBase || !m.originalPrice) return undefined;
     // originalPrice muss immer > actual price — proportional zum vollen Preisverhältnis
     const fullRatio = m.originalPrice / m.pricePerMonth;
-    return Math.round((m.basePrice + moduleSum) * fullRatio);
-  }, [isBase, moduleSum, m.originalPrice, m.pricePerMonth, m.basePrice]);
+    return Math.round((m.basePrice + moduleSum) * fullRatio) - freePaintDeduction;
+  }, [isBase, moduleSum, m.originalPrice, m.pricePerMonth, m.basePrice, freePaintDeduction]);
 
   const savings = useMemo(() => {
     if (isBase) return null;
@@ -124,7 +132,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       const co = await fetch("/api/membership-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: mail, level: m.level, modules, price, method: payMethod }),
+        body: JSON.stringify({ email: mail, level: m.level, modules, price, method: payMethod, freePaint: noPaint ? wantFreePaint : true }),
       });
       const coData = await co.json().catch(() => ({}));
       if (co.ok && coData.url) {
@@ -141,6 +149,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
           level: m.level,
           modules,
           price,
+          freePaint: noPaint ? wantFreePaint : true,
         }),
       });
       const data = await res.json();
@@ -237,10 +246,45 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
             })}
           </div>
 
+          {/* Gratis-Farbe abwählbar — nur wenn kein Lack-Modul aktiv (Teileportal-only oder Basis) */}
+          {noPaint && freePaintFeature && (
+            <div className="mt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Gratis-Farbe (optional)
+              </p>
+              <button
+                type="button"
+                onClick={() => setWantFreePaint((v) => !v)}
+                className={cn(
+                  "w-full flex items-center justify-between px-4 py-3 rounded-lg border text-sm font-medium transition-colors min-h-[48px] text-left",
+                  wantFreePaint
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border bg-secondary/40 text-muted-foreground/60"
+                )}
+              >
+                <span className={cn(!wantFreePaint && "line-through")}>{freePaintFeature.label}</span>
+                {wantFreePaint ? (
+                  <span className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center shrink-0">
+                    <Check className="w-3 h-3 text-primary-foreground" />
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold tracking-wide text-muted-foreground/80 shrink-0">
+                    −{m.freePaintValue} €
+                  </span>
+                )}
+              </button>
+              <p className="mt-1.5 text-[11px] text-muted-foreground leading-relaxed">
+                {wantFreePaint
+                  ? `Keine Lackfarbe nötig? Farbe abwählen und ${m.freePaintValue} € / Monat sparen.`
+                  : `Gratis-Farbe abgewählt — du sparst ${m.freePaintValue} € / Monat.`}
+              </p>
+            </div>
+          )}
+
           {/* Basis-Hinweis wenn alle Module abgewählt */}
           {isBase && (
             <div className="mt-3 rounded-lg bg-secondary/60 border border-border px-4 py-3 text-xs text-muted-foreground leading-relaxed">
-              <span className="font-semibold text-foreground">{activeDiscount}% auf das gesamte Sortiment und Teileportal</span> — inkl. Gratis-Farbe und alle Mitgliedsvorteile. Module einzeln zubuchbar.
+              <span className="font-semibold text-foreground">{activeDiscount}% auf das gesamte Sortiment und Teileportal</span> — {wantFreePaint ? "inkl. Gratis-Farbe und alle" : "alle weiteren"} Mitgliedsvorteile. Module einzeln zubuchbar.
             </div>
           )}
 
@@ -248,7 +292,8 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
             {m.features.map((f: Feature) => {
               const isCashback = f.label.includes("Cashback");
               const autoteileAktiv = modules.includes("Autoteile");
-              const inactive = isCashback && !autoteileAktiv;
+              const isFreePaint = f.label.startsWith("Gratis Farbe");
+              const inactive = (isCashback && !autoteileAktiv) || (isFreePaint && freePaintOff);
               const isOpen = openInfo === f.label;
               return (
                 <li key={f.label} className={cn("flex flex-col gap-0.5 text-sm", inactive && "opacity-40")}>
