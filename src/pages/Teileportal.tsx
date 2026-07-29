@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Car, Phone, MessageCircle, Loader2, Package, ChevronRight, ArrowLeft,
   Filter, Settings, Disc, Zap, Wind, Thermometer, Battery, Radio, Fuel,
-  Wrench, Navigation, Layers, Lightbulb, Truck, Circle, ShoppingBag
+  Wrench, Navigation, Layers, Lightbulb, Truck, Circle, ShoppingBag, Check, Hash
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
@@ -239,6 +239,7 @@ interface Article {
 
 type Phase = 'search' | 'categories' | 'articles';
 type SearchMode = 'vin' | 'kba';
+type HeroTab = 'search' | 'vin' | 'kba' | 'vehicle' | 'number';
 const PRICE_MARKUP = 1.7;
 
 async function postJson(url: string, payload: Record<string, unknown>, ms: number) {
@@ -343,6 +344,7 @@ export default function Teileportal() {
   const [cartOpen, setCartOpen] = useState(false);
   const [memberLevel, setMemberLevel] = useMembership();
   const [detailArticle, setDetailArticle] = useState<DetailArticle | null>(null);
+  const [heroTab, setHeroTab] = useState<HeroTab>('search');
 
   const activateGarageVehicle = (g: GarageVehicle) => {
     setVehicle({ manufacturer: g.manufacturer, model: g.model, typeName: g.typeName, power: g.power,
@@ -384,8 +386,9 @@ export default function Teileportal() {
 
   const vehicleLabel = vehicle ? [vehicle.manufacturer, vehicle.model, vehicle.typeName].filter(Boolean).join(' ') : '';
 
-  const lookupVehicle = async (e: React.FormEvent) => {
+  const lookupVehicle = async (e: React.FormEvent, modeOverride?: SearchMode) => {
     e.preventDefault();
+    const mode = modeOverride ?? searchMode;
     setVehicleLoading(true);
     setVehicleError(null);
     setVehicle(null);
@@ -396,7 +399,7 @@ export default function Teileportal() {
     const normVin = vin.trim().toUpperCase().replace(/\s/g,'').replace(/I/g,'1').replace(/O/g,'0').replace(/Q/g,'0');
     try {
       try {
-        const veh = searchMode === 'kba'
+        const veh = mode === 'kba'
           ? await apVehicleByKba(hsn.trim().padStart(4,'0'), tsn.trim().padStart(3,'0'))
           : await apVehicleByVin(normVin);
         if (veh) {
@@ -404,18 +407,18 @@ export default function Teileportal() {
             ps: veh.ps, ccm: veh.ccm, fuel: veh.fuel, bodyType: veh.bodyType,
             buildFrom: veh.buildFrom, buildTo: veh.buildTo, engineCodes: veh.engineCodes, raw: veh.raw });
           setVehicleKtype(veh.vehicleId ?? null);
-          setVehicleVin(searchMode === 'vin' ? normVin : '');
+          setVehicleVin(mode === 'vin' ? normVin : '');
           addToGarage({ label: [veh.manufacturer, veh.model, veh.typeName].filter(Boolean).join(' ').slice(0, 60),
             manufacturer: veh.manufacturer, model: veh.model, typeName: veh.typeName, power: veh.power,
             ps: veh.ps, ccm: veh.ccm, fuel: veh.fuel, bodyType: veh.bodyType,
             buildFrom: veh.buildFrom, buildTo: veh.buildTo, engineCodes: veh.engineCodes,
-            vin: searchMode === 'vin' ? normVin : undefined, ktype: veh.vehicleId ?? null });
+            vin: mode === 'vin' ? normVin : undefined, ktype: veh.vehicleId ?? null });
           setPhase('categories');
           setVehicleLoading(false);
           return;
         }
       } catch { /* weiter */ }
-      const payload = searchMode === 'vin'
+      const payload = mode === 'vin'
         ? { action: 'vin', vin: normVin }
         : { action: 'kba', hsn: hsn.trim().padStart(4,'0'), tsn: tsn.trim().padStart(3,'0') };
       const data = await tecdoc(payload);
@@ -425,7 +428,7 @@ export default function Teileportal() {
         setPhase('categories');
       } else {
         const info = parseVehicle(data);
-        if (info) { setVehicle(info); setVehicleVin(searchMode === 'vin' ? normVin : ''); setPhase('categories'); }
+        if (info) { setVehicle(info); setVehicleVin(mode === 'vin' ? normVin : ''); setPhase('categories'); }
         else {
           setPhase('search');
           setVehicleError(data?.error === 'kba_not_licensed'
@@ -553,357 +556,429 @@ export default function Teileportal() {
       <Seo title="Teileportal – Autoteile per Schlüsselnummer oder VIN finden"
         description="HSN/TSN oder VIN eingeben, Fahrzeug erkennen, alle passenden Autoteile mit Bild und Preis." />
 
-      <div className="flex min-h-[calc(100vh-4rem)]">
+      <div className="min-h-screen">
 
-        {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
-        <aside className="w-72 shrink-0 border-r border-border bg-card/60 flex-col sticky top-0 h-screen overflow-y-auto hidden md:flex">
-          <div className="p-5 border-b border-border">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-0.5">Alex Autoshop</p>
-            <h1 className="text-lg font-bold">Teileportal</h1>
-          </div>
+        {/* ── HERO (Suchphase) ───────────────────────────────────────────── */}
+        {phase === 'search' && (
+          <section className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background pointer-events-none" />
 
-          <AnimatePresence mode="wait">
-            {phase === 'search' ? (
-              <motion.div key="sp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5 flex flex-col gap-4 flex-1">
-                <div className="flex rounded-lg overflow-hidden border border-border">
-                  {(['vin','kba'] as SearchMode[]).map(m => (
-                    <button key={m} onClick={() => setSearchMode(m)}
-                      className={cn('flex-1 py-2 text-xs font-semibold transition-colors', searchMode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-secondary')}>
-                      {m === 'vin' ? 'VIN / FIN' : 'Schlüsselnummer'}
+            <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-10 text-center">
+
+              {/* Pill Badge */}
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-card/80 backdrop-blur text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-8">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                Alex Autoshop · Teileportal
+              </motion.div>
+
+              {/* Headline */}
+              <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] mb-6">
+                Über 5 Mio.<br />
+                <span className="text-primary">KFZ-Teile</span> finden.
+              </motion.h1>
+
+              {/* Subtitle */}
+              <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+                className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
+                Per VIN, Schlüsselnummer oder Freitextsuche — Originalteile, Premium-Marken
+                und Budget-Alternativen auf einer Plattform.
+              </motion.p>
+
+              {/* Feature Badges */}
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+                className="flex flex-wrap justify-center gap-2 mb-10">
+                {['5 Mio. Teile', 'Intercars & TecDoc', 'B2B-Preise ab Level 1', 'Next-Day Lieferung'].map(b => (
+                  <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium text-primary">
+                    <Check className="w-3.5 h-3.5" /> {b}
+                  </span>
+                ))}
+              </motion.div>
+
+              {/* Search Card */}
+              <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+                className="bg-card border border-border rounded-2xl shadow-xl max-w-3xl mx-auto overflow-hidden">
+
+                {/* Tab bar */}
+                <div className="flex overflow-x-auto border-b border-border px-4 pt-3 scrollbar-hide">
+                  {([
+                    { id: 'search' as HeroTab, label: 'Suche', Icon: Search },
+                    { id: 'vin' as HeroTab, label: 'VIN / FIN', Icon: Hash },
+                    { id: 'kba' as HeroTab, label: 'HSN / TSN', Icon: Wrench },
+                    { id: 'vehicle' as HeroTab, label: 'Meine Fahrzeuge', Icon: Car },
+                    { id: 'number' as HeroTab, label: 'Teilenummer', Icon: Package },
+                  ]).map(({ id, label, Icon }) => (
+                    <button key={id} onClick={() => setHeroTab(id)}
+                      className={cn('flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors border-b-2 -mb-px shrink-0',
+                        heroTab === id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}>
+                      <Icon className="w-3.5 h-3.5" /> {label}
                     </button>
                   ))}
                 </div>
-                <form onSubmit={lookupVehicle} className="flex flex-col gap-3">
-                  {searchMode === 'vin' ? (
-                    <div>
-                      <label className="text-xs text-muted-foreground font-medium mb-1 block">VIN / Fahrgestellnummer</label>
-                      <input value={vin} onChange={e => setVin(e.target.value)} placeholder="17 Zeichen" className="input-base w-full uppercase text-sm" maxLength={17} />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      <div>
-                        <label className="text-xs text-muted-foreground font-medium mb-1 block">Herstellerschlüssel (HSN)</label>
-                        <input value={hsn} onChange={e => { setHsn(e.target.value); if (e.target.value.length === 4) tsnInputRef.current?.focus(); }} placeholder="4-stellig" className="input-base w-full text-sm" maxLength={4} />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground font-medium mb-1 block">Typschlüssel (TSN)</label>
-                        <input ref={tsnInputRef} value={tsn} onChange={e => setTsn(e.target.value)} placeholder="3-stellig" className="input-base w-full text-sm" maxLength={3} />
-                      </div>
-                      <p className="text-xs text-muted-foreground">Seite 1 der Zulassungsbescheinigung</p>
-                    </div>
-                  )}
-                  <button type="submit" disabled={vehicleLoading} className="btn-primary w-full gap-2">
-                    {vehicleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}
-                    Fahrzeug suchen
-                  </button>
-                </form>
-                {vehicleError && <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-xs text-destructive">{vehicleError}</div>}
-                <GarageList garage={garage} onPick={activateGarageVehicle} onRemove={removeFromGarage} />
-                <div className="mt-auto pt-4 border-t border-border space-y-2">
-                  <a href={`tel:${SHOP_INFO.phone}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
-                    <Phone className="w-4 h-4" /> {SHOP_INFO.phone}
-                  </a>
-                  <a href={whatsappLink("Hallo, ich brauche Hilfe bei der Teilesuche.")} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
-                    <MessageCircle className="w-4 h-4" /> WhatsApp
-                  </a>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div key="vp" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col flex-1">
-                {/* Fahrzeugbild (echtes Foto via Wikipedia, Fallback Markenlogo) */}
-                <div className="relative flex items-center justify-center bg-gradient-to-b from-secondary/60 to-secondary/20 p-3" style={{ height: 170 }}>
-                  <CarImage manufacturer={vehicle?.manufacturer} model={vehicle?.model}
-                    fallbackLogo={vehicle?.manufacturer ? getCarBrandLogo(vehicle.manufacturer) : undefined} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-card/40 to-transparent pointer-events-none" />
-                </div>
 
-                <div className="p-5 flex flex-col gap-4 flex-1">
-                  <div className="divide-y divide-border/60">
-                    {vehicle?.manufacturer && <p className="text-primary text-sm font-semibold flex items-center gap-0.5 cursor-default py-1.5">{vehicle.manufacturer} <ChevronRight className="w-3.5 h-3.5" /></p>}
-                    {vehicle?.model && <p className="text-foreground font-bold text-base flex items-center gap-0.5 cursor-default py-1.5">{vehicle.model} <ChevronRight className="w-3.5 h-3.5" /></p>}
-                    {vehicle?.typeName && (
-                      <p className="text-sm flex items-center gap-0.5 cursor-default py-1.5 flex-wrap">
-                        <span className="font-medium">{vehicle.typeName}</span>
-                        {(vehicle.ccm || vehicle.power || vehicle.ps) && (
-                          <span className="text-muted-foreground">
-                            &nbsp;({[vehicle.ccm && `${vehicle.ccm} ccm`, vehicle.power && `${vehicle.power} kW`, vehicle.ps && `${vehicle.ps} PS`].filter(Boolean).join(' / ')})
-                          </span>
-                        )}
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </p>
+                {/* Tab content */}
+                <div className="p-5">
+                  <AnimatePresence mode="wait">
+                    {heroTab === 'search' && (
+                      <motion.form key="hs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onSubmit={handleSearchSubmit} className="flex gap-2">
+                        <input value={partQuery} onChange={e => setPartQuery(e.target.value)}
+                          placeholder="Teile suchen (z.B. Bremsbeläge, Zündkerzen, Ölfilter)"
+                          className="input-base flex-1 h-12 text-base" autoFocus />
+                        <button type="submit" disabled={partsLoading} className="btn-primary px-6 h-12 gap-2 shrink-0">
+                          {partsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                          Suchen
+                        </button>
+                      </motion.form>
                     )}
-                    {!vehicle && <p className="text-sm text-muted-foreground py-1.5">Kein Fahrzeug ausgewählt</p>}
-                  </div>
 
-                  <div className="rounded-lg bg-secondary/40 border border-border divide-y divide-border/60 text-xs overflow-hidden">
-                    {(vehicle?.buildFrom || vehicle?.buildTo) && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Baujahr</span><span className="font-medium">{fmtBau(vehicle.buildFrom)} – {fmtBau(vehicle.buildTo) || 'heute'}</span></div>}
-                    {!vehicle?.buildFrom && vehicle?.firstRegistration && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Baujahr</span><span className="font-medium">{vehicle.firstRegistration}</span></div>}
-                    {vehicle?.engineCodes && <div className="flex justify-between gap-2 px-3 py-2"><span className="text-muted-foreground shrink-0">Maschinencodes</span><span className="font-medium text-right">{vehicle.engineCodes}</span></div>}
-                    {vehicle?.bodyType && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Karosserie</span><span className="font-medium">{vehicle.bodyType}</span></div>}
-                    {!vehicle?.ccm && vehicle?.power && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Leistung</span><span className="font-medium">{vehicle.power} kW</span></div>}
-                    {vehicle?.fuel && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">Kraftstoff</span><span className="font-medium">{vehicle.fuel}</span></div>}
-                    {vehicleVin && <div className="flex justify-between px-3 py-2"><span className="text-muted-foreground">FIN</span><span className="font-mono font-medium text-[10px] truncate max-w-[130px]">{vehicleVin}</span></div>}
-                  </div>
+                    {heroTab === 'vin' && (
+                      <motion.form key="hv" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onSubmit={(e) => lookupVehicle(e, 'vin')} className="flex gap-2">
+                        <input value={vin} onChange={e => setVin(e.target.value)}
+                          placeholder="VIN / Fahrgestellnummer (17 Zeichen)"
+                          className="input-base flex-1 h-12 text-base uppercase font-mono tracking-wider" maxLength={17} autoFocus />
+                        <button type="submit" disabled={vehicleLoading} className="btn-primary px-6 h-12 gap-2 shrink-0">
+                          {vehicleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}
+                          Suchen
+                        </button>
+                      </motion.form>
+                    )}
 
-                  <div className="flex flex-col gap-2 mt-auto">
-                    <button onClick={() => { setPhase('search'); setVehicle(null); setVehicleKtype(null); setCatTree(null); setCatNodes({}); setOpenCatId(null); setArticles([]); setActiveCat(null); }}
-                      className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors">
-                      {vehicle ? 'FAHRZEUG WECHSELN' : 'FAHRZEUG WÄHLEN'}
-                    </button>
-                    <a href={whatsappLink(`Fahrzeuganfrage: ${vehicleLabel}`)} target="_blank" rel="noopener noreferrer"
-                      className="w-full py-2.5 rounded-lg border border-border text-sm font-medium text-center hover:bg-secondary transition-colors">
-                      ZUM VOLLEN ANGEBOT
-                    </a>
-                  </div>
+                    {heroTab === 'kba' && (
+                      <motion.form key="hk" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onSubmit={(e) => lookupVehicle(e, 'kba')} className="space-y-3">
+                        <div className="flex gap-3 items-end">
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground font-medium mb-1.5 block">Herstellerschlüssel (HSN)</label>
+                            <input value={hsn} onChange={e => { setHsn(e.target.value); if (e.target.value.length === 4) tsnInputRef.current?.focus(); }}
+                              placeholder="4-stellig" className="input-base w-full h-11" maxLength={4} autoFocus />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-muted-foreground font-medium mb-1.5 block">Typschlüssel (TSN)</label>
+                            <input ref={tsnInputRef} value={tsn} onChange={e => setTsn(e.target.value)}
+                              placeholder="3-stellig" className="input-base w-full h-11" maxLength={3} />
+                          </div>
+                          <button type="submit" disabled={vehicleLoading} className="btn-primary px-5 h-11 gap-2 shrink-0">
+                            {vehicleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}
+                            Suchen
+                          </button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Seite 1 der Zulassungsbescheinigung — Zeile 2.1 = HSN, Zeile 2.2 = TSN</p>
+                      </motion.form>
+                    )}
 
-                  <div className="border-t border-border pt-3 flex gap-4">
-                    <a href={`tel:${SHOP_INFO.phone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"><Phone className="w-3.5 h-3.5" /> Anruf</a>
-                    <a href={whatsappLink('')} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"><MessageCircle className="w-3.5 h-3.5" /> WhatsApp</a>
-                  </div>
+                    {heroTab === 'vehicle' && (
+                      <motion.div key="hgar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        {garage.length === 0 ? (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Car className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                            <p className="text-sm font-medium">Noch keine Fahrzeuge gespeichert</p>
+                            <p className="text-xs mt-1">Fahrzeug per VIN oder HSN/TSN suchen — wir merken es uns automatisch.</p>
+                          </div>
+                        ) : (
+                          <GarageList garage={garage} onPick={activateGarageVehicle} onRemove={removeFromGarage} />
+                        )}
+                      </motion.div>
+                    )}
+
+                    {heroTab === 'number' && (
+                      <motion.form key="hn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onSubmit={handleSearchSubmit} className="flex gap-2">
+                        <input value={partQuery} onChange={e => setPartQuery(e.target.value)}
+                          placeholder="Teilenummer eingeben (z.B. 1J0615301D, 06A103601AJ)"
+                          className="input-base flex-1 h-12 text-base font-mono" autoFocus />
+                        <button type="submit" disabled={partsLoading} className="btn-primary px-6 h-12 gap-2 shrink-0">
+                          {partsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                          Suchen
+                        </button>
+                      </motion.form>
+                    )}
+                  </AnimatePresence>
+
+                  {vehicleError && (
+                    <div className="mt-3 rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-xs text-destructive">{vehicleError}</div>
+                  )}
                 </div>
               </motion.div>
-            )}
-          </AnimatePresence>
-        </aside>
+            </div>
 
-        {/* ── HAUPTBEREICH ─────────────────────────────────────────────────── */}
-        <main className="flex-1 min-w-0">
+            {/* ── BELIEBTE KATEGORIEN ──────────────────────────────── */}
+            <div className="max-w-5xl mx-auto px-6 pb-16">
+              <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-5 text-center">Beliebte Kategorien</p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                {CATEGORIES.map((cat, i) => (
+                  <motion.button key={cat.id}
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 + i * 0.025 }}
+                    onClick={() => { setPhase('categories'); handleCategoryClick(cat); }}
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all group">
+                    <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center transition-transform group-hover:scale-110', cat.color)}>
+                      <cat.Icon className="w-5 h-5 text-foreground/70" />
+                    </div>
+                    <span className="text-xs font-medium text-center leading-tight line-clamp-2 text-muted-foreground group-hover:text-foreground transition-colors">
+                      {cat.name.split(' / ')[0]}
+                    </span>
+                  </motion.button>
+                ))}
+              </div>
 
-          {/* Mobile Kopfzeile */}
-          <div className="md:hidden border-b border-border p-4 bg-card/50 space-y-3">
-            <form onSubmit={lookupVehicle} className="flex gap-2">
-              {searchMode === 'vin' ? (
-                <input value={vin} onChange={e => setVin(e.target.value)} placeholder="VIN eingeben" className="input-base flex-1 text-sm uppercase" maxLength={17} />
+              {/* Contact links */}
+              <div className="flex justify-center gap-6 mt-10 pt-6 border-t border-border/50">
+                <a href={`tel:${SHOP_INFO.phone}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Phone className="w-4 h-4" /> {SHOP_INFO.phone}
+                </a>
+                <a href={whatsappLink("Hallo, ich brauche Hilfe bei der Teilesuche.")} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <MessageCircle className="w-4 h-4" /> WhatsApp
+                </a>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ── FAHRZEUG-LEISTE (categories / articles phase) ────────────── */}
+        {phase !== 'search' && (
+          <div className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-30">
+            <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => { setPhase('search'); setVehicle(null); setVehicleKtype(null); setCatTree(null); setCatNodes({}); setOpenCatId(null); setArticles([]); setActiveCat(null); }}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors shrink-0">
+                <ArrowLeft className="w-4 h-4" />
+                Teileportal
+              </button>
+              {vehicle ? (
+                <>
+                  <span className="text-muted-foreground/30 shrink-0">|</span>
+                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                    {vehicle.manufacturer && getCarBrandLogo(vehicle.manufacturer) && (
+                      <img src={getCarBrandLogo(vehicle.manufacturer)!} alt={vehicle.manufacturer}
+                        className="h-5 w-5 object-contain shrink-0"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    )}
+                    <span className="text-sm font-semibold truncate">{vehicleLabel}</span>
+                    {(vehicle.buildFrom || vehicle.buildTo) && (
+                      <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
+                        ({fmtBau(vehicle.buildFrom)} – {fmtBau(vehicle.buildTo) || 'heute'})
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { setPhase('search'); setVehicle(null); setVehicleKtype(null); setCatTree(null); setCatNodes({}); setOpenCatId(null); setArticles([]); setActiveCat(null); }}
+                    className="shrink-0 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded border border-border/60 hover:border-destructive/30">
+                    Wechseln
+                  </button>
+                </>
               ) : (
-                <div className="flex gap-2 flex-1">
-                  <input value={hsn} onChange={e => { setHsn(e.target.value); if (e.target.value.length === 4) tsnMobileRef.current?.focus(); }} placeholder="HSN" className="input-base w-20 text-sm" maxLength={4} />
-                  <input ref={tsnMobileRef} value={tsn} onChange={e => setTsn(e.target.value)} placeholder="TSN" className="input-base w-20 text-sm" maxLength={3} />
+                <span className="text-sm text-muted-foreground">Kein Fahrzeug — alle Teile</span>
+              )}
+              <div className="ml-auto flex items-center gap-4 shrink-0">
+                <a href={`tel:${SHOP_INFO.phone}`} className="hidden lg:flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                  <Phone className="w-3.5 h-3.5" /> {SHOP_INFO.phone}
+                </a>
+                <a href={whatsappLink(vehicleLabel ? `Fahrzeuganfrage: ${vehicleLabel}` : 'Hallo, ich brauche Hilfe.')} target="_blank" rel="noopener noreferrer"
+                  className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                  <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── CATEGORIES ───────────────────────────────────────────────── */}
+        {phase === 'categories' && (
+          <AnimatePresence mode="wait">
+            <motion.div key="cat" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="max-w-7xl mx-auto px-6 py-8">
+              {/* Suchfeld */}
+              <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-8 max-w-2xl">
+                <input value={partQuery} onChange={e => setPartQuery(e.target.value)} placeholder="Teilekategorie oder Stichwort eingeben …" className="input-base flex-1" />
+                <button type="submit" disabled={partsLoading} className="btn-dark px-5 gap-2">
+                  {partsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  Suchen
+                </button>
+              </form>
+              {/* Tabs */}
+              <div className="flex gap-0 mb-6 border-b border-border">
+                <button className="px-4 py-2.5 text-sm font-bold border-b-2 border-primary text-primary -mb-px">AFTERMARKET-TEILE</button>
+                <button disabled title="Original-Ersatzteilkatalog mit Explosionszeichnungen — kommt in Kürze"
+                  className="px-4 py-2.5 text-sm font-bold text-muted-foreground/50 cursor-not-allowed inline-flex items-center gap-2 -mb-px">
+                  ORIGINAL-KATALOG (OEM)
+                  <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-bold">BALD</span>
+                </button>
+              </div>
+              {/* Kategorien */}
+              <div className="md:columns-2 xl:columns-3 gap-3">
+                {CATEGORIES.map((cat, i) => {
+                  const isOpen = openCatId === cat.id;
+                  const nodes = catNodes[cat.id] ?? [];
+                  return (
+                    <motion.div key={cat.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
+                      className="break-inside-avoid mb-3">
+                      <div className={cn('rounded-xl border bg-card transition-all overflow-hidden',
+                        isOpen ? 'border-primary/60 shadow-sm' : 'border-border hover:border-primary/50 hover:shadow-sm')}>
+                        <button onClick={() => handleCategoryClick(cat)}
+                          className="group w-full flex items-center gap-3 p-4 text-left">
+                          <div className={cn('w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 transition-transform group-hover:scale-105', cat.color)}>
+                            <cat.Icon className="w-6 h-6 text-foreground/70" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold leading-tight line-clamp-2">{cat.name}</p>
+                          </div>
+                          <ChevronRight className={cn('w-4 h-4 text-muted-foreground/50 group-hover:text-primary shrink-0 transition-transform',
+                            isOpen && 'rotate-90 text-primary')} />
+                        </button>
+                        <AnimatePresence>
+                          {isOpen && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.18 }} className="overflow-hidden">
+                              <div className="px-3 pb-3 border-t border-border/60 pt-2">
+                                <SubCatList nodes={nodes} onPick={pickSubCat} />
+                                {!vehicleKtype && (
+                                  <p className="text-[11px] text-muted-foreground mt-2 px-2">
+                                    Tipp: Fahrzeug wählen, um nur exakt passende Teile zu sehen.
+                                  </p>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        )}
+
+        {/* ── ARTICLES ─────────────────────────────────────────────────── */}
+        {phase === 'articles' && (
+          <AnimatePresence mode="wait">
+            <motion.div key="arts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="max-w-7xl mx-auto px-6 py-6">
+              {/* Breadcrumb */}
+              <div className="flex items-center gap-2 mb-4">
+                <button onClick={() => { setPhase('categories'); setArticles([]); setActiveCat(null); }}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <ArrowLeft className="w-4 h-4" />
+                  Alle Teile
+                </button>
+                {activeCat && <><span className="text-muted-foreground/50">/</span><span className="text-sm font-medium">{activeCat.name}</span></>}
+              </div>
+              {/* Suchfeld */}
+              <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-5">
+                <input value={partQuery} onChange={e => setPartQuery(e.target.value)} placeholder="Andere Kategorie oder Teilenummer …" className="input-base flex-1" />
+                <button type="submit" disabled={partsLoading} className="btn-dark px-4">
+                  {partsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                </button>
+              </form>
+
+              {partsLoading && (
+                <div className="flex items-center gap-3 text-muted-foreground py-16 justify-center">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span>Teile werden geladen …</span>
                 </div>
               )}
-              <button type="submit" disabled={vehicleLoading} className="btn-primary px-3">
-                {vehicleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}
-              </button>
-            </form>
-            <div className="flex gap-2">
-              {(['vin','kba'] as SearchMode[]).map(m => (
-                <button key={m} onClick={() => setSearchMode(m)} className={cn('px-3 py-1 rounded text-xs font-medium', searchMode === m ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground')}>
-                  {m === 'vin' ? 'VIN' : 'HSN/TSN'}
-                </button>
-              ))}
-            </div>
-            {vehicle && <div className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-sm font-semibold text-primary">📋 {vehicleLabel}</div>}
-            {vehicleError && <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-xs text-destructive">{vehicleError}</div>}
-          </div>
+              {partsError && <p className="text-destructive text-sm">{partsError}</p>}
 
-          {/* ── CATEGORIES ───────────────────────────────────────────────── */}
-          {phase === 'categories' && (
-            <AnimatePresence mode="wait">
-              <motion.div key="cat" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-6">
-                {/* Suchfeld */}
-                <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-5">
-                  <input value={partQuery} onChange={e => setPartQuery(e.target.value)} placeholder="Teilekategorie eingeben …" className="input-base flex-1" />
-                  <button type="submit" disabled={partsLoading} className="btn-dark px-5 gap-2">
-                    {partsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                    Suchen
-                  </button>
-                </form>
-                {/* Tabs */}
-                <div className="flex gap-0 mb-6 border-b border-border">
-                  <button className="px-4 py-2.5 text-sm font-bold border-b-2 border-primary text-primary -mb-px">AFTERMARKET-TEILE</button>
-                  <button disabled title="Original-Ersatzteilkatalog mit Explosionszeichnungen — kommt in Kürze"
-                    className="px-4 py-2.5 text-sm font-bold text-muted-foreground/50 cursor-not-allowed inline-flex items-center gap-2 -mb-px">
-                    ORIGINAL-KATALOG (OEM)
-                    <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-bold">BALD</span>
-                  </button>
-                </div>
-                {/* Kategorien mit inline aufklappbaren Unterkategorien (wie Inter Cars) */}
-                <div className="md:columns-2 xl:columns-3 gap-3">
-                  {CATEGORIES.map((cat, i) => {
-                    const isOpen = openCatId === cat.id;
-                    const nodes = catNodes[cat.id] ?? [];
-                    return (
-                      <motion.div key={cat.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.025 }}
-                        className="break-inside-avoid mb-3">
-                        <div className={cn('rounded-xl border bg-card transition-all overflow-hidden',
-                          isOpen ? 'border-primary/60 shadow-sm' : 'border-border hover:border-primary/50 hover:shadow-sm')}>
-                          <button onClick={() => handleCategoryClick(cat)}
-                            className="group w-full flex items-center gap-3 p-4 text-left">
-                            <div className={cn('w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 transition-transform group-hover:scale-105', cat.color)}>
-                              <cat.Icon className="w-6 h-6 text-foreground/70" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold leading-tight line-clamp-2">{cat.name}</p>
-                            </div>
-                            <ChevronRight className={cn('w-4 h-4 text-muted-foreground/50 group-hover:text-primary shrink-0 transition-transform',
-                              isOpen && 'rotate-90 text-primary')} />
-                          </button>
-                          <AnimatePresence>
-                            {isOpen && (
-                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.18 }} className="overflow-hidden">
-                                <div className="px-3 pb-3 border-t border-border/60 pt-2">
-                                  <SubCatList nodes={nodes} onPick={pickSubCat} />
-                                  {!vehicleKtype && (
-                                    <p className="text-[11px] text-muted-foreground mt-2 px-2">
-                                      Tipp: Fahrzeug wählen, um nur exakt passende Teile zu sehen.
-                                    </p>
-                                  )}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          )}
-
-          {/* ── ARTICLES ─────────────────────────────────────────────────── */}
-          {phase === 'articles' && (
-            <AnimatePresence mode="wait">
-              <motion.div key="arts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-6">
-                {/* Breadcrumb */}
-                <div className="flex items-center gap-2 mb-4">
-                  <button onClick={() => { setPhase('categories'); setArticles([]); setActiveCat(null); }}
-                    className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors">
-                    <ArrowLeft className="w-4 h-4" />
-                    Alle Teile
-                  </button>
-                  {activeCat && <><span className="text-muted-foreground/50">/</span><span className="text-sm font-medium">{activeCat.name}</span></>}
-                </div>
-                {/* Suchfeld */}
-                <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-5">
-                  <input value={partQuery} onChange={e => setPartQuery(e.target.value)} placeholder="Andere Kategorie oder Teilenummer …" className="input-base flex-1" />
-                  <button type="submit" disabled={partsLoading} className="btn-dark px-4">
-                    {partsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                  </button>
-                </form>
-
-                {partsLoading && (
-                  <div className="flex items-center gap-3 text-muted-foreground py-16 justify-center">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Teile werden geladen …</span>
-                  </div>
-                )}
-                {partsError && <p className="text-destructive text-sm">{partsError}</p>}
-
-                {!partsLoading && articles.length > 0 && (
-                  <div className="flex gap-5">
-                    {/* Brand Filter */}
-                    {allBrands.length > 1 && (
-                      <BrandFilter
-                        brands={allBrands.map(b => ({ name: b, count: articles.filter(a => a.brand === b).length, logo: getBrandLogo(b, 'd') }))}
-                        selected={selectedBrands}
-                        onToggle={(b) => { const n = new Set(selectedBrands); n.has(b) ? n.delete(b) : n.add(b); setSelectedBrands(n); }}
-                        onReset={() => setSelectedBrands(new Set())}
-                      />
-                    )}
-
-                    {/* Artikelliste */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
-                        <span className="font-bold">{activeCat ? activeCat.name : 'Suchergebnisse'}
-                          <span className="text-muted-foreground font-normal text-sm ml-2">({totalCount > articles.length ? totalCount : articles.length})</span>
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <MembershipSelect level={memberLevel} onChange={setMemberLevel} />
-                          {selectedBrands.size > 0 && <span className="text-sm text-muted-foreground">{filtered.length} gefiltert</span>}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        {filtered.map((a, aIdx) => (
-                          <motion.div key={a.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            className="border border-border rounded-xl bg-card hover:border-primary/30 transition-all">
-                            <div className="flex gap-4 p-4">
-                              <div onClick={() => openDetail(a)} role="button" tabIndex={0}
-                                className="w-24 h-24 sm:w-32 sm:h-32 shrink-0 rounded-lg bg-white border border-border flex items-center justify-center overflow-hidden cursor-zoom-in p-1.5 hover:border-primary/50 transition-colors">
-                                {a.imageUrl ? (
-                                  <img src={a.imageUrl} alt={a.name} loading="lazy" className="w-full h-full object-contain"
-                                    onError={e => { const logo = getBrandLogo(a.brand); if (logo) { (e.target as HTMLImageElement).src = logo; (e.target as HTMLImageElement).className = 'w-full h-full object-contain p-2'; } else (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                ) : getBrandLogo(a.brand) ? (
-                                  <img src={getBrandLogo(a.brand)!} alt={a.brand} loading="lazy" className="w-full h-full object-contain p-2"
-                                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                ) : <Package className="w-7 h-7 text-muted-foreground" />}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <p className="font-bold text-sm text-primary truncate">{a.articleNumber}</p>
-                                    <p className="font-semibold text-sm leading-snug mt-0.5">{a.name}</p>
-                                    {a.brand && <span className="inline-block mt-1 px-2 py-0.5 rounded bg-secondary text-xs font-bold tracking-wide uppercase">{a.brand}</span>}
-                                    {a.oeNumbers && a.oeNumbers.length > 0 && <p className="text-xs text-muted-foreground mt-0.5">OE: {a.oeNumbers.join(', ')}</p>}
-                                  </div>
-                                  <div className="shrink-0 text-right flex flex-col items-end gap-2">
-                                    {getBrandLogo(a.brand) && (
-                                      <img src={getBrandLogo(a.brand)!} alt={a.brand} loading="lazy"
-                                        className="h-6 max-w-[100px] object-contain"
-                                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                                    )}
-                                    {a.price != null ? (
-                                      <>
-                                        <DeliveryBadge deliveryDays={a.deliveryDays} availability={a.availability} />
-                                        <PriceBlock price={a.price} level={memberLevel} />
-                                        <button onClick={() => addArticleToCart(a)} className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
-                                          <ShoppingBag className="w-3.5 h-3.5" /> In den Warenkorb
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">Preis auf Anfrage</span>
-                                        <DeliveryBadge />
-                                        <button onClick={() => addArticleToCart(a)} className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
-                                          <ShoppingBag className="w-3.5 h-3.5" /> In den Warenkorb
-                                        </button>
-                                        <button onClick={() => openDetail(a)} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:border-primary/50 hover:text-primary transition-colors">
-                                          Details ansehen
-                                        </button>
-                                        <a href={`tel:${SHOP_INFO.phone}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
-                                          <Phone className="w-3.5 h-3.5" /> {SHOP_INFO.phone}
-                                        </a>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <SpecStrip articleId={a.id} specs={a.specs} auto={aIdx < 12} />
-                            <ArticleExpander articleId={a.id} articleNumber={a.articleNumber} specs={a.specs} oeNumbers={a.oeNumbers}
-                              onSearchNumber={(no) => { setPartQuery(no); setActiveCat(null); setPhase('articles'); loadParts(no); }} />
-                          </motion.div>
-                        ))}
+              {!partsLoading && articles.length > 0 && (
+                <div className="flex gap-5">
+                  {allBrands.length > 1 && (
+                    <BrandFilter
+                      brands={allBrands.map(b => ({ name: b, count: articles.filter(a => a.brand === b).length, logo: getBrandLogo(b, 'd') }))}
+                      selected={selectedBrands}
+                      onToggle={(b) => { const n = new Set(selectedBrands); n.has(b) ? n.delete(b) : n.add(b); setSelectedBrands(n); }}
+                      onReset={() => setSelectedBrands(new Set())}
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
+                      <span className="font-bold">{activeCat ? activeCat.name : 'Suchergebnisse'}
+                        <span className="text-muted-foreground font-normal text-sm ml-2">({totalCount > articles.length ? totalCount : articles.length})</span>
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <MembershipSelect level={memberLevel} onChange={setMemberLevel} />
+                        {selectedBrands.size > 0 && <span className="text-sm text-muted-foreground">{filtered.length} gefiltert</span>}
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      {filtered.map((a, aIdx) => (
+                        <motion.div key={a.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                          className="border border-border rounded-xl bg-card hover:border-primary/30 transition-all">
+                          <div className="flex gap-4 p-4">
+                            <div onClick={() => openDetail(a)} role="button" tabIndex={0}
+                              className="w-24 h-24 sm:w-32 sm:h-32 shrink-0 rounded-lg bg-white border border-border flex items-center justify-center overflow-hidden cursor-zoom-in p-1.5 hover:border-primary/50 transition-colors">
+                              {a.imageUrl ? (
+                                <img src={a.imageUrl} alt={a.name} loading="lazy" className="w-full h-full object-contain"
+                                  onError={e => { const logo = getBrandLogo(a.brand); if (logo) { (e.target as HTMLImageElement).src = logo; (e.target as HTMLImageElement).className = 'w-full h-full object-contain p-2'; } else (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              ) : getBrandLogo(a.brand) ? (
+                                <img src={getBrandLogo(a.brand)!} alt={a.brand} loading="lazy" className="w-full h-full object-contain p-2"
+                                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              ) : <Package className="w-7 h-7 text-muted-foreground" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="font-bold text-sm text-primary truncate">{a.articleNumber}</p>
+                                  <p className="font-semibold text-sm leading-snug mt-0.5">{a.name}</p>
+                                  {a.brand && <span className="inline-block mt-1 px-2 py-0.5 rounded bg-secondary text-xs font-bold tracking-wide uppercase">{a.brand}</span>}
+                                  {a.oeNumbers && a.oeNumbers.length > 0 && <p className="text-xs text-muted-foreground mt-0.5">OE: {a.oeNumbers.join(', ')}</p>}
+                                </div>
+                                <div className="shrink-0 text-right flex flex-col items-end gap-2">
+                                  {getBrandLogo(a.brand) && (
+                                    <img src={getBrandLogo(a.brand)!} alt={a.brand} loading="lazy"
+                                      className="h-6 max-w-[100px] object-contain"
+                                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                  )}
+                                  {a.price != null ? (
+                                    <>
+                                      <DeliveryBadge deliveryDays={a.deliveryDays} availability={a.availability} />
+                                      <PriceBlock price={a.price} level={memberLevel} />
+                                      <button onClick={() => addArticleToCart(a)} className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
+                                        <ShoppingBag className="w-3.5 h-3.5" /> In den Warenkorb
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">Preis auf Anfrage</span>
+                                      <DeliveryBadge />
+                                      <button onClick={() => addArticleToCart(a)} className="btn-primary text-xs px-3 py-2 min-h-0 h-auto inline-flex items-center gap-1">
+                                        <ShoppingBag className="w-3.5 h-3.5" /> In den Warenkorb
+                                      </button>
+                                      <button onClick={() => openDetail(a)} className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-border text-xs font-medium hover:border-primary/50 hover:text-primary transition-colors">
+                                        Details ansehen
+                                      </button>
+                                      <a href={`tel:${SHOP_INFO.phone}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors">
+                                        <Phone className="w-3.5 h-3.5" /> {SHOP_INFO.phone}
+                                      </a>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <SpecStrip articleId={a.id} specs={a.specs} auto={aIdx < 12} />
+                          <ArticleExpander articleId={a.id} articleNumber={a.articleNumber} specs={a.specs} oeNumbers={a.oeNumbers}
+                            onSearchNumber={(no) => { setPartQuery(no); setActiveCat(null); setPhase('articles'); loadParts(no); }} />
+                        </motion.div>
+                      ))}
+                    </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {!partsLoading && articles.length === 0 && !partsError && (
-                  <div className="text-center py-20 text-muted-foreground">
-                    <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                    <p className="font-medium">Keine Teile gefunden</p>
-                    <p className="text-sm mt-1">Versuch eine andere Suchanfrage oder ruf uns an: <a href={`tel:${SHOP_INFO.phone}`} className="text-primary hover:underline">{SHOP_INFO.phone}</a></p>
-                  </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          )}
+              {!partsLoading && articles.length === 0 && !partsError && (
+                <div className="text-center py-20 text-muted-foreground">
+                  <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                  <p className="font-medium">Keine Teile gefunden</p>
+                  <p className="text-sm mt-1">Versuch eine andere Suchanfrage oder ruf uns an: <a href={`tel:${SHOP_INFO.phone}`} className="text-primary hover:underline">{SHOP_INFO.phone}</a></p>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        )}
 
-          {/* Search Phase (Desktop leer, zeigt Sidebar-Hinweis) */}
-          {phase === 'search' && (
-            <div className="hidden md:flex flex-col items-center justify-center h-full text-center p-12 text-muted-foreground">
-              <Car className="w-16 h-16 mb-5 opacity-20" />
-              <h2 className="text-xl font-bold mb-2 text-foreground">Fahrzeug suchen</h2>
-              <p className="text-sm max-w-xs">VIN / FIN oder Schlüsselnummer (HSN/TSN) in der Seitenleiste eingeben</p>
-              <button onClick={() => setPhase('categories')}
-                className="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-border bg-card text-sm font-semibold text-foreground hover:border-primary/50 hover:text-primary transition-colors">
-                Katalog ohne Fahrzeug durchstöbern <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </main>
       </div>
 
       <PartDetailModal article={detailArticle} vehicleLabel={vehicleLabel} onClose={() => setDetailArticle(null)}
