@@ -14,13 +14,13 @@ export const config = { runtime: 'edge' };
 
 const AUTOPARTS_KEY = process.env.AUTOPARTS_API_KEY; // NUR Env-Var — Repo ist PUBLIC, kein Key im Code!
 
+// NUR korrekte Basen (Prefix /api). Die /api/v1-Varianten liefern 404 auf ALLES
+// und dürfen niemals als "gesund" gelten. apiprofile.com/api ist der stabile Host.
 const BASES = [
-  'https://api.autopartsapi.com/api',
   'https://auto-parts-catalog.apiprofile.com/api',
-  'https://auto-parts-catalog.apiprofile.com/api/v1',
-  'https://api.autopartsapi.com/api/v1',
+  'https://api.autopartsapi.com/api',
 ];
-let preferredBase = null; // sticky pro warmer Edge-Instanz
+let preferredBase = null; // sticky pro warmer Edge-Instanz — NUR bei echtem Erfolg (2xx)
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -109,7 +109,9 @@ export default async function handler(req) {
     if (res._netError) { lastErr = `${base}: ${res._netError}`; continue; }
     // 5xx oder Timeout → nächsten Host probieren; alles andere ist eine echte Antwort
     if (res.status >= 500) { lastErr = `${base}: HTTP ${res.status}`; continue; }
-    preferredBase = base;
+    // preferredBase NUR bei echtem Erfolg merken — sonst würde sich der Proxy an
+    // eine Base festbeißen, die systematisch 404 liefert (falsches Prefix/Host).
+    if (res.ok) preferredBase = base;
     const data = await res.text();
     const ttl = cacheSeconds(apiPath);
     return new Response(data, {
