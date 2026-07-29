@@ -29,6 +29,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const navigate = useNavigate();
   const [modules, setModules] = useState<string[]>(m.defaultModules ?? m.modules);
   const [email, setEmail] = useState("");
+  const [payMethod, setPayMethod] = useState<"gocardless" | "stripe">("gocardless");
   const [loading, setLoading] = useState(false);
   const [trialLoading, setTrialLoading] = useState(false);
   const [openInfo, setOpenInfo] = useState<string | null>(null);
@@ -119,6 +120,19 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
     if (!mail) return toast.error("Bitte E-Mail angeben");
     setLoading(true);
     try {
+      // 1) Echte Zahlung versuchen (Stripe-Abo bzw. GoCardless-SEPA)
+      const co = await fetch("/api/membership-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: mail, level: m.level, modules, price, method: payMethod }),
+      });
+      const coData = await co.json().catch(() => ({}));
+      if (co.ok && coData.url) {
+        // Weiterleitung zur sicheren Bezahlseite
+        window.location.href = coData.url;
+        return;
+      }
+      // 2) Fallback: Anbieter noch nicht konfiguriert → bisheriger E-Mail-Anfrage-Flow
       const res = await fetch("/api/membership-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -131,8 +145,8 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unbekannter Fehler");
-      toast.success("E-Mail versendet! 📬", {
-        description: "Klick auf 'Zum Dashboard' in der Mail — du wirst automatisch eingeloggt.",
+      toast.success("Anfrage gesendet! 📬", {
+        description: "Wir melden uns zur Zahlung. Klick auf 'Zum Dashboard' in der Mail — du wirst automatisch eingeloggt.",
       });
       setEmail("");
     } catch (err: unknown) {
@@ -273,9 +287,31 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
                 className="input-base"
               />
             )}
+            {/* Zahlungsart */}
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { id: "gocardless", label: "SEPA-Lastschrift" },
+                { id: "stripe", label: "Karte" },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setPayMethod(opt.id)}
+                  className={cn(
+                    "px-3 py-2 rounded-xl border text-xs font-semibold transition-colors min-h-[44px]",
+                    payMethod === opt.id
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-secondary/40 text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
             <button type="submit" disabled={loading} className={m.highlight ? "btn-primary w-full" : "btn-dark w-full"}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              {isBase ? `Basis freischalten (${activeDiscount}%) →` : "Jetzt freischalten →"}
+              {isBase ? `Basis freischalten (${activeDiscount}%) →` : "Jetzt kostenpflichtig buchen →"}
             </button>
 
             {/* Trial-Button — 1 Stunde gratis testen */}
