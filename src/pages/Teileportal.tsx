@@ -14,6 +14,7 @@ import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, 
 import { icPriceLookup } from "@/lib/intercarsGateway";
 import { ArticleExpander, BrandFilter, SubCatList } from "@/components/TeileportalExtras";
 import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip } from "@/components/TeileportalPricing";
+import { useAuth } from "@/context/AuthContext";
 
 const BRAND_DOMAINS: Record<string, string> = {
   'BOSCH': 'bosch.com', 'BREMBO': 'brembo.com', 'ZIMMERMANN': 'zimmermann-brake.com',
@@ -356,6 +357,7 @@ export default function Teileportal() {
   const [totalCount, setTotalCount] = useState(0);
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
   const { garage, add: addToGarage, remove: removeFromGarage } = useGarage();
+  const { user } = useAuth();
   const [catTree, setCatTree] = useState<ApCategoryNode[] | null>(null);
   const [openCatId, setOpenCatId] = useState<string | null>(null);
   const [catNodes, setCatNodes] = useState<Record<string, ApCategoryNode[]>>({});
@@ -903,22 +905,32 @@ export default function Teileportal() {
               </motion.div>
             </div>
 
-            {/* ── BELIEBTE KATEGORIEN ──────────────────────────────── */}
+            {/* ── HINWEIS: Gespeicherte Fahrzeuge (Kategorien links in der Sidebar) ── */}
             <div className="max-w-5xl mx-auto px-6 pb-16">
-              <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-5 text-center">Alle Kategorien</p>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                {CATEGORIES.map((cat) => (
-                  <button key={cat.id}
-                    onClick={() => { setPhase('categories'); handleCategoryClick(cat); }}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border bg-card shadow-sm hover:border-primary hover:bg-primary/5 hover:-translate-y-0.5 transition-all group">
-                    <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center ring-1 ring-border/50 transition-transform group-hover:scale-110', cat.color)}>
-                      <cat.Icon className="w-5 h-5 text-foreground/80" />
-                    </div>
-                    <span className="text-xs font-semibold text-center leading-tight line-clamp-2 text-foreground">
-                      {cat.name.split(' / ')[0]}
-                    </span>
+              <div className="max-w-2xl mx-auto rounded-2xl border border-primary/30 bg-primary/5 p-6 sm:p-8 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center mx-auto mb-4">
+                  <Car className="w-6 h-6 text-primary" />
+                </div>
+                <h3 className="text-lg font-bold mb-1.5">Deine Fahrzeuge — immer griffbereit</h3>
+                <p className="text-sm text-muted-foreground max-w-lg mx-auto mb-5">
+                  {user
+                    ? (garage.length > 0
+                        ? `Du hast ${garage.length} Fahrzeug${garage.length === 1 ? '' : 'e'} gespeichert — ruf sie mit einem Klick ab und finde sofort passende Teile.`
+                        : 'Angemeldet: Sobald du ein Fahrzeug per VIN oder HSN/TSN suchst, merken wir es uns automatisch — jederzeit wieder abrufbar.')
+                    : 'Melde dich an, um deine eingegebenen Fahrzeuge dauerhaft zu speichern und mit einem Klick wieder abzurufen — samt passender Teile.'}
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <button
+                    onClick={() => { setHeroTab('vehicle'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="btn-primary px-5 h-11 gap-2">
+                    <Car className="w-4 h-4" /> Meine Fahrzeuge{garage.length > 0 ? ` (${garage.length})` : ''}
                   </button>
-                ))}
+                  {!user && (
+                    <a href="/konto" className="btn-outline px-5 h-11 inline-flex items-center justify-center gap-2">
+                      Anmelden
+                    </a>
+                  )}
+                </div>
               </div>
 
               {/* Contact links */}
