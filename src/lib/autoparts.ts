@@ -274,17 +274,9 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
   const v = vin.trim().toUpperCase();
   if (v.length !== 17) return null;
 
-  // 1) Nativer, exakter TecDoc-VIN-Check
-  try {
-    const r = await ap(`/vin/tecdoc-vin-check/${encodeURIComponent(v)}`);
-    const arr = pickArray(r, 'vehicles', 'matchedVehicles');
-    const one = toApVehicle(arr[0] || r?.vehicle || r);
-    if (one && one.vehicleId) {
-      return { manufacturer: one.manufacturer || '', model: one.model || '', exact: true, candidates: [one] };
-    }
-  } catch { /* Fallback */ }
-
-  // 2) decoder-v3 → Marke/Modell/Hubraum/Kraftstoff
+  // decoder-v3 (Fahrzeugregister) → Marke/Modell/Hubraum/Kraftstoff.
+  // (Der native tecdoc-vin-check bräuchte einen separaten VIN_API_KEY am Server
+  //  und läuft sonst 10s ins Timeout — daher hier bewusst nicht vorgeschaltet.)
   let make = '', model = '', ccm = 0, fuel = '';
   try {
     const r3 = await ap(`/vin/decoder-v3/${encodeURIComponent(v)}`);
@@ -297,59 +289,61 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
     const ft = String(info['Fuel type'] || '').toLowerCase();
     if (/diesel/.test(ft)) fuel = 'diesel';
     else if (/gas|petrol|benz/.test(ft)) fuel = 'benzin';
-  } catch { /* */ }
+  } catch { /* decoder nicht erreichbar */ }
   if (!make || !model) return null;
 
-  // 3) Hersteller
-  const manus = pickArray(await ap(`/manufacturers/list/type-id/${TYPE_PC}`), 'manufacturers');
-  const MK = make.toUpperCase();
-  const manu = manus.find((x: any) => String(x.manufacturerName).toUpperCase() === MK)
-            || manus.find((x: any) => String(x.manufacturerName).toUpperCase().includes(MK));
-  if (!manu) return { manufacturer: make, model, candidates: [] };
+  // Marke → Modellreihe(n) → Motorvarianten. Robust: jeder Fehler liefert Teilergebnis
+  // (mind. manufacturer/model), damit NIE in den alten Fallback gefallen wird.
+  try {
+    const manus = pickArray(await ap(`/manufacturers/list/type-id/${TYPE_PC}`), 'manufacturers');
+    const MK = make.toUpperCase();
+    const manu = manus.find((x: any) => String(x.manufacturerName).toUpperCase() === MK)
+              || manus.find((x: any) => String(x.manufacturerName).toUpperCase().includes(MK));
+    if (!manu) return { manufacturer: make, model, candidates: [] };
 
-  // 4) Modellreihe(n) — unscharfer Namensvergleich
-  const models = pickArray(
-    await ap(`/models/list/type-id/${TYPE_PC}/manufacturer-id/${manu.manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`),
-    'models'
-  );
-  const nModel = normCat(model);
-  let matched = models.filter((m: any) => normCat(String(m.modelName)).includes(nModel));
-  if (matched.length === 0) matched = models.filter((m: any) => nModel.includes(normCat(String(m.modelName))));
-  if (matched.length === 0) return { manufacturer: make, model, candidates: [] };
-  matched = matched.slice(0, 6);
+    const models = pickArray(
+      await ap(`/models/list/type-id/${TYPE_PC}/manufacturer-id/${manu.manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`),
+      'models'
+    );
+    const nModel = normCat(model);
+    let matched = models.filter((m: any) => normCat(String(m.modelName)).includes(nModel));
+    if (matched.length === 0) matched = models.filter((m: any) => nModel.includes(normCat(String(m.modelName))));
+    if (matched.length === 0) return { manufacturer: make, model, candidates: [] };
+    matched = matched.slice(0, 6);
 
-  // 5) Motorvarianten sammeln
-  const cands: ApVinCandidate[] = [];
-  const seen = new Set<number>();
-  for (const mdl of matched) {
-    let types: any[] = [];
-    try {
-      types = pickArray(
-        await ap(`/types/type-id/${TYPE_PC}/list-vehicles-types/${mdl.modelId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`),
-        'modelTypes', 'types'
-      );
-    } catch { continue; }
-    for (const t of types) {
-      const veh = toApVehicle(t) as ApVinCandidate | null;
-      if (!veh || !veh.vehicleId || seen.has(veh.vehicleId)) continue;
-      // Kraftstoff-Filter (weich): klar unpassende Varianten aussortieren, wenn bekannt
-      if (fuel) {
-        const tf = String(veh.fuel || '').toLowerCase();
-        if (fuel === 'diesel' && tf && !/diesel/.test(tf)) continue;
-        if (fuel === 'benzin' && /diesel/.test(tf)) continue;
+    const cands: ApVinCandidate[] = [];
+    const seen = new Set<number>();
+    for (const mdl of matched) {
+      let types: any[] = [];
+      try {
+        types = pickArray(
+          await ap(`/types/type-id/${TYPE_PC}/list-vehicles-types/${mdl.modelId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`),
+          'modelTypes', 'types'
+        );
+      } catch { continue; }
+      for (const t of types) {
+        const veh = toApVehicle(t) as ApVinCandidate | null;
+        if (!veh || !veh.vehicleId || seen.has(veh.vehicleId)) continue;
+        if (fuel) {
+          const tf = String(veh.fuel || '').toLowerCase();
+          if (fuel === 'diesel' && tf && !/diesel/.test(tf)) continue;
+          if (fuel === 'benzin' && /diesel/.test(tf)) continue;
+        }
+        seen.add(veh.vehicleId);
+        veh.modelName = String(mdl.modelName);
+        cands.push(veh);
       }
-      seen.add(veh.vehicleId);
-      veh.modelName = String(mdl.modelName);
-      cands.push(veh);
     }
+    if (ccm) {
+      cands.sort((a, b) => Math.abs(parseInt(a.ccm || '0', 10) - ccm) - Math.abs(parseInt(b.ccm || '0', 10) - ccm));
+    } else {
+      cands.sort((a, b) => (a.modelName || '').localeCompare(b.modelName || '') || (a.typeName || '').localeCompare(b.typeName || ''));
+    }
+    return { manufacturer: make, model, candidates: cands.slice(0, 60) };
+  } catch {
+    // Auflösung fehlgeschlagen — trotzdem Marke/Modell melden (kein alter Fallback)
+    return { manufacturer: make, model, candidates: [] };
   }
-  // Nach Hubraum-Nähe sortieren (wenn bekannt), sonst nach Modell + Motorname
-  if (ccm) {
-    cands.sort((a, b) => Math.abs(parseInt(a.ccm || '0', 10) - ccm) - Math.abs(parseInt(b.ccm || '0', 10) - ccm));
-  } else {
-    cands.sort((a, b) => (a.modelName || '').localeCompare(b.modelName || '') || (a.typeName || '').localeCompare(b.typeName || ''));
-  }
-  return { manufacturer: make, model, candidates: cands.slice(0, 60) };
 }
 
 /** Kategorie-IDs per Textsuche (z.B. "Bremsscheibe" → Kategorie-Baum-Treffer). */
