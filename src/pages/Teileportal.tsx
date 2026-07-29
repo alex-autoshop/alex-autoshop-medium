@@ -482,9 +482,13 @@ export default function Teileportal() {
   const sortKnownBrandsFirst = (arts: Article[]) =>
     [...arts].sort((a, b) => Number(!!getBrandLogo(b.brand)) - Number(!!getBrandLogo(a.brand)));
 
-  /** Top-Artikel gestaffelt mit echten IC-Daten anreichern (UVP, Bestand, Lieferzeit). */
+  /** Alle Artikel ohne Preis mit echten IC-UVP-Preisen anreichern.
+   *  Batches à 5 parallel, 300ms zwischen Batches → kein Rate-Limit. */
   const enrichTopWithIc = (arts: Article[]) => {
-    arts.filter((a) => a.price == null && a.articleNumber).slice(0, 20).forEach((a, i) => {
+    const toEnrich = arts.filter((a) => a.price == null && a.articleNumber);
+    const BATCH = 5;
+    toEnrich.forEach((a, i) => {
+      const delay = Math.floor(i / BATCH) * 300 + (i % BATCH) * 30;
       setTimeout(() => {
         icPriceLookup(a.articleNumber).then((live) => {
           if (!live) return;
@@ -492,7 +496,7 @@ export default function Teileportal() {
             ? { ...x, price: live.price, availability: live.availability, deliveryDays: live.deliveryDays, imageUrl: x.imageUrl ?? live.imageUrl, source: 'intercars' as const }
             : x));
         }).catch(() => {});
-      }, i * 200);
+      }, delay);
     });
   };
 
