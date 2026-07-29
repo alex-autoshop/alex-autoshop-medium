@@ -577,7 +577,7 @@ export default function Teileportal() {
   // ── Schnellfilter-States ─────────────────────────────────────────────────
   const [artSearch,    setArtSearch]    = useState('');
   const [quickFilter,  setQuickFilter]  = useState<string | null>(null);
-  const [sortOrder,    setSortOrder]    = useState<'popular' | 'cheapest' | 'savings' | 'fast' | 'brand'>('popular');
+  const [sortOrder,    setSortOrder]    = useState<'popular' | 'cheapest' | 'quality' | 'savings' | 'fast' | 'brand'>('popular');
   const [availFilter,  setAvailFilter]  = useState<'all' | 'instant' | 'fast'>('all');
 
   const filtered = useMemo(() => {
@@ -600,11 +600,24 @@ export default function Teileportal() {
       result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 2);
     }
 
+    // Originalteil-Filter: nur Artikel mit OE-/Originalteilnummer
+    if (quickFilter === 'oem') {
+      result = result.filter(a => Array.isArray(a.oeNumbers) && a.oeNumbers.length > 0);
+    }
+
     // Sortierung
     const sorted = [...result];
     switch (sortOrder) {
       case 'cheapest':
         sorted.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)); break;
+      case 'quality':
+        // Premiummarken (mit hinterlegtem Marken-Logo) zuerst, dann günstigster Preis
+        sorted.sort((a, b) => {
+          const qa = getBrandLogo(a.brand) ? 1 : 0;
+          const qb = getBrandLogo(b.brand) ? 1 : 0;
+          if (qb !== qa) return qb - qa;
+          return (a.price ?? Infinity) - (b.price ?? Infinity);
+        }); break;
       case 'savings':
         sorted.sort((a, b) => {
           const savA = a.priceEK != null && a.price != null ? a.price - a.priceEK : 0;
@@ -1070,8 +1083,8 @@ export default function Teileportal() {
                         {[
                           { id: 'instant',  label: 'Sofort lieferbar', icon: '📦' },
                           { id: 'cheapest', label: 'Günstigste',        icon: '⚡' },
-                          { id: 'savings',  label: 'Max. Ersparnis',    icon: '✦' },
-                          { id: 'fast',     label: 'Schnell',           icon: '🚀' },
+                          { id: 'quality',  label: 'Qualität',          icon: '★' },
+                          { id: 'oem',      label: 'Originalteil',      icon: '✓' },
                         ].map(f => {
                           const isActive = quickFilter === f.id || sortOrder === f.id || (f.id === 'instant' && availFilter === 'instant');
                           return (
@@ -1080,6 +1093,9 @@ export default function Teileportal() {
                               onClick={() => {
                                 if (f.id === 'instant') {
                                   setAvailFilter(prev => prev === 'instant' ? 'all' : 'instant');
+                                  setQuickFilter(prev => prev === f.id ? null : f.id);
+                                } else if (f.id === 'oem') {
+                                  // Reiner Filter (keine Sortierung) — nur Teile mit OE-Nummer
                                   setQuickFilter(prev => prev === f.id ? null : f.id);
                                 } else {
                                   setSortOrder(prev => (prev as string) === f.id ? 'popular' : f.id as typeof sortOrder);
