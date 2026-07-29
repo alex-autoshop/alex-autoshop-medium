@@ -290,29 +290,30 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
     if (/diesel/.test(ft)) fuel = 'diesel';
     else if (/gas|petrol|benz/.test(ft)) fuel = 'benzin';
   } catch { /* decoder nicht erreichbar */ }
-  const DBG: any = { make, model, ccm, fuel }; try { (globalThis as any).__vinDbg = DBG; } catch { /* */ }
   if (!make || !model) return null;
+
+  // Lokale Normalisierung (bewusst NICHT die modulweite normCat — die kann beim
+  // Vite-Code-Splitting im Route-Chunk fehlen → "normCat is not defined").
+  const norm = (x: string) => String(x).toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]/g, '');
 
   // Marke → Modellreihe(n) → Motorvarianten. Robust: jeder Fehler liefert Teilergebnis
   // (mind. manufacturer/model), damit NIE in den alten Fallback gefallen wird.
   try {
     const manus = pickArray(await ap(`/manufacturers/list/type-id/${TYPE_PC}`), 'manufacturers');
-    DBG.manus = manus.length;
     const MK = make.toUpperCase();
     const manu = manus.find((x: any) => String(x.manufacturerName).toUpperCase() === MK)
               || manus.find((x: any) => String(x.manufacturerName).toUpperCase().includes(MK));
-    DBG.manuId = manu?.manufacturerId;
     if (!manu) return { manufacturer: make, model, candidates: [] };
 
     const models = pickArray(
       await ap(`/models/list/type-id/${TYPE_PC}/manufacturer-id/${manu.manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`),
       'models'
     );
-    DBG.models = models.length;
-    const nModel = normCat(model);
-    let matched = models.filter((m: any) => normCat(String(m.modelName)).includes(nModel));
-    if (matched.length === 0) matched = models.filter((m: any) => nModel.includes(normCat(String(m.modelName))));
-    DBG.matched = matched.length;
+    const nModel = norm(model);
+    let matched = models.filter((m: any) => norm(String(m.modelName)).includes(nModel));
+    if (matched.length === 0) matched = models.filter((m: any) => nModel.includes(norm(String(m.modelName))));
     if (matched.length === 0) return { manufacturer: make, model, candidates: [] };
     matched = matched.slice(0, 6);
 
@@ -339,16 +340,13 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
         cands.push(veh);
       }
     }
-    DBG.cands = cands.length;
     if (ccm) {
       cands.sort((a, b) => Math.abs(parseInt(a.ccm || '0', 10) - ccm) - Math.abs(parseInt(b.ccm || '0', 10) - ccm));
     } else {
       cands.sort((a, b) => (a.modelName || '').localeCompare(b.modelName || '') || (a.typeName || '').localeCompare(b.typeName || ''));
     }
     return { manufacturer: make, model, candidates: cands.slice(0, 60) };
-  } catch (e: any) {
-    DBG.error = String(e && e.message ? e.message : e);
-    try { (globalThis as any).__vinDbg = DBG; } catch { /* */ }
+  } catch {
     // Auflösung fehlgeschlagen — trotzdem Marke/Modell melden (kein alter Fallback)
     return { manufacturer: make, model, candidates: [] };
   }
