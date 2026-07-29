@@ -666,28 +666,54 @@ export default function Teileportal() {
           <nav className="flex-1 p-2 space-y-0.5 py-3">
             {CATEGORIES.map((cat) => {
               const isActive = activeCat?.id === cat.id;
+              const isOpen = openCatId === cat.id;
+              const nodes = catNodes[cat.id] ?? [];
               return (
-                <button
-                  key={cat.id}
-                  onClick={() => handleSidebarCat(cat)}
-                  className={cn(
-                    "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all duration-150",
-                    isActive
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
-                  )}
-                >
-                  <div className={cn(
-                    "w-6 h-6 rounded-md bg-gradient-to-br flex items-center justify-center shrink-0 transition-transform",
-                    cat.color,
-                    isActive ? "scale-110" : "group-hover:scale-105"
-                  )}>
-                    <cat.Icon className="w-3 h-3 text-foreground/70" />
-                  </div>
-                  <span className="text-xs font-medium leading-tight line-clamp-2">
-                    {cat.name.split(' / ')[0]}
-                  </span>
-                </button>
+                <div key={cat.id}>
+                  <button
+                    onClick={() => handleCategoryClick(cat)}
+                    className={cn(
+                      "group w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all duration-150",
+                      isActive || isOpen
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-6 h-6 rounded-md bg-gradient-to-br flex items-center justify-center shrink-0 ring-1 ring-border/50 transition-transform group-hover:scale-105",
+                      cat.color,
+                      isOpen && "scale-110"
+                    )}>
+                      <cat.Icon className="w-3 h-3 text-foreground/80" />
+                    </div>
+                    <span className="flex-1 text-xs font-medium leading-tight line-clamp-2">
+                      {cat.name.split(' / ')[0]}
+                    </span>
+                    <ChevronRight className={cn(
+                      "w-3.5 h-3.5 shrink-0 transition-transform text-muted-foreground/60",
+                      isOpen && "rotate-90 text-primary"
+                    )} />
+                  </button>
+                  <AnimatePresence>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.18 }} className="overflow-hidden"
+                      >
+                        <div className="pl-1 py-1">
+                          {nodes.length > 0 ? (
+                            <SubCatList nodes={nodes} onPick={pickSubCat} />
+                          ) : (
+                            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground px-2 py-1">
+                              {partsLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                              {partsLoading ? "Lädt …" : "Keine Unterkategorien"}
+                            </p>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               );
             })}
           </nav>
@@ -879,20 +905,19 @@ export default function Teileportal() {
 
             {/* ── BELIEBTE KATEGORIEN ──────────────────────────────── */}
             <div className="max-w-5xl mx-auto px-6 pb-16">
-              <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-5 text-center">Beliebte Kategorien</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold mb-5 text-center">Alle Kategorien</p>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                {CATEGORIES.map((cat, i) => (
-                  <motion.button key={cat.id}
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 + i * 0.025 }}
+                {CATEGORIES.map((cat) => (
+                  <button key={cat.id}
                     onClick={() => { setPhase('categories'); handleCategoryClick(cat); }}
-                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all group">
-                    <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center transition-transform group-hover:scale-110', cat.color)}>
-                      <cat.Icon className="w-5 h-5 text-foreground/70" />
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border bg-card shadow-sm hover:border-primary hover:bg-primary/5 hover:-translate-y-0.5 transition-all group">
+                    <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center ring-1 ring-border/50 transition-transform group-hover:scale-110', cat.color)}>
+                      <cat.Icon className="w-5 h-5 text-foreground/80" />
                     </div>
-                    <span className="text-xs font-medium text-center leading-tight line-clamp-2 text-muted-foreground group-hover:text-foreground transition-colors">
+                    <span className="text-xs font-semibold text-center leading-tight line-clamp-2 text-foreground">
                       {cat.name.split(' / ')[0]}
                     </span>
-                  </motion.button>
+                  </button>
                 ))}
               </div>
 

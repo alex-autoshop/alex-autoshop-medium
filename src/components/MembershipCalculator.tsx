@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { TrendingUp, CalendarClock } from "lucide-react";
-import { MEMBERSHIP_LEVELS } from "@/data/memberships";
+import { TrendingUp, CalendarClock, Check } from "lucide-react";
+import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
 import { cn } from "@/lib/utils";
 
 const MAX = 500_000;
@@ -12,6 +12,22 @@ const CATEGORIES = [
   { id: "teile", label: "Teile Anschaffung" },
   { id: "sonstiges", label: "Sonstiges" },
 ] as const;
+
+// Welches Modul schaltet den Rabatt für welche Ausgaben-Kategorie frei
+// ("any" = zählt sobald mind. ein Modul aktiv ist, z.B. allg. Werkstattbedarf)
+const CATEGORY_MODULE: Record<string, "Autoteile" | "Lackfarben" | "Lackmaterial" | "any"> = {
+  lackfarbe: "Lackfarben",
+  lackmaterial: "Lackmaterial",
+  fahrzeughandel: "Autoteile",
+  teile: "Autoteile",
+  sonstiges: "any",
+};
+
+const MODULES: { id: string; label: string }[] = [
+  { id: "Autoteile", label: "Autoteile" },
+  { id: "Lackfarben", label: "Lackfarben" },
+  { id: "Lackmaterial", label: "Lackmaterial" },
+];
 
 const MONTH_LABELS = ["Vor 3 Monaten", "Vor 2 Monaten", "Letzter Monat"];
 
@@ -178,67 +194,184 @@ export function MembershipCalculator() {
         </div>
       )}
 
-      {/* Ergebnis-Karten */}
+      {/* Ergebnis-Karten — pro Karte die exakte Mitgliedschaft konfigurieren */}
+      <p className="text-xs text-muted-foreground mb-2">
+        Module je Level an- oder abwählen — Beitrag, Ersparnis und Netto rechnen sich sofort neu.
+      </p>
       <div className="grid sm:grid-cols-3 gap-4">
-        {MEMBERSHIP_LEVELS.map((m) => {
-          const savedPerMonth = total * (m.discountPercent / 100);
-          if (mode === "months") {
-            const perMonthSaved = months.map((v) => v * (m.discountPercent / 100));
-            const totalSaved = perMonthSaved.reduce((a, b) => a + b, 0);
-            const net = totalSaved - m.pricePerMonth * 3;
-            const worth = net > 0;
-            return (
-              <div key={m.level} className={cn("rounded-xl border p-4", worth ? "border-primary bg-primary/5" : "border-border bg-secondary/50")}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-bold">{m.name}</p>
-                  <span className="text-xs font-semibold text-primary">{m.discountPercent}%</span>
-                </div>
-                <div className="space-y-0.5 text-xs text-muted-foreground mb-2">
-                  {perMonthSaved.map((s, i) => (
-                    <div key={i} className="flex justify-between">
-                      <span>{MONTH_LABELS[i]}</span>
-                      <span className="text-foreground font-medium">{eur(s)}</span>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-2xl font-display font-bold text-primary leading-none">{eur(totalSaved)}</p>
-                <p className="text-xs text-muted-foreground mt-1">in 3 Monaten gespart</p>
-                <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-1.5 text-sm">
-                  <TrendingUp className={cn("w-4 h-4", worth ? "text-primary" : "text-muted-foreground")} />
-                  <span className={cn("font-semibold", worth ? "text-foreground" : "text-muted-foreground")}>
-                    {worth ? "+" : ""}{eur(net)} netto
-                  </span>
-                </div>
-              </div>
-            );
-          }
-          const net = savedPerMonth - m.pricePerMonth;
-          const worth = net > 0;
-          return (
-            <div key={m.level} className={cn("rounded-xl border p-4", worth ? "border-primary bg-primary/5" : "border-border bg-secondary/50")}>
-              <div className="flex items-center justify-between mb-1">
-                <p className="font-bold">{m.name}</p>
-                <span className="text-xs font-semibold text-primary">{m.discountPercent}%</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground mb-2">{m.pricePerMonth} € Beitrag / Monat</p>
-              <p className="text-2xl font-display font-bold text-primary leading-none">{eur(savedPerMonth)}</p>
-              <p className="text-xs text-muted-foreground mt-1">Ersparnis / Monat</p>
-              <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-1.5 text-sm">
-                <TrendingUp className={cn("w-4 h-4", worth ? "text-primary" : "text-muted-foreground")} />
-                <span className={cn("font-semibold", worth ? "text-foreground" : "text-muted-foreground")}>
-                  {worth ? "+" : ""}{eur(net)} netto
-                </span>
-              </div>
-            </div>
-          );
-        })}
+        {MEMBERSHIP_LEVELS.map((m) => (
+          <ResultCard
+            key={m.level}
+            m={m}
+            mode={mode}
+            simpleTotal={simpleTotal}
+            amounts={amounts}
+            enabled={enabled}
+            months={months}
+          />
+        ))}
       </div>
 
       <p className="text-xs text-muted-foreground mt-4">
         {mode === "months"
           ? "So viel hättest du in den letzten 3 Monaten gespart, wenn du deine Lackfarben, Lackmaterialien, Autoteile, Pflegeprodukte und deinen Werkstattbedarf über Alex Autoshop gekauft hättest."
-          : "Die Ersparnis gilt auf deinen Einkauf über Alex Autoshop — Lackfarben, Lackmaterial, Autoteile, Pflegeprodukte und Werkstattbedarf."}
+          : "Die Ersparnis gilt auf deinen Einkauf über Alex Autoshop — Lackfarben, Lackmaterial, Autoteile, Pflegeprodukte und Werkstattbedarf. Der Rabatt greift jeweils in den Bereichen deiner gewählten Module."}
       </p>
+    </div>
+  );
+}
+
+function ResultCard({
+  m,
+  mode,
+  simpleTotal,
+  amounts,
+  enabled,
+  months,
+}: {
+  m: MembershipLevel;
+  mode: Mode;
+  simpleTotal: number;
+  amounts: Record<string, number>;
+  enabled: Record<string, boolean>;
+  months: number[];
+}) {
+  const [modules, setModules] = useState<string[]>(m.modules);
+  const [wantFreePaint, setWantFreePaint] = useState(true);
+  const toggle = (mod: string) =>
+    setModules((p) => (p.includes(mod) ? p.filter((x) => x !== mod) : [...p, mod]));
+
+  const isBase = modules.length === 0;
+  const noPaint = !modules.includes("Lackfarben") && !modules.includes("Lackmaterial");
+  const freePaintOff = noPaint && !wantFreePaint;
+  const rate = isBase ? m.baseDiscountPercent : m.discountPercent;
+
+  // Beitrag (gleiche Logik wie auf den Mitgliedschaftskarten)
+  const price = useMemo(() => {
+    const base = isBase
+      ? m.basePrice
+      : m.basePrice + modules.reduce((s, mod) => s + (m.modulePrices[mod] ?? 0), 0);
+    return Math.max(0, base - (freePaintOff ? m.freePaintValue : 0));
+  }, [isBase, modules, freePaintOff, m]);
+
+  // Rabattfähiger Anteil einer Monatsausgabe – abhängig von den aktiven Modulen
+  const eligibleLump = (v: number) => (isBase ? v : v * (modules.length / 3));
+  const eligibleDetailed = () =>
+    CATEGORIES.reduce((s, c) => {
+      if (!enabled[c.id]) return s;
+      const amt = amounts[c.id] || 0;
+      if (isBase) return s + amt; // Basis: Rabatt auf alles
+      const map = CATEGORY_MODULE[c.id];
+      const active = map === "any" ? modules.length > 0 : modules.includes(map);
+      return s + (active ? amt : 0);
+    }, 0);
+
+  // Ergebnis je Modus
+  const isMonths = mode === "months";
+  const perMonthSaved = months.map((v) => eligibleLump(v) * (rate / 100));
+  const monthsSaved = perMonthSaved.reduce((a, b) => a + b, 0);
+  const eligibleMonthly =
+    mode === "simple" ? eligibleLump(simpleTotal) : mode === "detailed" ? eligibleDetailed() : 0;
+  const savedPerMonth = eligibleMonthly * (rate / 100);
+
+  const net = isMonths ? monthsSaved - price * 3 : savedPerMonth - price;
+  const worth = net > 0;
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border p-4",
+        worth ? "border-primary bg-primary/5" : "border-border bg-secondary/50"
+      )}
+    >
+      <div className="flex items-center justify-between mb-1">
+        <p className="font-bold">{m.name}</p>
+        <span className="text-xs font-semibold text-primary">{rate}%</span>
+      </div>
+      <p className="text-[11px] text-muted-foreground mb-2">{price} € Beitrag / Monat</p>
+
+      {/* Module – anklickbar */}
+      <div className="space-y-1.5 mb-3">
+        {MODULES.map((mod) => {
+          const on = modules.includes(mod.id);
+          return (
+            <button
+              key={mod.id}
+              type="button"
+              onClick={() => toggle(mod.id)}
+              className={cn(
+                "w-full flex items-center justify-between px-2.5 py-2 rounded-md border text-[11px] font-medium transition-colors min-h-[40px]",
+                on
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border bg-secondary/40 text-muted-foreground/60"
+              )}
+            >
+              <span className={cn("text-left", !on && "line-through")}>{mod.label}</span>
+              <span
+                className={cn(
+                  "w-4 h-4 rounded-full border flex items-center justify-center shrink-0",
+                  on ? "border-primary bg-primary" : "border-muted-foreground/40"
+                )}
+              >
+                {on && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+              </span>
+            </button>
+          );
+        })}
+
+        {/* Gratis-Farbe abwählbar – nur wenn kein Lack-Modul aktiv */}
+        {noPaint && (
+          <button
+            type="button"
+            onClick={() => setWantFreePaint((v) => !v)}
+            className={cn(
+              "w-full flex items-center justify-between px-2.5 py-2 rounded-md border text-[11px] font-medium transition-colors min-h-[40px]",
+              wantFreePaint
+                ? "border-primary bg-primary/10 text-foreground"
+                : "border-border bg-secondary/40 text-muted-foreground/60"
+            )}
+          >
+            <span className={cn("text-left", !wantFreePaint && "line-through")}>Gratis-Farbe</span>
+            {wantFreePaint ? (
+              <span className="w-4 h-4 rounded-full border border-primary bg-primary flex items-center justify-center shrink-0">
+                <Check className="w-2.5 h-2.5 text-primary-foreground" />
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold text-muted-foreground/80 shrink-0">
+                −{m.freePaintValue} €
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+
+      {isMonths ? (
+        <>
+          <div className="space-y-0.5 text-xs text-muted-foreground mb-2">
+            {perMonthSaved.map((s, i) => (
+              <div key={i} className="flex justify-between">
+                <span>{MONTH_LABELS[i]}</span>
+                <span className="text-foreground font-medium">{eur(s)}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-2xl font-display font-bold text-primary leading-none">{eur(monthsSaved)}</p>
+          <p className="text-xs text-muted-foreground mt-1">in 3 Monaten gespart</p>
+        </>
+      ) : (
+        <>
+          <p className="text-2xl font-display font-bold text-primary leading-none">{eur(savedPerMonth)}</p>
+          <p className="text-xs text-muted-foreground mt-1">Ersparnis / Monat</p>
+        </>
+      )}
+
+      <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-1.5 text-sm">
+        <TrendingUp className={cn("w-4 h-4", worth ? "text-primary" : "text-muted-foreground")} />
+        <span className={cn("font-semibold", worth ? "text-foreground" : "text-muted-foreground")}>
+          {worth ? "+" : ""}
+          {eur(net)} netto
+        </span>
+      </div>
     </div>
   );
 }
