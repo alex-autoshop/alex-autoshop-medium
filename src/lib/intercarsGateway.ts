@@ -1,56 +1,88 @@
 /**
- * IC-Preis-Lookup direkt über /api/intercars (Vercel Node Serverless).
- * Supabase-Gateway war nötig als noch Edge Functions genutzt wurden (Cloudflare-IPs geblockt).
- * Node Serverless nutzt andere IPs → IC OAuth klappt direkt.
+ * Inter-Cars-Gateway über Supabase Edge Function (Deno-IPs).
+ *
+ * WICHTIG: NICHT direkt über /api/intercars (Vercel) aufrufen — Inter Cars blockt
+ * Vercel/AWS-IPs per WAF ("Połączenie zablokowane", 403 auf OAuth). Die Supabase
+ * Edge Function `intercars-api` (Projekt zasbdvtsxgimcezotlsi) läuft auf Deno-IPs,
+ * die IC nicht blockt, und hat gültige IC-Secrets hinterlegt → OAuth klappt dort.
  *
  * Preislogik:
- *   price     = listPriceGross (UVP/Einzelhandel) — was Kunden zahlen, z.B. 13,24€
- *   priceEK   = customerPriceGross (EK) — Alex's Einkaufspreis, z.B. 4,50€
- *   Fallback: EK * 1.7 wenn IC kein UVP liefert
+ *   price     = listPriceGross (UVP / Einzelhandel) — was Kunden sehen, z.B. 13,24€
+ *   priceEK   = customerPriceGross (EK) — Alex' Einkaufspreis, nur intern, z.B. 4,50€
+ *   Fallback: EK * Markup, falls IC kein UVP liefert.
  */
 
+const SUPA_URL = "https://zasbdvtsxgimcezotlsi.supabase.co";
+// Anon/Publishable-Key ist per Design öffentlich (Function-Aufruf, RLS-geschützt).
+const SUPA_KEY = "sb_publishable_hMoY8Rgjjb9cvmeMaTEJoQ_AkBoF3FX";
 const PRICE_MARKUP = 1.7;
+
 const _cache = new Map<string, { v: unknown; ts: number }>();
 const TTL = 5 * 60 * 1000; // 5 Minuten
 
 export interface IcLiveInfo {
   price: number;        // UVP / Einzelhandel (listPriceGross) — für Kunden
   priceEK?: number;     // EK-Preis (customerPriceGross) — nur intern
-  availability: string; // z.B. "sofort (10+ Stück)"
+  availability: string; // z.B. "1 Werktag · 5 Stück"
   deliveryDays: number;
   icSku: string;
   imageUrl?: string;
 }
 
-/** 4 Varianten — IC ist case-sensitiv und spacing-abhängig */
+async function icCall(action: string, body: Record<string, unknown>): Promise<any> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 10_000);
+  try {
+    const res = await fetch(`${SUPA_URL}/functions/v1/intercars-api?action=${action}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) return null;
+    const j = await res.json().catch(() => null);
+    return j?.data ?? j;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Rekursiv nach einem numerischen Feld suchen (IC verschachtelt price/stock). */
+function digNumber(obj: any, key: string): number | undefined {
+  if (!obj || typeof obj !== "object") return undefined;
+  if (typeof obj[key] === "number") return obj[key];
+  for (const v of Object.values(obj)) {
+    if (v && typeof v === "object") { const r = digNumber(v, key); if (r !== undefined) return r; }
+  }
+  return undefined;
+}
+
+/** Bild-URL aus einem IC-Produkt-Objekt extrahieren (verschiedene Feldnamen). */
+function extractImage(p: any): string | undefined {
+  if (!p) return undefined;
+  const candidates = [
+    p.imageUrl, p.imageURL, p.image, p.thumbnailUrl, p.pictureUrl, p.photo,
+    p.images?.[0]?.url, p.images?.[0]?.imageURL, p.images?.[0]?.link,
+    p.media?.[0]?.url, p.media?.[0]?.imageURL,
+  ];
+  return candidates.find((c) => typeof c === "string" && c.startsWith("http"));
+}
+
+/** IC ist case-sensitiv und formatabhängig → 4 Varianten parallel probieren. */
 function artVariants(artNo: string): string[] {
   const set = new Set<string>();
   set.add(artNo);
   set.add(artNo.toUpperCase());
-  set.add(artNo.replace(/\s+/g, ''));
-  set.add(artNo.toUpperCase().replace(/\s+/g, ''));
+  set.add(artNo.replace(/\s+/g, ""));
+  set.add(artNo.toUpperCase().replace(/\s+/g, ""));
   return [...set];
-}
-
-async function searchByIndex(index: string): Promise<any[] | null> {
-  try {
-    const res = await fetch('/api/intercars', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'searchByIndex', index }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) return null;
-    const data = await res.json().catch(() => null);
-    return Array.isArray(data) ? data : null;
-  } catch {
-    return null;
-  }
 }
 
 /** Live UVP + EK + Bestand + Bild zu einer Hersteller-Artikelnummer (best effort). */
 export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo | null> {
-  const artNo = (articleNumber || '').trim();
+  const artNo = (articleNumber || "").trim();
   if (artNo.length < 3) return null;
 
   const hit = _cache.get(artNo);
@@ -58,33 +90,39 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
 
   let result: IcLiveInfo | null = null;
   try {
-    for (const variant of artVariants(artNo)) {
-      const products = await searchByIndex(variant);
-      if (!products || products.length === 0) continue;
+    // Varianten parallel suchen — ersten Treffer nehmen
+    const searches = await Promise.all(
+      artVariants(artNo).map((v) => icCall("search", { index: v, pageSize: 1 })),
+    );
+    const prods: any[] = searches.flatMap((s) => s?.products || []).filter(Boolean);
+    const p = prods[0];
 
-      const p = products.find((x: any) => (x?.priceOriginal ?? x?.price) > 0) ?? products[0];
-      if (!p) continue;
-
-      // UVP = listPriceGross (priceOriginal) — Einzelhandel-Preis für Kunden
-      // EK  = customerPriceGross (price) — Alex's Einkaufspreis
-      const ek: number | undefined = p.price > 0 ? Number(p.price) : undefined;
-      const uvp: number | undefined = p.priceOriginal != null && p.priceOriginal > 0
-        ? Number(p.priceOriginal)
-        : ek != null
-          ? Math.ceil(ek * PRICE_MARKUP * 100) / 100  // Fallback: EK + Aufschlag
+    if (p?.sku) {
+      const d = await icCall("product-detail", { sku: p.sku });
+      // UVP = listPriceGross (Einzelhandel) anzeigen — NICHT den EK. Fallback: EK × Markup.
+      const uvp = digNumber(d?.pricing, "listPriceGross");
+      const ek  = digNumber(d?.pricing, "customerPriceGross");
+      const price = uvp && uvp > 0
+        ? uvp
+        : ek && ek > 0
+          ? Math.ceil(ek * PRICE_MARKUP * 100) / 100
           : undefined;
+      const avail = digNumber(d?.stock, "availability") ?? 0;
 
-      if (!uvp) continue;
-
-      result = {
-        price: uvp,                          // Einzelhandel — was Kunden sehen
-        priceEK: ek,                         // EK-Preis für Alex
-        availability: p.availability || '1 Werktag · Zentrallager',
-        deliveryDays: typeof p.deliveryDays === 'number' ? p.deliveryDays : 1,
-        icSku: p._sku || p._index || String(p.id || variant),
-        imageUrl: Array.isArray(p.images) ? p.images[0] : p.imageUrl || undefined,
-      };
-      break;
+      if (price) {
+        // IC liefert aus Zweigstelle ODER Zentrallager → immer 1 Werktag.
+        // avail=0 heißt nur lokales Lager leer, nicht Out-of-Stock.
+        result = {
+          price,
+          priceEK: ek && ek > 0 ? ek : undefined,
+          availability: avail > 0
+            ? `1 Werktag · ${avail >= 10 ? ">10" : avail} Stück`
+            : "1 Werktag · Zentrallager",
+          deliveryDays: 1,
+          icSku: String(p.sku),
+          imageUrl: extractImage(p) ?? extractImage(d),
+        };
+      }
     }
   } catch { /* best effort */ }
 
