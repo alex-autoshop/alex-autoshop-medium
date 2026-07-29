@@ -1,9 +1,9 @@
 /**
- * Preis-/Liefer-Bausteine fürs Teileportal:
- * Mitgliedspreise (Level 1–3), Lieferprognose mit Tour-Ansage, Spec-Zeile mit Auto-Load.
+ * Preis-/Liefer-Bausteine fürs Teileportal — IC-Style Design.
+ * Mitgliedspreise (Level 1–3), Lieferprognose, Spec-Zeile.
  */
 import { useEffect, useState } from "react";
-import { ChevronDown, Crown, Truck } from "lucide-react";
+import { ChevronDown, Crown, Truck, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apArticleSpecs } from "@/lib/autoparts";
 
@@ -17,7 +17,6 @@ export const MEMBER_LEVELS = [
 export type MemberLevelId = "none" | "L1" | "L2" | "L3";
 
 const MS_KEY = "tp:membership";
-/** Bis der Login-Flow steht: Kunde wählt seine Stufe selbst (localStorage). */
 export function useMembership(): [MemberLevelId, (l: MemberLevelId) => void] {
   const [level, setLevel] = useState<MemberLevelId>(() => {
     try { return (localStorage.getItem(MS_KEY) as MemberLevelId) || "none"; } catch { return "none"; }
@@ -42,33 +41,70 @@ export function MembershipSelect({ level, onChange }: { level: MemberLevelId; on
   );
 }
 
-/** Grundpreis vs. Mitgliedspreis, alle Stufen zum Aufklappen. */
-export function PriceBlock({ price, level }: { price: number; level: MemberLevelId }) {
+// ─── IC-STYLE PREIS-BLOCK ────────────────────────────────────
+
+/**
+ * Preisanzeige à la Intercars:
+ * - Obere Zeile: EK-Preis (klein, grau) — nur wenn vorhanden
+ * - Untere Zeile: Einzelhandel / UVP (groß, fett) = was Kunden zahlen
+ * - Mitgliedspreis: hervorgehoben mit Badge wenn Level gewählt
+ */
+export function PriceBlock({
+  price,
+  priceEK,
+  level,
+}: {
+  price: number;
+  priceEK?: number;
+  level: MemberLevelId;
+}) {
   const [open, setOpen] = useState(false);
   const my = MEMBER_LEVELS.find((l) => l.id === level);
   const myPrice = my ? memberPrice(price, my.pct) : null;
+
   return (
     <div className="text-right">
+      {/* EK-Preis (Alex's Einkaufspreis) — kleine graue Zeile à la IC */}
+      {priceEK != null && priceEK > 0 && priceEK < price && (
+        <p className="text-[11px] text-muted-foreground/70 leading-none mb-0.5">
+          EK {eur(priceEK)}
+        </p>
+      )}
+
       {myPrice != null ? (
         <>
-          <p className="text-xs text-muted-foreground">Grundpreis <span className="line-through">{eur(price)}</span></p>
-          <p className="font-bold text-xl leading-tight text-primary">{eur(myPrice)}</p>
-          <p className="text-[11px] font-medium text-green-700 dark:text-green-400">
-            Dein {my!.name}-Preis — du sparst {eur(price - myPrice)}
+          <p className="text-xs text-muted-foreground leading-none mb-0.5">
+            Einzelhandel <span className="line-through">{eur(price)}</span>
           </p>
+          <p className="font-bold text-lg leading-tight text-primary">{eur(myPrice)}</p>
+          <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary leading-none">
+            −{my!.pct} % {my!.name}
+          </span>
         </>
       ) : (
-        <p className="font-bold text-lg leading-none">{eur(price)}</p>
+        <>
+          <p className="text-[11px] text-muted-foreground/70 leading-none mb-0.5">Einzelhandel</p>
+          <p className="font-bold text-lg leading-tight">{eur(price)}</p>
+        </>
       )}
-      <button onClick={() => setOpen((o) => !o)}
-        className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors">
-        Mitgliedspreise <ChevronDown className={cn("w-3 h-3 transition-transform", open && "rotate-180")} />
+
+      {/* Mitgliedspreise aufklappbar */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+      >
+        Mitgliedspreise <ChevronDown className={cn("w-2.5 h-2.5 transition-transform", open && "rotate-180")} />
       </button>
       {open && (
-        <div className="mt-1 rounded-lg border border-border bg-secondary/40 text-[11px] divide-y divide-border/60 overflow-hidden text-left min-w-[170px]">
-          <div className="flex justify-between gap-3 px-2.5 py-1.5"><span>Grundpreis</span><b>{eur(price)}</b></div>
+        <div className="mt-1 rounded-lg border border-border bg-secondary/40 text-[11px] divide-y divide-border/60 overflow-hidden text-left min-w-[160px]">
+          <div className="flex justify-between gap-3 px-2.5 py-1.5 font-medium">
+            <span>Einzelhandel</span><b>{eur(price)}</b>
+          </div>
           {MEMBER_LEVELS.map((l) => (
-            <div key={l.id} className={cn("flex justify-between gap-3 px-2.5 py-1.5", level === l.id && "bg-primary/10 text-primary font-semibold")}>
+            <div key={l.id} className={cn(
+              "flex justify-between gap-3 px-2.5 py-1.5",
+              level === l.id && "bg-primary/10 text-primary font-semibold"
+            )}>
               <span>{l.name} (−{l.pct} %)</span><b>{eur(memberPrice(price, l.pct))}</b>
             </div>
           ))}
@@ -78,28 +114,38 @@ export function PriceBlock({ price, level }: { price: number; level: MemberLevel
   );
 }
 
-// ─── LIEFERPROGNOSE ─────────────────────────────────────────
+// ─── IC-STYLE LIEFER-BADGE ───────────────────────────────────
 
 const TOUR_NAME = "Morgentour";
 const WOCHENTAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
-/** Bestellt bis 16 Uhr → +n Werktage, Zustellung ca. 9:00 mit der Tour. */
 export function deliveryForecast(days: number): string {
   const d = new Date();
   let rest = Math.max(1, days) + (d.getHours() >= 16 ? 1 : 0);
   while (rest > 0) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) rest--; }
-  return `${WOCHENTAGE[d.getDay()]}, ${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}. · ca. 9:00 · ${TOUR_NAME}`;
+  return `${WOCHENTAGE[d.getDay()]}, ${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.`;
 }
 
-export function DeliveryBadge({ deliveryDays, availability }: { deliveryDays?: number; availability?: string }) {
+/**
+ * Lieferbadge à la Intercars:
+ * 🟢 Heute (in der Zweigstelle) 06:00
+ * ⚡ 1 Werktag
+ */
+export function DeliveryBadge({
+  deliveryDays,
+  availability,
+}: {
+  deliveryDays?: number;
+  availability?: string;
+}) {
   if (deliveryDays == null) {
     return (
-      <div className="text-right space-y-1">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">
-          <Truck className="w-4 h-4" /> Lieferzeit auf Anfrage
+      <div className="space-y-1">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700">
+          <Truck className="w-3.5 h-3.5" /> Lieferzeit auf Anfrage
         </span>
-        <p className="text-[11px] text-muted-foreground max-w-[200px] ml-auto leading-snug">
-          Meist schon {deliveryForecast(1)} bei dir — wir bestätigen sofort.
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          Meist schon {deliveryForecast(1)} · ca. 9:00 · {TOUR_NAME}
         </p>
       </div>
     );
@@ -108,54 +154,69 @@ export function DeliveryBadge({ deliveryDays, availability }: { deliveryDays?: n
   const is1day = deliveryDays <= 1;
   const is2day = deliveryDays === 2;
 
-  const badgeClass = is1day
-    ? "bg-green-500 text-white border-green-600 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
-    : is2day
-      ? "bg-yellow-400 text-yellow-900 border-yellow-500"
-      : "bg-amber-400 text-amber-900 border-amber-500";
-
   return (
-    <div className="text-right space-y-1">
+    <div className="space-y-1">
+      {/* Datum-Badge — grün wenn 1 Tag, gelb wenn 2, orange wenn mehr */}
       <span className={cn(
-        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold border",
-        badgeClass
+        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border",
+        is1day
+          ? "bg-green-500 text-white border-green-600"
+          : is2day
+            ? "bg-yellow-400 text-yellow-900 border-yellow-500"
+            : "bg-amber-400 text-amber-900 border-amber-500"
       )}>
         {is1day && (
-          <span className="relative flex h-2 w-2 shrink-0">
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
           </span>
         )}
-        <Truck className="w-4 h-4 shrink-0" />
-        {is1day ? "1 Werktag" : `${deliveryDays} Werktage`}
+        {is1day ? "Heute · Zweigstelle · 06:00" : `${deliveryForecast(deliveryDays)} · ca. 9:00`}
       </span>
-      <p className="text-[11px] font-medium text-foreground/70">Wäre {deliveryForecast(deliveryDays)} da</p>
-      {availability && <p className="text-[11px] text-muted-foreground">Lager: {availability}</p>}
+
+      {/* Werktage-Badge */}
+      <div>
+        <span className={cn(
+          "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium",
+          is1day ? "text-green-700 dark:text-green-400" : "text-muted-foreground"
+        )}>
+          {is1day ? <Zap className="w-3 h-3" /> : <Truck className="w-3 h-3" />}
+          {is1day ? "1 Werktag" : `${deliveryDays} Werktage`}
+          {availability && availability.includes("sofort") && (
+            <span className="ml-1 text-muted-foreground">· {availability}</span>
+          )}
+        </span>
+      </div>
     </div>
   );
 }
 
-// ─── SPEC-ZEILE (lädt Kriterien automatisch nach, edge-gecacht) ─
+// ─── SPEC-ZEILE ──────────────────────────────────────────────
 
 export function SpecStrip({ articleId, specs, auto }: {
   articleId: string | number;
   specs?: { name: string; value: string }[];
   auto?: boolean;
 }) {
-  const [loaded, setLoaded] = useState<{ name: string; value: string }[] | null>(specs && specs.length > 0 ? specs : null);
+  const [loaded, setLoaded] = useState<{ name: string; value: string }[] | null>(
+    specs && specs.length > 0 ? specs : null
+  );
   useEffect(() => {
     if (loaded || !auto) return;
     let alive = true;
-    apArticleSpecs(articleId).then((s) => { if (alive && s.length > 0) setLoaded(s.slice(0, 6)); }).catch(() => {});
+    apArticleSpecs(articleId)
+      .then((s) => { if (alive && s.length > 0) setLoaded(s.slice(0, 6)); })
+      .catch(() => {});
     return () => { alive = false; };
   }, [articleId, auto, loaded]);
+
   if (!loaded || loaded.length === 0) return null;
   return (
     <div className="px-4 pb-2 pt-2 border-t border-border/40 text-xs text-muted-foreground flex flex-wrap items-center gap-y-1">
       {loaded.map((s, si) => (
         <span key={si} className="whitespace-nowrap">
           {si > 0 && <span className="mx-2 text-border">|</span>}
-          {s.name}: <span className="font-semibold text-primary">{s.value}</span>
+          {s.name}: <span className="font-semibold text-foreground/80">{s.value}</span>
         </span>
       ))}
     </div>
