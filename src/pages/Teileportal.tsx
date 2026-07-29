@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Car, Phone, MessageCircle, Loader2, Package, ChevronRight, ArrowLeft,
   Filter, Settings, Disc, Zap, Wind, Thermometer, Battery, Radio, Fuel,
-  Wrench, Navigation, Layers, Lightbulb, Truck, Circle, ShoppingBag, Check, Hash
+  Wrench, Navigation, Layers, Lightbulb, Truck, Circle, ShoppingBag, Check, Hash, X
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
@@ -574,7 +574,50 @@ export default function Teileportal() {
   };
 
   const allBrands = useMemo(() => [...new Set(articles.map(a => a.brand).filter(Boolean))].sort(), [articles]);
-  const filtered = useMemo(() => selectedBrands.size > 0 ? articles.filter(a => selectedBrands.has(a.brand)) : articles, [articles, selectedBrands]);
+  // ── Schnellfilter-States ─────────────────────────────────────────────────
+  const [artSearch,    setArtSearch]    = useState('');
+  const [quickFilter,  setQuickFilter]  = useState<string | null>(null);
+  const [sortOrder,    setSortOrder]    = useState<'popular' | 'cheapest' | 'savings' | 'fast' | 'brand'>('popular');
+  const [availFilter,  setAvailFilter]  = useState<'all' | 'instant' | 'fast'>('all');
+
+  const filtered = useMemo(() => {
+    let result = selectedBrands.size > 0 ? articles.filter(a => selectedBrands.has(a.brand)) : articles;
+
+    // Artikel-Textsuche
+    if (artSearch.trim()) {
+      const q = artSearch.toLowerCase();
+      result = result.filter(a =>
+        a.name?.toLowerCase().includes(q) ||
+        a.articleNumber?.toLowerCase().includes(q) ||
+        a.brand?.toLowerCase().includes(q)
+      );
+    }
+
+    // Schnellfilter / Verfügbarkeit
+    if (quickFilter === 'instant' || availFilter === 'instant') {
+      result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 1);
+    } else if (availFilter === 'fast') {
+      result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 2);
+    }
+
+    // Sortierung
+    const sorted = [...result];
+    switch (sortOrder) {
+      case 'cheapest':
+        sorted.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)); break;
+      case 'savings':
+        sorted.sort((a, b) => {
+          const savA = a.priceEK != null && a.price != null ? a.price - a.priceEK : 0;
+          const savB = b.priceEK != null && b.price != null ? b.price - b.priceEK : 0;
+          return savB - savA;
+        }); break;
+      case 'fast':
+        sorted.sort((a, b) => (a.deliveryDays ?? 99) - (b.deliveryDays ?? 99)); break;
+      case 'brand':
+        sorted.sort((a, b) => (a.brand || '').localeCompare(b.brand || '')); break;
+    }
+    return sorted;
+  }, [articles, selectedBrands, artSearch, quickFilter, sortOrder, availFilter]);
 
   const inquiry = (article?: Article) => {
     const lines = ['Hallo Alex Autoshop, ich brauche ein Teil:',
@@ -583,12 +626,97 @@ export default function Teileportal() {
     return whatsappLink(lines.join('\n'));
   };
 
+  const handleSidebarCat = (cat: typeof CATEGORIES[0]) => {
+    if (vehicleKtype) {
+      setPhase('categories');
+      handleCategoryClick(cat);
+    } else {
+      setActiveCat(cat);
+      setPhase('articles');
+      loadParts(cat.keywords[0]);
+    }
+  };
+
   return (
     <>
       <Seo title="Teileportal – Autoteile per Schlüsselnummer oder VIN finden"
         description="HSN/TSN oder VIN eingeben, Fahrzeug erkennen, alle passenden Autoteile mit Bild und Preis." />
 
-      <div className="min-h-screen">
+      <div className="min-h-screen lg:flex">
+
+        {/* ── KATEGORIE-LEISTE (Desktop: linke Sidebar, immer sichtbar) ────── */}
+        <aside className="hidden lg:flex flex-col w-52 xl:w-56 shrink-0 border-r border-border bg-card/60 sticky top-0 h-screen overflow-y-auto z-20">
+          <div className="px-4 py-3.5 border-b border-border flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Kategorien</span>
+          </div>
+          <nav className="flex-1 p-2 space-y-0.5 py-3">
+            {CATEGORIES.map((cat) => {
+              const isActive = activeCat?.id === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleSidebarCat(cat)}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all duration-150",
+                    isActive
+                      ? "bg-primary/10 text-primary font-semibold"
+                      : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                  )}
+                >
+                  <div className={cn(
+                    "w-6 h-6 rounded-md bg-gradient-to-br flex items-center justify-center shrink-0 transition-transform",
+                    cat.color,
+                    isActive ? "scale-110" : "group-hover:scale-105"
+                  )}>
+                    <cat.Icon className="w-3 h-3 text-foreground/70" />
+                  </div>
+                  <span className="text-xs font-medium leading-tight line-clamp-2">
+                    {cat.name.split(' / ')[0]}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+          {/* Kontakt am unteren Rand */}
+          <div className="p-3 border-t border-border space-y-1.5">
+            <a href={`tel:${SHOP_INFO.phone}`}
+              className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary transition-colors">
+              <Phone className="w-3 h-3" /> {SHOP_INFO.phone}
+            </a>
+            <a href={whatsappLink("Hallo, ich brauche Hilfe bei der Teilesuche.")}
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary transition-colors">
+              <MessageCircle className="w-3 h-3" /> WhatsApp
+            </a>
+          </div>
+        </aside>
+
+        {/* ── HAUPTINHALT + Mobile-Leiste ──────────────────────────────────── */}
+        <div className="flex-1 min-w-0">
+
+        {/* Mobile: horizontale Kategorie-Leiste */}
+        <div className="lg:hidden flex overflow-x-auto gap-2 px-4 py-2.5 border-b border-border bg-card/90 backdrop-blur sticky top-0 z-30"
+          style={{ scrollbarWidth: 'none' }}>
+          {CATEGORIES.map((cat) => {
+            const isActive = activeCat?.id === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => handleSidebarCat(cat)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap border transition-all shrink-0",
+                  isActive
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "border-border/60 text-muted-foreground hover:border-primary/50 hover:text-foreground bg-card"
+                )}
+              >
+                <cat.Icon className="w-3 h-3" />
+                {cat.name.split(' / ')[0]}
+              </button>
+            );
+          })}
+        </div>
 
         {/* ── HERO (Suchphase) ───────────────────────────────────────────── */}
         {phase === 'search' && (
@@ -934,6 +1062,113 @@ export default function Teileportal() {
                         {selectedBrands.size > 0 && <span className="text-sm text-muted-foreground">{filtered.length} gefiltert</span>}
                       </div>
                     </div>
+                    {/* ── SCHNELLFILTER + FILTER-BAR ─────────────────────── */}
+                    <div className="mb-4 rounded-xl border border-border bg-card/60 overflow-hidden">
+                      {/* Schnellfilter-Chips */}
+                      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50 flex-wrap">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 shrink-0 mr-1">Schnellfilter</span>
+                        {[
+                          { id: 'instant',  label: 'Sofort lieferbar', icon: '📦' },
+                          { id: 'cheapest', label: 'Günstigste',        icon: '⚡' },
+                          { id: 'savings',  label: 'Max. Ersparnis',    icon: '✦' },
+                          { id: 'fast',     label: 'Schnell',           icon: '🚀' },
+                        ].map(f => {
+                          const isActive = quickFilter === f.id || sortOrder === f.id || (f.id === 'instant' && availFilter === 'instant');
+                          return (
+                            <button
+                              key={f.id}
+                              onClick={() => {
+                                if (f.id === 'instant') {
+                                  setAvailFilter(prev => prev === 'instant' ? 'all' : 'instant');
+                                  setQuickFilter(prev => prev === f.id ? null : f.id);
+                                } else {
+                                  setSortOrder(prev => (prev as string) === f.id ? 'popular' : f.id as typeof sortOrder);
+                                  setQuickFilter(prev => prev === f.id ? null : f.id);
+                                }
+                              }}
+                              className={cn(
+                                "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all",
+                                isActive
+                                  ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20"
+                                  : "border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                              )}
+                            >
+                              <span>{f.icon}</span> {f.label}
+                            </button>
+                          );
+                        })}
+                        {(quickFilter || sortOrder !== 'popular' || availFilter !== 'all' || artSearch) && (
+                          <button onClick={() => { setQuickFilter(null); setSortOrder('popular'); setAvailFilter('all'); setArtSearch(''); }}
+                            className="ml-auto text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                            <X className="w-3 h-3" /> Zurücksetzen
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Filter-Row: Suche + Dropdowns */}
+                      <div className="flex items-center gap-2 px-4 py-2.5 flex-wrap">
+                        {/* Artikel-Textsuche */}
+                        <div className="relative flex-1 min-w-[160px] max-w-xs">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                          <input
+                            value={artSearch}
+                            onChange={e => setArtSearch(e.target.value)}
+                            placeholder="Produkt suchen ..."
+                            className="input-base pl-8 h-8 text-xs"
+                          />
+                        </div>
+
+                        {/* Marke Dropdown */}
+                        {allBrands.length > 1 && (
+                          <select
+                            value={[...selectedBrands][0] || ''}
+                            onChange={e => {
+                              if (e.target.value) {
+                                setSelectedBrands(new Set([e.target.value]));
+                              } else {
+                                setSelectedBrands(new Set());
+                              }
+                            }}
+                            className="h-8 rounded-lg border border-border bg-card px-2 py-0 text-xs font-medium"
+                          >
+                            <option value="">Marke</option>
+                            {allBrands.map(b => <option key={b} value={b}>{b}</option>)}
+                          </select>
+                        )}
+
+                        {/* Verfügbarkeit Dropdown */}
+                        <select
+                          value={availFilter}
+                          onChange={e => setAvailFilter(e.target.value as typeof availFilter)}
+                          className="h-8 rounded-lg border border-border bg-card px-2 py-0 text-xs font-medium"
+                        >
+                          <option value="all">Verfügbarkeit</option>
+                          <option value="instant">Sofort (1 Werktag)</option>
+                          <option value="fast">Schnell (≤ 2 Tage)</option>
+                        </select>
+
+                        {/* Sortierung */}
+                        <select
+                          value={sortOrder}
+                          onChange={e => setSortOrder(e.target.value as typeof sortOrder)}
+                          className="h-8 rounded-lg border border-border bg-card px-2 py-0 text-xs font-medium ml-auto"
+                        >
+                          <option value="popular">↕ Beliebt</option>
+                          <option value="cheapest">↕ Günstigste</option>
+                          <option value="savings">↕ Max. Ersparnis</option>
+                          <option value="fast">↕ Schnellste Lieferung</option>
+                          <option value="brand">↕ Marke A–Z</option>
+                        </select>
+
+                        {/* Ergebnis-Zähler */}
+                        {filtered.length < articles.length && (
+                          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                            {filtered.length} von {articles.length}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
                     {/* IC-Style Tabellen-Header — Desktop */}
                     <div className="hidden lg:grid grid-cols-[56px_1fr_90px_180px_200px] gap-4 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/60 border-b border-border/60 mb-1">
                       <span></span>
@@ -1062,7 +1297,8 @@ export default function Teileportal() {
           </AnimatePresence>
         )}
 
-      </div>
+        </div>{/* end flex-1 main content */}
+      </div>{/* end lg:flex wrapper */}
 
       <PartDetailModal article={detailArticle} vehicleLabel={vehicleLabel} onClose={() => setDetailArticle(null)}
         onAddToCart={(a) => addArticleToCart(a)} brandLogo={detailArticle ? getBrandLogo(detailArticle.brand) : undefined} />

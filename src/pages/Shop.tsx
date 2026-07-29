@@ -227,11 +227,15 @@ function CategoryDropdown({
   );
 }
 
+type ShopMode = 'standard' | 'schnell' | 'menge';
+
 // ── Shop Page ─────────────────────────────────────────────────────────────────
 export default function Shop() {
   const { category } = useParams();
   const [search, setSearch] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState("");
+  const [shopMode, setShopMode] = useState<ShopMode>('standard');
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
   const activeCategory =
@@ -488,6 +492,116 @@ export default function Shop() {
         </section>
       )}
 
+      {/* ── Einkaufsmodus-Selector ────────────────────────────────────── */}
+      <div className="flex items-center gap-3 mb-5 py-3 px-4 rounded-xl border border-border bg-card/60">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 shrink-0">
+          Einkaufsmodus
+        </span>
+        <div className="flex items-center rounded-lg border border-border bg-secondary/40 p-0.5 gap-0.5">
+          {([
+            { id: 'standard', label: 'Standard' },
+            { id: 'schnell',  label: 'Schnellbestellung' },
+            { id: 'menge',    label: 'Mengenmodus' },
+          ] as { id: ShopMode; label: string }[]).map(m => (
+            <button
+              key={m.id}
+              onClick={() => setShopMode(m.id)}
+              className={cn(
+                "px-4 py-1.5 rounded-md text-xs font-semibold transition-all duration-150",
+                shopMode === m.id
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+        {shopMode === 'schnell' && (
+          <span className="text-xs text-muted-foreground ml-2">Artikelnummer eingeben → sofort in den Warenkorb</span>
+        )}
+        {shopMode === 'menge' && (
+          <span className="text-xs text-muted-foreground ml-2">Mengen direkt anpassen und alles auf einmal bestellen</span>
+        )}
+      </div>
+
+      {/* Schnellbestellung: Artikel-Nr. Direkteingabe */}
+      {shopMode === 'schnell' && (
+        <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">⚡</span>
+            Schnellbestellung — Produkt direkt suchen und in den Warenkorb legen
+          </p>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                placeholder="Produktname oder Artikelnummer …"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-card text-sm focus:outline-none focus:border-primary/50"
+              />
+            </div>
+            <button className="btn-primary px-4 text-sm">Suchen</button>
+          </div>
+        </div>
+      )}
+
+      {/* Mengenmodus: Alle Produkte als kompakte Liste mit Mengenfeld */}
+      {shopMode === 'menge' ? (
+        <div className="space-y-2 mb-8">
+          {sortedGridProducts.slice(0, 80).map(p => {
+            const title = p.node.title;
+            const handle = p.node.handle;
+            const price = p.node.priceRange?.minVariantPrice?.amount;
+            const qty = quantities[handle] ?? 0;
+            return (
+              <div key={handle} className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-border bg-card hover:border-primary/30 transition-all">
+                {p.node.images?.edges?.[0]?.node?.url && (
+                  <img src={p.node.images.edges[0].node.url} alt={title}
+                    className="w-10 h-10 object-contain rounded-lg bg-white border border-border/50 p-0.5 shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{title}</p>
+                  {price && <p className="text-xs text-muted-foreground">{Number(price).toFixed(2).replace('.', ',')} €</p>}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => setQuantities(q => ({ ...q, [handle]: Math.max(0, (q[handle] ?? 0) - 1) }))}
+                    className="w-7 h-7 rounded-md border border-border bg-secondary hover:bg-secondary/80 text-sm font-bold flex items-center justify-center transition-colors"
+                  >−</button>
+                  <input
+                    type="number" min={0}
+                    value={qty}
+                    onChange={e => setQuantities(q => ({ ...q, [handle]: Math.max(0, Number(e.target.value)) }))}
+                    className="w-12 h-7 text-center text-sm font-mono border border-border rounded-md bg-card focus:outline-none focus:border-primary/50"
+                  />
+                  <button
+                    onClick={() => setQuantities(q => ({ ...q, [handle]: (q[handle] ?? 0) + 1 }))}
+                    className="w-7 h-7 rounded-md border border-border bg-secondary hover:bg-secondary/80 text-sm font-bold flex items-center justify-center transition-colors"
+                  >+</button>
+                </div>
+                {qty > 0 && (
+                  <button className="btn-primary text-xs px-3 py-1.5 min-h-0 h-auto shrink-0">
+                    In Warenkorb
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {Object.values(quantities).some(q => q > 0) && (
+            <div className="sticky bottom-4 flex justify-end pt-2">
+              <div className="rounded-xl border border-primary/50 bg-card shadow-lg px-5 py-3 flex items-center gap-4">
+                <span className="text-sm font-medium">
+                  {Object.values(quantities).reduce((s, q) => s + q, 0)} Artikel ausgewählt
+                </span>
+                <button onClick={() => setQuantities({})} className="text-xs text-muted-foreground hover:text-foreground">Zurücksetzen</button>
+                <button className="btn-primary text-sm px-5 py-2">Alle bestellen</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
       <ProductGrid
         products={sortedGridProducts}
         isLoading={isLoading}
@@ -495,6 +609,7 @@ export default function Shop() {
         hasNextPage={hasNextPage}
         onLoadMore={loadMore}
       />
+      )}
     </div>
   );
 }

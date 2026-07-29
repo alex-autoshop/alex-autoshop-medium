@@ -399,13 +399,44 @@ export default async function handler(req, res) {
 
     // ──────────────────────────────────────────────────────────────────────────
     // SEARCH BY INDEX — GET /catalog/products?index=  (added Jul 2024)
+    // IC speichert Artikel-Nummern oft ohne Leerzeichen (z.B. "HU716/2X").
+    // Daher: mehrere Varianten probieren + Text-Search als Fallback.
     // ──────────────────────────────────────────────────────────────────────────
     if (action === "searchByIndex" && productIndex) {
-      const raw = await icFetch(`/catalog/products?index=${encodeURIComponent(productIndex)}`, token, payerId, recipientId, branch);
-      const products = raw?.products || (Array.isArray(raw) ? raw : []);
+      // Varianten: original, uppercase, ohne Leerzeichen, ohne Leerzeichen+uppercase
+      const variants = [...new Set([
+        productIndex,
+        productIndex.toUpperCase(),
+        productIndex.replace(/\s+/g, ""),
+        productIndex.replace(/\s+/g, "").toUpperCase(),
+      ])];
+
+      let products = [];
+
+      // Erst alle Index-Varianten probieren
+      for (const v of variants) {
+        const raw = await icFetch(`/catalog/products?index=${encodeURIComponent(v)}&limit=10`, token, payerId, recipientId, branch);
+        const prods = raw?.products || (Array.isArray(raw) ? raw : []);
+        if (prods.length) { products = prods; break; }
+      }
+
+      // Fallback: Text-Search → nach Artikel-Nummer filtern
+      if (!products.length) {
+        const normQuery = productIndex.replace(/\s+/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const searchRaw = await icFetch(`/catalog/products?search=${encodeURIComponent(productIndex.replace(/\s+/g, ""))}&limit=10`, token, payerId, recipientId, branch);
+        const searchProds = searchRaw?.products || (Array.isArray(searchRaw) ? searchRaw : []);
+
+        // Erst exakter Treffer (normalisiert), dann erster Treffer
+        products = searchProds.filter(p => {
+          const normIdx = (p.index || "").replace(/\s+/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+          return normIdx === normQuery;
+        });
+        if (!products.length && searchProds.length > 0) products = [searchProds[0]];
+      }
+
       if (!products.length) return json([]);
 
-      // Same enrich flow as SKU search
+      // Bestand + Preise für gefundene Artikel holen
       const p = products[0];
       const [stockRaw, pricingRaw] = await Promise.all([
         icFetch(`/catalog/products/${encodeURIComponent(p.sku || p.index)}/stock`, token, payerId, recipientId, branch),
