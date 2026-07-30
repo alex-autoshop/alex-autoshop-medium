@@ -17,3 +17,12 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </StrictMode>
 );
+
+// Page-Preloader ausblenden sobald React gemountet ist
+requestAnimationFrame(() => {
+  const preloader = document.getElementById("page-preloader");
+  if (preloader) {
+    preloader.classList.add("fade-out");
+    setTimeout(() => preloader.remove(), 500);
+  }
+});

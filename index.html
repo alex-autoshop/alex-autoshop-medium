@@ -87,8 +87,36 @@
       ]
     }
     </script>
+  <style>
+    #page-preloader {
+      position: fixed;
+      inset: 0;
+      background: #0d0d0d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+      transition: opacity 0.45s ease, visibility 0.45s ease;
+    }
+    #page-preloader.fade-out {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    #page-preloader img {
+      width: 130px;
+      animation: aa-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes aa-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.6; transform: scale(0.93); }
+    }
+  </style>
   </head>
   <body>
+    <div id="page-preloader">
+      <img src="/images/logo-cropped.png" alt="Alex Autoshop" />
+    </div>
     <div id="root"></div>
     <div id="google_translate_element" style="display: none"></div>
     <script type="module" src="/src/main.tsx"></script>

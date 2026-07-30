@@ -676,6 +676,37 @@ export default function Teileportal() {
 
   return (
     <>
+      {/* ── SUCH-OVERLAY (Blur + Logo beim Laden) ────────────────────────── */}
+      <AnimatePresence>
+        {(partsLoading || vehicleLoading) && (
+          <motion.div
+            key="search-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9998] flex items-center justify-center"
+            style={{ backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", backgroundColor: "rgba(10,10,10,0.55)" }}
+          >
+            <motion.div
+              initial={{ scale: 0.88, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="flex flex-col items-center gap-4"
+            >
+              <img
+                src="/images/logo-cropped.png"
+                alt="Alex Autoshop"
+                className="w-28 sm:w-36"
+                style={{ animation: "aa-pulse 1.4s ease-in-out infinite" }}
+              />
+              <span className="text-xs text-white/50 tracking-widest uppercase font-medium">Wird geladen …</span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Seo title="Teilebörse – Autoteile per Schlüsselnummer oder VIN finden"
         description="HSN/TSN oder VIN eingeben, Fahrzeug erkennen, alle passenden Autoteile mit Bild und Preis." />
 

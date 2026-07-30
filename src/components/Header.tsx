@@ -16,7 +16,7 @@ const NAV: Array<{ to: string; label: string; href?: string; beta?: boolean }> =
   { to: "/shop", label: "Shop" },
   { to: "/teileboerse", label: "Teilebörse", beta: true },
   // Fahrzeugmarkt bewusst ausgeblendet (in Arbeit) — Seite bleibt unter /fahrzeugmarkt erreichbar
-  { to: "/mitgliedschaft", label: "Mitgliedschaft" },
+  { to: "/mitgliedschaft", label: "Mitgliedschaft", beta: true },
   { to: "/laden", label: "Laden & Kontakt" },
 ];
 
@@ -25,11 +25,12 @@ const NAV_BASE = "px-3 py-3 rounded-lg font-medium transition-colors min-h-[48px
 const BetaBadge = ({ className = "" }: { className?: string }) => (
   <span
     className={cn(
-      "ml-1.5 rounded bg-gold-bright/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-gold-bright",
+      "ml-1.5 rounded-md px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-widest",
+      "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
       className
     )}
   >
-    Beta
+    NEU
   </span>
 );
 
