@@ -33,7 +33,7 @@ const USPS = [
     icon: BadgePercent,
     title: "B2B-Rabatte bis 40%",
     text: "Drei Mitgliedschaftsstufen für Werkstätten — monatlich kündbar, sofort sparen.",
-    badge: "Neu · 10 Spots erhältlich",
+    badge: "Nächste Freigabe ab 1. Sept.",
   },
 ];
 
