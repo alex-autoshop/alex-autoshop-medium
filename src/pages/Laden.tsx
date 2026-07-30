@@ -135,6 +135,8 @@ export default function Laden() {
 
       {/* Marken-Karussell */}
       <BrandMarquee />
+      {/* Footer hat mt-16 — diesen Abstand dunkel füllen damit keine helle Lücke entsteht */}
+      <div className="bg-night h-16" />
     </div>
   );
 }
