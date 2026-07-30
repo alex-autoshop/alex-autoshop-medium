@@ -7,6 +7,7 @@ import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MaterialPlannerWidget } from "@/components/MaterialPlannerWidget";
+import { LiveChatWidget } from "@/components/LiveChatWidget";
 import { CookieConsent } from "@/components/CookieConsent";
 
 const Home = lazy(() => import("@/pages/Home"));
@@ -86,6 +87,7 @@ export default function App() {
           <Footer />
         </div>
         <MaterialPlannerWidget />
+        <LiveChatWidget />
         <CookieConsent />
         <Toaster position="top-center" richColors />
       </AuthProvider>

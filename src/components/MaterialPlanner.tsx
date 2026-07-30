@@ -40,8 +40,26 @@ import { cn } from "@/lib/utils";
 // 3. Aktionen: Warenkorb, WhatsApp, Drucken, Neu planen
 // ─────────────────────────────────────────────────────────────────────
 
-const JOBS = ["Komplettlackierung", "Beilackierung", "Politur/Aufbereitung", "Karosserie/Spachtel", "Steinschlagschutz", "Andere..."];
-const AREAS = ["Motorhaube", "Tür", "Stoßstange", "Komplettfahrzeug", "Heckklappe", "Dach", "Andere..."];
+const JOBS = [
+  "Komplettlackierung",
+  "Beilackierung",
+  "Politur / Aufbereitung",
+  "Karosserie / Spachtel",
+  "Steinschlagschutz",
+  "Dellen (PDR)",
+  "Felgen lackieren",
+  "Foliierung",
+  "Keramik / Versiegelung",
+  "Andere...",
+];
+const AREAS = ["Motorhaube", "Tür", "Stoßstange", "Komplettfahrzeug", "Kotflügel", "Heckklappe", "Dach", "Felge(n)", "Andere..."];
+const SIZES = [
+  { value: "Delle / Kratzer (< 10 cm)", label: "Delle / Kratzer", sub: "< 10 cm" },
+  { value: "Kleine Stelle (ca. A5)", label: "Kleine Stelle", sub: "ca. A5" },
+  { value: "Mittlere Fläche (ca. A4)", label: "Mittlere Fläche", sub: "ca. A4" },
+  { value: "Großfläche (> A3)", label: "Großfläche", sub: "> A3" },
+  { value: "Komplettes Bauteil / Fahrzeug", label: "Kompl. Bauteil", sub: "ganzes Teil / Fzg." },
+];
 const QUALITIES = [
   { value: "Professionell (Standox/Sikkens)", label: "Professionell", sub: "Standox / Sikkens" },
   { value: "Mittelklasse (Mipa)", label: "Mittelklasse", sub: "Mipa" },
@@ -328,8 +346,8 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
   const { profile, user } = useAuth();
   const garage: Vehicle[] = profile.vehicles ?? [];
   const discount = user ? discountForLevel(profile.membership_level) : 0;
-  // Bei Politur/Aufbereitung sind alle Lackfragen sinnlos — nur Lager-Frage zeigen
-  const isPaintJob = briefing.job !== "Politur/Aufbereitung";
+  // Bei Politur/Aufbereitung/PDR/Keramik sind alle Lackfragen sinnlos — nur Lager-Frage zeigen
+  const isPaintJob = !["Politur / Aufbereitung", "Dellen (PDR)", "Keramik / Versiegelung"].includes(briefing.job);
   const stockOptions = isPaintJob ? STOCK_PAINT : STOCK_POLISH;
   const toolOptions = isPaintJob ? TOOLS_PAINT : TOOLS_POLISH;
   const toggleTool = (m: string) =>
@@ -353,6 +371,8 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
   const [q, setQ] = useState(0);
   const [customJob, setCustomJob] = useState("");
   const [customArea, setCustomArea] = useState("");
+  const [schnellText, setSchnellText] = useState("");
+  const [schnellMode, setSchnellMode] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [cartBusy, setCartBusy] = useState(false);
@@ -374,7 +394,29 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
     setShowTutorial(false);
   };
 
-  const TOTAL_Q = 5;
+  const TOTAL_Q = 6;
+
+  // ── Schnellstart: Freitext direkt an AI übergeben ──
+  const generateSchnell = async () => {
+    if (!schnellText.trim() || generatingGlobal) return;
+    generatingGlobal = true;
+    setError(null);
+    setStep(2);
+    setLoadingStep(0);
+    const ticker = setInterval(() => setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1)), 850);
+    const minWait = new Promise((r) => setTimeout(r, 3000));
+    try {
+      const briefingText = `Erstelle einen Materialplan für folgendes Projekt:\n${schnellText.trim()}`;
+      const [raw] = await Promise.all([streamAiResponse(briefingText), minWait]);
+      setAiPlan(parseAiPlan(raw));
+      setStep(3);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unbekannter Fehler");
+    } finally {
+      clearInterval(ticker);
+      generatingGlobal = false;
+    }
+  };
 
   // ── Schritt 2: AI-Plan generieren ──
   const generate = async (b = briefing) => {
@@ -397,6 +439,7 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
           : `Farbcode: nicht bekannt — an der Theke ermitteln`,
       b.colorName ? `Farbname: ${b.colorName}` : "",
       `Schadenstelle: ${b.area}`,
+      b.size ? `Schadengröße: ${b.size}` : "",
       `Qualitätsstufe: ${b.quality}`,
       b.job !== "Politur/Aufbereitung"
         ? b.paintSystem
@@ -544,6 +587,8 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
     setQ(0);
     setCustomJob("");
     setCustomArea("");
+    setSchnellText("");
+    setSchnellMode(false);
     setError(null);
   };
 
@@ -599,6 +644,36 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
       ),
     },
     {
+      title: "Wie groß ist der Schaden?",
+      subtitle: "Beeinflusst die Mengenkalkulation" as string | undefined,
+      content: (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {SIZES.map((opt) => (
+            <TouchButton
+              key={opt.value}
+              active={briefing.size === opt.value}
+              onClick={() => {
+                setBriefing({ size: opt.value });
+                setQ(4);
+              }}
+            >
+              <span className="font-bold">{opt.label}</span>
+              <span className="text-sm opacity-70">{opt.sub}</span>
+            </TouchButton>
+          ))}
+          <TouchButton
+            active={briefing.size === ""}
+            onClick={() => {
+              setBriefing({ size: "" });
+              setQ(4);
+            }}
+          >
+            <span className="font-semibold text-muted-foreground">AI entscheiden lassen</span>
+          </TouchButton>
+        </div>
+      ),
+    },
+    {
       title: "Qualitätsstufe?",
       subtitle: undefined as string | undefined,
       content: (
@@ -609,7 +684,7 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
               active={briefing.quality === opt.value}
               onClick={() => {
                 setBriefing({ quality: opt.value });
-                setQ(4);
+                setQ(5);
               }}
             >
               <span className="font-bold">{opt.label}</span>
@@ -756,8 +831,44 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
           </motion.div>
         )}
 
+        {/* ── SCHNELLSTART: Freitext-Modus ── */}
+        {step === 1 && !showTutorial && schnellMode && (
+          <motion.div key="schnell" variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }}>
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary mb-1">
+              <Wand2 className="w-4 h-4" /> Schnellstart
+            </p>
+            <h3 className="font-display text-xl sm:text-2xl font-bold mb-1">Dein Projekt beschreiben</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Schreib einfach frei — Fahrzeug, Farbcode, was gemacht werden soll. Die AI erkennt alles.
+            </p>
+            <textarea
+              autoFocus
+              value={schnellText}
+              onChange={(e) => setSchnellText(e.target.value)}
+              placeholder={"z.B. VW Golf 7 Stoßstange beilackieren, Farbe LY9T Platinschwarz, Budget Mipa\n\noder: BMW 5er Komplettlackierung, Farbcode A83, Standox-Qualität"}
+              rows={5}
+              className="w-full rounded-xl px-4 py-3 text-sm text-foreground bg-card border border-border focus:border-primary outline-none resize-none transition-colors mb-3"
+            />
+            <div className="grid gap-2">
+              <button
+                onClick={generateSchnell}
+                disabled={!schnellText.trim()}
+                className="btn-primary w-full min-h-[56px] text-base font-bold disabled:opacity-40"
+              >
+                <Wand2 className="w-5 h-5" /> Plan erstellen
+              </button>
+              <button
+                onClick={() => setSchnellMode(false)}
+                className="min-h-[48px] text-sm font-medium text-muted-foreground hover:text-foreground transition-colors inline-flex items-center justify-center gap-1.5"
+              >
+                <ArrowLeft className="w-4 h-4" /> Schritt für Schritt
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {/* ── SCHRITT 1: Briefing ── */}
-        {step === 1 && !showTutorial && (
+        {step === 1 && !showTutorial && !schnellMode && (
           <motion.div key={`q${q}`} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25, ease: "easeOut" }}>
             {/* Fortschritt */}
             <div className="flex items-center gap-2 mb-5">
@@ -774,9 +885,19 @@ export function MaterialPlanner({ compact = false }: { compact?: boolean }) {
               <span className="text-xs font-semibold text-muted-foreground shrink-0">{q + 1}/{TOTAL_Q}</span>
             </div>
 
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary mb-1">
-              <Wand2 className="w-4 h-4" /> AI-Materialplaner
-            </p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary">
+                <Wand2 className="w-4 h-4" /> AI-Materialplaner
+              </p>
+              {q === 0 && (
+                <button
+                  onClick={() => setSchnellMode(true)}
+                  className="text-xs font-semibold text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> Schnellstart
+                </button>
+              )}
+            </div>
             <h3 className="font-display text-xl sm:text-2xl font-bold mb-1">{questions[q].title}</h3>
             {questions[q].subtitle ? <p className="text-sm text-muted-foreground mb-4">{questions[q].subtitle}</p> : <div className="mb-4" />}
             {questions[q].content}

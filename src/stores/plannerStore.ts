@@ -19,6 +19,7 @@ export interface PlannerBriefing {
   colorName: string; // Farbname falls bekannt (z.B. "Deep Black")
   vin: string; // VIN — Alex Autoshop ermittelt daraus den Farbcode (kostenlos)
   area: string; // Schadenstelle
+  size: string; // Schadengröße — beeinflusst Mengenkalkulation
   quality: string; // Qualitätsstufe
   paintAmount: string; // gewünschte Lackmenge, "" = AI kalkuliert
   paintSystem: string; // Lacksystem: "" = AI, "1K Basislack + Klarlack", "2K Decklack …", "Nur Basislack …"
@@ -44,7 +45,7 @@ export interface AIPlan {
   hint?: string;
 }
 
-const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", colorCode: "", colorName: "", vin: "", area: "", quality: "", paintAmount: "", paintSystem: "", clearcoat: "", inStock: [], needTools: [] };
+const EMPTY_BRIEFING: PlannerBriefing = { job: "", vehicle: "", colorCode: "", colorName: "", vin: "", area: "", size: "", quality: "", paintAmount: "", paintSystem: "", clearcoat: "", inStock: [], needTools: [] };
 
 interface PlannerStore {
   items: PlannerItem[];
