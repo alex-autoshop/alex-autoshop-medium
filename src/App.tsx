@@ -58,7 +58,7 @@ export default function App() {
                 <Route
                   path="/teileboerse"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute preview>
                       <Teileportal />
                     </ProtectedRoute>
                   }

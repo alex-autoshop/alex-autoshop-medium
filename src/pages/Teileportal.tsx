@@ -603,6 +603,7 @@ export default function Teileportal() {
   const [quickFilter,  setQuickFilter]  = useState<string | null>(null);
   const [sortOrder,    setSortOrder]    = useState<'popular' | 'cheapest' | 'quality' | 'savings' | 'fast' | 'brand'>('popular');
   const [availFilter,  setAvailFilter]  = useState<'all' | 'instant' | 'fast'>('all');
+  const [oemFilter,    setOemFilter]    = useState(false);
 
   const filtered = useMemo(() => {
     let result = selectedBrands.size > 0 ? articles.filter(a => selectedBrands.has(a.brand)) : articles;
@@ -617,15 +618,15 @@ export default function Teileportal() {
       );
     }
 
-    // Schnellfilter / Verfügbarkeit
-    if (quickFilter === 'instant' || availFilter === 'instant') {
+    // Verfügbarkeits-Filter — unabhängig von Sortierung
+    if (availFilter === 'instant') {
       result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 1);
     } else if (availFilter === 'fast') {
       result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 2);
     }
 
-    // Originalteil-Filter: nur Artikel mit OE-/Originalteilnummer
-    if (quickFilter === 'oem') {
+    // Originalteil-Filter — unabhängig
+    if (oemFilter) {
       result = result.filter(a => Array.isArray(a.oeNumbers) && a.oeNumbers.length > 0);
     }
 
@@ -654,7 +655,7 @@ export default function Teileportal() {
         sorted.sort((a, b) => (a.brand || '').localeCompare(b.brand || '')); break;
     }
     return sorted;
-  }, [articles, selectedBrands, artSearch, quickFilter, sortOrder, availFilter]);
+  }, [articles, selectedBrands, artSearch, quickFilter, sortOrder, availFilter, oemFilter]);
 
   const inquiry = (article?: Article) => {
     const lines = ['Hallo Alex Autoshop, ich brauche ein Teil:',
@@ -1176,20 +1177,21 @@ export default function Teileportal() {
                           { id: 'quality',  label: 'Qualität',          icon: '★' },
                           { id: 'oem',      label: 'Originalteil',      icon: '✓' },
                         ].map(f => {
-                          const isActive = quickFilter === f.id || sortOrder === f.id || (f.id === 'instant' && availFilter === 'instant');
+                          // Jeder Chip hat seinen eigenen State — können gleichzeitig aktiv sein
+                          const isActive =
+                            f.id === 'instant'  ? availFilter === 'instant' :
+                            f.id === 'oem'      ? oemFilter :
+                            sortOrder === f.id;
                           return (
                             <button
                               key={f.id}
                               onClick={() => {
                                 if (f.id === 'instant') {
                                   setAvailFilter(prev => prev === 'instant' ? 'all' : 'instant');
-                                  setQuickFilter(prev => prev === f.id ? null : f.id);
                                 } else if (f.id === 'oem') {
-                                  // Reiner Filter (keine Sortierung) — nur Teile mit OE-Nummer
-                                  setQuickFilter(prev => prev === f.id ? null : f.id);
+                                  setOemFilter(prev => !prev);
                                 } else {
                                   setSortOrder(prev => (prev as string) === f.id ? 'popular' : f.id as typeof sortOrder);
-                                  setQuickFilter(prev => prev === f.id ? null : f.id);
                                 }
                               }}
                               className={cn(
@@ -1203,8 +1205,8 @@ export default function Teileportal() {
                             </button>
                           );
                         })}
-                        {(quickFilter || sortOrder !== 'popular' || availFilter !== 'all' || artSearch) && (
-                          <button onClick={() => { setQuickFilter(null); setSortOrder('popular'); setAvailFilter('all'); setArtSearch(''); }}
+                        {(oemFilter || sortOrder !== 'popular' || availFilter !== 'all' || artSearch) && (
+                          <button onClick={() => { setQuickFilter(null); setSortOrder('popular'); setAvailFilter('all'); setArtSearch(''); setOemFilter(false); }}
                             className="ml-auto text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
                             <X className="w-3 h-3" /> Zurücksetzen
                           </button>
