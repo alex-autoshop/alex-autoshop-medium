@@ -89,7 +89,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const ratio = modules.length / m.modules.length;
   const activeDiscount = isBase ? m.baseDiscountPercent : m.discountPercent;
 
-  // Gratis-Farbe ist nur abwählbar wenn KEIN Lack-Modul aktiv ist (nur Teileportal oder Basis).
+  // Gratis-Farbe ist nur abwählbar wenn KEIN Lack-Modul aktiv ist (nur Teilebörse oder Basis).
   // Sobald Lackfarben/Lackmaterial gebucht sind, gehört die Gratis-Farbe fest dazu.
   const noPaint = !modules.includes("Lackfarben") && !modules.includes("Lackmaterial");
   const freePaintFeature = m.features.find((f) => f.label.startsWith("Gratis Farbe"));
@@ -201,7 +201,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
       {isBase ? (
         <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
-          <Zap className="w-4 h-4" /> {activeDiscount}% auf das gesamte Sortiment und Teileportal
+          <Zap className="w-4 h-4" /> {activeDiscount}% auf das gesamte Sortiment und Teilebörse
         </p>
       ) : (
         <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
@@ -230,7 +230,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
                   )}
                 >
                   <span className={cn(!on && "line-through")}>
-                    {m.discountPercent}% auf {mod === "Autoteile" ? "Autoteile (im Teileportal)" : mod}
+                    {m.discountPercent}% auf {mod === "Autoteile" ? "Autoteile (in der Teilebörse)" : mod}
                   </span>
                   {on ? (
                     <span className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center shrink-0">
@@ -246,7 +246,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
             })}
           </div>
 
-          {/* Gratis-Farbe abwählbar — nur wenn kein Lack-Modul aktiv (Teileportal-only oder Basis) */}
+          {/* Gratis-Farbe abwählbar — nur wenn kein Lack-Modul aktiv (Teilebörse-only oder Basis) */}
           {noPaint && freePaintFeature && (
             <div className="mt-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
@@ -284,7 +284,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
           {/* Basis-Hinweis wenn alle Module abgewählt */}
           {isBase && (
             <div className="mt-3 rounded-lg bg-secondary/60 border border-border px-4 py-3 text-xs text-muted-foreground leading-relaxed">
-              <span className="font-semibold text-foreground">{activeDiscount}% auf das gesamte Sortiment und Teileportal</span> — {wantFreePaint ? "inkl. Gratis-Farbe und alle" : "alle weiteren"} Mitgliedsvorteile. Module einzeln zubuchbar.
+              <span className="font-semibold text-foreground">{activeDiscount}% auf das gesamte Sortiment und Teilebörse</span> — {wantFreePaint ? "inkl. Gratis-Farbe und alle" : "alle weiteren"} Mitgliedsvorteile. Module einzeln zubuchbar.
             </div>
           )}
 

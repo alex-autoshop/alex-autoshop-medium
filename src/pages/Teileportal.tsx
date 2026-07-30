@@ -676,7 +676,7 @@ export default function Teileportal() {
 
   return (
     <>
-      <Seo title="Teileportal – Autoteile per Schlüsselnummer oder VIN finden"
+      <Seo title="Teilebörse – Autoteile per Schlüsselnummer oder VIN finden"
         description="HSN/TSN oder VIN eingeben, Fahrzeug erkennen, alle passenden Autoteile mit Bild und Preis." />
 
       <div className="min-h-screen lg:flex">
@@ -792,7 +792,7 @@ export default function Teileportal() {
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
                 className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-card/80 backdrop-blur text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-8">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                Alex Autoshop · Teileportal
+                Alex Autoshop · Teilebörse
               </motion.div>
 
               {/* Headline */}

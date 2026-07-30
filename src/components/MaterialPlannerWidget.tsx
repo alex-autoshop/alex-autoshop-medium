@@ -13,7 +13,7 @@ export function MaterialPlannerWidget() {
   const cartOpen = useCartStore((s) => s.isOpen);
   // Im Teileportal ausgeblendet — dort sitzt der Teile-Warenkorb an derselben Stelle.
   const { pathname } = useLocation();
-  if (pathname.startsWith("/teileportal")) return null;
+  if (pathname.startsWith("/teileboerse")) return null;
 
   return (
     <>

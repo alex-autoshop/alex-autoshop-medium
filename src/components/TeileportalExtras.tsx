@@ -239,7 +239,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin 
 }) {
   const { items, setQty, clear, subtotal, allPriced } = cart;
   const orderText = [
-    "🛒 BESTELLANFRAGE — Alex Autoshop Teileportal",
+    "🛒 BESTELLANFRAGE — Alex Autoshop Teilebörse",
     vehicleLabel ? `Fahrzeug: ${vehicleLabel}` : "",
     vehicleVin ? `FIN: ${vehicleVin}` : "",
     "",

@@ -70,7 +70,7 @@ export default function Konto() {
         </h1>
         <p className="text-muted-foreground text-sm mb-6">
           {mode === "login"
-            ? "Melde dich an für Teileportal & Mitgliederbereich."
+            ? "Melde dich an für Teilebörse & Mitgliederbereich."
             : "Kostenlos registrieren — auch ohne Mitgliedschaft. Du siehst sofort, wie viel du als Mitglied sparen würdest."}
         </p>
 

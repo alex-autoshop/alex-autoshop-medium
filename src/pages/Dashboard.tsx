@@ -50,12 +50,12 @@ import { requestMembership, sendMessage } from "@/lib/inbox";
 import { MembershipCards } from "@/components/MembershipCards";
 import { cn } from "@/lib/utils";
 
-type Tab = "overview" | "shop" | "teileportal" | "inbox" | "planner" | "orders" | "affiliate" | "profile" | "settings";
+type Tab = "overview" | "shop" | "teileboerse" | "inbox" | "planner" | "orders" | "affiliate" | "profile" | "settings";
 
 const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
   { id: "shop", label: "B2B Shop", icon: ShoppingBag },
-  { id: "teileportal", label: "Teileportal", icon: Car },
+  { id: "teileboerse", label: "Teilebörse", icon: Car },
   { id: "inbox", label: "Nachrichten", icon: InboxIcon },
   { id: "planner", label: "Materialplaner", icon: ClipboardCheck },
   { id: "orders", label: "Bestellungen", icon: ClipboardList },
@@ -153,7 +153,7 @@ export default function Dashboard() {
 
       {tab === "overview" && <Overview level={level} profile={profile} trialActive={trialActive} effectiveLevel={effectiveLevel} />}
       {tab === "shop" && <DashboardShop level={effectiveLevel} profile={profile} trialActive={trialActive} />}
-      {tab === "teileportal" && (
+      {tab === "teileboerse" && (
         <div className="-mt-4">
           <Teileportal />
         </div>
@@ -284,7 +284,7 @@ function CurrentModules({ level, profile }: { level: number; profile: import("@/
   const modules = profile.membership_modules ?? ["Autoteile", "Lackfarben", "Lackmaterial"];
   const discounts = moduleDiscounts(level, modules);
   const moduleLabels: Record<MembershipModule, string> = {
-    Autoteile: "Autoteile (im Teileportal)",
+    Autoteile: "Autoteile (in der Teilebörse)",
     Lackfarben: "Lackfarben (Wunschfarbe, Spraydose)",
     Lackmaterial: "Lackmaterial (Klarlack, Grundierung…)",
   };

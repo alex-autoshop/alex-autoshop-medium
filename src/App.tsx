@@ -56,7 +56,7 @@ export default function App() {
                 <Route path="/produkt/:handle" element={<ProductDetail />} />
                 <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />
                 <Route
-                  path="/teileportal"
+                  path="/teileboerse"
                   element={
                     <ProtectedRoute>
                       <Teileportal />
