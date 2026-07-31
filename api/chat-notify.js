@@ -25,15 +25,17 @@ export default async function handler(req, res) {
   const clickUrl = `https://www.alex-autoshop.de/admin/chat${sessionId ? `?session=${sessionId}` : ''}`;
 
   try {
-    await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
+    // JSON-Format verwenden (Emojis in Headern verboten — non-ASCII)
+    await fetch(`https://ntfy.sh/`, {
       method: 'POST',
-      headers: {
-        'Title': title,
-        'Priority': 'high',
-        'Click': clickUrl,
-        'Content-Type': 'text/plain; charset=utf-8',
-      },
-      body: message,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic: NTFY_TOPIC,
+        title: title,
+        message: message,
+        priority: 4,
+        click: clickUrl,
+      }),
     });
 
     res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
