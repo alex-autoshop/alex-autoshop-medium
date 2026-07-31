@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Send, Loader2, MessageCircle, CheckCircle, Clock } from "lucide-react";
+import { Send, Loader2, MessageCircle, CheckCircle, Clock, Lock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/context/AuthContext";
 import { Seo } from "@/components/Seo";
 
 interface Session { id: string; visitor_name: string | null; last_msg_at: string; status: string }
 interface Msg { id: string; session_id: string; sender: string; message: string; created_at: string }
+
+const ADMIN_PIN = "alex2024";
+const PIN_KEY = "aa-admin-auth";
 
 function timeAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -17,21 +19,47 @@ function timeAgo(iso: string) {
 }
 
 export default function AdminChat() {
-  const { user } = useAuth();
   const [params] = useSearchParams();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeId, setActiveId] = useState<string | null>(params.get("session"));
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [authed, setAuthed] = useState(() => localStorage.getItem(PIN_KEY) === ADMIN_PIN);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Zugriffschutz — nur Alex
-  const ALEX_EMAIL = "alexanderharitopoulos@gmail.com";
-  if (!user || user.email !== ALEX_EMAIL) {
+  // PIN-Schutz
+  if (!authed) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">
-        Kein Zugriff.
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="w-full max-w-xs bg-card border border-border rounded-2xl p-8 flex flex-col items-center gap-5 shadow-xl">
+          <Lock className="w-8 h-8 text-primary" />
+          <h2 className="font-bold text-lg">Alex Autoshop Admin</h2>
+          <input
+            type="password"
+            value={pinInput}
+            onChange={e => setPinInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                if (pinInput === ADMIN_PIN) { localStorage.setItem(PIN_KEY, ADMIN_PIN); setAuthed(true); }
+                else { setPinInput(""); }
+              }
+            }}
+            placeholder="PIN eingeben"
+            autoFocus
+            className="w-full rounded-xl border border-border bg-background px-4 py-3 text-center text-lg outline-none focus:border-primary transition-colors"
+          />
+          <button
+            onClick={() => {
+              if (pinInput === ADMIN_PIN) { localStorage.setItem(PIN_KEY, ADMIN_PIN); setAuthed(true); }
+              else { setPinInput(""); }
+            }}
+            className="btn-primary w-full py-3"
+          >
+            Einloggen
+          </button>
+        </div>
       </div>
     );
   }
