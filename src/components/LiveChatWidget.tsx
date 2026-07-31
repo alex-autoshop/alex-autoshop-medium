@@ -2,15 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { X, Send, MessageCircle, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-// Öffnungszeiten in Berliner Zeit
-function isOnline(): boolean {
-  const berlin = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Berlin" }));
-  const day = berlin.getDay();
-  const min = berlin.getHours() * 60 + berlin.getMinutes();
-  if (day >= 1 && day <= 5) return min >= 9 * 60 && min < 17 * 60 + 30;
-  if (day === 6) return min >= 9 * 60 && min < 14 * 60;
-  return false;
-}
+// Immer online — Alex antwortet via ntfy wann immer möglich
+function isOnline(): boolean { return true; }
 
 const SESSION_KEY = "aa-chat-session";
 
@@ -173,8 +166,8 @@ export function LiveChatWidget() {
               </div>
               <div>
                 <p className="font-bold text-white text-sm">Alex Autoshop</p>
-                <p className="text-xs" style={{ color: online ? "#4ade80" : "rgba(255,255,255,0.35)" }}>
-                  {online ? "● Jetzt online" : "● Mo–Fr 9–17:30 · Sa 9–14"}
+                <p className="text-xs" style={{ color: "#4ade80" }}>
+                  ● Jetzt online
                 </p>
               </div>
             </div>
