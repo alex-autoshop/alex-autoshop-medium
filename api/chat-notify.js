@@ -1,4 +1,5 @@
-// Vercel Node Runtime — Email-Benachrichtigung wenn neuer Chat startet
+// Vercel Node Runtime — Push-Benachrichtigung via ntfy.sh (kostenlos, kein Account nötig)
+// Setup: ntfy App installieren (iOS/Android) → Topic "alex-autoshop-chat-7x4k9" abonnieren → fertig.
 export const config = { runtime: 'nodejs' };
 
 const CORS = {
@@ -7,55 +8,32 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+// Einzigartiger Topic-Name damit niemand zufällig mithört
+const NTFY_TOPIC = 'alex-autoshop-chat-7x4k9';
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.writeHead(200, CORS); res.end(); return; }
   if (req.method !== 'POST') { res.writeHead(405, CORS); res.end(); return; }
 
-  const resendKey = process.env.RESEND_API_KEY;
-  if (!resendKey) {
-    res.writeHead(500, { ...CORS, 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'RESEND_API_KEY not set' }));
-    return;
-  }
-
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch { /**/ } }
 
-  const { sessionId, visitorName, firstMessage } = body ?? {};
+  const { visitorName, firstMessage, sessionId } = body ?? {};
+
+  const title = visitorName ? `💬 Chat von ${visitorName}` : '💬 Neuer Chat';
+  const message = firstMessage || '(keine Nachricht)';
+  const clickUrl = `https://www.alex-autoshop.de/admin/chat${sessionId ? `?session=${sessionId}` : ''}`;
 
   try {
-    const adminUrl = `https://www.alex-autoshop.de/admin/chat?session=${sessionId}`;
-
-    await fetch('https://api.resend.com/emails', {
+    await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
+        'Title': title,
+        'Priority': 'high',
+        'Click': clickUrl,
+        'Content-Type': 'text/plain; charset=utf-8',
       },
-      body: JSON.stringify({
-        from: 'chat@alex-autoshop.de',
-        to: ['lazoneon@web.de'],
-        subject: `💬 Neuer Live-Chat${visitorName ? ` von ${visitorName}` : ''}`,
-        html: `
-          <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
-            <h2 style="color:#B8860B">💬 Neuer Chat auf alex-autoshop.de</h2>
-            ${visitorName ? `<p><strong>Name:</strong> ${visitorName}</p>` : ''}
-            <p><strong>Erste Nachricht:</strong></p>
-            <blockquote style="border-left:4px solid #B8860B;padding:12px 16px;background:#faf9f0;border-radius:4px;margin:0">
-              ${firstMessage ?? '(keine Nachricht)'}
-            </blockquote>
-            <p style="margin-top:20px">
-              <a href="${adminUrl}"
-                 style="display:inline-block;background:#B8860B;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">
-                Jetzt antworten →
-              </a>
-            </p>
-            <p style="font-size:12px;color:#999;margin-top:16px">
-              Direkt-URL: ${adminUrl}
-            </p>
-          </div>
-        `,
-      }),
+      body: message,
     });
 
     res.writeHead(200, { ...CORS, 'Content-Type': 'application/json' });
