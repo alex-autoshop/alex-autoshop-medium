@@ -47,50 +47,56 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
-        <div className="min-h-screen flex flex-col">
-          <Header />
-          <main className="flex-1">
-            <Suspense fallback={<PageFallback />}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/shop/:category" element={<Shop />} />
-                <Route path="/produkt/:handle" element={<ProductDetail />} />
-                <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />
-                <Route
-                  path="/teileboerse"
-                  element={
-                    <ProtectedRoute preview>
-                      <Teileportal />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/fahrzeugmarkt" element={<Fahrzeugmarkt />} />
-                <Route path="/laden" element={<Laden />} />
-                <Route path="/konto" element={<Konto />} />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/impressum" element={<Impressum />} />
-                <Route path="/datenschutz" element={<Datenschutz />} />
-                <Route path="/agb" element={<AGB />} />
-                <Route path="/versand" element={<Versand />} />
-                <Route path="/widerruf" element={<Widerruf />} />
-                <Route path="/admin/chat" element={<AdminChat />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </main>
-          <Footer />
-        </div>
-        <MaterialPlannerWidget />
-        <LiveChatWidget />
-        <CookieConsent />
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            {/* Admin-Chat: kein Header, kein Footer, kein Widget */}
+            <Route path="/admin/chat" element={<AdminChat />} />
+            {/* Alle anderen Seiten mit normalem Layout */}
+            <Route path="*" element={
+              <div className="min-h-screen flex flex-col">
+                <Header />
+                <main className="flex-1">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/shop" element={<Shop />} />
+                    <Route path="/shop/:category" element={<Shop />} />
+                    <Route path="/produkt/:handle" element={<ProductDetail />} />
+                    <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />
+                    <Route
+                      path="/teileboerse"
+                      element={
+                        <ProtectedRoute preview>
+                          <Teileportal />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route path="/fahrzeugmarkt" element={<Fahrzeugmarkt />} />
+                    <Route path="/laden" element={<Laden />} />
+                    <Route path="/konto" element={<Konto />} />
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <ProtectedRoute>
+                          <Dashboard />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route path="/impressum" element={<Impressum />} />
+                    <Route path="/datenschutz" element={<Datenschutz />} />
+                    <Route path="/agb" element={<AGB />} />
+                    <Route path="/versand" element={<Versand />} />
+                    <Route path="/widerruf" element={<Widerruf />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
+                <Footer />
+                <MaterialPlannerWidget />
+                <LiveChatWidget />
+                <CookieConsent />
+              </div>
+            } />
+          </Routes>
+        </Suspense>
         <Toaster position="top-center" richColors />
       </AuthProvider>
     </BrowserRouter>
