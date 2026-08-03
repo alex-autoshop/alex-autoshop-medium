@@ -51,6 +51,11 @@ export interface ShopifyProduct {
 }
 
 export async function storefrontApiRequest(query: string, variables: Record<string, unknown> = {}) {
+  const isCartMutation = query.includes('cartCreate') || query.includes('cartLines');
+  if (isCartMutation) {
+    console.log('[shopify] cart mutation →', query.trim().slice(0, 80), 'vars:', JSON.stringify(variables).slice(0, 200));
+  }
+
   const response = await fetch(SHOPIFY_STOREFRONT_URL, {
     method: 'POST',
     headers: {
@@ -60,7 +65,10 @@ export async function storefrontApiRequest(query: string, variables: Record<stri
     body: JSON.stringify({ query, variables }),
   });
 
+  console.log('[shopify] status:', response.status, '|', query.trim().slice(0, 50));
+
   if (response.status === 402) {
+    console.error('[shopify] 402 — Shopify plan requires upgrade for this API call');
     toast.error("Shop vorübergehend nicht verfügbar", {
       description: "Bitte kontaktiere uns direkt unter 0202 82690.",
     });
@@ -68,12 +76,18 @@ export async function storefrontApiRequest(query: string, variables: Record<stri
   }
 
   if (!response.ok) {
+    const body = await response.text();
+    console.error('[shopify] HTTP', response.status, '—', body.slice(0, 500));
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
   const data = await response.json();
+  if (isCartMutation) {
+    console.log('[shopify] cart mutation response:', JSON.stringify(data).slice(0, 600));
+  }
 
   if (data.errors) {
+    console.error('[shopify] GraphQL errors:', data.errors);
     throw new Error(`Shopify Error: ${data.errors.map((e: { message: string }) => e.message).join(', ')}`);
   }
 

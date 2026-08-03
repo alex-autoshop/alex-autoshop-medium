@@ -102,7 +102,9 @@ export default function ProductDetail() {
   }
 
   const addToCart = async () => {
-    if (!selectedVariant) return;
+    console.log('[addToCart] called, selectedVariant:', selectedVariant?.id, 'cartLoading:', cartLoading);
+    if (!selectedVariant) { console.log('[addToCart] no selectedVariant, return'); return; }
+    console.log('[addToCart] calling addItem...');
     await addItem({
       product: { node: product },
       variantId: selectedVariant.id,
@@ -111,6 +113,7 @@ export default function ProductDetail() {
       quantity,
       selectedOptions: selectedVariant.selectedOptions ?? [],
     });
+    console.log('[addToCart] addItem done');
     toast.success("In den Warenkorb gelegt", { description: `${quantity}× ${product.title}` });
   };
 

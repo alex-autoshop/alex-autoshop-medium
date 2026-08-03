@@ -63,10 +63,13 @@ export const useCartStore = create<CartStore>()(
           ? undefined
           : items.find(i => i.variantId === item.variantId && (i.attributes?.length ?? 0) === 0);
 
+        console.log('[cartStore.addItem] variantId:', item.variantId, 'cartId:', cartId, 'existingItem:', existingItem?.uid);
         set({ isLoading: true });
         try {
           if (!cartId) {
+            console.log('[cartStore.addItem] creating new cart...');
             const result = await createShopifyCart({ variantId: item.variantId, quantity: item.quantity, attributes: item.attributes });
+            console.log('[cartStore.addItem] createShopifyCart result:', result);
             if (result) {
               set({
                 cartId: result.cartId,
@@ -76,7 +79,17 @@ export const useCartStore = create<CartStore>()(
             }
           } else if (existingItem) {
             const newQuantity = existingItem.quantity + item.quantity;
-            if (!existingItem.lineId) return;
+            if (!existingItem.lineId) {
+              // Inkonsistenter State (lineId fehlt) → Cart zurücksetzen und neu anlegen
+              console.warn('[cartStore] existingItem has no lineId, clearing cart and recreating');
+              clearCart();
+              const freshResult = await createShopifyCart({ variantId: item.variantId, quantity: item.quantity, attributes: item.attributes });
+              console.log('[cartStore] freshResult after clear+recreate:', freshResult);
+              if (freshResult) {
+                set({ cartId: freshResult.cartId, checkoutUrl: freshResult.checkoutUrl, items: [{ ...item, lineId: freshResult.lineId, uid: newUid() }] });
+              }
+              return;
+            }
             const result = await updateShopifyCartLine(cartId, existingItem.lineId, newQuantity);
             if (result.success) {
               set({ items: get().items.map(i => i.uid === existingItem.uid ? { ...i, quantity: newQuantity } : i) });

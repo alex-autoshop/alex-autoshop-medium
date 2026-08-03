@@ -7,7 +7,8 @@ import { MaterialPlanner } from "@/components/MaterialPlanner";
 
 // Schwebendes Materialplaner-Widget unten rechts — auf allen Seiten verfügbar.
 export function MaterialPlannerWidget() {
-  const [open, setOpen] = useState(true); // standardmäßig offen bei Seitenbesuch
+  // Nur auf Desktop (≥1024px) standardmäßig offen
+  const [open, setOpen] = useState(() => window.innerWidth >= 1024);
   const count = usePlannerStore((s) => s.items.filter((i) => !i.done).length);
   // Wenn der Warenkorb offen ist, das Widget ausblenden — sonst überdeckt es die Kasse-Buttons.
   const cartOpen = useCartStore((s) => s.isOpen);
