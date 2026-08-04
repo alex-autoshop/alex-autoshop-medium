@@ -260,14 +260,14 @@ function parseIntercarsArticles(data: any): Article[] {
   const items: any[] = data?.articles ?? data?.results ?? (Array.isArray(data) ? data : []);
   return items.map((ic: any) => {
     // IC gibt zurück:
-    //   price         = customerPriceGross (EK-Preis, z.B. 4,50€)
-    //   priceOriginal = listPriceGross (UVP/Einzelhandel, z.B. 13,24€)
-    // Kunden sehen immer die Einzelhandel-Preis (UVP). Fallback: EK * Aufschlag.
+    //   price         = customerPriceGross (EK-Preis inkl. MwSt, z.B. 4,50€)
+    //   priceOriginal = listPriceGross (Intercars-UVP — wird NICHT verwendet)
+    // UVP = EK * PRICE_MARKUP (1.5). Intercars-Listenpreis als letzter Fallback wenn kein EK.
     const ekPrice: number | undefined = ic.price > 0 ? Number(ic.price) : undefined;
-    const uvpPrice: number | undefined = ic.priceOriginal != null && ic.priceOriginal > 0
-      ? Number(ic.priceOriginal)
-      : ekPrice != null
-        ? Math.ceil(ekPrice * PRICE_MARKUP * 100) / 100
+    const uvpPrice: number | undefined = ekPrice != null
+      ? Math.ceil(ekPrice * PRICE_MARKUP * 100) / 100
+      : ic.priceOriginal != null && ic.priceOriginal > 0
+        ? Number(ic.priceOriginal)
         : undefined;
     const imgRaw = ic.images?.[0];
     const imageUrl: string | undefined = typeof imgRaw === "string" ? imgRaw : imgRaw?.url ?? imgRaw?.imageURL;
