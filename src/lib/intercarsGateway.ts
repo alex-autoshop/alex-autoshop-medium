@@ -15,7 +15,8 @@
 const SUPA_URL = "https://zasbdvtsxgimcezotlsi.supabase.co";
 // Anon/Publishable-Key ist per Design öffentlich (Function-Aufruf, RLS-geschützt).
 const SUPA_KEY = "sb_publishable_hMoY8Rgjjb9cvmeMaTEJoQ_AkBoF3FX";
-const PRICE_MARKUP = 1.7;
+// VK = EK × 2.0 — konsistent mit parseIntercarsArticles in Teileportal.tsx
+const PRICE_MARKUP = 2.0;
 
 const _cache = new Map<string, { v: unknown; ts: number }>();
 const TTL = 5 * 60 * 1000; // 5 Minuten
@@ -99,14 +100,11 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
 
     if (p?.sku) {
       const d = await icCall("product-detail", { sku: p.sku });
-      // UVP = listPriceGross (Einzelhandel) anzeigen — NICHT den EK. Fallback: EK × Markup.
-      const uvp = digNumber(d?.pricing, "listPriceGross");
+      // VK = EK × 2.0 (Alex's Preis, immer unter IC-Listenpreis). listPriceGross wird NICHT verwendet.
       const ek  = digNumber(d?.pricing, "customerPriceGross");
-      const price = uvp && uvp > 0
-        ? uvp
-        : ek && ek > 0
-          ? Math.ceil(ek * PRICE_MARKUP * 100) / 100
-          : undefined;
+      const price = ek && ek > 0
+        ? Math.ceil(ek * PRICE_MARKUP * 100) / 100
+        : undefined;
       const avail = digNumber(d?.stock, "availability") ?? 0;
 
       if (price) {
