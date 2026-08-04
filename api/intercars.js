@@ -343,8 +343,41 @@ export default async function handler(req, res) {
       if (query)      qs.set("search",     query);
       if (categoryId) qs.set("categoryId", categoryId);
 
-      const catalogRaw = await icFetch(`/catalog/products?${qs}`, token, payerId, recipientId, branch);
-      const products   = catalogRaw?.products || (Array.isArray(catalogRaw) ? catalogRaw : []);
+      let catalogRaw = await icFetch(`/catalog/products?${qs}`, token, payerId, recipientId, branch);
+      let products   = catalogRaw?.products || (Array.isArray(catalogRaw) ? catalogRaw : []);
+
+      // Wenn Text-Suche leer → Artikel-Nummer-Fallback (?index= dann ?sku=)
+      // Betrifft z.B. "S410485006024" — IC findet das nur über index/sku, nicht Freitext.
+      if (!products.length && query && !categoryId) {
+        const stripped = query.replace(/\s+/g, "").toUpperCase();
+        // 1) index-Suche (Hersteller-Artikelnummer)
+        const idxRaw = await icFetch(
+          `/catalog/products?index=${encodeURIComponent(stripped)}&limit=${cap}`,
+          token, payerId, recipientId, branch
+        ).catch(() => null);
+        products = idxRaw?.products || (Array.isArray(idxRaw) ? idxRaw : []);
+
+        // 2) SKU-Suche (IC-interner Code)
+        if (!products.length) {
+          const skuRaw = await icFetch(
+            `/catalog/products?sku=${encodeURIComponent(stripped)}&limit=${cap}`,
+            token, payerId, recipientId, branch
+          ).catch(() => null);
+          products = skuRaw?.products || (Array.isArray(skuRaw) ? skuRaw : []);
+        }
+
+        // 3) Nochmal Text-Suche ohne Sonderzeichen (z.B. "HU716/2X" → "HU7162X")
+        if (!products.length) {
+          const norm = query.replace(/[^a-zA-Z0-9]/g, "");
+          if (norm && norm !== query.replace(/\s/g, "")) {
+            const normRaw = await icFetch(
+              `/catalog/products?search=${encodeURIComponent(norm)}&limit=${cap}`,
+              token, payerId, recipientId, branch
+            ).catch(() => null);
+            products = normRaw?.products || (Array.isArray(normRaw) ? normRaw : []);
+          }
+        }
+      }
 
       if (!products.length) return json([]);
 
