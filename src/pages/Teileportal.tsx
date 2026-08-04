@@ -242,7 +242,7 @@ interface Article {
 type Phase = 'search' | 'categories' | 'articles';
 type SearchMode = 'vin' | 'kba';
 type HeroTab = 'search' | 'vin' | 'kba' | 'vehicle' | 'number';
-const PRICE_MARKUP = 1.7;
+const PRICE_MARKUP = 1.5;
 
 async function postJson(url: string, payload: Record<string, unknown>, ms: number) {
   const ctrl = new AbortController();
