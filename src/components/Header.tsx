@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut, Bell } from "lucide-react";
+import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut, Bell, ClipboardList } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { CartDrawer } from "@/components/CartDrawer";
+import { usePlannerStore } from "@/stores/plannerStore";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
 import { useUnread } from "@/hooks/useUnread";
@@ -43,6 +44,8 @@ export function Header() {
   const { user, signOut } = useAuth();
   const unread = useUnread();
   const navigate = useNavigate();
+  const togglePlanner = usePlannerStore((s) => s.togglePlanner);
+  const plannerCount = usePlannerStore((s) => s.items.filter((i) => !i.done).length);
 
   const handleLogout = async () => {
     await signOut();
@@ -141,6 +144,20 @@ export function Header() {
             )}
 
             <LanguageSwitcher tone="dark" />
+
+            <button
+              onClick={togglePlanner}
+              className="relative flex items-center justify-center w-12 h-12 rounded-lg text-white hover:bg-white/10 transition-colors"
+              aria-label="Materialplaner öffnen"
+              title="Materialplaner"
+            >
+              <ClipboardList className="w-6 h-6" />
+              {plannerCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-gold-bright text-night text-xs font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center">
+                  {plannerCount > 9 ? "9+" : plannerCount}
+                </span>
+              )}
+            </button>
 
             <button
               onClick={openCart}

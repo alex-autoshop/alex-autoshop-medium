@@ -51,6 +51,11 @@ interface PlannerStore {
   items: PlannerItem[];
   projectName: string;
   setProjectName: (name: string) => void;
+  // Panel-Sichtbarkeit (nicht persistiert)
+  isPlannerOpen: boolean;
+  openPlanner: () => void;
+  closePlanner: () => void;
+  togglePlanner: () => void;
   add: (name: string, quantity?: number) => void;
   addMany: (names: string[]) => void;
   toggle: (id: number) => void;
@@ -79,6 +84,10 @@ export const usePlannerStore = create<PlannerStore>()(
       items: [],
       projectName: "",
       setProjectName: (name) => set({ projectName: name }),
+      isPlannerOpen: false,
+      openPlanner: () => set({ isPlannerOpen: true }),
+      closePlanner: () => set({ isPlannerOpen: false }),
+      togglePlanner: () => set((s) => ({ isPlannerOpen: !s.isPlannerOpen })),
       add: (name, quantity = 1) =>
         set((s) => ({
           items: [...s.items, { id: nextId(), name: name.trim(), quantity, done: false }],
@@ -131,7 +140,7 @@ export const usePlannerStore = create<PlannerStore>()(
       // step 2 (AI lädt) NIE persistieren — sonst hängt die Ladeanimation
       // nach Reload/Abbruch für immer fest, ohne dass ein Request läuft.
       partialize: (s) =>
-        ({ ...s, step: s.step === 2 ? (s.aiPlan ? 3 : 1) : s.step }) as PlannerStore,
+        ({ ...s, step: s.step === 2 ? (s.aiPlan ? 3 : 1) : s.step, isPlannerOpen: false }) as PlannerStore,
       // Alte localStorage-Stände kennen neue Briefing-Felder nicht —
       // mit Defaults auffüllen, damit Inputs nie undefined-Werte bekommen.
       merge: (persisted, current) => {
