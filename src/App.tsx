@@ -62,14 +62,7 @@ export default function App() {
                     <Route path="/shop/:category" element={<Shop />} />
                     <Route path="/produkt/:handle" element={<ProductDetail />} />
                     <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />
-                    <Route
-                      path="/teileboerse"
-                      element={
-                        <ProtectedRoute preview>
-                          <Teileportal />
-                        </ProtectedRoute>
-                      }
-                    />
+                    <Route path="/teileboerse" element={<Teileportal />} />
                     <Route path="/fahrzeugmarkt" element={<Fahrzeugmarkt />} />
                     <Route path="/laden" element={<Laden />} />
                     <Route path="/konto" element={<Konto />} />

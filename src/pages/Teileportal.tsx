@@ -1,9 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Search, Car, Phone, MessageCircle, Loader2, Package, ChevronRight, ArrowLeft,
   Filter, Settings, Disc, Zap, Wind, Thermometer, Battery, Radio, Fuel,
-  Wrench, Navigation, Layers, Lightbulb, Truck, Circle, ShoppingBag, Check, Hash, X
+  Wrench, Navigation, Layers, Lightbulb, Truck, Circle, ShoppingBag, Check, Hash, X,
+  LogIn, UserPlus, UserCheck
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
@@ -13,7 +15,7 @@ import { STATIC_CAT_TREE } from "@/lib/catTreeStatic";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
 import { icPriceLookup } from "@/lib/intercarsGateway";
 import { ArticleExpander, BrandFilter, SubCatList } from "@/components/TeileportalExtras";
-import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip } from "@/components/TeileportalPricing";
+import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip, type MemberLevelId } from "@/components/TeileportalPricing";
 import { useAuth } from "@/context/AuthContext";
 
 const BRAND_DOMAINS: Record<string, string> = {
@@ -358,7 +360,9 @@ export default function Teileportal() {
   const [totalCount, setTotalCount] = useState(0);
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
   const { garage, add: addToGarage, remove: removeFromGarage } = useGarage();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const [authModal, setAuthModal] = useState<null | { name: string; brand: string; articleNumber: string; imageUrl?: string; price?: number }>(null);
   // VIN-Auflösung: Motorvarianten zur Auswahl (wenn VIN nicht exakt eine Variante trifft)
   const [vinCandidates, setVinCandidates] = useState<ApVinCandidate[]>([]);
   const [vinBase, setVinBase] = useState<{ manufacturer: string; model: string; vin: string } | null>(null);
@@ -367,7 +371,21 @@ export default function Teileportal() {
   const [catNodes, setCatNodes] = useState<Record<string, ApCategoryNode[]>>({});
   const cart = usePartsCart();
   const [cartOpen, setCartOpen] = useState(false);
+  // memberLevel kommt aus dem echten Supabase-Account, NICHT aus localStorage.
+  // membership_level: 0=kein Mitglied, 1=L1, 2=L2, 3=L3
   const [memberLevel, setMemberLevel] = useMembership();
+  const actualLevel: MemberLevelId = !user ? "none"
+    : profile?.membership_level === 3 ? "L3"
+    : profile?.membership_level === 2 ? "L2"
+    : profile?.membership_level === 1 ? "L1"
+    : "none";
+  // Angezeigter Level darf nie höher als der echte Account-Level sein
+  const effectiveMemberLevel: MemberLevelId = (() => {
+    const order: MemberLevelId[] = ["none", "L1", "L2", "L3"];
+    const actualIdx = order.indexOf(actualLevel);
+    const chosenIdx = order.indexOf(memberLevel);
+    return chosenIdx <= actualIdx ? memberLevel : actualLevel;
+  })();
   const [detailArticle, setDetailArticle] = useState<DetailArticle | null>(null);
   const [heroTab, setHeroTab] = useState<HeroTab>('search');
 
@@ -405,8 +423,20 @@ export default function Teileportal() {
   };
 
   const addArticleToCart = (a: { name: string; brand: string; articleNumber: string; imageUrl?: string; price?: number }) => {
+    if (!user) {
+      setAuthModal(a);
+      return;
+    }
     cart.add({ key: `${a.brand}::${a.articleNumber}`.toLowerCase(), name: a.name, brand: a.brand,
       articleNumber: a.articleNumber, imageUrl: a.imageUrl, price: a.price, vehicleLabel });
+  };
+
+  const addArticleAsGuest = () => {
+    if (!authModal) return;
+    cart.add({ key: `${authModal.brand}::${authModal.articleNumber}`.toLowerCase(), name: authModal.name,
+      brand: authModal.brand, articleNumber: authModal.articleNumber, imageUrl: authModal.imageUrl,
+      price: authModal.price, vehicleLabel });
+    setAuthModal(null);
   };
 
   const vehicleLabel = vehicle ? [vehicle.manufacturer, vehicle.model, vehicle.typeName].filter(Boolean).join(' ') : '';
@@ -1163,7 +1193,9 @@ export default function Teileportal() {
                         <span className="text-muted-foreground font-normal text-sm ml-2">({totalCount > articles.length ? totalCount : articles.length})</span>
                       </span>
                       <div className="flex items-center gap-3">
-                        <MembershipSelect level={memberLevel} onChange={setMemberLevel} />
+                        {actualLevel !== "none" && (
+                          <MembershipSelect level={effectiveMemberLevel} onChange={setMemberLevel} />
+                        )}
                         {selectedBrands.size > 0 && <span className="text-sm text-muted-foreground">{filtered.length} gefiltert</span>}
                       </div>
                     </div>
@@ -1354,7 +1386,7 @@ export default function Teileportal() {
                                       </span>
                                     )}
                                   </div>
-                                  <PriceBlock price={a.price} priceEK={a.priceEK} level={memberLevel} />
+                                  <PriceBlock price={a.price} priceEK={a.priceEK} level={effectiveMemberLevel} />
                                   <button onClick={() => addArticleToCart(a)}
                                     className="btn-primary text-xs px-3 py-1.5 min-h-0 h-auto inline-flex items-center gap-1.5 mt-0.5">
                                     <ShoppingBag className="w-3.5 h-3.5" /> Warenkorb
@@ -1457,6 +1489,55 @@ export default function Teileportal() {
           </div>
         </div>
       )}
+
+      {/* ── Auth-Modal: Anmelden / Registrieren / Als Gast bestellen ── */}
+      <AnimatePresence>
+        {authModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] flex items-center justify-center px-4"
+            style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+            onClick={() => setAuthModal(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.93, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.93, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="w-full max-w-[360px] bg-[#111] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-6 pt-6 pb-4 text-center">
+                <img src="/images/logo-cropped.png" alt="Alex Autoshop" className="h-9 mx-auto mb-4" />
+                <h2 className="text-lg font-bold text-white mb-1">Zum Bestellen anmelden</h2>
+                <p className="text-sm text-white/50 leading-snug">
+                  Du bestellst: <span className="text-white/80 font-medium">{authModal.name}</span>
+                </p>
+              </div>
+              <div className="px-6 pb-6 flex flex-col gap-2.5">
+                <Link
+                  to="/konto"
+                  state={{ from: "/teileboerse" }}
+                  className="flex items-center justify-center gap-2 w-full bg-gold-bright text-night font-bold py-3 rounded-xl hover:brightness-95 active:scale-[0.98] transition-all text-[15px]"
+                >
+                  <LogIn className="w-4 h-4" /> Anmelden
+                </Link>
+                <Link
+                  to="/konto"
+                  state={{ from: "/teileboerse", tab: "register" }}
+                  className="flex items-center justify-center gap-2 w-full bg-white/10 text-white font-semibold py-3 rounded-xl hover:bg-white/15 active:scale-[0.98] transition-all text-[15px] border border-white/10"
+                >
+                  <UserPlus className="w-4 h-4" /> Konto erstellen
+                </Link>
+                <button
+                  onClick={addArticleAsGuest}
+                  className="flex items-center justify-center gap-2 w-full bg-transparent text-white/60 font-medium py-3 rounded-xl hover:text-white/90 hover:bg-white/5 active:scale-[0.98] transition-all text-[14px] border border-white/10"
+                >
+                  <UserCheck className="w-4 h-4" /> Als Gast bestellen
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
