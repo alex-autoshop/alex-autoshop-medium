@@ -105,7 +105,10 @@ export function Header() {
               <div className="hidden xl:flex items-center gap-1">
                 <NavLink
                   to="/dashboard"
-                  className="inline-flex items-center gap-2 px-3 min-h-[48px] rounded-lg font-medium text-white/75 hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap"
+                  className={({ isActive }) => cn(
+                    "inline-flex items-center gap-2 px-3 min-h-[48px] rounded-lg font-medium transition-colors whitespace-nowrap",
+                    isActive ? "text-gold-bright bg-white/10" : "text-white/75 hover:text-white hover:bg-white/10"
+                  )}
                 >
                   <LayoutDashboard className="w-5 h-5" /> Dashboard
                 </NavLink>
@@ -223,7 +226,10 @@ export function Header() {
                     <NavLink
                       to="/dashboard"
                       onClick={() => setMobileOpen(false)}
-                      className="px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2 text-white/85 hover:bg-white/10"
+                      className={({ isActive }) => cn(
+                        "px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center gap-2 hover:bg-white/10",
+                        isActive ? "text-gold-bright bg-white/10" : "text-white/85"
+                      )}
                     >
                       <LayoutDashboard className="w-5 h-5" /> Dashboard
                     </NavLink>
