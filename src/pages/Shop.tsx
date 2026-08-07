@@ -340,6 +340,24 @@ export default function Shop() {
 
       <h1 className="text-3xl sm:text-4xl mb-6">{title}</h1>
 
+      {/* ── Shop in Bearbeitung Banner ─────────────────────────────────── */}
+      <div className="mb-8 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 flex gap-4 items-start">
+        <span className="text-2xl shrink-0 mt-0.5">🚧</span>
+        <div>
+          <p className="font-bold text-amber-400 text-base leading-tight mb-1">
+            Shop wird gerade aufgebaut — neue Produkte folgen in Kürze
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Wir arbeiten daran, unser vollständiges Sortiment (Standox, Sikkens, Mirka, SATA, 3M u. v. m.) hier einzupflegen.
+            Was du jetzt siehst, ist erst ein kleiner Teil. Alles was du brauchst, bekommst du schon heute —{" "}
+            <a href="tel:+4920282690" className="text-amber-400 font-semibold hover:underline">
+              ruf einfach an (0202 82690)
+            </a>{" "}
+            oder schreib uns und wir besorgen es dir.
+          </p>
+        </div>
+      </div>
+
       {/* Sentinel for IntersectionObserver */}
       <div ref={stickyRef} className="h-px -mt-px" />
 
