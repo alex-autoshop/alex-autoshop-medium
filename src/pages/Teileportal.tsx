@@ -821,28 +821,6 @@ export default function Teileportal() {
         {/* ── HAUPTINHALT + Mobile-Leiste ──────────────────────────────────── */}
         <div className="flex-1 min-w-0">
 
-        {/* Mobile: horizontale Kategorie-Leiste */}
-        <div className="lg:hidden flex overflow-x-auto gap-2 px-4 py-2.5 border-b border-border bg-card/90 backdrop-blur sticky top-0 z-30"
-          style={{ scrollbarWidth: 'none' }}>
-          {CATEGORIES.map((cat) => {
-            const isActive = activeCat?.id === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => handleSidebarCat(cat)}
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap border transition-all shrink-0",
-                  isActive
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "border-border/60 text-muted-foreground hover:border-primary/50 hover:text-foreground bg-card"
-                )}
-              >
-                <cat.Icon className="w-3 h-3" />
-                {cat.name.split(' / ')[0]}
-              </button>
-            );
-          })}
-        </div>
 
         {/* ── HERO (Suchphase) ───────────────────────────────────────────── */}
         {phase === 'search' && (
@@ -893,7 +871,6 @@ export default function Teileportal() {
                     { id: 'vin' as HeroTab, label: 'VIN / FIN', Icon: Hash },
                     { id: 'kba' as HeroTab, label: 'HSN / TSN', Icon: Wrench },
                     { id: 'vehicle' as HeroTab, label: 'Meine Fahrzeuge', Icon: Car },
-                    { id: 'number' as HeroTab, label: 'Teilenummer', Icon: Package },
                   ]).map(({ id, label, Icon }) => (
                     <button key={id} onClick={() => setHeroTab(id)}
                       className={cn('flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors border-b-2 -mb-px shrink-0',
@@ -910,7 +887,7 @@ export default function Teileportal() {
                       <motion.form key="hs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         onSubmit={handleSearchSubmit} className="flex gap-2">
                         <input value={partQuery} onChange={e => setPartQuery(e.target.value)}
-                          placeholder="Teile suchen (z.B. Bremsbeläge, Zündkerzen, Ölfilter)"
+                          placeholder="Teile oder Teilenummer suchen (z.B. Bremsbeläge, 1J0615301D)"
                           className="input-base flex-1 h-12 text-base" autoFocus />
                         <button type="submit" disabled={partsLoading} className="btn-primary px-6 h-12 gap-2 shrink-0">
                           {partsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
@@ -969,18 +946,6 @@ export default function Teileportal() {
                       </motion.div>
                     )}
 
-                    {heroTab === 'number' && (
-                      <motion.form key="hn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        onSubmit={handleSearchSubmit} className="flex gap-2">
-                        <input value={partQuery} onChange={e => setPartQuery(e.target.value)}
-                          placeholder="Teilenummer eingeben (z.B. 1J0615301D, 06A103601AJ)"
-                          className="input-base flex-1 h-12 text-base font-mono" autoFocus />
-                        <button type="submit" disabled={partsLoading} className="btn-primary px-6 h-12 gap-2 shrink-0">
-                          {partsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                          Suchen
-                        </button>
-                      </motion.form>
-                    )}
                   </AnimatePresence>
 
                   {vehicleError && (
