@@ -865,17 +865,19 @@ export default function Teileportal() {
                 className="bg-card border border-border rounded-2xl shadow-xl max-w-3xl mx-auto overflow-hidden">
 
                 {/* Tab bar */}
-                <div className="flex overflow-x-auto border-b border-border px-4 pt-3 scrollbar-hide">
+                <div className="flex border-b border-border px-1 pt-3">
                   {([
-                    { id: 'search' as HeroTab, label: 'Suche', Icon: Search },
-                    { id: 'vin' as HeroTab, label: 'VIN / FIN', Icon: Hash },
-                    { id: 'kba' as HeroTab, label: 'HSN / TSN', Icon: Wrench },
-                    { id: 'vehicle' as HeroTab, label: 'Meine Fahrzeuge', Icon: Car },
-                  ]).map(({ id, label, Icon }) => (
+                    { id: 'search' as HeroTab, label: 'Suche', mobileLabel: 'Suche', Icon: Search },
+                    { id: 'vin' as HeroTab, label: 'VIN / FIN', mobileLabel: 'VIN', Icon: Hash },
+                    { id: 'kba' as HeroTab, label: 'HSN / TSN', mobileLabel: 'HSN/TSN', Icon: Wrench },
+                    { id: 'vehicle' as HeroTab, label: 'Meine Fahrzeuge', mobileLabel: 'Garage', Icon: Car },
+                  ]).map(({ id, label, mobileLabel, Icon }) => (
                     <button key={id} onClick={() => setHeroTab(id)}
-                      className={cn('flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors border-b-2 -mb-px shrink-0',
+                      className={cn('flex-1 flex items-center justify-center gap-1 px-1 py-2.5 text-xs sm:text-sm font-semibold transition-colors border-b-2 -mb-px',
                         heroTab === id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground')}>
-                      <Icon className="w-3.5 h-3.5" /> {label}
+                      <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+                      <span className="sm:hidden">{mobileLabel}</span>
+                      <span className="hidden sm:inline">{label}</span>
                     </button>
                   ))}
                 </div>
