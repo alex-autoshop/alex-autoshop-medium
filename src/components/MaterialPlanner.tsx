@@ -3,17 +3,27 @@
  * Kein AI-Wizard. Nutzer wählt selbst was und wie viel.
  * - Quick-Templates (Komplettlackierung, Politur, …)
  * - Freie Produktsuche / Eigeneingabe
- * - Mengensteuerung (+/–)
- * - Alles in Warenkorb / WhatsApp / Print
+ * - Passende Shopify-Produkte werden automatisch vorgeschlagen
+ * - WhatsApp / Print
  */
-import { useState, useRef } from "react";
-import { Plus, Minus, Trash2, ShoppingCart, MessageCircle, Printer, Check, X, RotateCcw } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
+import {
+  Plus, Minus, Trash2, MessageCircle, Printer, Check, X,
+  RotateCcw, Loader2, ShoppingCart, ExternalLink, Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useCartStore } from "@/stores/cartStore";
 import { useAuth } from "@/context/AuthContext";
 import { discountForLevel } from "@/data/memberships";
 import { whatsappLink } from "@/data/shopInfo";
+import {
+  storefrontApiRequest,
+  STOREFRONT_PRODUCT_BY_HANDLE_QUERY,
+  formatPrice,
+} from "@/lib/shopify";
+import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { cn } from "@/lib/utils";
 
 // ── Schnell-Vorlagen ──────────────────────────────────────────────────
@@ -31,7 +41,7 @@ const TEMPLATES: { label: string; emoji: string; items: string[] }[] = [
   {
     label: "Politur / Aufbereitung",
     emoji: "💎",
-    items: ["Schnittkorrektur-Paste", "Antihologramm-Politur", "Hochglanzpolitur", "Polierpads", "Mikrofasertücher", "Exzenterschleifer-Pads", "Silikonentferner"],
+    items: ["Schnittkorrektur-Paste", "Antihologramm-Politur", "Hochglanzpolitur", "Polierpads", "Mikrofasertücher", "Exzenterschleifer-Pads"],
   },
   {
     label: "Spachtel / Karosserie",
@@ -54,6 +64,93 @@ const CATEGORIES: { label: string; items: string[] }[] = [
   { label: "Hilfsstoffe", items: ["Silikonentferner", "Abdeckband & Folie", "Mischbecher & Siebe", "Handschuhe & Tücher", "Atemschutzmaske", "Reinigungstücher"] },
 ];
 
+// ── Keyword → Shopify-Handles ────────────────────────────────────────
+// Reihenfolge: spezifischer zuerst, allgemeiner zuletzt
+const SUGGESTION_MAP: Array<[string, string[]]> = [
+  ["basislack",      ["farben-mix", "mipa-acryl-lack-spray"]],
+  ["wunschfarbe",    ["farben-mix", "individuelle-spraydose-erstellen", "individuellen-lackstift-bestellen-20ml"]],
+  ["lackstift",      ["individuellen-lackstift-bestellen-20ml"]],
+  ["spraydose",      ["individuelle-spraydose-erstellen", "mipa-acryl-lack-spray"]],
+  ["klarlack",       ["mipa-cx4-express-klarlack", "mipa-cc9-2k-hs-klarlack-5l", "master-hs-2-1-klarlack-5l"]],
+  ["klarlack 1k",    ["mipa-acryl-lack-spray"]],
+  ["härter",         ["mipa-hs-25-2k-harter-normal", "mipa-hs-10-2k-hs-harter-kurz", "master-hs-harter-2k"]],
+  ["harter",         ["mipa-hs-25-2k-harter-normal", "mipa-hs-10-2k-hs-harter-kurz", "master-hs-harter-2k"]],
+  ["verdünnung",     ["avo-acrylverdunnung-profi-line", "meyer-nitro-universalverdunnung"]],
+  ["verdunnung",     ["avo-acrylverdunnung-profi-line", "meyer-nitro-universalverdunnung"]],
+  ["acrylverdünnung",["avo-acrylverdunnung-profi-line"]],
+  ["nitroverdünnung",["meyer-nitro-universalverdunnung"]],
+  ["schleifpad",     ["feiner-schleifschwamm-p220-p400", "rhynogrip-p800-schleifscheiben", "gewaffelte-polierpads"]],
+  ["schleifpapier",  ["rhynogrip-p800-schleifscheiben", "rhynogrip-p600-schleifscheiben", "mp-schleifscheiben-goldfilm"]],
+  ["schleifscheib",  ["rhynogrip-p800-schleifscheiben", "rhynogrip-p600-schleifscheiben", "rhynogrip-p400-schleifscheiben"]],
+  ["schleifvlies",   ["app-ws-222-schleifvlies"]],
+  ["schleif",        ["feiner-schleifschwamm-p220-p400", "rhynogrip-p800-schleifscheiben", "mp-schleifscheiben-goldfilm"]],
+  ["polierpads",     ["gewaffelte-polierpads"]],
+  ["politur",        ["a1-speed-polish-dr-wack", "a1-speed-polish-glanz-in-rekordzeit", "gewaffelte-polierpads"]],
+  ["polish",         ["a1-speed-polish-dr-wack", "a1-speed-polish-glanz-in-rekordzeit"]],
+  ["hochglanz",      ["a1-speed-polish-glanz-in-rekordzeit", "a1-polish-wax"]],
+  ["wax",            ["a1-polish-wax", "a1-der-wax-schwamm"]],
+  ["wachs",          ["a1-polish-wax", "a1-der-wax-schwamm"]],
+  ["shampoo",        ["a1-speed-shampoo-schnell-schonend-stark"]],
+  ["abdeckband",     ["beiges-abdeckband-19-mm-prazise-kanten-perfektes-finish", "green-tape-19-mm-profi-abdeckband-fur-lackierer", "green-tape-30-mm-abdeckband-fur-prazise-lackierarbeiten"]],
+  ["klebeband",      ["beiges-abdeckband-19-mm-prazise-kanten-perfektes-finish", "green-tape-19-mm-profi-abdeckband-fur-lackierer"]],
+  ["abdeckfolie",    ["crs-foam-tape"]],
+  ["foam",           ["crs-foam-tape"]],
+  ["grundierfüller", ["mipa-etch-filler-hb-der-1k-haftfuller-fur-schwierige-untergrunde"]],
+  ["grundier",       ["mipa-etch-filler-hb-der-1k-haftfuller-fur-schwierige-untergrunde", "mipa-etch-primer-spray"]],
+  ["primer",         ["mipa-etch-primer-spray", "mipa-etch-filler-hb-der-1k-haftfuller-fur-schwierige-untergrunde"]],
+  ["filler",         ["mipa-etch-filler-hb-der-1k-haftfuller-fur-schwierige-untergrunde"]],
+  ["steinschlag",    ["mipa-steinschlagschutz-ubs-uberlackierbar-schwarz", "troton-ubs-steinschlagschutz-korrosionsschutz-unterbodenschutz-500ml"]],
+  ["unterboden",     ["troton-ubs-steinschlagschutz-korrosionsschutz-unterbodenschutz-500ml"]],
+  ["ubs",            ["mipa-steinschlagschutz-ubs-uberlackierbar-schwarz"]],
+  ["felgenlack",     ["mipa-mipatherm-silber-hitzebestandiger-lack-bis-800-c-400-ml-spraydose"]],
+  ["felgen",         ["mipa-mipatherm-silber-hitzebestandiger-lack-bis-800-c-400-ml-spraydose", "mipa-mipatherm-hitzebestandiger-lack-bis-800-c-400-ml-spraydose"]],
+  ["hitzebeständig", ["mipa-mipatherm-silber-hitzebestandiger-lack-bis-800-c-400-ml-spraydose"]],
+];
+
+function findSuggestedHandles(itemName: string): string[] {
+  const lower = itemName.toLowerCase();
+  const found: string[] = [];
+  for (const [kw, handles] of SUGGESTION_MAP) {
+    if (lower.includes(kw)) {
+      for (const h of handles) {
+        if (!found.includes(h)) found.push(h);
+      }
+      if (found.length >= 3) break;
+    }
+  }
+  return found.slice(0, 3);
+}
+
+interface SuggestedProduct {
+  handle: string;
+  title: string;
+  priceFormatted: string;
+  priceAmount: string;
+  priceCurrency: string;
+  variantId: string;
+  variantTitle: string;
+  image: string;
+}
+
+// ── Shop-Suchbegriff für kompakten Link ────────────────────────────
+function shopSearchTerm(itemName: string): string {
+  const lower = itemName.toLowerCase();
+  if (lower.includes("klarlack")) return "Klarlack";
+  if (lower.includes("basislack") || lower.includes("wunschfarbe")) return "Farbe";
+  if (lower.includes("härter") || lower.includes("harter")) return "Härter";
+  if (lower.includes("verdünnung") || lower.includes("verdunnung")) return "Verdünnung";
+  if (lower.includes("schleif")) return "Schleif";
+  if (lower.includes("politur") || lower.includes("polish")) return "Politur";
+  if (lower.includes("abdeckband") || lower.includes("klebeband")) return "Abdeckband";
+  if (lower.includes("grundier") || lower.includes("primer") || lower.includes("filler")) return "Grundierung";
+  if (lower.includes("steinschlag")) return "Steinschlagschutz";
+  if (lower.includes("spachtel")) return "Spachtel";
+  if (lower.includes("wax") || lower.includes("wachs")) return "Wax";
+  if (lower.includes("shampoo")) return "Shampoo";
+  if (lower.includes("felgen")) return "Felgen";
+  return "";
+}
+
 interface MaterialPlannerProps {
   compact?: boolean;
 }
@@ -64,24 +161,65 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
   const { user, profile } = useAuth();
   const [customInput, setCustomInput] = useState("");
   const [activeCat, setActiveCat] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<SuggestedProduct[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const pendingCount = items.filter((i) => !i.done).length;
   const doneCount = items.filter((i) => i.done).length;
+  const discount = user ? discountForLevel(profile?.membership_level ?? 0) : 0;
 
-  // ── Vorlage laden ─────────────────────────────────────────────────
+  // ── Shopify-Produkte für Plan-Einträge laden (nur Vollansicht) ────
+  const itemKey = items.map((i) => i.name).join("|");
+  useEffect(() => {
+    if (compact || items.length === 0) { setSuggestions([]); return; }
+
+    const handleSet = new Set<string>();
+    for (const item of items) {
+      findSuggestedHandles(item.name).forEach((h) => handleSet.add(h));
+    }
+    const handles = [...handleSet].slice(0, 12);
+    if (!handles.length) { setSuggestions([]); return; }
+
+    setLoadingSuggestions(true);
+    Promise.all(
+      handles.map((handle) =>
+        storefrontApiRequest(STOREFRONT_PRODUCT_BY_HANDLE_QUERY, { handle })
+          .then((d) => {
+            const node = d?.data?.productByHandle;
+            if (!node) return null;
+            const v = node.variants?.edges?.[0]?.node;
+            if (!v) return null;
+            return {
+              handle,
+              title: node.title as string,
+              priceFormatted: formatPrice(v.price.amount, v.price.currencyCode),
+              priceAmount: v.price.amount as string,
+              priceCurrency: v.price.currencyCode as string,
+              variantId: v.id as string,
+              variantTitle: v.title as string,
+              image: (node.images?.edges?.[0]?.node?.url as string) || PRODUCT_IMAGES[handle] || "",
+            } as SuggestedProduct;
+          })
+          .catch(() => null)
+      )
+    )
+      .then((results) => setSuggestions(results.filter(Boolean) as SuggestedProduct[]))
+      .finally(() => setLoadingSuggestions(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemKey, compact]);
+
+  // ── Vorlagen ──────────────────────────────────────────────────────
   const applyTemplate = (tpl: typeof TEMPLATES[0]) => {
     addMany(tpl.items);
     toast.success(`"${tpl.label}" geladen`, { description: `${tpl.items.length} Positionen hinzugefügt` });
   };
 
-  // ── Produkt aus Kategorie hinzufügen ─────────────────────────────
   const quickAdd = (name: string) => {
     add(name);
     toast.success(name, { description: "Zum Plan hinzugefügt" });
   };
 
-  // ── Custom-Eingabe ────────────────────────────────────────────────
   const handleCustomAdd = () => {
     const name = customInput.trim();
     if (!name) return;
@@ -90,36 +228,65 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
     inputRef.current?.focus();
   };
 
-  // ── Alles in Shopify-Warenkorb ────────────────────────────────────
-  const addAllToCart = async () => {
-    const toAdd = items.filter((i) => !i.done);
-    if (!toAdd.length) { toast.error("Keine offenen Positionen"); return; }
-    toast.info(`${toAdd.length} Artikel werden hinzugefügt …`);
-    // Materialplan-Artikel haben keine Shopify-Varianten → als Notiz via WhatsApp stattdessen
-    const lines = toAdd.map((i) => `• ${i.name}${i.quantity > 1 ? ` (${i.quantity}×)` : ""}`).join("\n");
-    const project = projectName || "Materialplan";
-    window.open(whatsappLink(`Hallo Alex Autoshop! Ich möchte folgendes bestellen:\n\n*${project}*\n${lines}\n\nBitte Preise + Verfügbarkeit bestätigen.`), "_blank");
+  // ── Produkt direkt in Warenkorb ───────────────────────────────────
+  const addSuggestionToCart = async (p: SuggestedProduct) => {
+    try {
+      await addToShopifyCart({
+        product: {
+          node: {
+            id: p.handle,
+            title: p.title,
+            handle: p.handle,
+            description: "",
+            images: { edges: p.image ? [{ node: { url: p.image } }] : [] },
+            variants: { edges: [] },
+          },
+        } as never,
+        variantId: p.variantId,
+        variantTitle: p.variantTitle || "Standard",
+        price: { amount: p.priceAmount, currencyCode: p.priceCurrency },
+        quantity: 1,
+        selectedOptions: [],
+      });
+      toast.success(`${p.title} in den Warenkorb gelegt`);
+    } catch {
+      toast.error("Fehler beim Hinzufügen");
+    }
   };
 
   // ── WhatsApp ──────────────────────────────────────────────────────
   const sendWhatsApp = () => {
     if (!items.length) { toast.error("Plan ist leer"); return; }
-    const lines = items.map((i) => `${i.done ? "✅" : "◻️"} ${i.name}${i.quantity > 1 ? ` (${i.quantity}×)` : ""}`).join("\n");
-    window.open(whatsappLink(`*${projectName || "Materialplan"}*\n\n${lines}`), "_blank");
+    const lines = items
+      .map((i) => `${i.done ? "✅" : "◻️"} ${i.name}${i.quantity > 1 ? ` (${i.quantity}×)` : ""}`)
+      .join("\n");
+    window.open(
+      whatsappLink(`*${projectName || "Materialplan"}*\n\n${lines}`),
+      "_blank"
+    );
   };
 
   // ── Print ─────────────────────────────────────────────────────────
   const print = () => {
-    const lines = items.map((i) => `${i.done ? "[x]" : "[ ]"} ${i.name}${i.quantity > 1 ? ` — ${i.quantity}×` : ""}`).join("\n");
+    const lines = items
+      .map((i) => `${i.done ? "[x]" : "[ ]"} ${i.name}${i.quantity > 1 ? ` — ${i.quantity}×` : ""}`)
+      .join("\n");
     const w = window.open("", "_blank");
-    w?.document.write(`<pre style="font-family:monospace;font-size:14px;padding:24px">${projectName || "Materialplan"}\n${"─".repeat(40)}\n${lines}</pre>`);
+    w?.document.write(
+      `<pre style="font-family:monospace;font-size:14px;padding:24px">${projectName || "Materialplan"}\n${"─".repeat(40)}\n${lines}</pre>`
+    );
     w?.print();
   };
 
-  // ── Mitgliedschaftsrabatt ─────────────────────────────────────────
-  const discount = user ? discountForLevel(profile?.membership_level ?? 0) : 0;
-
+  // ══════════════════════════════════════════════════════════════════
+  // COMPACT VIEW (Navbar-Widget)
+  // ══════════════════════════════════════════════════════════════════
   if (compact) {
+    // Shoplinks aus den Planer-Einträgen ableiten
+    const shopLinks = [
+      ...new Set(items.map((i) => shopSearchTerm(i.name)).filter(Boolean)),
+    ].slice(0, 5);
+
     return (
       <div className="flex flex-col gap-3">
         {/* Projektname */}
@@ -132,25 +299,47 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
 
         {/* Artikel-Liste */}
         {items.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-4">Noch keine Materialien — füge etwas hinzu.</p>
+          <p className="text-center text-sm text-muted-foreground py-4">
+            Noch keine Materialien — füge etwas hinzu.
+          </p>
         ) : (
           <ul className="space-y-1.5">
             {items.map((item) => (
-              <li key={item.id} className={cn("flex items-center gap-2 rounded-lg px-2 py-1.5 group", item.done && "opacity-50")}>
-                <button onClick={() => toggle(item.id)} className={cn("w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors", item.done ? "bg-primary border-primary text-white" : "border-border hover:border-primary")}>
+              <li
+                key={item.id}
+                className={cn("flex items-center gap-2 rounded-lg px-2 py-1.5 group", item.done && "opacity-50")}
+              >
+                <button
+                  onClick={() => toggle(item.id)}
+                  className={cn(
+                    "w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors",
+                    item.done ? "bg-primary border-primary text-white" : "border-border hover:border-primary"
+                  )}
+                >
                   {item.done && <Check className="w-3 h-3" />}
                 </button>
-                <span className={cn("flex-1 text-sm leading-tight", item.done && "line-through")}>{item.name}</span>
+                <span className={cn("flex-1 text-sm leading-tight", item.done && "line-through")}>
+                  {item.name}
+                </span>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => setQuantity(item.id, item.quantity - 1)} className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary">
+                  <button
+                    onClick={() => setQuantity(item.id, item.quantity - 1)}
+                    className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  >
                     <Minus className="w-3 h-3" />
                   </button>
                   <span className="text-xs font-semibold w-4 text-center">{item.quantity}</span>
-                  <button onClick={() => setQuantity(item.id, item.quantity + 1)} className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary">
+                  <button
+                    onClick={() => setQuantity(item.id, item.quantity + 1)}
+                    className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  >
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
-                <button onClick={() => remove(item.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all">
+                <button
+                  onClick={() => remove(item.id)}
+                  className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </li>
@@ -158,7 +347,7 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
           </ul>
         )}
 
-        {/* Eigene Position hinzufügen */}
+        {/* Freie Eingabe */}
         <div className="flex gap-2">
           <input
             ref={inputRef}
@@ -168,21 +357,53 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
             placeholder="Produkt eingeben …"
             className="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-1 focus:ring-primary"
           />
-          <button onClick={handleCustomAdd} className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:brightness-95 active:scale-95 transition-all">
+          <button
+            onClick={handleCustomAdd}
+            className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:brightness-95 active:scale-95 transition-all"
+          >
             <Plus className="w-4 h-4" />
           </button>
         </div>
 
+        {/* Shop-Links passend zum Plan */}
+        {shopLinks.length > 0 && (
+          <div className="border-t border-border pt-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+              Im Shop finden
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {shopLinks.map((term) => (
+                <Link
+                  key={term}
+                  to={`/shop?q=${encodeURIComponent(term)}`}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-border text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                >
+                  {term} →
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Aktionen */}
         {items.length > 0 && (
           <div className="flex gap-2 pt-1">
-            <button onClick={sendWhatsApp} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#25D366] text-white text-xs font-semibold hover:brightness-95 active:scale-95 transition-all">
+            <button
+              onClick={sendWhatsApp}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#25D366] text-white text-xs font-semibold hover:brightness-95 active:scale-95 transition-all"
+            >
               <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
             </button>
-            <button onClick={print} className="px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-secondary active:scale-95 transition-all">
+            <button
+              onClick={print}
+              className="px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-secondary active:scale-95 transition-all"
+            >
               <Printer className="w-3.5 h-3.5" />
             </button>
-            <button onClick={() => { if (confirm("Plan leeren?")) clear(); }} className="px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-secondary active:scale-95 transition-all text-muted-foreground">
+            <button
+              onClick={() => { if (confirm("Plan leeren?")) clear(); }}
+              className="px-3 py-2 rounded-lg border border-border text-xs font-medium hover:bg-secondary active:scale-95 transition-all text-muted-foreground"
+            >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -191,14 +412,18 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
     );
   }
 
-  // ── VOLLANSICHT (Dashboard / eigene Seite) ───────────────────────
+  // ══════════════════════════════════════════════════════════════════
+  // VOLLANSICHT (Dashboard / eigene Seite)
+  // ══════════════════════════════════════════════════════════════════
   return (
     <div className="max-w-3xl mx-auto py-6 px-4 space-y-8">
 
       {/* Header + Projektname */}
       <div>
         <h2 className="text-2xl font-display font-bold mb-1">Materialplaner</h2>
-        <p className="text-muted-foreground text-sm mb-4">Wähle selbst, was du brauchst — plane dein Projekt in Sekunden.</p>
+        <p className="text-muted-foreground text-sm mb-4">
+          Wähle selbst, was du brauchst — wir schlagen passende Produkte aus dem Shop vor.
+        </p>
         <input
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
@@ -209,7 +434,9 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
 
       {/* Quick-Templates */}
       <div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Schnell-Vorlage laden</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+          Schnell-Vorlage laden
+        </p>
         <div className="flex flex-wrap gap-2">
           {TEMPLATES.map((tpl) => (
             <button
@@ -225,8 +452,9 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
 
       {/* Kategorie-Schnellwahl */}
       <div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Produkte hinzufügen</p>
-        {/* Kategorie-Tabs */}
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+          Produkte hinzufügen
+        </p>
         <div className="flex flex-wrap gap-1.5 mb-3">
           {CATEGORIES.map((cat) => (
             <button
@@ -243,7 +471,6 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
             </button>
           ))}
         </div>
-        {/* Produkte der aktiven Kategorie */}
         {activeCat && (
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.find((c) => c.label === activeCat)?.items.map((item) => {
@@ -293,15 +520,23 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
               Deine Liste ({pendingCount} offen{doneCount > 0 ? `, ${doneCount} erledigt` : ""})
             </p>
-            <button onClick={() => { if (confirm("Plan komplett leeren?")) clear(); }} className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors">
+            <button
+              onClick={() => { if (confirm("Plan komplett leeren?")) clear(); }}
+              className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
+            >
               <RotateCcw className="w-3 h-3" /> Leeren
             </button>
           </div>
 
           <div className="rounded-2xl border border-border overflow-hidden divide-y divide-border">
             {items.map((item) => (
-              <div key={item.id} className={cn("flex items-center gap-3 px-4 py-3 group transition-colors", item.done ? "bg-muted/30" : "bg-card hover:bg-muted/20")}>
-                {/* Checkbox */}
+              <div
+                key={item.id}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 group transition-colors",
+                  item.done ? "bg-muted/30" : "bg-card hover:bg-muted/20"
+                )}
+              >
                 <button
                   onClick={() => toggle(item.id)}
                   className={cn(
@@ -311,13 +546,9 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
                 >
                   {item.done && <Check className="w-3 h-3" />}
                 </button>
-
-                {/* Name */}
                 <span className={cn("flex-1 text-sm font-medium", item.done && "line-through text-muted-foreground")}>
                   {item.name}
                 </span>
-
-                {/* Menge */}
                 <div className="flex items-center gap-1.5 bg-secondary rounded-lg px-1 py-0.5">
                   <button
                     onClick={() => setQuantity(item.id, item.quantity - 1)}
@@ -333,8 +564,6 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
                     <Plus className="w-3 h-3" />
                   </button>
                 </div>
-
-                {/* Löschen */}
                 <button
                   onClick={() => remove(item.id)}
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
@@ -366,6 +595,87 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
               <Check className="w-3.5 h-3.5" />
               Dein Mitgliederrabatt von {discount}% wird beim Checkout automatisch angewendet.
             </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Passende Produkte aus dem Shop ─────────────────────────── */}
+      {items.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+              Passende Produkte aus dem Shop
+            </p>
+            {loadingSuggestions && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+          </div>
+
+          {loadingSuggestions && suggestions.length === 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="rounded-xl border border-border p-3 animate-pulse">
+                  <div className="w-full h-24 bg-muted rounded-lg mb-2" />
+                  <div className="h-4 bg-muted rounded w-3/4 mb-1" />
+                  <div className="h-3 bg-muted rounded w-1/3" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loadingSuggestions && suggestions.length === 0 && items.length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Keine direkten Produktmatches — schau im{" "}
+              <Link to="/shop" className="text-primary underline">
+                Shop
+              </Link>{" "}
+              oder bestelle per WhatsApp.
+            </p>
+          )}
+
+          {suggestions.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {suggestions.map((p) => (
+                <div
+                  key={p.handle}
+                  className="rounded-xl border border-border bg-card flex flex-col overflow-hidden hover:border-primary/40 transition-colors"
+                >
+                  {/* Produktbild */}
+                  {p.image ? (
+                    <img
+                      src={p.image}
+                      alt={p.title}
+                      className="w-full h-28 object-cover bg-secondary"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-28 bg-secondary flex items-center justify-center text-muted-foreground text-xs">
+                      Kein Bild
+                    </div>
+                  )}
+
+                  <div className="p-3 flex flex-col flex-1 gap-2">
+                    <p className="text-sm font-semibold leading-tight line-clamp-2 flex-1">{p.title}</p>
+                    <p className="text-primary font-bold text-base">{p.priceFormatted}</p>
+
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => addSuggestionToCart(p)}
+                        className="flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:brightness-95 active:scale-95 transition-all"
+                      >
+                        <ShoppingCart className="w-3 h-3" /> Warenkorb
+                      </button>
+                      <Link
+                        to={`/shop/${p.handle}`}
+                        className="w-8 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary transition-all"
+                        title="Details ansehen"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
