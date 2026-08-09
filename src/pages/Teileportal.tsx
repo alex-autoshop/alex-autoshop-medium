@@ -1436,6 +1436,7 @@ export default function Teileportal() {
         {phase === 'oem' && (
           <OemExplosionView
             vehicle={vehicle}
+            vehicleKtype={vehicleKtype}
             vehicleVin={vehicleVin}
             onBack={() => setPhase(vehicle ? 'categories' : 'search')}
           />
