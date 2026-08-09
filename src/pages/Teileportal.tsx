@@ -835,6 +835,7 @@ export default function Teileportal() {
                 className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-card/80 backdrop-blur text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-8">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 Alex Autoshop · Teilebörse
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] font-black tracking-wider">BETA</span>
               </motion.div>
 
               {/* Headline */}
