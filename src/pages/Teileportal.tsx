@@ -17,6 +17,7 @@ import { icPriceLookup } from "@/lib/intercarsGateway";
 import { ArticleExpander, BrandFilter, SubCatList } from "@/components/TeileportalExtras";
 import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip, type MemberLevelId } from "@/components/TeileportalPricing";
 import { useAuth } from "@/context/AuthContext";
+import { OemExplosionView } from "@/components/OemExplosionView";
 
 const BRAND_DOMAINS: Record<string, string> = {
   'BOSCH': 'bosch.com', 'BREMBO': 'brembo.com', 'ZIMMERMANN': 'zimmermann-brake.com',
@@ -241,7 +242,7 @@ interface Article {
   source?: "intercars" | "static";
 }
 
-type Phase = 'search' | 'categories' | 'articles';
+type Phase = 'search' | 'categories' | 'articles' | 'oem';
 type SearchMode = 'vin' | 'kba';
 type HeroTab = 'search' | 'vin' | 'kba' | 'vehicle' | 'number';
 // VK = EK × 2.0 → immer unter IC-Listenpreis, Level 3 (-40%) = EK × 1.2 (noch profitabel)
@@ -957,6 +958,31 @@ export default function Teileportal() {
               </motion.div>
             </div>
 
+            {/* ── OEM TEASER ────────────────────────────────────────────────── */}
+            <div className="max-w-5xl mx-auto px-6 pb-6">
+              <motion.button
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                onClick={() => setPhase('oem')}
+                className="w-full rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/8 to-transparent p-5 sm:p-6 flex items-center gap-4 text-left hover:border-primary/50 hover:from-primary/12 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/25 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <Layers className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-bold">OEM Original-Katalog</span>
+                    <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-black">PREVIEW</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Explosionszeichnungen + OE-Nummern direkt in der Teilebörse — Vorschau anzeigen.
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground/40 group-hover:text-primary shrink-0 transition-colors" />
+              </motion.button>
+            </div>
+
             {/* ── HINWEIS: Gespeicherte Fahrzeuge (Kategorien links in der Sidebar) ── */}
             <div className="max-w-5xl mx-auto px-6 pb-16">
               <div className="max-w-2xl mx-auto rounded-2xl border border-primary/30 bg-primary/5 p-6 sm:p-8 text-center">
@@ -1063,10 +1089,11 @@ export default function Teileportal() {
               {/* Tabs */}
               <div className="flex gap-0 mb-6 border-b border-border">
                 <button className="px-4 py-2.5 text-sm font-bold border-b-2 border-primary text-primary -mb-px">AFTERMARKET-TEILE</button>
-                <button disabled title="Original-Ersatzteilkatalog mit Explosionszeichnungen — kommt in Kürze"
-                  className="px-4 py-2.5 text-sm font-bold text-muted-foreground/50 cursor-not-allowed inline-flex items-center gap-2 -mb-px">
+                <button
+                  onClick={() => setPhase('oem')}
+                  className="px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2 -mb-px border-b-2 border-transparent hover:border-primary/40">
                   ORIGINAL-KATALOG (OEM)
-                  <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-bold">BALD</span>
+                  <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-bold">PREVIEW</span>
                 </button>
               </div>
               {/* Kategorien */}
@@ -1403,6 +1430,15 @@ export default function Teileportal() {
               )}
             </motion.div>
           </AnimatePresence>
+        )}
+
+        {/* ── OEM EXPLOSIONSKATALOG ────────────────────────────── */}
+        {phase === 'oem' && (
+          <OemExplosionView
+            vehicle={vehicle}
+            vehicleVin={vehicleVin}
+            onBack={() => setPhase(vehicle ? 'categories' : 'search')}
+          />
         )}
 
         </div>{/* end flex-1 main content */}
