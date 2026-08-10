@@ -164,15 +164,24 @@ async function fetchQuotes(skus, token, payerId, recipientId, branch) {
   const map = new Map();
   const list = [...new Set(skus.filter(Boolean))];
   if (!list.length) return map;
-  // IC verarbeitet laut Doku max. 30 Artikel pro Anfrage
+  // POST (GET → 405 "Method not allowed"). Body: { lines: [{ sku, quantity }] }
+  // IC verarbeitet laut Doku max. 30 Artikel pro Anfrage.
   for (let i = 0; i < list.length; i += 30) {
     const batch = list.slice(i, i + 30);
-    const r = await icFetch(
-      `/inventory/quote?sku=${encodeURIComponent(batch.join(","))}`,
+    const r = await icPost(
+      `/inventory/quote`,
+      { lines: batch.map((sku) => ({ sku, quantity: 1 })) },
       token, payerId, recipientId, branch
     ).catch(() => null);
     const arr = Array.isArray(r) ? r : (Array.isArray(r?.lines) ? r.lines : []);
-    for (const q of arr) if (q?.sku) map.set(String(q.sku), q);
+    for (const q of arr) {
+      if (!q?.sku) continue;
+      const k = String(q.sku);
+      // Mehrere Einträge je SKU (ein Lager pro Eintrag) → lines zusammenführen
+      const prev = map.get(k);
+      if (prev) prev.lines = [...(prev.lines || []), ...(q.lines || [])];
+      else map.set(k, { ...q, lines: [...(q.lines || [])] });
+    }
   }
   return map;
 }
@@ -386,11 +395,14 @@ export default async function handler(req, res) {
       const token = await getToken(clientId, clientSecret);
       out.oauth = { ok: true, ms: Date.now() - t0, tokenLen: (token || "").length };
       // Roh-Fetch damit wir HTTP-Status + Body sehen (icFetch schluckt Fehler)
-      const probe = async (path, hdrs) => {
+      const probe = async (path, hdrs, postBody) => {
         const t = Date.now();
         try {
-          const r = await withTimeout(fetch(`${IC_BASE_URL}${path}`, { headers: hdrs }), 9000, "probe");
-          const txt = (await r.text()).slice(0, 300);
+          const opts = postBody
+            ? { method: "POST", headers: { ...hdrs, "Content-Type": "application/json" }, body: JSON.stringify(postBody) }
+            : { headers: hdrs };
+          const r = await withTimeout(fetch(`${IC_BASE_URL}${path}`, opts), 9000, "probe");
+          const txt = (await r.text()).slice(0, 400);
           return { status: r.status, ms: Date.now() - t, body: txt };
         } catch (e) { return { status: 0, ms: Date.now() - t, body: String(e.message).slice(0, 200) }; }
       };
@@ -402,10 +414,8 @@ export default async function handler(req, res) {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
       };
       // Korrigierte Endpoints verifizieren
-      out.pCategory = await probe(`/catalog/category`, H);
-      out.pQuote    = await probe(`/inventory/quote?sku=G0QF5M`, H);
-      out.pStock    = await probe(`/inventory/stock?sku=G0QF5M`, H);
-      out.pIndex    = await probe(`/catalog/products?index=G7B014PC`, H);
+      out.pQuotePost = await probe(`/inventory/quote`, H, { lines: [{ sku: "G0QF5M", quantity: 1 }] });
+      out.pStock     = await probe(`/inventory/stock?sku=G0QF5M`, H);
     } catch (e) {
       out.oauth = { ok: false, ms: Date.now() - t0, error: String(e.message).slice(0, 250) };
     }
