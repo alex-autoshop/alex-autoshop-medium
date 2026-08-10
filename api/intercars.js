@@ -94,6 +94,9 @@ async function icFetch(path, token, payerId, recipientId, branch) {
       "X-Recipient-Id": recipientId,
       "X-Branch":       branch,
       Accept:           "application/json",
+      // PFLICHT: IC lehnt Requests ohne gültiges Accept-Language ab (Fehler ICF311).
+      // Nur "de" — NICHT "de-DE,de;q=0.9" (IC akzeptiert nur den reinen Sprachcode).
+      "Accept-Language": "de",
       "User-Agent":     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
     },
   }), 8000, `IC ${path.slice(0, 40)}`).finally(() => clearTimeout(timer));
@@ -118,6 +121,7 @@ async function icPost(path, body, token, payerId, recipientId, branch) {
       "X-Branch":       branch,
       "Content-Type":   "application/json",
       Accept:           "application/json",
+      "Accept-Language": "de", // PFLICHT (ICF311)
       "User-Agent":     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
     },
     body: JSON.stringify(body),
@@ -335,17 +339,18 @@ export default async function handler(req, res) {
           return { status: r.status, ms: Date.now() - t, body: txt };
         } catch (e) { return { status: 0, ms: Date.now() - t, body: String(e.message).slice(0, 200) }; }
       };
-      const baseHdrs = {
+      const H = {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
+        "Accept-Language": "de",
+        "X-Payer-Id": payerId, "X-Recipient-Id": recipientId, "X-Branch": branch,
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
       };
-      // A: mit allen X-Headern (aktueller Code)  B: ohne X-Header  C: nur Payer
-      out.probeWithHeaders = await probe(`/catalog/products?search=filter&limit=1`,
-        { ...baseHdrs, "X-Payer-Id": payerId, "X-Recipient-Id": recipientId, "X-Branch": branch });
-      out.probeNoHeaders   = await probe(`/catalog/products?search=filter&limit=1`, baseHdrs);
-      out.probePayerOnly   = await probe(`/catalog/products?search=filter&limit=1`,
-        { ...baseHdrs, "X-Payer-Id": payerId });
+      // Welche Suchparameter akzeptiert IC wirklich?
+      out.pCategories  = await probe(`/catalog/categories`, H);
+      out.pByIndex     = await probe(`/catalog/products?index=VKJP01001&limit=3`, H);
+      out.pBySku       = await probe(`/catalog/products?sku=VKJP01001&limit=3`, H);
+      out.pSearchText  = await probe(`/catalog/products?search=antriebswelle&limit=3`, H);
     } catch (e) {
       out.oauth = { ok: false, ms: Date.now() - t0, error: String(e.message).slice(0, 250) };
     }
