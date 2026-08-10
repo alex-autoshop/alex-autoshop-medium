@@ -280,7 +280,9 @@ export default async function handler(req) {
         const pegResult = await peg('LIST_ARTICLES_BY_QUICK_SEARCH', {
           searchQuery: query, page, perPage: 20, includeAll: true,
         });
-        result = (!pegResult || pegResult.error) ? staticSearch(query) : pegResult;
+        // Fallback auf Static-Catalog wenn: kein Ergebnis, Fehler, ODER 0 Artikel zurück
+        const pegArts = Array.isArray(pegResult?.articles) ? pegResult.articles : [];
+        result = (!pegResult || pegResult.error || pegArts.length === 0) ? staticSearch(query) : pegResult;
       } catch(e) {
         result = staticSearch(query); // sofortiger Fallback bei Timeout
       }
