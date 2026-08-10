@@ -1,5 +1,5 @@
 // Serverless (nicht Edge) — Intercars OAuth blockt Cloudflare/Edge IPs.
-// Redeploy 2026-07-12: IC-Credentials wurden in Vercel eingetragen.
+// Redeploy 2026-08-10: INTERCARS_PAYER_ID=F00100, RECIPIENT_ID, BRANCH gesetzt.
 // WICHTIG: Node-Runtime nutzt die (req, res)-Signatur! Der frühere Web-API-Handler
 // (Request→Response) wurde nie beantwortet → JEDER Request lief in den 25s-Timeout.
 export const config = { maxDuration: 25 };
