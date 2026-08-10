@@ -248,9 +248,18 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     const qs = new URLSearchParams(req.url?.split("?")[1] || "");
     if (qs.get("diag") !== "1") { res.status(405).send("Use POST or GET ?diag=1"); return; }
-    const cId  = process.env.INTERCARS_CLIENT_ID;
-    const cSec = process.env.INTERCARS_CLIENT_SECRET;
+    const cIdRaw  = process.env.INTERCARS_CLIENT_ID  || "";
+    const cSecRaw = process.env.INTERCARS_CLIENT_SECRET || "";
+    const cId  = cIdRaw.trim();
+    const cSec = cSecRaw.trim();
     if (!cId || !cSec) { res.status(500).json({ ok: false, error: "env vars missing" }); return; }
+    // Diagnose-Info: Länge + ob Whitespace drin war (häufigste Fehlerquelle beim Einfügen)
+    const credInfo = {
+      clientIdLength: cId.length,
+      clientIdHadWhitespace: cIdRaw !== cId,
+      clientSecretLength: cSec.length,
+      clientSecretHadWhitespace: cSecRaw !== cSec,
+    };
     const ctrl  = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 9000);
     try {
@@ -271,6 +280,7 @@ export default async function handler(req, res) {
       res.status(200).json({
         ok: r.ok, httpStatus: r.status,
         tokenUrl: IC_TOKEN_URL,
+        ...credInfo,
         clientIdPrefix: cId.slice(0, 8) + "…",
         payerId: process.env.INTERCARS_PAYER_ID || "F00099 (default)",
         branch:  process.env.INTERCARS_BRANCH   || "FA1 (default)",
@@ -292,8 +302,9 @@ export default async function handler(req, res) {
 
   const json = (data, status = 200) => { res.status(status).json(data); };
 
-  const clientId     = process.env.INTERCARS_CLIENT_ID;
-  const clientSecret = process.env.INTERCARS_CLIENT_SECRET;
+  // .trim() → schützt vor versehentlichen Leerzeichen/Zeilenumbrüchen beim Einfügen in Vercel
+  const clientId     = (process.env.INTERCARS_CLIENT_ID     || "").trim();
+  const clientSecret = (process.env.INTERCARS_CLIENT_SECRET || "").trim();
   if (!clientId || !clientSecret) {
     return json({ error: "Intercars credentials not configured", hint: "Set INTERCARS_CLIENT_ID + INTERCARS_CLIENT_SECRET in Vercel env vars" }, 500);
   }
@@ -315,13 +326,26 @@ export default async function handler(req, res) {
     try {
       const token = await getToken(clientId, clientSecret);
       out.oauth = { ok: true, ms: Date.now() - t0, tokenLen: (token || "").length };
-      const t1 = Date.now();
-      try {
-        const cat = await icFetch(`/catalog/products?search=filter&limit=1`, token, payerId, recipientId, branch);
-        out.catalog = { ok: !!cat, ms: Date.now() - t1, total: cat?.totalResults, sampleSku: cat?.products?.[0]?.sku };
-      } catch (e) {
-        out.catalog = { ok: false, ms: Date.now() - t1, error: String(e.message).slice(0, 200) };
-      }
+      // Roh-Fetch damit wir HTTP-Status + Body sehen (icFetch schluckt Fehler)
+      const probe = async (path, hdrs) => {
+        const t = Date.now();
+        try {
+          const r = await withTimeout(fetch(`${IC_BASE_URL}${path}`, { headers: hdrs }), 9000, "probe");
+          const txt = (await r.text()).slice(0, 300);
+          return { status: r.status, ms: Date.now() - t, body: txt };
+        } catch (e) { return { status: 0, ms: Date.now() - t, body: String(e.message).slice(0, 200) }; }
+      };
+      const baseHdrs = {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+      };
+      // A: mit allen X-Headern (aktueller Code)  B: ohne X-Header  C: nur Payer
+      out.probeWithHeaders = await probe(`/catalog/products?search=filter&limit=1`,
+        { ...baseHdrs, "X-Payer-Id": payerId, "X-Recipient-Id": recipientId, "X-Branch": branch });
+      out.probeNoHeaders   = await probe(`/catalog/products?search=filter&limit=1`, baseHdrs);
+      out.probePayerOnly   = await probe(`/catalog/products?search=filter&limit=1`,
+        { ...baseHdrs, "X-Payer-Id": payerId });
     } catch (e) {
       out.oauth = { ok: false, ms: Date.now() - t0, error: String(e.message).slice(0, 250) };
     }
