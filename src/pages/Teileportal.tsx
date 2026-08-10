@@ -557,11 +557,16 @@ export default function Teileportal() {
   const sortKnownBrandsFirst = (arts: Article[]) =>
     [...arts].sort((a, b) => Number(!!getBrandLogo(b.brand)) - Number(!!getBrandLogo(a.brand)));
 
-  /** Alle Artikel ohne Preis mit echten IC-UVP-Preisen anreichern.
-   *  Batches à 5 parallel, 300ms zwischen Batches → kein Rate-Limit.
-   *  price = UVP/Einzelhandel (listPriceGross), priceEK = EK (customerPriceGross). */
+  /** Die ERSTEN sichtbaren Artikel mit echten IC-Preisen anreichern.
+   *  WICHTIG — Limit: Kategorien wie "Bremsbelag" liefern 900+ Artikel. Ohne Kappung
+   *  würden pro Suche tausende IC-Requests rausgehen (Rate-Limit + langsame Seite).
+   *  Nur was der Nutzer zuerst sieht wird angereichert; beim Nachladen mehr.
+   *  price = UVP/Einzelhandel, priceEK = EK (customerPriceGross). */
+  const IC_ENRICH_LIMIT = 24;
   const enrichTopWithIc = (arts: Article[]) => {
-    const toEnrich = arts.filter((a) => a.price == null && a.articleNumber);
+    const toEnrich = arts
+      .filter((a) => a.price == null && a.articleNumber)
+      .slice(0, IC_ENRICH_LIMIT);
     const BATCH = 5;
     toEnrich.forEach((a, i) => {
       const delay = Math.floor(i / BATCH) * 300 + (i % BATCH) * 30;
