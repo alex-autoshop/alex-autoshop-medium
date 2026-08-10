@@ -828,11 +828,11 @@ export default function Teileportal() {
           <section className="relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background pointer-events-none" />
 
-            <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-10 text-center">
+            <div className="relative max-w-5xl mx-auto px-6 pt-8 md:pt-14 pb-6 text-center">
 
               {/* Pill Badge */}
               <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-card/80 backdrop-blur text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-8">
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-card/80 backdrop-blur text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-4">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 Alex Autoshop · Teilebörse
                 <span className="px-2 py-0.5 rounded bg-amber-500 text-black text-xs font-black tracking-wider">BETA</span>
@@ -840,21 +840,21 @@ export default function Teileportal() {
 
               {/* Headline */}
               <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                className="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] mb-6">
+                className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] mb-3">
                 Über 5 Mio.<br />
                 <span className="text-primary">KFZ-Teile</span> finden.
               </motion.h1>
 
               {/* Subtitle */}
               <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-                className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
+                className="text-sm md:text-lg text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed">
                 Per VIN, Schlüsselnummer oder Freitextsuche — Originalteile, Premium-Marken
                 und Budget-Alternativen auf einer Plattform.
               </motion.p>
 
               {/* Feature Badges */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-                className="flex flex-wrap justify-center gap-2 mb-10">
+                className="flex flex-wrap justify-center gap-2 mb-5">
                 {['5 Mio. Teile', 'Intercars & TecDoc', 'B2B-Preise ab Level 1', 'Next-Day Lieferung'].map(b => (
                   <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium text-primary">
                     <Check className="w-3.5 h-3.5" /> {b}
