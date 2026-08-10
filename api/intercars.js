@@ -20,20 +20,31 @@ export const config = { maxDuration: 25 };
  *   INTERCARS_KH_KOD         — Old IC Katalog customer number
  *   INTERCARS_CATALOG_TOKEN  — Old IC Katalog API token
  *
- * IC API response shapes (confirmed from SDK):
+ * ─── VERIFIZIERTE Endpoints (IC-Postman-Collection PROD, getestet 08/2026) ───
  *
- * GET /catalog/products → { totalResults, hasNextPage, requestProcessingTime, products: ICProduct[] }
- * ICProduct: { sku, index, brand, shortDescription, description, blockedReturn }
+ * PFLICHT-HEADER auf ALLEN Calls: Accept-Language: de
+ *   Ohne diesen Header antwortet IC mit 400 / ICF311. Nur der reine Sprachcode
+ *   ("de"), NICHT "de-DE,de;q=0.9".
  *
- * GET /catalog/products/{sku}/stock → ICStockItem[]
- * ICStockItem: { sku, location, availability, index, name, description, blockedReturn, eans }
+ * GET /catalog/products?index=…  |  ?sku=…  |  ?categoryId=…
+ *   → { totalResults, hasNextPage, products: [{ sku, index, brand, description, gtuCode }] }
+ *   ACHTUNG: Freitextsuche (?search=) gibt es NICHT → 400 / ICF101
+ *   ("CategoryId, sku or index is required"). Text → erst Kategorie auflösen.
+ *   Paginierung: pageNumber / pageSize (nicht limit/offset).
  *
- * GET /catalog/products/pricing → { lines: ICPriceLine[] }
- * ICPriceLine.price: { currencyCode, listPriceNet, listPriceGross, vatPercentage, vatAmount,
- *   refundableAmountNet, refundableAmountGross, customerPriceNet, customerPriceGross }
+ * GET /inventory/quote?sku=A,B,C   ← Preis UND Bestand in einem Call, max 30 SKUs
+ *   → [{ sku, quantity,
+ *        price: { currencyCode, listPriceNet, listPriceGross, vatPercentage,
+ *                 vatAmount, refundableAmount, customerPriceNet, customerPriceGross },
+ *        lines: [{ location, sku, availability, latestDeliveryDate }] }]
+ *   customerPriceGross = EK nach Rabattstufe · listPriceGross = UVP
+ *   Ohne &location= liefert IC alle Lager der Logistikkette.
  *
- * New field (Sep 2025): gtuCode in GET /catalog/products
- * New query params (Jul 2024): ?sku= and ?index= on GET /catalog/products
+ * GET /inventory/stock?sku=A,B,C  → [{ location, sku, availability, latestDeliveryDate }]
+ * GET /catalog/category?categoryId=…  (EINZAHL! /catalog/categories → 404)
+ *
+ * Frühere Fassung nutzte /catalog/products/pricing und /catalog/products/{sku}/stock —
+ * beide existieren nicht und lieferten still 0 € / "auf Anfrage".
  */
 
 // ── API Constants ─────────────────────────────────────────────────────────────
@@ -143,15 +154,48 @@ async function inChunks(items, size, fn) {
   return out;
 }
 
-// ── Pricing: POST mit SKU-Liste zuerst, GET als Fallback ─────────────────────
-async function fetchPricing(skus, token, payerId, recipientId, branch) {
-  if (!skus.length) return null;
-  const body = buildPricingBody(skus.map((sku) => ({ sku, quantity: 1 })));
-  const viaPost = await icPost(`/catalog/products/pricing`, body, token, payerId, recipientId, branch)
-    .catch(() => null);
-  if (viaPost?.lines?.length) return viaPost;
-  return icFetch(`/catalog/products/pricing?${new URLSearchParams({ skus: skus.join(",") })}`, token, payerId, recipientId, branch)
-    .catch(() => null);
+// ── Preis UND Bestand in EINEM Call ──────────────────────────────────────────
+// GET /inventory/quote?sku=A,B,C  (offizieller Endpoint laut IC-Postman-Collection)
+// Antwort: [{ sku, quantity, price:{listPriceGross, customerPriceGross, ...},
+//             lines:[{ location, sku, availability, latestDeliveryDate }] }]
+// Ohne "location" liefert IC alle Lager der Logistikkette des Kunden.
+// Ersetzt die alten (falschen) Pfade /catalog/products/pricing + /{sku}/stock.
+async function fetchQuotes(skus, token, payerId, recipientId, branch) {
+  const map = new Map();
+  const list = [...new Set(skus.filter(Boolean))];
+  if (!list.length) return map;
+  // IC verarbeitet laut Doku max. 30 Artikel pro Anfrage
+  for (let i = 0; i < list.length; i += 30) {
+    const batch = list.slice(i, i + 30);
+    const r = await icFetch(
+      `/inventory/quote?sku=${encodeURIComponent(batch.join(","))}`,
+      token, payerId, recipientId, branch
+    ).catch(() => null);
+    const arr = Array.isArray(r) ? r : (Array.isArray(r?.lines) ? r.lines : []);
+    for (const q of arr) if (q?.sku) map.set(String(q.sku), q);
+  }
+  return map;
+}
+
+// ── Nur Bestand (ohne Preise) — GET /inventory/stock?sku=A,B,C ───────────────
+// Antwort: [{ location, sku, availability, latestDeliveryDate }]
+async function fetchStock(skus, token, payerId, recipientId, branch) {
+  const map = new Map();
+  const list = [...new Set(skus.filter(Boolean))];
+  if (!list.length) return map;
+  for (let i = 0; i < list.length; i += 30) {
+    const batch = list.slice(i, i + 30);
+    const r = await icFetch(
+      `/inventory/stock?sku=${encodeURIComponent(batch.join(","))}`,
+      token, payerId, recipientId, branch
+    ).catch(() => null);
+    for (const l of (Array.isArray(r) ? r : [])) {
+      if (!l?.sku) continue;
+      const k = String(l.sku);
+      map.set(k, [...(map.get(k) || []), l]);
+    }
+  }
+  return map;
 }
 
 // ── Normalize confirmed IC API response shapes ────────────────────────────────
@@ -166,46 +210,55 @@ async function fetchPricing(skus, token, payerId, recipientId, branch) {
 //   sku, quantity, price.customerPriceGross, price.listPriceGross, price.vatPercentage,
 //   price.currencyCode, index, name, description, blockedReturn, eans
 //
-function normalizeProduct(product, stockItem = null, priceLine = null) {
+/** quote = Eintrag aus /inventory/quote: { sku, price:{...}, lines:[{location, availability, latestDeliveryDate}] }
+ *  stockLines = alternativ Zeilen aus /inventory/stock (wenn kein Quote vorliegt). */
+function normalizeProduct(product, quote = null, stockLines = null) {
   if (!product) return null;
 
   const sku   = product.sku   || product.index || "";
   const name  = product.description || product.shortDescription || product.name || "Artikel";
   const brand = product.brand || "Inter Cars";
 
-  // Stock: field is `availability` (not `quantity`)
-  const stockAvail = stockItem?.availability ?? 0;
-  // IC API: shows max 10 — "10" means "10 or more in stock"
-  const tenPlus = stockAvail >= 10;
-  const qty     = stockAvail;
+  // ── Bestand: über alle Lager der Logistikkette summieren ──────────────────
+  const lines = Array.isArray(quote?.lines) ? quote.lines
+              : Array.isArray(stockLines)   ? stockLines
+              : [];
+  const perLocation = lines
+    .map((l) => ({
+      location: String(l?.location || ""),
+      qty: Math.max(0, Math.floor(Number(l?.availability) || 0)),
+      until: l?.latestDeliveryDate || null,
+    }))
+    .filter((l) => l.qty > 0);
+  const qty     = perLocation.reduce((s, l) => s + l.qty, 0);
+  const tenPlus = qty >= 10;
   const avail   = qty > 0
     ? (tenPlus ? "sofort (10+ Stück)" : `sofort (${qty} Stück)`)
     : "auf Anfrage";
   const days    = qty > 0 ? 1 : 3;
 
-  // EAN codes (on stock item)
-  const eans    = Array.isArray(stockItem?.eans) ? stockItem.eans : [];
-  const images  = []; // IC API doesn't return images directly in this version
+  const eans   = Array.isArray(product.eans) ? product.eans : [];
+  const images = []; // IC API liefert in dieser Version keine Bilder
 
-  // Pricing: customerPriceGross is what Alex's account pays (B2B price!)
-  const customerPrice  = priceLine?.price?.customerPriceGross  ?? 0;
-  const listPrice      = priceLine?.price?.listPriceGross      ?? 0;
-  const vatPct         = priceLine?.price?.vatPercentage       ?? 19;
-  const currency       = priceLine?.price?.currencyCode        ?? "EUR";
+  // ── Preise: customerPriceGross = Alex' EK nach Rabattstufe ────────────────
+  const p              = quote?.price || {};
+  const customerPrice  = Number(p.customerPriceGross) || 0;
+  const listPrice      = Number(p.listPriceGross)     || 0;
+  const vatPct         = p.vatPercentage ?? 19;
+  const currency       = p.currencyCode  ?? "EUR";
 
-  const price         = Number(customerPrice) || Number(listPrice) || 0;
-  const priceOriginal = Number(listPrice) > Number(customerPrice) && Number(listPrice) > 0
-    ? Number(listPrice)
-    : undefined;
+  const price         = customerPrice || listPrice || 0;
+  const priceOriginal = listPrice > customerPrice && listPrice > 0 ? listPrice : undefined;
 
   const specs = {};
   if (product.index)   specs["Index"]    = product.index;
   if (eans[0])         specs["EAN"]      = eans[0];
-  if (product.gtuCode) specs["GTU-Code"] = product.gtuCode; // new Sep 2025
+  if (product.gtuCode) specs["GTU-Code"] = product.gtuCode;
   if (vatPct)          specs["MwSt"]     = `${vatPct}%`;
   if (currency)        specs["Währung"]  = currency;
   if (qty > 0)         specs["Lager"]    = tenPlus ? "≥10 Stück" : `${qty} Stück`;
-  if (stockItem?.location) specs["Lagerort"] = stockItem.location;
+  if (perLocation.length) specs["Lagerorte"] = perLocation.map((l) => `${l.location}: ${l.qty}`).join(" · ");
+  if (perLocation[0]?.until) specs["Lieferung bis"] = perLocation[0].until;
   if (product.blockedReturn) specs["Rückgabe"] = "nicht möglich";
 
   return {
@@ -214,6 +267,7 @@ function normalizeProduct(product, stockItem = null, priceLine = null) {
     brand,
     price,
     priceOriginal,
+    priceNet:      Number(p.customerPriceNet) || undefined,
     availability:  avail,
     deliveryDays:  days,
     specs,
@@ -221,6 +275,7 @@ function normalizeProduct(product, stockItem = null, priceLine = null) {
     oemNumbers:    eans,
     images,
     stockQuantity: qty,
+    stockByLocation: perLocation,
     tenPlusInStock: tenPlus,
     categoryId:    "",
     categoryLabel: "",
@@ -346,11 +401,11 @@ export default async function handler(req, res) {
         "X-Payer-Id": payerId, "X-Recipient-Id": recipientId, "X-Branch": branch,
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
       };
-      // Welche Suchparameter akzeptiert IC wirklich?
-      out.pCategories  = await probe(`/catalog/categories`, H);
-      out.pByIndex     = await probe(`/catalog/products?index=VKJP01001&limit=3`, H);
-      out.pBySku       = await probe(`/catalog/products?sku=VKJP01001&limit=3`, H);
-      out.pSearchText  = await probe(`/catalog/products?search=antriebswelle&limit=3`, H);
+      // Korrigierte Endpoints verifizieren
+      out.pCategory = await probe(`/catalog/category`, H);
+      out.pQuote    = await probe(`/inventory/quote?sku=G0QF5M`, H);
+      out.pStock    = await probe(`/inventory/stock?sku=G0QF5M`, H);
+      out.pIndex    = await probe(`/catalog/products?index=G7B014PC`, H);
     } catch (e) {
       out.oauth = { ok: false, ms: Date.now() - t0, error: String(e.message).slice(0, 250) };
     }
@@ -413,26 +468,12 @@ export default async function handler(req, res) {
       const slice = products.slice(0, cap);
       const skus  = slice.map(p => p.sku).filter(Boolean);
 
-      const [stockResults, pricingRaw] = await Promise.all([
-        // Stock: parallel in 10er-Batches (Rate-Limit-schonend)
-        inChunks(skus, 10, s =>
-          icFetch(`/catalog/products/${encodeURIComponent(s)}/stock`, token, payerId, recipientId, branch)
-            .then(r => Array.isArray(r) ? r[0] : r)
-            .catch(() => null)
-        ),
-        // Pricing: Batch-Call mit SKU-Liste
-        fetchPricing(skus, token, payerId, recipientId, branch),
-      ]);
+      // EIN Call liefert Preise UND Bestand für alle SKUs
+      const quotes = await fetchQuotes(skus, token, payerId, recipientId, branch);
 
-      // Pricing map: sku → priceLine
-      const priceMap = new Map();
-      if (pricingRaw?.lines) {
-        for (const line of pricingRaw.lines) priceMap.set(line.sku, line);
-      }
-
-      const normalized = slice.map((p, i) =>
-        normalizeProduct(p, stockResults[i] ?? null, priceMap.get(p.sku) ?? null)
-      ).filter(Boolean);
+      const normalized = slice
+        .map((p) => normalizeProduct(p, quotes.get(String(p.sku)) ?? null))
+        .filter(Boolean);
 
       return json(normalized);
     }
@@ -445,17 +486,9 @@ export default async function handler(req, res) {
       const products = raw?.products || (Array.isArray(raw) ? raw : []);
       if (!products.length) return json([]);
 
-      const p = products[0];
-      const [stockRaw, pricingRaw] = await Promise.all([
-        icFetch(`/catalog/products/${encodeURIComponent(p.sku)}/stock`, token, payerId, recipientId, branch),
-        fetchPricing(products.map(x => x.sku).filter(Boolean), token, payerId, recipientId, branch),
-      ]);
-      const stockItem = Array.isArray(stockRaw) ? stockRaw[0] : stockRaw;
-      const priceMap  = new Map();
-      if (pricingRaw?.lines) for (const l of pricingRaw.lines) priceMap.set(l.sku, l);
-
+      const quotes = await fetchQuotes(products.map(x => x.sku).filter(Boolean), token, payerId, recipientId, branch);
       return json(products.map(prod =>
-        normalizeProduct(prod, prod.sku === p.sku ? stockItem : null, priceMap.get(prod.sku) ?? null)
+        normalizeProduct(prod, quotes.get(String(prod.sku)) ?? null)
       ).filter(Boolean));
     }
 
@@ -498,18 +531,10 @@ export default async function handler(req, res) {
 
       if (!products.length) return json([]);
 
-      // Bestand + Preise für gefundene Artikel holen
-      const p = products[0];
-      const [stockRaw, pricingRaw] = await Promise.all([
-        icFetch(`/catalog/products/${encodeURIComponent(p.sku || p.index)}/stock`, token, payerId, recipientId, branch),
-        fetchPricing(products.map(x => x.sku).filter(Boolean), token, payerId, recipientId, branch),
-      ]);
-      const stockItem = Array.isArray(stockRaw) ? stockRaw[0] : stockRaw;
-      const priceMap  = new Map();
-      if (pricingRaw?.lines) for (const l of pricingRaw.lines) priceMap.set(l.sku, l);
-
+      // Bestand + Preise für gefundene Artikel holen (ein Call)
+      const quotes = await fetchQuotes(products.map(x => x.sku).filter(Boolean), token, payerId, recipientId, branch);
       return json(products.map(prod =>
-        normalizeProduct(prod, prod.sku === p.sku ? stockItem : null, priceMap.get(prod.sku) ?? null)
+        normalizeProduct(prod, quotes.get(String(prod.sku)) ?? null)
       ).filter(Boolean));
     }
 
@@ -520,29 +545,26 @@ export default async function handler(req, res) {
       const rawSku = sku.replace(/^ic-/, "");
       const encoded = encodeURIComponent(rawSku);
 
-      const [catalogRaw, stockRaw, pricingRaw] = await Promise.all([
+      const [catalogRaw, quotes] = await Promise.all([
         icFetch(`/catalog/products?sku=${encoded}`, token, payerId, recipientId, branch),
-        icFetch(`/catalog/products/${encoded}/stock`, token, payerId, recipientId, branch),
-        fetchPricing([rawSku], token, payerId, recipientId, branch),
+        fetchQuotes([rawSku], token, payerId, recipientId, branch),
       ]);
 
-      const products  = catalogRaw?.products || (Array.isArray(catalogRaw) ? catalogRaw : []);
-      const product   = products[0] || { sku: rawSku, description: rawSku };
-      const stockItem = Array.isArray(stockRaw) ? stockRaw[0] : stockRaw;
+      const products = catalogRaw?.products || (Array.isArray(catalogRaw) ? catalogRaw : []);
+      const product  = products[0] || { sku: rawSku, description: rawSku };
 
-      const priceMap = new Map();
-      if (pricingRaw?.lines) for (const l of pricingRaw.lines) priceMap.set(l.sku, l);
-
-      return json(normalizeProduct(product, stockItem, priceMap.get(rawSku) ?? null));
+      return json(normalizeProduct(product, quotes.get(String(rawSku)) ?? null));
     }
 
     // ──────────────────────────────────────────────────────────────────────────
     // CATEGORIES — GET /catalog/categories
     // ──────────────────────────────────────────────────────────────────────────
+    // Korrekter Pfad ist /catalog/category (Einzahl!) — /catalog/categories gibt 404.
+    // Ohne categoryId → oberste Ebene; mit → Unterkategorien dieser Ebene.
     if (action === "categories") {
       const qs = new URLSearchParams();
-      if (categoryId) qs.set("parentId", categoryId);
-      const raw = await icFetch(`/catalog/categories${qs.toString() ? "?" + qs : ""}`, token, payerId, recipientId, branch);
+      if (categoryId) qs.set("categoryId", categoryId);
+      const raw = await icFetch(`/catalog/category${qs.toString() ? "?" + qs : ""}`, token, payerId, recipientId, branch);
       const cats = raw?.categories || raw?.data || (Array.isArray(raw) ? raw : []);
       return json(cats.map(c => ({
         categoryId: String(c.id || c.categoryId || ""),
@@ -557,29 +579,23 @@ export default async function handler(req, res) {
     // STOCK CHECK — batch availability for multiple SKUs
     // Note: IC shows max 10 (means "≥10 in reality")
     // ──────────────────────────────────────────────────────────────────────────
+    // Ein Batch-Call für alle Positionen: GET /inventory/stock?sku=A,B,C
     if (action === "stock-check" && Array.isArray(items)) {
-      const results = await Promise.allSettled(
-        items.map(async ({ productId, quantity, name }) => {
-          const skuId   = String(productId).replace(/^ic-/, "");
-          const stockRaw = await icFetch(`/catalog/products/${encodeURIComponent(skuId)}/stock`, token, payerId, recipientId, branch);
-          const stockArr = Array.isArray(stockRaw) ? stockRaw : (stockRaw ? [stockRaw] : []);
-          const avail    = stockArr.reduce((sum, s) => sum + (s.availability || 0), 0);
-          return {
-            productId,
-            name,
-            available:         avail >= quantity,
-            stockQuantity:     avail,
-            requestedQuantity: quantity,
-            tenPlusInStock:    avail >= 10,
-          };
-        })
-      );
-      return json(results.map((r, i) =>
-        r.status === "fulfilled" ? r.value : {
-          productId: items[i]?.productId, name: items[i]?.name,
-          available: false, stockQuantity: 0, requestedQuantity: items[i]?.quantity || 1,
-        }
-      ));
+      const skus     = items.map(it => String(it.productId).replace(/^ic-/, ""));
+      const stockMap = await fetchStock(skus, token, payerId, recipientId, branch);
+      return json(items.map((it, i) => {
+        const lines = stockMap.get(skus[i]) || [];
+        const avail = lines.reduce((s, l) => s + Math.max(0, Math.floor(Number(l.availability) || 0)), 0);
+        const want  = Number(it.quantity) || 1;
+        return {
+          productId:         it.productId,
+          name:              it.name,
+          available:         avail >= want,
+          stockQuantity:     avail,
+          requestedQuantity: want,
+          tenPlusInStock:    avail >= 10,
+        };
+      }));
     }
 
     // ──────────────────────────────────────────────────────────────────────────
