@@ -1,20 +1,20 @@
 /**
- * Inter-Cars-Gateway über Supabase Edge Function (Deno-IPs).
+ * Inter-Cars-Gateway über /api/intercars (Vercel Serverless).
  *
- * WICHTIG: NICHT direkt über /api/intercars (Vercel) aufrufen — Inter Cars blockt
- * Vercel/AWS-IPs per WAF ("Połączenie zablokowane", 403 auf OAuth). Die Supabase
- * Edge Function `intercars-api` (Projekt zasbdvtsxgimcezotlsi) läuft auf Deno-IPs,
- * die IC nicht blockt, und hat gültige IC-Secrets hinterlegt → OAuth klappt dort.
+ * STAND 08/2026: Läuft direkt über Vercel. Die frühere Annahme, IC blocke
+ * Vercel-IPs per WAF, war falsch — der 403 kam vom mitgesendeten Origin-Header
+ * bzw. von ungültigen Credentials. Mit korrekten PROD-Keys und dem Pflicht-Header
+ * `Accept-Language: de` liefert IC von Vercel aus sauber Token, Preise und Bestand.
+ * (Die alte Supabase Edge Function `intercars-api` hat noch den kaputten Stand
+ *  mit nicht existierenden Endpoints — deshalb hier bewusst nicht mehr genutzt.)
  *
- * Preislogik:
- *   price     = listPriceGross (UVP / Einzelhandel) — was Kunden sehen, z.B. 13,24€
- *   priceEK   = customerPriceGross (EK) — Alex' Einkaufspreis, nur intern, z.B. 4,50€
- *   Fallback: EK * Markup, falls IC kein UVP liefert.
+ * Ein Call `searchByIndex` liefert bereits alles: Preis, Bestand, EAN, Lagerorte.
+ *
+ * Preislogik (unverändert):
+ *   priceEK = customerPriceGross (Alex' EK nach Rabattstufe)
+ *   price   = EK × PRICE_MARKUP  (Kundenpreis; IC-Listenpreis nur als Fallback)
  */
 
-const SUPA_URL = "https://zasbdvtsxgimcezotlsi.supabase.co";
-// Anon/Publishable-Key ist per Design öffentlich (Function-Aufruf, RLS-geschützt).
-const SUPA_KEY = "sb_publishable_hMoY8Rgjjb9cvmeMaTEJoQ_AkBoF3FX";
 // VK = EK × 2.0 — konsistent mit parseIntercarsArticles in Teileportal.tsx
 const PRICE_MARKUP = 2.0;
 
@@ -32,17 +32,16 @@ export interface IcLiveInfo {
 
 async function icCall(action: string, body: Record<string, unknown>): Promise<any> {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 10_000);
+  const t = setTimeout(() => ctrl.abort(), 12_000);
   try {
-    const res = await fetch(`${SUPA_URL}/functions/v1/intercars-api?action=${action}`, {
+    const res = await fetch(`/api/intercars`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...body }),
       signal: ctrl.signal,
     });
     if (!res.ok) return null;
-    const j = await res.json().catch(() => null);
-    return j?.data ?? j;
+    return await res.json().catch(() => null);
   } catch {
     return null;
   } finally {
@@ -91,34 +90,35 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
 
   let result: IcLiveInfo | null = null;
   try {
-    // Varianten parallel suchen — ersten Treffer nehmen
-    const searches = await Promise.all(
-      artVariants(artNo).map((v) => icCall("search", { index: v, pageSize: 1 })),
+    // searchByIndex liefert Preis + Bestand + EAN bereits fertig normalisiert.
+    // Varianten parallel probieren (IC ist format-sensitiv: "VKJP 01001" vs "VKJP01001").
+    const results = await Promise.all(
+      artVariants(artNo).map((v) => icCall("searchByIndex", { index: v })),
     );
-    const prods: any[] = searches.flatMap((s) => s?.products || []).filter(Boolean);
-    const p = prods[0];
+    const p: any = results
+      .flatMap((r) => (Array.isArray(r) ? r : []))
+      .find((x) => x && x._sku);
 
-    if (p?.sku) {
-      const d = await icCall("product-detail", { sku: p.sku });
-      // VK = EK × 2.0 (Alex's Preis, immer unter IC-Listenpreis). listPriceGross wird NICHT verwendet.
-      const ek  = digNumber(d?.pricing, "customerPriceGross");
-      const price = ek && ek > 0
+    if (p) {
+      // p.price = customerPriceGross (EK) · p.priceOriginal = listPriceGross (IC-UVP)
+      const ek = Number(p.price) > 0 ? Number(p.price) : undefined;
+      const price = ek != null
         ? Math.ceil(ek * PRICE_MARKUP * 100) / 100
-        : undefined;
-      const avail = digNumber(d?.stock, "availability") ?? 0;
+        : Number(p.priceOriginal) > 0 ? Number(p.priceOriginal) : undefined;
+      const avail = Number(p.stockQuantity) || 0;
 
       if (price) {
         // IC liefert aus Zweigstelle ODER Zentrallager → immer 1 Werktag.
         // avail=0 heißt nur lokales Lager leer, nicht Out-of-Stock.
         result = {
           price,
-          priceEK: ek && ek > 0 ? ek : undefined,
+          priceEK: ek,
           availability: avail > 0
             ? `1 Werktag · ${avail >= 10 ? ">10" : avail} Stück`
             : "1 Werktag · Zentrallager",
           deliveryDays: 1,
-          icSku: String(p.sku),
-          imageUrl: extractImage(p) ?? extractImage(d),
+          icSku: String(p._sku),
+          imageUrl: extractImage(p),
         };
       }
     }
