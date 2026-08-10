@@ -436,8 +436,86 @@ async function apCategoryIds(query: string): Promise<number[]> {
   return [];
 }
 
+// ─── Fahrzeug-eigener Kategoriebaum als Suchindex ───────────────────────────
+// Der globale "commodity group tree" liefert für "Antriebswelle" u.a. Werkzeuge
+// ("Ausziehhülse") und Starter-Teile → die Artikel passen dann nicht und der
+// Relevanzfilter wirft alles weg. Der FAHRZEUG-Baum enthält dagegen exakt die
+// Kategorien dieses Autos mit klaren deutschen Namen ("Antriebswelle" = 100062).
+const _vehTreeCache = new Map<number, Array<{ name: string; id: number }>>();
+
+function cleanTerm(x: string): string {
+  return String(x).toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+async function vehicleCategoryIds(vehicleId: number, query: string): Promise<number[]> {
+  let flat = _vehTreeCache.get(vehicleId);
+  if (!flat) {
+    try {
+      const tree = await apCategoryTree(vehicleId);
+      const acc: Array<{ name: string; id: number }> = [];
+      const walk = (nodes: ApCategoryNode[]) => {
+        for (const n of nodes) {
+          if (n.id) acc.push({ name: n.name, id: n.id });
+          if (n.children?.length) walk(n.children);
+        }
+      };
+      walk(tree);
+      flat = acc;
+      _vehTreeCache.set(vehicleId, acc);
+    } catch {
+      return [];
+    }
+  }
+  if (!flat.length) return [];
+
+  // Original UND Synonym prüfen (z.B. "ventilgummi" → "Ventilschaftdichtung")
+  const terms = [...new Set([cleanTerm(query), cleanTerm(normalizeSearchQuery(query))])].filter(Boolean);
+  const scored: Array<{ id: number; score: number }> = [];
+  for (const { name, id } of flat) {
+    const c = cleanTerm(name);
+    if (!c) continue;
+    let best = 0;
+    for (const q of terms) {
+      if (!q) continue;
+      if (c === q) best = Math.max(best, 100);
+      else if (c.startsWith(q)) best = Math.max(best, 80);
+      else if (q.startsWith(c) && c.length >= 5) best = Math.max(best, 70);
+      else if (c.includes(q) && q.length >= 4) best = Math.max(best, 60);
+      else if (q.includes(c) && c.length >= 5) best = Math.max(best, 50);
+    }
+    if (best > 0) scored.push({ id, score: best });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return [...new Set(scored.map((s) => s.id))].slice(0, 3);
+}
+
 /** Alle passenden Artikel für Fahrzeug + Suchbegriff — mit Bildern, alle Marken. */
 export async function apArticlesForVehicle(vehicleId: number, query: string): Promise<ApArticle[]> {
+  // 1) Fahrzeug-Baum (präzise) → Artikel sind per Konstruktion passend
+  const vehCatIds = await vehicleCategoryIds(vehicleId, query);
+  if (vehCatIds.length) {
+    const settled = await Promise.allSettled(
+      vehCatIds.map((cid) => ap(`/articles/list/type-id/${TYPE_PC}/vehicle-id/${vehicleId}/category-id/${cid}/lang-id/${LANG}`))
+    );
+    const raw: any[] = [];
+    for (const s of settled) if (s.status === 'fulfilled') raw.push(...pickArray(s.value, 'articles'));
+    const seen = new Set<string>();
+    const out = raw
+      .map(toApArticle)
+      .filter((a): a is ApArticle => !!a && !!a.articleNumber)
+      .filter((a) => {
+        const k = `${a.brand.toLowerCase()}::${a.articleNumber.toLowerCase()}`;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+    // KEIN Relevanzfilter: die Kategorie wurde bereits über den Namen gematcht.
+    if (out.length) return out;
+  }
+
+  // 2) Fallback: globale Kategoriebaum-Suche (unscharf → Relevanzfilter nötig)
   const catIds = await apCategoryIds(query);
   if (!catIds.length) return [];
   const settled = await Promise.allSettled(
