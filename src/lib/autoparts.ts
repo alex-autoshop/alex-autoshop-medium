@@ -354,46 +354,95 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
 
 // ─── Umgangssprache → TecDoc-Kategoriebegriff ───────────────────────────────
 // Werkstätten verwenden oft vereinfachte Begriffe die nicht 1:1 im TecDoc-Baum stehen.
+// Werkstatt-Slang → tatsächlicher TecDoc-Kategoriename. Die Zielbegriffe rechts
+// sind gegen echte Fahrzeug-Kategoriebäume verifiziert (nicht geraten).
 const QUERY_SYNONYMS: Record<string, string> = {
-  'ventilgummi': 'Ventilschaftdichtung',
-  'ventilschaft': 'Ventilschaftdichtung',
-  'ventilschaftdichtring': 'Ventilschaftdichtung',
-  'ventildeckeldichtung': 'Zylinderkopfhaubendichtung',
-  'kopfhaubendichtung': 'Zylinderkopfhaubendichtung',
-  'antriebsgummi': 'Gelenkwellenmanschette',
-  'achsmanschette': 'Gelenkwellenmanschette',
-  'faltenbalg antrieb': 'Gelenkwellenmanschette',
-  'domlager': 'Federbeinlager',
-  'stabilager': 'Stabilisatorlager',
-  'stabibuchse': 'Stabilisatorlager',
-  'koppelstange': 'Koppelstange',
-  'pendelstütze': 'Koppelstange',
-  'pendelstuetze': 'Koppelstange',
-  'lima': 'Lichtmaschine',
-  'kat': 'Katalysator',
-  'dpf': 'Dieselpartikelfilter',
-  'agr': 'AGR-Ventil',
-  'gluehkerze': 'Glühkerze',
-  'zahnriemensatz': 'Zahnriemen',
-  'steuerriemen': 'Zahnriemen',
-  'keilriemen': 'Keilrippenriemen',
-  'riemenspanner': 'Spannrolle',
-  'umlenkrolle': 'Umlenker',
-  'kurbelwellendichtring': 'Kurbelwellendichtung',
+  // Motor / Dichtungen
+  'ventilgummi': 'Ventilschaftabdichtung',
+  'ventilschaft': 'Ventilschaftabdichtung',
+  'ventilschaftdichtung': 'Ventilschaftabdichtung',
+  'ventilschaftdichtring': 'Ventilschaftabdichtung',
+  'kopfhaubendichtung': 'Ventildeckeldichtung',
   'simmerring': 'Wellendichtring',
-  'gummi': 'Lagerung',
-  'buchse': 'Lagerung',
+  'kurbelwellendichtring': 'Wellendichtring',
+  // Elektrik
+  'anlasser': 'Starter',
+  'lichtmaschine': 'Generator',
+  'lima': 'Generator',
+  // Abgas
+  'auspuff': 'Schalldämpfer',
+  'auspuffanlage': 'Schalldämpfer',
+  'endtopf': 'Schalldämpfer',
+  'endschalldaempfer': 'Schalldämpfer',
+  'kat': 'Katalysator',
+  'dpf': 'Partikelfilter',
+  'russpartikelfilter': 'Partikelfilter',
+  'dieselpartikelfilter': 'Partikelfilter',
+  'agr': 'Abgasrückführung',
+  // Aufladung / Kraftstoff
+  'turbolader': 'Lader',
+  'turbo': 'Lader',
+  'einspritzduese': 'Einspritzventil',
+  'injektor': 'Einspritzventil',
+  // Fahrwerk
+  'querlenker': 'Lenker',
+  'dreieckslenker': 'Lenker',
+  'domlager': 'Federbein',
+  'federbeinlager': 'Federbein',
+  'stabibuchse': 'Stabilisator',
+  'stabilager': 'Stabilisator',
+  'achsmanschette': 'Faltenbalg',
+  'antriebsgummi': 'Faltenbalg',
+  'manschette': 'Faltenbalg',
+  'gelenkwellenmanschette': 'Faltenbalg',
+  // Bremse
+  'radbremszylinder': 'Radzylinder',
+  'handbremsseil': 'Hebel/Seile/Züge',
+  'handbremse': 'Hebel/Seile/Züge',
+  'feststellbremse': 'Hebel/Seile/Züge',
+  'bremsleitung': 'Bremsschläuche',
+  'bremsschlauch': 'Bremsschläuche',
+  // Kupplung
+  'zms': 'Schwungscheibe',
+  'zweimassenschwungrad': 'Schwungscheibe',
+  'schwungrad': 'Schwungscheibe',
+  // Filter / Riemen
+  'pollenfilter': 'Innenraumluftfilter',
+  'innenraumfilter': 'Innenraumluftfilter',
+  'aktivkohlefilter': 'Innenraumluftfilter',
+  'steuerriemen': 'Zahnriemen',
+  // Scheibenwischer
+  'scheibenwischer': 'Wischblatt',
+  'wischerblatt': 'Wischblatt',
+  'wischer': 'Wischblatt',
+  'wischgummi': 'Wischblatt',
 };
 
-function normalizeSearchQuery(query: string): string {
-  const q = query.toLowerCase()
+/** Kleinschreibung + Umlaute → ASCII + Sonderzeichen weg. */
+function cleanTerm(x: string): string {
+  return String(x).toLowerCase()
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
-    .trim();
-  // Exakter Treffer im Synonym-Map
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/** Wortstamm: Umlaut-Plurale angleichen (Beläge→belage) + deutsche Endung kappen.
+ *  Damit greifen "Bremsbeläge"→"bremsbelag" und "Spurstangen"→"spurstang". */
+function stemTerm(x: string): string {
+  const c = cleanTerm(x).replace(/ae/g, 'a').replace(/oe/g, 'o').replace(/ue/g, 'u');
+  return c.replace(/(en|er|e|n|s)$/, '') || c;
+}
+
+/** Kategoriennamen sind Komposita wie "Umlenk-/Führungsrolle" → in Tokens zerlegen. */
+function nameTokens(name: string): string[] {
+  return String(name).split(/[/\-,()\s]+/).map(stemTerm).filter((t) => t.length >= 3);
+}
+
+function normalizeSearchQuery(query: string): string {
+  const q = cleanTerm(query);
   if (QUERY_SYNONYMS[q]) return QUERY_SYNONYMS[q];
-  // Teilstring-Treffer (z.B. "ventilgummi satz" → "Ventilschaftdichtung")
   for (const [key, val] of Object.entries(QUERY_SYNONYMS)) {
-    if (q.includes(key) || key.includes(q)) return val;
+    const k = cleanTerm(key);
+    if (q.includes(k) || k.includes(q)) return val;
   }
   return query; // kein Synonym → Original
 }
@@ -443,12 +492,6 @@ async function apCategoryIds(query: string): Promise<number[]> {
 // Kategorien dieses Autos mit klaren deutschen Namen ("Antriebswelle" = 100062).
 const _vehTreeCache = new Map<number, Array<{ name: string; id: number }>>();
 
-function cleanTerm(x: string): string {
-  return String(x).toLowerCase()
-    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
-    .replace(/[^a-z0-9]/g, '');
-}
-
 async function vehicleCategoryIds(vehicleId: number, query: string): Promise<number[]> {
   let flat = _vehTreeCache.get(vehicleId);
   if (!flat) {
@@ -470,24 +513,30 @@ async function vehicleCategoryIds(vehicleId: number, query: string): Promise<num
   }
   if (!flat.length) return [];
 
-  // Original UND Synonym prüfen (z.B. "ventilgummi" → "Ventilschaftdichtung")
-  const terms = [...new Set([cleanTerm(query), cleanTerm(normalizeSearchQuery(query))])].filter(Boolean);
-  const scored: Array<{ id: number; score: number }> = [];
+  // Original UND Synonym prüfen (z.B. "ventilgummi" → "Ventilschaftabdichtung")
+  const terms = [...new Set([stemTerm(query), stemTerm(normalizeSearchQuery(query))])].filter(Boolean);
+  const scored: Array<{ id: number; score: number; len: number }> = [];
   for (const { name, id } of flat) {
-    const c = cleanTerm(name);
+    const c = stemTerm(name);
     if (!c) continue;
+    const tk = nameTokens(name);
     let best = 0;
     for (const q of terms) {
       if (!q) continue;
-      if (c === q) best = Math.max(best, 100);
-      else if (c.startsWith(q)) best = Math.max(best, 80);
-      else if (q.startsWith(c) && c.length >= 5) best = Math.max(best, 70);
+      if (c === q) best = Math.max(best, 100);                                        // "Antriebswelle"
+      else if (tk.includes(q)) best = Math.max(best, 90);                             // "Ruß-/Partikelfilter"
+      else if (c.startsWith(q)) best = Math.max(best, 85);                            // "Bremsscheibe"
+      else if (tk.some((t) => t.startsWith(q) && q.length >= 4)) best = Math.max(best, 75);
+      else if (tk.some((t) => q.startsWith(t) && t.length >= 4)) best = Math.max(best, 70); // "umlenkrolle"→"Umlenk-"
+      else if (tk.some((t) => q.endsWith(t) && t.length >= 4)) best = Math.max(best, 65);   // "turbolader"→"Lader"
       else if (c.includes(q) && q.length >= 4) best = Math.max(best, 60);
       else if (q.includes(c) && c.length >= 5) best = Math.max(best, 50);
     }
-    if (best > 0) scored.push({ id, score: best });
+    if (best > 0) scored.push({ id, score: best, len: name.length });
   }
-  scored.sort((a, b) => b.score - a.score);
+  // Gleicher Score → kürzerer Name gewinnt (das ist die präzisere Kategorie:
+  // "Ruß-/Partikelfilter" statt "Regeneration Ruß-/Partikelfilter").
+  scored.sort((a, b) => b.score - a.score || a.len - b.len);
   return [...new Set(scored.map((s) => s.id))].slice(0, 3);
 }
 
