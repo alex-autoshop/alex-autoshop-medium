@@ -69,21 +69,105 @@ function decodeVinLocal(vin) {
 
 // ─── Static catalog (fallback) ───────────────────────────────────────────────
 const STATIC_CATALOG = [
+  // BREMSE
   { id:'bs001', keywords:['bremse','bremsscheibe','disc','brake'], mfrName:'BOSCH', articleNumber:'0 986 479 B56', name:'Bremsscheibe', category:'Bremse', specs:[{attrName:'Durchmesser',attrValue:'280',attrUnit:'mm'},{attrName:'Einbauseite',attrValue:'Vorderachse'}], oeNumbers:['5Q0615301G'] },
   { id:'bs002', keywords:['bremse','bremsscheibe','disc','brake'], mfrName:'ZIMMERMANN', articleNumber:'100.3300.20', name:'Bremsscheibe belüftet', category:'Bremse', specs:[{attrName:'Durchmesser',attrValue:'300',attrUnit:'mm'},{attrName:'Einbauseite',attrValue:'Vorderachse'}], oeNumbers:['34116756095'] },
   { id:'bs003', keywords:['bremse','bremsscheibe','disc','brake'], mfrName:'BREMBO', articleNumber:'09.B513.11', name:'Bremsscheibe Sport', category:'Bremse', specs:[{attrName:'Durchmesser',attrValue:'312',attrUnit:'mm'}], oeNumbers:['1J0615301H'] },
-  { id:'bb001', keywords:['bremse','bremsbelag','bremsbeläge','brake pad'], mfrName:'BOSCH', articleNumber:'0 986 494 565', name:'Bremsbelagsatz', category:'Bremse', specs:[{attrName:'Einbauseite',attrValue:'Vorderachse'}], oeNumbers:['7D0698151A'] },
-  { id:'zk001', keywords:['zuendkerze','zündkerze','spark plug'], mfrName:'BOSCH', articleNumber:'FR 7 KPP 33+', name:'Zündkerze Platin', category:'Zündanlage', specs:[{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'}], oeNumbers:['030905601AA'] },
-  { id:'zk002', keywords:['zuendkerze','zündkerze','spark plug'], mfrName:'NGK', articleNumber:'BKR6EGP', name:'Zündkerze G-Power Platin', category:'Zündanlage', specs:[{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'}], oeNumbers:['0K2A918110'] },
-  { id:'of001', keywords:['oelfilter','ölfilter','oil filter','filter'], mfrName:'BOSCH', articleNumber:'F 026 407 006', name:'Ölfilter', category:'Ölfilter', specs:[{attrName:'Höhe',attrValue:'78',attrUnit:'mm'}], oeNumbers:['15400-PLM-A01'] },
-  { id:'of002', keywords:['oelfilter','ölfilter','oil filter','filter'], mfrName:'MANN-FILTER', articleNumber:'W 712/93', name:'Ölfilter', category:'Ölfilter', specs:[{attrName:'Höhe',attrValue:'74',attrUnit:'mm'}], oeNumbers:['0451103316'] },
-  { id:'lf001', keywords:['luftfilter','air filter'], mfrName:'BOSCH', articleNumber:'F 026 400 072', name:'Luftfilter', category:'Luftfilter', specs:[{attrName:'Länge',attrValue:'257',attrUnit:'mm'}], oeNumbers:[] },
-  { id:'sd001', keywords:['stossdaempfer','stoßdämpfer','shock absorber'], mfrName:'BILSTEIN', articleNumber:'B4 22-229434', name:'Stoßdämpfer Vorderachse', category:'Stoßdämpfer', specs:[{attrName:'Einbauseite',attrValue:'Vorderachse'}], oeNumbers:[] },
-  { id:'ku001', keywords:['kupplung','clutch'], mfrName:'LUK', articleNumber:'624 3410 09', name:'Kupplungssatz', category:'Kupplung', specs:[{attrName:'Durchmesser',attrValue:'215',attrUnit:'mm'}], oeNumbers:[] },
-  { id:'wp001', keywords:['wasserpumpe','water pump'], mfrName:'DOLZ', articleNumber:'A148', name:'Wasserpumpe', category:'Kühlung', specs:[{attrName:'Anzahl Schaufeln',attrValue:'6'}], oeNumbers:['030121005Q'] },
-  { id:'zr001', keywords:['zahnriemen','timing belt','riemen'], mfrName:'GATES', articleNumber:'T38102', name:'Zahnriemensatz', category:'Motor', specs:[{attrName:'Anzahl Zähne',attrValue:'120'}], oeNumbers:['030109119M'] },
-  { id:'gt001', keywords:['getriebe','transmission','gearbox'], mfrName:'LUK', articleNumber:'602 0003 00', name:'Kupplungssatz (Getriebe)', category:'Getriebe', specs:[], oeNumbers:[] },
   { id:'bs004', keywords:['bremse','bremsscheibe','disc','brake'], mfrName:'ATE', articleNumber:'24.0120-0156.1', name:'Bremsscheibe', category:'Bremse', specs:[{attrName:'Einbauseite',attrValue:'Hinterachse'}], oeNumbers:['93182185'] },
+  { id:'bb001', keywords:['bremse','bremsbelag','bremsbelaege','bremsbeläge','brake pad'], mfrName:'BOSCH', articleNumber:'0 986 494 565', name:'Bremsbelagsatz Vorderachse', category:'Bremse', specs:[{attrName:'Einbauseite',attrValue:'Vorderachse'}], oeNumbers:['7D0698151A'] },
+  { id:'bb002', keywords:['bremse','bremsbelag','bremsbelaege','brake pad'], mfrName:'TRW', articleNumber:'GDB1570', name:'Bremsbelagsatz Hinterachse', category:'Bremse', specs:[{attrName:'Einbauseite',attrValue:'Hinterachse'}], oeNumbers:[] },
+  { id:'bs005', keywords:['bremssattel','sattel','caliper','bremse'], mfrName:'ATE', articleNumber:'11.0441-9856.3', name:'Bremssattel rechts', category:'Bremse', specs:[{attrName:'Einbauseite',attrValue:'Vorne rechts'}], oeNumbers:[] },
+  { id:'bz001', keywords:['bremszylinder','radbremszylinder','wheel cylinder','bremse'], mfrName:'TRW', articleNumber:'BWH244', name:'Radbremszylinder', category:'Bremse', specs:[], oeNumbers:[] },
+
+  // ZÜNDANLAGE
+  { id:'zk001', keywords:['zuendkerze','zundkerze','zündkerze','spark plug','zuendung'], mfrName:'BOSCH', articleNumber:'FR 7 KPP 33+', name:'Zündkerze Platin', category:'Zündanlage', specs:[{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'}], oeNumbers:['030905601AA'] },
+  { id:'zk002', keywords:['zuendkerze','zundkerze','zündkerze','spark plug'], mfrName:'NGK', articleNumber:'BKR6EGP', name:'Zündkerze G-Power Platin', category:'Zündanlage', specs:[{attrName:'Gewindedurchmesser',attrValue:'M14x1,25'}], oeNumbers:['0K2A918110'] },
+  { id:'gk001', keywords:['gluehkerze','glühkerze','gluhkerze','glow plug','diesel','gluehen','glühen'], mfrName:'BOSCH', articleNumber:'0 250 203 001', name:'Glühkerze', category:'Zündanlage', specs:[{attrName:'Spannung',attrValue:'12V'},{attrName:'Watt',attrValue:'65W'}], oeNumbers:['5970.H9'] },
+  { id:'gk002', keywords:['gluehkerze','glühkerze','glow plug','diesel'], mfrName:'NGK', articleNumber:'Y-507J', name:'Glühkerze', category:'Zündanlage', specs:[], oeNumbers:[] },
+
+  // FILTER
+  { id:'of001', keywords:['oelfilter','ölfilter','oel filter','oil filter','filter'], mfrName:'BOSCH', articleNumber:'F 026 407 006', name:'Ölfilter', category:'Ölfilter', specs:[{attrName:'Höhe',attrValue:'78',attrUnit:'mm'}], oeNumbers:['15400-PLM-A01'] },
+  { id:'of002', keywords:['oelfilter','ölfilter','oil filter','filter'], mfrName:'MANN-FILTER', articleNumber:'W 712/93', name:'Ölfilter', category:'Ölfilter', specs:[{attrName:'Höhe',attrValue:'74',attrUnit:'mm'}], oeNumbers:[] },
+  { id:'lf001', keywords:['luftfilter','air filter','filter'], mfrName:'BOSCH', articleNumber:'F 026 400 072', name:'Luftfilter', category:'Luftfilter', specs:[{attrName:'Länge',attrValue:'257',attrUnit:'mm'}], oeNumbers:[] },
+  { id:'lf002', keywords:['luftfilter','air filter','filter'], mfrName:'MANN-FILTER', articleNumber:'C 2898', name:'Luftfilter', category:'Luftfilter', specs:[], oeNumbers:[] },
+  { id:'kf001', keywords:['kraftstofffilter','benzinfilter','dieselfilter','fuel filter','kraftstoff','filter'], mfrName:'BOSCH', articleNumber:'F 026 402 062', name:'Kraftstofffilter', category:'Kraftstofffilter', specs:[], oeNumbers:[] },
+  { id:'if001', keywords:['innenraumfilter','pollenfilter','aktivkohlefilter','cabin filter','filter','innenraum','pollen'], mfrName:'BOSCH', articleNumber:'1 987 432 415', name:'Innenraumfilter mit Aktivkohle', category:'Innenraumfilter', specs:[{attrName:'Mit Aktivkohle',attrValue:'Ja'}], oeNumbers:[] },
+  { id:'if002', keywords:['innenraumfilter','pollenfilter','filter','innenraum','pollen'], mfrName:'MANN-FILTER', articleNumber:'CU 29 000', name:'Innenraumfilter', category:'Innenraumfilter', specs:[], oeNumbers:[] },
+
+  // VENTIL / MOTOR-DICHTUNGEN
+  { id:'vs001', keywords:['ventilgummi','ventilschaft','ventilschaftdichtung','dichtring','valve stem','stem seal','ventil','dichtung'], mfrName:'ELRING', articleNumber:'456.910', name:'Ventilschaftdichtung Satz (8 Stück)', category:'Motor-Dichtung', specs:[{attrName:'Menge',attrValue:'8 Stück'},{attrName:'Material',attrValue:'PTFE/FKM'}], oeNumbers:['12014-RAA-A01'] },
+  { id:'vs002', keywords:['ventilgummi','ventilschaft','ventilschaftdichtung','valve stem','ventil'], mfrName:'VICTOR REINZ', articleNumber:'12-53543-01', name:'Ventilschaftdichtung', category:'Motor-Dichtung', specs:[], oeNumbers:[] },
+  { id:'vd001', keywords:['ventildeckeldichtung','ventildeckel','zylinderkopfhaube','kopfhaubendichtung','dichtung','motor','rocker cover'], mfrName:'ELRING', articleNumber:'217.600', name:'Ventildeckeldichtung', category:'Motor-Dichtung', specs:[{attrName:'Material',attrValue:'Silikon'}], oeNumbers:['11120-0D020'] },
+  { id:'vd002', keywords:['ventildeckeldichtung','ventildeckel','zylinderkopfhaube','dichtung','motor'], mfrName:'VICTOR REINZ', articleNumber:'71-12933-00', name:'Ventildeckeldichtung', category:'Motor-Dichtung', specs:[], oeNumbers:[] },
+  { id:'dk001', keywords:['zylinderkopfdichtung','kopfdichtung','head gasket','dichtung','motor','zylinderkopf'], mfrName:'ELRING', articleNumber:'125.830', name:'Zylinderkopfdichtung', category:'Motor-Dichtung', specs:[{attrName:'Dicke',attrValue:'1,5mm'}], oeNumbers:['06A103383S'] },
+  { id:'od001', keywords:['oelwannendichtung','ölwannendichtung','oelwanne','ölwanne','sump gasket','dichtung','öl'], mfrName:'ELRING', articleNumber:'029.320', name:'Ölwannendichtung', category:'Motor-Dichtung', specs:[], oeNumbers:[] },
+  { id:'ka001', keywords:['kurbelwellendichtung','kurbelwelle','dichtung','wellendichtring','simmerring'], mfrName:'ELRING', articleNumber:'065.900', name:'Kurbelwellendichtring vorne', category:'Motor-Dichtung', specs:[], oeNumbers:[] },
+  { id:'nd001', keywords:['nockenwellendichtung','nockenwelle','dichtung','wellendichtring','simmerring'], mfrName:'ELRING', articleNumber:'068.850', name:'Nockenwellendichtring', category:'Motor-Dichtung', specs:[], oeNumbers:[] },
+
+  // ANTRIEBSWELLE / GELENKWELLE
+  { id:'aw001', keywords:['antriebswelle','gelenkwelle','drive shaft','gleichlaufgelenk','cv joint','seitenwelle','antrieb'], mfrName:'LOBRO', articleNumber:'304542', name:'Antriebswelle komplett links', category:'Antrieb', specs:[{attrName:'Einbauseite',attrValue:'Links'},{attrName:'Gelenke',attrValue:'2x Gleichlaufgelenk'}], oeNumbers:['1J0407451EX'] },
+  { id:'aw002', keywords:['antriebswelle','gelenkwelle','drive shaft','gleichlaufgelenk','seitenwelle','antrieb'], mfrName:'GKN', articleNumber:'2987671', name:'Antriebswelle komplett rechts', category:'Antrieb', specs:[{attrName:'Einbauseite',attrValue:'Rechts'}], oeNumbers:['1J0407452BX'] },
+  { id:'gm001', keywords:['gelenkwellenmanschette','manschette','faltenbalg','achsmanschette','cv boot','antrieb','gelenk','antriebsgummi'], mfrName:'LOBRO', articleNumber:'500 0001 10', name:'Gelenkwellenmanschette außen', category:'Antrieb', specs:[], oeNumbers:['1J0498203'] },
+  { id:'gm002', keywords:['gelenkwellenmanschette','manschette','faltenbalg','cv boot','antrieb','gelenk'], mfrName:'FEBI', articleNumber:'23789', name:'Manschettensatz Antriebswelle innen', category:'Antrieb', specs:[], oeNumbers:[] },
+
+  // KÜHLUNG
+  { id:'wp001', keywords:['wasserpumpe','water pump','kuhlung','kühlung','kühlwasser'], mfrName:'DOLZ', articleNumber:'A148', name:'Wasserpumpe', category:'Kühlung', specs:[{attrName:'Anzahl Schaufeln',attrValue:'6'}], oeNumbers:['030121005Q'] },
+  { id:'ts001', keywords:['thermostat','kühlwasser','kuehlwasser','kühlmittel','thermo','cooling','temperatur'], mfrName:'WAHLER', articleNumber:'4.583.80D', name:'Thermostat mit Dichtung', category:'Kühlung', specs:[{attrName:'Öffnungstemperatur',attrValue:'80°C'}], oeNumbers:['06A121113G'] },
+  { id:'kh001', keywords:['kuehlmittelschlauch','kühlmittelschlauch','kühlerschlauch','schlauch','kühler','hose','coolant'], mfrName:'GATES', articleNumber:'02-0901', name:'Kühlmittelschlauch oben', category:'Kühlung', specs:[], oeNumbers:[] },
+  { id:'kh002', keywords:['kuehlmittelschlauch','kühlmittelschlauch','kühlerschlauch','schlauch','kühler','coolant'], mfrName:'GATES', articleNumber:'02-0902', name:'Kühlmittelschlauch unten', category:'Kühlung', specs:[], oeNumbers:[] },
+  { id:'ku001', keywords:['kühler','kuehler','radiator','kühlmittel','kühlung','wasser'], mfrName:'NISSENS', articleNumber:'60794', name:'Motorkühler', category:'Kühlung', specs:[], oeNumbers:['1K0121253M'] },
+
+  // RIEMENANTRIEB
+  { id:'zr001', keywords:['zahnriemen','timing belt','riemen','steuerriemen','steuerung'], mfrName:'GATES', articleNumber:'T38102', name:'Zahnriemensatz', category:'Steuerriemen', specs:[{attrName:'Anzahl Zähne',attrValue:'120'}], oeNumbers:['030109119M'] },
+  { id:'kr001', keywords:['keilriemen','keilrippenriemen','riemen','v-belt','belt','rippenriemen'], mfrName:'GATES', articleNumber:'6PK1725', name:'Keilrippenriemen', category:'Keilrippenriemen', specs:[{attrName:'Riementyp',attrValue:'6PK'},{attrName:'Länge',attrValue:'1725mm'}], oeNumbers:[] },
+  { id:'rt001', keywords:['riemenspanner','spanner','tensioner','spannrolle','riemen'], mfrName:'INA', articleNumber:'534 0080 10', name:'Riemenspanner', category:'Riemenantrieb', specs:[], oeNumbers:['038903315P'] },
+  { id:'ur001', keywords:['umlenkrolle','umlenker','deflection','idler','riemen','rolle'], mfrName:'INA', articleNumber:'532 0060 20', name:'Umlenkrolle Keilrippenriemen', category:'Riemenantrieb', specs:[], oeNumbers:['038903341H'] },
+
+  // FAHRWERK / LENKUNG
+  { id:'sd001', keywords:['stossdaempfer','stoßdaempfer','stossdampfer','stoßdämpfer','shock absorber','daempfer','dämpfer'], mfrName:'BILSTEIN', articleNumber:'B4 22-229434', name:'Stoßdämpfer Vorderachse', category:'Stoßdämpfer', specs:[{attrName:'Einbauseite',attrValue:'Vorderachse'}], oeNumbers:[] },
+  { id:'sd002', keywords:['stossdaempfer','stoßdämpfer','shock absorber','daempfer'], mfrName:'SACHS', articleNumber:'313 269', name:'Stoßdämpfer Hinterachse', category:'Stoßdämpfer', specs:[{attrName:'Einbauseite',attrValue:'Hinterachse'}], oeNumbers:[] },
+  { id:'dl001', keywords:['domlager','federbeinlager','federbein','strut mount','lager','daempfer'], mfrName:'LEMFÖRDER', articleNumber:'30584 01', name:'Domlager Vorderachse', category:'Federung/Dämpfung', specs:[{attrName:'Einbauseite',attrValue:'Vorderachse'}], oeNumbers:['1K0412331E'] },
+  { id:'fb001', keywords:['feder','fahwerksfeder','spirale','spring','fahrwerk','federung'], mfrName:'KW', articleNumber:'2002000001', name:'Fahrwerksfeder Vorderachse', category:'Federung/Dämpfung', specs:[], oeNumbers:[] },
+  { id:'ql001', keywords:['querlenker','control arm','lenker','fahrwerk','achslenker','radaufhaengung','radaufhängung'], mfrName:'LEMFÖRDER', articleNumber:'29888 01', name:'Querlenker vorne links', category:'Radaufhängung', specs:[{attrName:'Einbauseite',attrValue:'Vorne links'}], oeNumbers:['1K0407155P'] },
+  { id:'ql002', keywords:['querlenker','control arm','lenker','fahrwerk','achslenker'], mfrName:'LEMFÖRDER', articleNumber:'29889 01', name:'Querlenker vorne rechts', category:'Radaufhängung', specs:[{attrName:'Einbauseite',attrValue:'Vorne rechts'}], oeNumbers:['1K0407156P'] },
+  { id:'st001', keywords:['spurstange','spurstangenkopf','tie rod','lenkung','lenker'], mfrName:'TRW', articleNumber:'JTE362', name:'Spurstangenkopf außen rechts', category:'Lenkung', specs:[{attrName:'Einbauseite',attrValue:'Rechts außen'}], oeNumbers:[] },
+  { id:'st002', keywords:['spurstange','spurstangenkopf','tie rod','lenkung'], mfrName:'TRW', articleNumber:'JTE363', name:'Spurstangenkopf außen links', category:'Lenkung', specs:[{attrName:'Einbauseite',attrValue:'Links außen'}], oeNumbers:[] },
+  { id:'sb001', keywords:['stabilisator','stabi','sway bar','stabilisatorlager','lager','strebe'], mfrName:'LEMFÖRDER', articleNumber:'25473 01', name:'Stabilisatorlager', category:'Radaufhängung', specs:[], oeNumbers:['1K0411313C'] },
+  { id:'kp001', keywords:['koppelstange','pendelstütze','sway bar link','stabi','stabilisator'], mfrName:'MEYLE', articleNumber:'11-16 060 0007', name:'Koppelstange Stabilisator', category:'Radaufhängung', specs:[], oeNumbers:[] },
+  { id:'wl001', keywords:['radlager','radlagersatz','wheel bearing','lager','nabe','radnabe'], mfrName:'SKF', articleNumber:'VKBA 3543', name:'Radlager Vorderachse', category:'Radaufhängung', specs:[{attrName:'Einbauseite',attrValue:'Vorderachse'}], oeNumbers:['6Q0407621G'] },
+  { id:'wl002', keywords:['radlager','wheel bearing','lager','nabe'], mfrName:'FAG', articleNumber:'713 6108 10', name:'Radlager Hinterachse', category:'Radaufhängung', specs:[{attrName:'Einbauseite',attrValue:'Hinterachse'}], oeNumbers:[] },
+
+  // KUPPLUNG / GETRIEBE
+  { id:'ku002', keywords:['kupplung','clutch','kupplungssatz'], mfrName:'LUK', articleNumber:'624 3410 09', name:'Kupplungssatz', category:'Kupplung', specs:[{attrName:'Durchmesser',attrValue:'215',attrUnit:'mm'}], oeNumbers:[] },
+  { id:'gt001', keywords:['getriebe','transmission','gearbox','schaltgetriebe'], mfrName:'LUK', articleNumber:'602 0003 00', name:'Zweimassenschwungrad + Kupplungssatz', category:'Kupplung/Getriebe', specs:[], oeNumbers:[] },
+  { id:'zms001', keywords:['zweimassenschwungrad','schwungrad','zms','dual mass flywheel','kupplung'], mfrName:'LUK', articleNumber:'415 0352 10', name:'Zweimassenschwungrad', category:'Kupplung', specs:[], oeNumbers:[] },
+
+  // ABGASANLAGE
+  { id:'es001', keywords:['endschalldaempfer','endschalldämpfer','auspuff','schalldaempfer','schalldämpfer','exhaust','muffler','endtopf'], mfrName:'BOSAL', articleNumber:'255-131', name:'Endschalldämpfer', category:'Abgasanlage', specs:[], oeNumbers:[] },
+  { id:'kt001_agr', keywords:['katalysator','kat','catalytic','converter','abgas'], mfrName:'BOSAL', articleNumber:'099-026', name:'Katalysator', category:'Abgasanlage', specs:[], oeNumbers:[] },
+  { id:'dpf001', keywords:['dieselpartikelfilter','partikelfilter','dpf','russpartikelfilter','rußpartikelfilter','filter','diesel'], mfrName:'BOSAL', articleNumber:'095-212', name:'Dieselpartikelfilter DPF', category:'Abgasanlage', specs:[], oeNumbers:[] },
+  { id:'agr001', keywords:['agr','agr-ventil','egr','egr-ventil','ventil','abgasrueckfuehrung','abgasrückführung'], mfrName:'WAHLER', articleNumber:'7248D', name:'AGR-Ventil', category:'Motorelektrik', specs:[], oeNumbers:['038129637D'] },
+
+  // MOTORELEKTRIK / SENSOREN
+  { id:'ls001', keywords:['lambdasonde','lambda','sonde','o2 sensor','sauerstoffsensor','abgas'], mfrName:'BOSCH', articleNumber:'0 258 006 537', name:'Lambdasonde vor Kat', category:'Abgasanlage', specs:[{attrName:'Heizelemente',attrValue:'4'}], oeNumbers:['36531-PNA-003'] },
+  { id:'al001', keywords:['anlasser','starter','startmotor','anlassen','elektrik'], mfrName:'VALEO', articleNumber:'432729', name:'Anlasser', category:'Motorelektrik', specs:[{attrName:'Spannung',attrValue:'12V'},{attrName:'kW',attrValue:'1,4'}], oeNumbers:['02M911023G'] },
+  { id:'la001', keywords:['lichtmaschine','generator','alternator','elektrik','ladung','lima'], mfrName:'VALEO', articleNumber:'437439', name:'Lichtmaschine 90A', category:'Motorelektrik', specs:[{attrName:'Spannung',attrValue:'14V'},{attrName:'Ampere',attrValue:'90A'}], oeNumbers:['038903018BX'] },
+
+  // AUFLADUNG
+  { id:'tl001', keywords:['turbolader','turbo','lader','turbine','aufladung','turbocharger'], mfrName:'GARRETT', articleNumber:'454232-5008S', name:'Turbolader', category:'Aufladung', specs:[{attrName:'Typ',attrValue:'GT1544S'}], oeNumbers:['028145701K'] },
+  { id:'tl002', keywords:['turbolader','turbo','lader','aufladung'], mfrName:'BorgWarner', articleNumber:'53039880044', name:'Turbolader KKK', category:'Aufladung', specs:[], oeNumbers:['038145703L'] },
+
+  // KRAFTSTOFFANLAGE
+  { id:'in001', keywords:['einspritzduese','einspritzdüse','injektor','injector','duese','einspritzung','kraftstoff'], mfrName:'BOSCH', articleNumber:'0 445 110 071', name:'Kraftstoffinjektor Common Rail', category:'Kraftstoffanlage', specs:[], oeNumbers:['038130073AK'] },
+  { id:'op001', keywords:['oelpumpe','ölpumpe','oil pump','pumpe','öl','motor'], mfrName:'HELLA', articleNumber:'8TG 008 411-001', name:'Ölpumpe', category:'Motor', specs:[], oeNumbers:['06B115105A'] },
+
+  // BATTERIE / ZUBEHÖR
+  { id:'ba001', keywords:['batterie','battery','akku','starter','12v','autobatterie'], mfrName:'BOSCH', articleNumber:'S5 008', name:'Autobatterie 77Ah', category:'Batterie', specs:[{attrName:'Kapazität',attrValue:'77Ah'},{attrName:'Kaltstartstrom',attrValue:'780A'}], oeNumbers:[] },
+  { id:'sw001', keywords:['scheibenwischer','wischer','wischerblatt','wiper','blade','scheibe'], mfrName:'BOSCH', articleNumber:'3 397 013 428', name:'Scheibenwischer Aerotwin 650mm', category:'Scheibenwischer', specs:[{attrName:'Länge',attrValue:'650mm'}], oeNumbers:[] },
+
+  // ACHSMANSCHETTEN / GUMMITEILE
+  { id:'ls002', keywords:['lenkungsmanschette','lenkmanschette','manschette','steering boot','faltenbalg','lenkung'], mfrName:'FEBI', articleNumber:'33867', name:'Lenkungsmanschettensatz', category:'Lenkung', specs:[], oeNumbers:[] },
+  { id:'gm003', keywords:['gummi','gummilager','buchse','lagerbuchse','silent block','fahrwerk','lager'], mfrName:'MEYLE', articleNumber:'300 610 5549', name:'Querlenkerlagersatz Gummi', category:'Radaufhängung', specs:[], oeNumbers:[] },
 ];
 
 function staticSearch(query) {

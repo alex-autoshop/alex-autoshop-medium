@@ -352,33 +352,88 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
   }
 }
 
-/** Kategorie-IDs per Textsuche (z.B. "Bremsscheibe" → Kategorie-Baum-Treffer). */
-async function apCategoryIds(query: string): Promise<number[]> {
-  try {
-    const tree = await ap(
-      `/category/search-for-the-commodity-group-tree-by-description/type-id/${TYPE_PC}/lang-id/${LANG}/search-text/${encodeURIComponent(query)}`
-    );
-    // Baum: { "Name": { categoryId, categoryName, level, productId, children: { "Name": {...} } } }
-    const hits: Array<{ id: number; level: number; leaf: boolean }> = [];
-    const walk = (node: any) => {
-      if (!node || typeof node !== 'object') return;
-      if (Array.isArray(node)) return node.forEach(walk);
-      const id = Number(node.categoryId);
-      const children = node.children;
-      const childVals = children && typeof children === 'object' ? Object.values(children) : [];
-      if (id) hits.push({ id, level: Number(node.level) || 0, leaf: childVals.length === 0 });
-      if (childVals.length) childVals.forEach(walk);
-      if (node.categoryId === undefined && !children) {
-        for (const v of Object.values(node)) { if (v && typeof v === 'object') walk(v); }
-      }
-    };
-    walk(tree);
-    // Tiefste Knoten zuerst (spezifischste Produktgruppen), Blätter bevorzugt
-    hits.sort((a, b) => (Number(b.leaf) - Number(a.leaf)) || (b.level - a.level));
-    return [...new Set(hits.map((h) => h.id))].slice(0, 3);
-  } catch {
-    return [];
+// ─── Umgangssprache → TecDoc-Kategoriebegriff ───────────────────────────────
+// Werkstätten verwenden oft vereinfachte Begriffe die nicht 1:1 im TecDoc-Baum stehen.
+const QUERY_SYNONYMS: Record<string, string> = {
+  'ventilgummi': 'Ventilschaftdichtung',
+  'ventilschaft': 'Ventilschaftdichtung',
+  'ventilschaftdichtring': 'Ventilschaftdichtung',
+  'ventildeckeldichtung': 'Zylinderkopfhaubendichtung',
+  'kopfhaubendichtung': 'Zylinderkopfhaubendichtung',
+  'antriebsgummi': 'Gelenkwellenmanschette',
+  'achsmanschette': 'Gelenkwellenmanschette',
+  'faltenbalg antrieb': 'Gelenkwellenmanschette',
+  'domlager': 'Federbeinlager',
+  'stabilager': 'Stabilisatorlager',
+  'stabibuchse': 'Stabilisatorlager',
+  'koppelstange': 'Koppelstange',
+  'pendelstütze': 'Koppelstange',
+  'pendelstuetze': 'Koppelstange',
+  'lima': 'Lichtmaschine',
+  'kat': 'Katalysator',
+  'dpf': 'Dieselpartikelfilter',
+  'agr': 'AGR-Ventil',
+  'gluehkerze': 'Glühkerze',
+  'zahnriemensatz': 'Zahnriemen',
+  'steuerriemen': 'Zahnriemen',
+  'keilriemen': 'Keilrippenriemen',
+  'riemenspanner': 'Spannrolle',
+  'umlenkrolle': 'Umlenker',
+  'kurbelwellendichtring': 'Kurbelwellendichtung',
+  'simmerring': 'Wellendichtring',
+  'gummi': 'Lagerung',
+  'buchse': 'Lagerung',
+};
+
+function normalizeSearchQuery(query: string): string {
+  const q = query.toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .trim();
+  // Exakter Treffer im Synonym-Map
+  if (QUERY_SYNONYMS[q]) return QUERY_SYNONYMS[q];
+  // Teilstring-Treffer (z.B. "ventilgummi satz" → "Ventilschaftdichtung")
+  for (const [key, val] of Object.entries(QUERY_SYNONYMS)) {
+    if (q.includes(key) || key.includes(q)) return val;
   }
+  return query; // kein Synonym → Original
+}
+
+/** Kategorie-IDs per Textsuche (z.B. "Bremsscheibe" → Kategorie-Baum-Treffer).
+ *  Probiert zuerst den normalisierten TecDoc-Begriff (z.B. "Ventilschaftdichtung" für "ventilgummi"),
+ *  dann den Original-Query falls nichts gefunden. */
+async function apCategoryIds(query: string): Promise<number[]> {
+  const normalizedQuery = normalizeSearchQuery(query);
+  const searchTerms = normalizedQuery !== query ? [normalizedQuery, query] : [query];
+
+  for (const term of searchTerms) {
+    try {
+      const tree = await ap(
+        `/category/search-for-the-commodity-group-tree-by-description/type-id/${TYPE_PC}/lang-id/${LANG}/search-text/${encodeURIComponent(term)}`
+      );
+      // Baum: { "Name": { categoryId, categoryName, level, productId, children: { "Name": {...} } } }
+      const hits: Array<{ id: number; level: number; leaf: boolean }> = [];
+      const walk = (node: any) => {
+        if (!node || typeof node !== 'object') return;
+        if (Array.isArray(node)) return node.forEach(walk);
+        const id = Number(node.categoryId);
+        const children = node.children;
+        const childVals = children && typeof children === 'object' ? Object.values(children) : [];
+        if (id) hits.push({ id, level: Number(node.level) || 0, leaf: childVals.length === 0 });
+        if (childVals.length) childVals.forEach(walk);
+        if (node.categoryId === undefined && !children) {
+          for (const v of Object.values(node)) { if (v && typeof v === 'object') walk(v); }
+        }
+      };
+      walk(tree);
+      // Tiefste Knoten zuerst (spezifischste Produktgruppen), Blätter bevorzugt
+      hits.sort((a, b) => (Number(b.leaf) - Number(a.leaf)) || (b.level - a.level));
+      const ids = [...new Set(hits.map((h) => h.id))].slice(0, 3);
+      if (ids.length > 0) return ids; // gefunden → zurückgeben, sonst nächsten Begriff versuchen
+    } catch {
+      // Nächsten Begriff probieren
+    }
+  }
+  return [];
 }
 
 /** Alle passenden Artikel für Fahrzeug + Suchbegriff — mit Bildern, alle Marken. */
@@ -400,15 +455,25 @@ export async function apArticlesForVehicle(vehicleId: number, query: string): Pr
       seen.add(k);
       return true;
     });
-  // Relevanz: Produktname muss zum Suchbegriff passen (Kategorie-Baum ist teils unscharf)
+  // Relevanz: Produktname muss zum Suchbegriff (oder normalisierten Synonym) passen
   const clean = (x: string) => x.toLowerCase()
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
     .replace(/[^a-z0-9]/g, '');
   const q = clean(query);
+  const qNorm = clean(normalizeSearchQuery(query));
   const stem = q.length > 5 ? q.slice(0, q.length - 2) : q;
+  const stemNorm = qNorm.length > 5 ? qNorm.slice(0, qNorm.length - 2) : qNorm;
   const relevant = all.filter((a) => {
     const n = clean(`${a.name} ${a.category || ''}`);
-    return n.includes(q) || n.includes(stem) || q.includes(clean(a.name).slice(0, 6));
+    // Original-Query im Artikelnamen?
+    if (n.includes(q) || n.includes(stem)) return true;
+    // Normalisierter Begriff (z.B. "ventilschaftdichtung" für "ventilgummi") im Artikelnamen?
+    if (n.includes(qNorm) || n.includes(stemNorm)) return true;
+    // Erste 6 Zeichen des Artikelnamens im Query? (z.B. "ventil" in "ventilgummi")
+    if (q.includes(clean(a.name).slice(0, 6))) return true;
+    // Erste 6 Zeichen des normalisierten Queries im Artikelnamen?
+    if (n.includes(qNorm.slice(0, 6))) return true;
+    return false;
   });
   // KEIN Fallback auf `all`: lieber leer zurückgeben (loadParts probiert dann
   // Inter Cars / Nummernsuche) als unpassende Teile (z.B. Ölwannen bei "Bremse").
