@@ -1,3 +1,4 @@
+import { apAnalogParts } from "@/lib/autoparts";
 /**
  * Inter-Cars-Gateway über /api/intercars (Vercel Serverless).
  *
@@ -28,6 +29,9 @@ export interface IcLiveInfo {
   deliveryDays: number;
   icSku: string;
   imageUrl?: string;
+  /** Gesetzt, wenn nicht der exakte Artikel geliefert wird, sondern ein
+   *  baugleiches Teil einer anderen Marke (z.B. "PASCAL G7B014PC"). */
+  viaAnalog?: string;
 }
 
 async function icCall(action: string, body: Record<string, unknown>): Promise<any> {
@@ -93,7 +97,24 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
     // EIN Call genügt: /api/intercars probiert serverseitig alle Schreibweisen
     // durch (HU 716/2 x → HU716/2X → HU7162X …) und bricht beim Treffer ab.
     const r = await icCall("searchByIndex", { index: artNo });
-    const p: any = Array.isArray(r) ? r.find((x: any) => x && x._sku) : null;
+    let p: any = Array.isArray(r) ? r.find((x: any) => x && x._sku) : null;
+
+    // ── Kein Direkttreffer? Über baugleiche Teile suchen ──────────────────────
+    // TecDoc listet 39 Marken je Teil, Inter Cars führt davon nur einen Teil.
+    // Statt "Preis auf Anfrage" suchen wir das BAUGLEICHE Teil einer Marke,
+    // die IC führt (z.B. GSP 205130 → PASCAL G7B014PC). Für den Kunden ist das
+    // dasselbe Teil — nur lieferbar statt anfragepflichtig.
+    if (!p) {
+      try {
+        const analogs = await apAnalogParts(artNo);
+        for (const alt of analogs.slice(0, 5)) {
+          if (!alt.articleNumber) continue;
+          const ar = await icCall("searchByIndex", { index: alt.articleNumber });
+          const hit = Array.isArray(ar) ? ar.find((x: any) => x && x._sku) : null;
+          if (hit) { p = { ...hit, _viaAnalog: `${alt.brand} ${alt.articleNumber}`.trim() }; break; }
+        }
+      } catch { /* optional — best effort */ }
+    }
 
     if (p) {
       // p.price = customerPriceGross (EK) · p.priceOriginal = listPriceGross (IC-UVP)
@@ -107,17 +128,22 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
         // Lieferzeit kommt jetzt vom Server (aus IC latestDeliveryDate) statt
         // pauschal "1 Werktag" — so stimmen auch 2–3-Tage-Teile.
         const serverDays = Number(p.deliveryDays) || 1;
+        const base = avail > 0
+          ? `${serverDays} Werktag${serverDays > 1 ? "e" : ""} · ${avail >= 10 ? ">10" : avail} Stück`
+          : (p.availability && p.availability !== "auf Anfrage"
+              ? String(p.availability)
+              : `${serverDays} Werktag${serverDays > 1 ? "e" : ""} · Zentrallager`);
+        // Ersatzmarke IMMER ausweisen — sonst stünde ein PASCAL-Preis unter
+        // einer GSP-Zeile, ohne dass es jemand sieht.
+        const analog = p._viaAnalog ? String(p._viaAnalog) : undefined;
         result = {
           price,
           priceEK: ek,
-          availability: avail > 0
-            ? `${serverDays} Werktag${serverDays > 1 ? "e" : ""} · ${avail >= 10 ? ">10" : avail} Stück`
-            : (p.availability && p.availability !== "auf Anfrage"
-                ? String(p.availability)
-                : `${serverDays} Werktag${serverDays > 1 ? "e" : ""} · Zentrallager`),
+          availability: analog ? `≙ ${analog} · ${base}` : base,
           deliveryDays: serverDays,
           icSku: String(p._sku),
           imageUrl: extractImage(p),
+          viaAnalog: analog,
         };
       }
     }
