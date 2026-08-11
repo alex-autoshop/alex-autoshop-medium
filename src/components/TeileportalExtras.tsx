@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Car, X, Plus, Minus, Trash2, ShoppingCart, MessageCircle, Package, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
+import { formatSpecValue } from "@/components/TeileportalPricing";
 
 // ─── TYPEN ──────────────────────────────────────────────────
 
@@ -184,7 +185,7 @@ export function PartDetailModal({ article, vehicleLabel, onClose, onAddToCart, b
               {article.specs && article.specs.length > 0 && (
                 <div className="rounded-lg border border-border divide-y divide-border/60 text-xs overflow-hidden">
                   {article.specs.slice(0, 8).map((s, i) => (
-                    <div key={i} className="flex justify-between px-3 py-1.5"><span className="text-muted-foreground">{s.name}</span><span className="font-medium text-right">{s.value}</span></div>
+                    <div key={i} className="flex justify-between px-3 py-1.5"><span className="text-muted-foreground">{s.name}</span><span className="font-medium text-right">{formatSpecValue(s.name, s.value)}</span></div>
                   ))}
                 </div>
               )}
@@ -365,7 +366,7 @@ export function ArticleExpander({ articleId, articleNumber, specs, oeNumbers, on
               {!loading && tab === "info" && (
                 (info && info.length > 0) ? (
                   <div className="rounded-lg border border-border divide-y divide-border/60 text-xs overflow-hidden max-w-xl">
-                    {info.map((s, i) => <div key={i} className="flex justify-between gap-4 px-3 py-1.5"><span className="text-muted-foreground">{s.name}</span><span className="font-medium text-right">{s.value}</span></div>)}
+                    {info.map((s, i) => <div key={i} className="flex justify-between gap-4 px-3 py-1.5"><span className="text-muted-foreground">{s.name}</span><span className="font-medium text-right">{formatSpecValue(s.name, s.value)}</span></div>)}
                   </div>
                 ) : <p className="text-xs text-muted-foreground">Keine technischen Details verfügbar — frag uns direkt.</p>
               )}

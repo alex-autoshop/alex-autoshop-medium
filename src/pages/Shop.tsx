@@ -107,11 +107,13 @@ const isFrizProduct = (handle: string) =>
 //
 // Reihenfolge im Shop: Wunschfarben → Mipa → Eigenmarken (FRIZ, Master) → Rest.
 // Jede Marke bildet einen zusammenhängenden Block.
+// Anker (^) bei mehrdeutigen Marken: "DRYING MASTER" (Mikrofasertuch) darf NICHT
+// als Marke Master gelten, "Master Black Carbon Spachtel" schon.
 const BRAND_ORDER: Array<{ brand: string; match: RegExp }> = [
   { brand: "Mipa",          match: /\bmipa\b/i },
   // Eigenmarken direkt danach (beste Marge)
   { brand: "FRIZ",          match: /\bfriz\b/i },
-  { brand: "Master",        match: /\bmaster\b/i },
+  { brand: "Master",        match: /^master[\s-]/i },
   // Danach die Hauptmarken
   { brand: "Standox",       match: /\bstandox\b/i },
   { brand: "Glasurit",      match: /\bglasurit\b/i },
@@ -126,32 +128,31 @@ const BRAND_ORDER: Array<{ brand: string; match: RegExp }> = [
   { brand: "Rupes",         match: /\brupes\b/i },
   { brand: "Colad",         match: /\bcolad\b/i },
   { brand: "Sonax",         match: /\bsonax\b/i },
-  { brand: "Dr. Wack",      match: /\b(dr\.?\s?wack|a1)\b/i },
+  { brand: "Dr. Wack",      match: /^(dr\.?\s?wack|a1)[\s-]/i },
   { brand: "Liqui Moly",    match: /\bliqui[\s-]?moly\b/i },
   { brand: "Castrol",       match: /\bcastrol\b/i },
   { brand: "FanFaro",       match: /\bfanfaro\b/i },
   { brand: "Novol",         match: /\bnovol\b/i },
   { brand: "Troton",        match: /\btroton\b/i },
   { brand: "U-POL",         match: /\bu-?pol\b/i },
-  { brand: "APP",           match: /\bapp\b/i },
-  { brand: "AVO",           match: /\bavo\b/i },
+  { brand: "APP",           match: /^app[\s-]/i },
+  { brand: "AVO",           match: /^avo[\s-]/i },
   { brand: "Petec",         match: /\bpetec\b/i },
   { brand: "Tesa",          match: /\btesa\b/i },
   { brand: "Kovax",         match: /\bkovax\b/i },
   { brand: "Beaven",        match: /\bbeaven\b/i },
 ];
 
-/** Index der Marke in BRAND_ORDER; unbekannte Marken landen hinten. */
-function brandRank(p: { node: { title?: string; handle: string; vendor?: string } }): number {
-  const hay = `${p.node.title || ""} ${p.node.handle.replace(/-/g, " ")}`;
-  const i = BRAND_ORDER.findIndex((b) => b.match.test(hay));
-  return i === -1 ? BRAND_ORDER.length : i;
+/** Titel und Handle EINZELN prüfen — sonst greifen die ^-Anker nicht
+ *  (zusammengeklebt stünde der Handle nie am Stringanfang). */
+function matchesBrand(re: RegExp, node: { title?: string; handle: string }): boolean {
+  return re.test(node.title || "") || re.test(node.handle.replace(/-/g, " "));
 }
 
-/** Marken-Label für die Gruppierung (leer = unbekannt). */
-function brandName(p: { node: { title?: string; handle: string } }): string {
-  const hay = `${p.node.title || ""} ${p.node.handle.replace(/-/g, " ")}`;
-  return BRAND_ORDER.find((b) => b.match.test(hay))?.brand ?? "";
+/** Index der Marke in BRAND_ORDER; unbekannte Marken landen hinten. */
+function brandRank(p: { node: { title?: string; handle: string } }): number {
+  const i = BRAND_ORDER.findIndex((b) => matchesBrand(b.match, p.node));
+  return i === -1 ? BRAND_ORDER.length : i;
 }
 
 /** Wunschfarben = konfigurierbare Lacke (Shopify product_type "Autolack").
@@ -335,7 +336,13 @@ export default function Shop() {
     return "";
   }, [submittedSearch, activeCategory]);
 
-  const { products, isLoading, error, hasNextPage, loadMore } = useProducts({ query });
+  // Kompletten Katalog laden (442 Produkte = 2 Requests à 250), damit die
+  // Markensortierung über ALLE Produkte greift und nicht nur über die erste Seite.
+  const { products, isLoading, error, hasNextPage, loadMore } = useProducts({
+    query,
+    pageSize: 250,
+    loadAll: true,
+  });
 
   // Featured konfigurator products
   const [featured, setFeatured] = useState<ShopifyProduct[]>([]);

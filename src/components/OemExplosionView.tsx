@@ -5,6 +5,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { formatSpecValue } from "@/components/TeileportalPricing";
 import {
   ArrowLeft, Sparkles, Phone, MessageCircle, ChevronRight,
   Settings, Disc, Zap, Wind, Thermometer, Battery, Radio, Fuel,
@@ -693,7 +694,7 @@ function ArticleRow({
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
             {article.specs.slice(0, 3).map((s, i) => (
               <span key={i} className="text-[10px] text-muted-foreground">
-                {s.name}: <span className="text-foreground/70">{s.value}</span>
+                {s.name}: <span className="text-foreground/70">{formatSpecValue(s.name, s.value)}</span>
               </span>
             ))}
           </div>

@@ -191,6 +191,33 @@ export function DeliveryBadge({
   );
 }
 
+// ─── SPEC-WERTE LESBAR MACHEN ────────────────────────────────
+// TecDoc liefert Baujahre als YYYYMM ohne Trenner ("201905") und mehrere
+// Werte mit Semikolon ("201905; 202010"). Für Werkstatt-Mitarbeiter ist das
+// nicht lesbar → "2019/05 · 2020/10".
+// Nur bei Datums-Feldern anwenden: eine 6-stellige Artikelnummer darf NICHT
+// zu "2051/30" werden.
+const DATE_SPEC_RE = /baujahr|bj\.?\b|jahr|year|datum|date|modelljahr/i;
+
+export function formatSpecValue(name: string, value: string): string {
+  if (!value) return value;
+  if (!DATE_SPEC_RE.test(name || "")) return value;
+  return String(value)
+    .split(/\s*[;,]\s*/)
+    .map((tok) => {
+      const m = tok.trim().match(/^(\d{4})(\d{2})$/);
+      if (!m) return tok.trim();
+      const [, y, mo] = m;
+      const mn = parseInt(mo, 10);
+      const yr = parseInt(y, 10);
+      // Plausibilitätsprüfung: echter Monat und realistisches Baujahr
+      if (mn < 1 || mn > 12 || yr < 1900 || yr > 2100) return tok.trim();
+      return `${y}/${mo}`;
+    })
+    .filter(Boolean)
+    .join(" · ");
+}
+
 // ─── SPEC-ZEILE ──────────────────────────────────────────────
 
 export function SpecStrip({ articleId, specs, auto }: {
@@ -216,7 +243,7 @@ export function SpecStrip({ articleId, specs, auto }: {
       {loaded.map((s, si) => (
         <span key={si} className="whitespace-nowrap">
           {si > 0 && <span className="mx-2 text-border">|</span>}
-          {s.name}: <span className="font-semibold text-foreground/80">{s.value}</span>
+          {s.name}: <span className="font-semibold text-foreground/80">{formatSpecValue(s.name, s.value)}</span>
         </span>
       ))}
     </div>
