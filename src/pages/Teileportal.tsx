@@ -64,15 +64,52 @@ const BRAND_DOMAINS: Record<string, string> = {
   'MULLER FILTER': 'mullerfilter.com', 'MÜLLER FILTER': 'mullerfilter.com', 'SOFIMA': 'sofimafilter.com',
   'TECNOCAR': 'tecnocar.net', 'FIL FILTER': 'filfilter.com',
 };
-// Clearbit wurde abgeschaltet → Favicon-Dienste (keine API-Keys nötig).
-// 'd' = DuckDuckGo für lange Listen (Sidebar-Filter), 'g' = Google für Karten —
-// verteilt die Last, da beide Dienste bei ~60 parallelen Requests drosseln.
-function getBrandLogo(brand: string, prov: 'g' | 'd' = 'g'): string | undefined {
-  const domain = BRAND_DOMAINS[(brand || '').toUpperCase().trim()];
-  if (!domain) return undefined;
-  return prov === 'd'
-    ? `https://icons.duckduckgo.com/ip3/${domain}.ico`
-    : `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+/** Ist die Marke ein bekannter Hersteller? (Nur für Sortierung/"Qualität"-Filter —
+ *  bewusst NICHT mehr an die Logo-Verfügbarkeit gekoppelt.) */
+function isKnownBrand(brand: string): boolean {
+  return Boolean(BRAND_DOMAINS[(brand || '').toUpperCase().trim()]);
+}
+
+// ─── ECHTE MARKENLOGOS ───────────────────────────────────────────────────────
+// Früher wurden Google-/DuckDuckGo-FAVICONS als Logos angezeigt. Ein Favicon ist
+// aber kein Logo: mann-hummel.com liefert das Konzernzeichen statt des gelben
+// MANN-FILTER-Logos, abs-allbrakesystems.com nur einen generischen Globus.
+// Deshalb jetzt ausschließlich geprüfte Original-Dateien aus public/images/brands/.
+// Ist keine hinterlegt → sauberer Marken-Chip (siehe BrandLogo in TeileportalExtras).
+//
+// NEUE LOGOS ERGÄNZEN: Datei nach public/images/brands/ legen (PNG mit
+// transparentem Hintergrund oder SVG) und hier eintragen — sonst nichts nötig.
+const BRAND_LOGO_FILES: Record<string, string> = {
+  'BOSCH': '/images/brands/bosch.png',
+  '3M': '/images/brands/3m.png',
+  'FEBI': '/images/brands/febi.png',
+  'FEBI BILSTEIN': '/images/brands/febi.png',
+  'MIPA': '/images/brands/mipa.png',
+  'STANDOX': '/images/brands/standox.png',
+  'GLASURIT': '/images/brands/glasurit.png',
+  'SPIES HECKER': '/images/brands/spies-hecker.png',
+  'INDASA': '/images/brands/indasa.png',
+  'LIQUI MOLY': '/images/brands/liqui-moly.png',
+  'CASTROL': '/images/brands/castrol.png',
+  'RUPES': '/images/brands/rupes.png',
+  'SATA': '/images/brands/sata.png',
+  'COLAD': '/images/brands/colad.png',
+  'SONAX': '/images/brands/sonax.png',
+  'PPG': '/images/brands/ppg.png',
+  'LECHLER': '/images/brands/lechler.png',
+  'KOCH-CHEMIE': '/images/brands/kochchemie.png',
+  "MEGUIAR'S": '/images/brands/meguiars.png',
+  'MENZERNA': '/images/brands/menzerna.png',
+  'SAGOLA': '/images/brands/sagola.png',
+  'DEVILBISS': '/images/brands/devilbiss.png',
+  'FINIXA': '/images/brands/finix.png',
+  'NOVOL': '/images/brands/novol.png',
+  'U-POL': '/images/brands/upol.png',
+};
+
+/** Nur echte Originallogos. Ohne hinterlegte Datei: undefined → Marken-Chip. */
+function getBrandLogo(brand: string, _prov: 'g' | 'd' = 'g'): string | undefined {
+  return BRAND_LOGO_FILES[(brand || '').toUpperCase().trim()];
 }
 
 const CAR_BRAND_DOMAINS: Record<string, string> = {
@@ -555,7 +592,7 @@ export default function Teileportal() {
 
   /** Bekannte Marken (ATE, BOSCH, BREMBO …) nach oben — wie bei Inter Cars. */
   const sortKnownBrandsFirst = (arts: Article[]) =>
-    [...arts].sort((a, b) => Number(!!getBrandLogo(b.brand)) - Number(!!getBrandLogo(a.brand)));
+    [...arts].sort((a, b) => Number(isKnownBrand(b.brand)) - Number(isKnownBrand(a.brand)));
 
   /** Die ERSTEN sichtbaren Artikel mit echten IC-Preisen anreichern.
    *  WICHTIG — Limit: Kategorien wie "Bremsbelag" liefern 900+ Artikel. Ohne Kappung
@@ -641,6 +678,13 @@ export default function Teileportal() {
   const [sortOrder,    setSortOrder]    = useState<'popular' | 'cheapest' | 'quality' | 'savings' | 'fast' | 'brand'>('popular');
   const [availFilter,  setAvailFilter]  = useState<'all' | 'instant' | 'fast'>('all');
   const [oemFilter,    setOemFilter]    = useState(false);
+  // Schnellfilter-Chips sind EINZELN schaltbar und beliebig kombinierbar.
+  // (Vorher teilten sich instant/fast einen State und cheapest/quality den
+  //  sortOrder — dadurch ging immer nur einer von beiden.)
+  const [fInstant, setFInstant] = useState(false);
+  const [fFast,    setFFast]    = useState(false);
+  const [fCheap,   setFCheap]   = useState(false);
+  const [fQuality, setFQuality] = useState(false);
 
   const filtered = useMemo(() => {
     let result = selectedBrands.size > 0 ? articles.filter(a => selectedBrands.has(a.brand)) : articles;
@@ -655,11 +699,14 @@ export default function Teileportal() {
       );
     }
 
-    // Verfügbarkeits-Filter — unabhängig von Sortierung
-    if (availFilter === 'instant') {
+    // Lieferzeit-Chips: beide gleichzeitig möglich → Vereinigung der Zeiträume.
+    // "Sofort" (≤1 Tag) ist eine Teilmenge von "Bis 3 Tage", zusammen also ≤3.
+    if (fInstant || fFast) {
+      const maxDays = fFast ? 3 : 1;
+      result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= maxDays);
+    } else if (availFilter === 'instant') {
       result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 1);
     } else if (availFilter === 'fast') {
-      // "Bis 3 Tage": alles was Inter Cars per Nachtsprung/Zentrallager schafft
       result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 3);
     }
 
@@ -670,14 +717,30 @@ export default function Teileportal() {
 
     // Sortierung
     const sorted = [...result];
+
+    // Chips "Qualität" und "Günstigste" sind kombinierbar und werden GESCHICHTET:
+    // erst Premiummarken nach oben, innerhalb davon der günstigste Preis.
+    // Nur wenn keiner der beiden Chips aktiv ist, greift die Dropdown-Sortierung.
+    if (fQuality || fCheap) {
+      sorted.sort((a, b) => {
+        if (fQuality) {
+          const d = (isKnownBrand(b.brand) ? 1 : 0) - (isKnownBrand(a.brand) ? 1 : 0);
+          if (d !== 0) return d;
+        }
+        if (fCheap) return (a.price ?? Infinity) - (b.price ?? Infinity);
+        return 0;
+      });
+      return sorted;
+    }
+
     switch (sortOrder) {
       case 'cheapest':
         sorted.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity)); break;
       case 'quality':
         // Premiummarken (mit hinterlegtem Marken-Logo) zuerst, dann günstigster Preis
         sorted.sort((a, b) => {
-          const qa = getBrandLogo(a.brand) ? 1 : 0;
-          const qb = getBrandLogo(b.brand) ? 1 : 0;
+          const qa = isKnownBrand(a.brand) ? 1 : 0;
+          const qb = isKnownBrand(b.brand) ? 1 : 0;
           if (qb !== qa) return qb - qa;
           return (a.price ?? Infinity) - (b.price ?? Infinity);
         }); break;
@@ -693,7 +756,7 @@ export default function Teileportal() {
         sorted.sort((a, b) => (a.brand || '').localeCompare(b.brand || '')); break;
     }
     return sorted;
-  }, [articles, selectedBrands, artSearch, quickFilter, sortOrder, availFilter, oemFilter]);
+  }, [articles, selectedBrands, artSearch, quickFilter, sortOrder, availFilter, oemFilter, fInstant, fFast, fCheap, fQuality]);
 
   const inquiry = (article?: Article) => {
     const lines = ['Hallo Alex Autoshop, ich brauche ein Teil:',
@@ -1209,25 +1272,22 @@ export default function Teileportal() {
                           { id: 'quality',  label: 'Qualität',          icon: '★' },
                           { id: 'oem',      label: 'Originalteil',      icon: '✓' },
                         ].map(f => {
-                          // Jeder Chip hat seinen eigenen State — können gleichzeitig aktiv sein
+                          // Jeder Chip hat seinen eigenen State — beliebig kombinierbar
                           const isActive =
-                            f.id === 'instant'  ? availFilter === 'instant' :
-                            f.id === 'fast'     ? availFilter === 'fast' :
-                            f.id === 'oem'      ? oemFilter :
-                            sortOrder === f.id;
+                            f.id === 'instant'  ? fInstant :
+                            f.id === 'fast'     ? fFast :
+                            f.id === 'cheapest' ? fCheap :
+                            f.id === 'quality'  ? fQuality :
+                            f.id === 'oem'      ? oemFilter : false;
                           return (
                             <button
                               key={f.id}
                               onClick={() => {
-                                if (f.id === 'instant') {
-                                  setAvailFilter(prev => prev === 'instant' ? 'all' : 'instant');
-                                } else if (f.id === 'fast') {
-                                  setAvailFilter(prev => prev === 'fast' ? 'all' : 'fast');
-                                } else if (f.id === 'oem') {
-                                  setOemFilter(prev => !prev);
-                                } else {
-                                  setSortOrder(prev => (prev as string) === f.id ? 'popular' : f.id as typeof sortOrder);
-                                }
+                                if (f.id === 'instant')       setFInstant(v => !v);
+                                else if (f.id === 'fast')     setFFast(v => !v);
+                                else if (f.id === 'cheapest') setFCheap(v => !v);
+                                else if (f.id === 'quality')  setFQuality(v => !v);
+                                else if (f.id === 'oem')      setOemFilter(v => !v);
                               }}
                               className={cn(
                                 "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-all",
@@ -1240,8 +1300,8 @@ export default function Teileportal() {
                             </button>
                           );
                         })}
-                        {(oemFilter || sortOrder !== 'popular' || availFilter !== 'all' || artSearch) && (
-                          <button onClick={() => { setQuickFilter(null); setSortOrder('popular'); setAvailFilter('all'); setArtSearch(''); setOemFilter(false); }}
+                        {(oemFilter || sortOrder !== 'popular' || availFilter !== 'all' || artSearch || fInstant || fFast || fCheap || fQuality) && (
+                          <button onClick={() => { setQuickFilter(null); setSortOrder('popular'); setAvailFilter('all'); setArtSearch(''); setOemFilter(false); setFInstant(false); setFFast(false); setFCheap(false); setFQuality(false); }}
                             className="ml-auto text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
                             <X className="w-3 h-3" /> Zurücksetzen
                           </button>

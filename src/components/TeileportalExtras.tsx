@@ -440,8 +440,18 @@ function BrandLogo({ name, logo }: { name: string; logo?: string }) {
   const [err, setErr] = useState(false);
   // Ohne bekannte Domain KEIN Rate-Guessing mehr (erzeugte graue Platzhalter) —
   // stattdessen sauberer Initialen-Chip.
+  // Kein Originallogo hinterlegt → Marken-Chip. Bewusst KEIN Favicon:
+  // die zeigen oft ein fremdes/generisches Zeichen (Globus) statt des Markenlogos.
   if (!logo || err || !name) {
-    return <span className="w-10 h-5 rounded bg-secondary text-[8px] font-bold flex items-center justify-center shrink-0 uppercase tracking-tight">{(name || '?').slice(0, 5)}</span>;
+    const short = name.replace(/\s*(GmbH|AG|B\.?V\.?|S\.?A\.?|Ltd\.?)\s*$/i, '').trim();
+    return (
+      <span
+        title={name}
+        className="w-10 h-5 rounded bg-secondary/80 border border-border/50 text-[7px] font-bold flex items-center justify-center shrink-0 uppercase tracking-tighter px-0.5 overflow-hidden whitespace-nowrap"
+      >
+        {short.length > 7 ? short.slice(0, 7) : short}
+      </span>
+    );
   }
   return <img src={logo} alt={name} loading="lazy" onError={() => setErr(true)}
     className="w-10 h-5 object-contain shrink-0 bg-white rounded border border-border/60 p-px" />;
