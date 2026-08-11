@@ -144,6 +144,27 @@ async function icPost(path, body, token, payerId, recipientId, branch) {
   return res.json();
 }
 
+// ── Artikelnummer-Varianten ──────────────────────────────────────────────────
+// IC sucht `index` EXAKT. TecDoc und IC schreiben dieselbe Nummer aber oft
+// unterschiedlich: "HU 716/2 x" ↔ "HU716/2X" ↔ "HU7162X". Deshalb der Reihe nach
+// durchprobieren — von der wörtlichsten zur stärksten Normalisierung.
+function artVariantsServer(artNo) {
+  const s = String(artNo || "").trim();
+  if (!s) return [];
+  const noSpace = s.replace(/\s+/g, "");
+  const alnum   = s.replace(/[^A-Za-z0-9]/g, "");
+  const list = [
+    s, s.toUpperCase(),
+    noSpace, noSpace.toUpperCase(),
+    alnum, alnum.toUpperCase(),
+    // Trenner vereinheitlichen: "HU716-2X" → "HU716/2X"
+    noSpace.replace(/-/g, "/").toUpperCase(),
+    // Führende Nullen im Zahlenblock weglassen: "W 0712/95" → "W712/95"
+    noSpace.replace(/\b0+(\d)/g, "$1").toUpperCase(),
+  ];
+  return [...new Set(list.filter(Boolean))];
+}
+
 // ── Parallel in Batches (schont IC Rate-Limits) ──────────────────────────────
 async function inChunks(items, size, fn) {
   const out = [];
@@ -335,7 +356,33 @@ export default async function handler(req, res) {
   // ── GET ?diag=1 — Token-Test via Browser/web_fetch ───────────────────────
   if (req.method === "GET") {
     const qs = new URLSearchParams(req.url?.split("?")[1] || "");
-    if (qs.get("diag") !== "1") { res.status(405).send("Use POST or GET ?diag=1"); return; }
+
+    // ── ?idx=HU 716/2 x — welche Schreibweise findet IC? ────────────────────
+    // Diagnose für "Preis auf Anfrage" obwohl der Artikel bei IC lieferbar ist.
+    if (qs.get("idx")) {
+      const raw = qs.get("idx");
+      const cId  = (process.env.INTERCARS_CLIENT_ID || "").trim();
+      const cSec = (process.env.INTERCARS_CLIENT_SECRET || "").trim();
+      try {
+        const token = await getToken(cId, cSec);
+        const payer = process.env.INTERCARS_PAYER_ID || "F00099";
+        const rec   = process.env.INTERCARS_RECIPIENT_ID || payer;
+        const br    = process.env.INTERCARS_BRANCH || "FA1";
+        const out = [];
+        for (const v of artVariantsServer(raw)) {
+          const r = await icFetch(`/catalog/products?index=${encodeURIComponent(v)}&limit=3`, token, payer, rec, br).catch(() => null);
+          const n = r?.products?.length || 0;
+          out.push({ variant: v, treffer: n, sku: r?.products?.[0]?.sku || null, index: r?.products?.[0]?.index || null });
+          if (n) break;
+        }
+        res.status(200).json({ eingabe: raw, versuche: out });
+      } catch (e) {
+        res.status(500).json({ error: String(e.message) });
+      }
+      return;
+    }
+
+    if (qs.get("diag") !== "1") { res.status(405).send("Use POST or GET ?diag=1 or ?idx=<Artikelnummer>"); return; }
     const cIdRaw  = process.env.INTERCARS_CLIENT_ID  || "";
     const cSecRaw = process.env.INTERCARS_CLIENT_SECRET || "";
     const cId  = cIdRaw.trim();
@@ -529,12 +576,10 @@ export default async function handler(req, res) {
     // ──────────────────────────────────────────────────────────────────────────
     if (action === "searchByIndex" && productIndex) {
       // Varianten: original, uppercase, ohne Leerzeichen, ohne Leerzeichen+uppercase
-      const variants = [...new Set([
-        productIndex,
-        productIndex.toUpperCase(),
-        productIndex.replace(/\s+/g, ""),
-        productIndex.replace(/\s+/g, "").toUpperCase(),
-      ])];
+      // Alle Schreibweisen durchprobieren (siehe artVariantsServer):
+      // TecDoc "HU 716/2 x" vs. IC "HU716/2X" — sonst "Preis auf Anfrage"
+      // obwohl der Artikel bei IC ab Lager lieferbar ist.
+      const variants = artVariantsServer(productIndex);
 
       let products = [];
 

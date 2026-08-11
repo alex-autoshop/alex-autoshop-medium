@@ -90,16 +90,10 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
 
   let result: IcLiveInfo | null = null;
   try {
-    // searchByIndex liefert Preis + Bestand + EAN bereits fertig normalisiert.
-    // IC ist format-sensitiv ("VKJP 01001" ≠ "VKJP01001") → Varianten probieren,
-    // aber SEQUENZIELL mit Abbruch beim ersten Treffer: parallel wären es 4×
-    // so viele Requests, und der erste Versuch sitzt in den meisten Fällen.
-    let p: any = null;
-    for (const v of artVariants(artNo)) {
-      const r = await icCall("searchByIndex", { index: v });
-      const hit = Array.isArray(r) ? r.find((x: any) => x && x._sku) : null;
-      if (hit) { p = hit; break; }
-    }
+    // EIN Call genügt: /api/intercars probiert serverseitig alle Schreibweisen
+    // durch (HU 716/2 x → HU716/2X → HU7162X …) und bricht beim Treffer ab.
+    const r = await icCall("searchByIndex", { index: artNo });
+    const p: any = Array.isArray(r) ? r.find((x: any) => x && x._sku) : null;
 
     if (p) {
       // p.price = customerPriceGross (EK) · p.priceOriginal = listPriceGross (IC-UVP)
