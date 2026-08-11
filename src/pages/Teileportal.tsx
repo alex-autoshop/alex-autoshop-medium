@@ -450,7 +450,7 @@ export default function Teileportal() {
   const openDetail = (a: DetailArticle) => {
     setDetailArticle(a);
     if (a.price == null) {
-      icPriceLookup(a.articleNumber).then((live) => {
+      icPriceLookup(a.articleNumber, a.name).then((live) => {
         if (!live) return;
         setDetailArticle((prev) => prev && prev.articleNumber === a.articleNumber
           ? { ...prev, price: live.price, availability: live.availability } : prev);
@@ -608,7 +608,7 @@ export default function Teileportal() {
     toEnrich.forEach((a, i) => {
       const delay = Math.floor(i / BATCH) * 300 + (i % BATCH) * 30;
       setTimeout(() => {
-        icPriceLookup(a.articleNumber).then((live) => {
+        icPriceLookup(a.articleNumber, a.name).then((live) => {
           if (!live) return;
           setArticles((prev) => prev.map((x) => x.articleNumber === a.articleNumber
             ? {

@@ -74,6 +74,27 @@ function extractImage(p: any): string | undefined {
   return candidates.find((c) => typeof c === "string" && c.startsWith("http"));
 }
 
+/** Teileart aus einer Bezeichnung ziehen — "Gelenksatz, Antriebswelle" und
+ *  "Antriebswelle komplett links" ergeben beide "antriebswell".
+ *  Dient als Gleichheitsprüfung, damit kein Kühler als Antriebswelle durchgeht. */
+function partKey(name: string): string {
+  const n = String(name || "").toLowerCase()
+    .replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u").replace(/ß/g, "ss");
+  const TYPES = [
+    "antriebswell", "gelenkwell", "gelenksatz", "faltenbalg", "manschette",
+    "bremsscheib", "bremsbelag", "bremssattel", "bremsschlauch",
+    "olfilter", "luftfilter", "kraftstofffilter", "innenraumfilter", "partikelfilter",
+    "wasserpump", "olpump", "kuhler", "thermostat", "kuhlmittel",
+    "stossdampfer", "federbein", "querlenker", "lenker", "spurstang", "koppelstang",
+    "stabilisator", "radlager", "kupplung", "schwungrad", "schwungscheib",
+    "zahnriemen", "keilriemen", "keilrippenriemen", "spannrolle", "umlenkroll",
+    "zundkerze", "gluhkerze", "lambdasonde", "anlasser", "starter", "generator",
+    "lichtmaschine", "turbolader", "lader", "katalysator", "schalldampfer",
+    "dichtung", "wellendichtring", "einspritz", "batterie", "wischblatt", "scheibenwischer",
+  ];
+  return TYPES.find((t) => n.includes(t)) || "";
+}
+
 /** IC ist case-sensitiv und formatabhängig → 4 Varianten parallel probieren. */
 function artVariants(artNo: string): string[] {
   const set = new Set<string>();
@@ -85,7 +106,12 @@ function artVariants(artNo: string): string[] {
 }
 
 /** Live UVP + EK + Bestand + Bild zu einer Hersteller-Artikelnummer (best effort). */
-export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo | null> {
+export async function icPriceLookup(
+  articleNumber: string,
+  /** Teilebezeichnung des Originalartikels (z.B. "Antriebswelle").
+   *  PFLICHT für die Ersatzteil-Suche — ohne sie wird sie übersprungen. */
+  expectName?: string,
+): Promise<IcLiveInfo | null> {
   const artNo = (articleNumber || "").trim();
   if (artNo.length < 3) return null;
 
@@ -104,16 +130,26 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
     // Statt "Preis auf Anfrage" suchen wir das BAUGLEICHE Teil einer Marke,
     // die IC führt (z.B. GSP 205130 → PASCAL G7B014PC). Für den Kunden ist das
     // dasselbe Teil — nur lieferbar statt anfragepflichtig.
-    if (!p) {
-      try {
-        const analogs = await apAnalogParts(artNo);
-        for (const alt of analogs.slice(0, 5)) {
-          if (!alt.articleNumber) continue;
-          const ar = await icCall("searchByIndex", { index: alt.articleNumber });
-          const hit = Array.isArray(ar) ? ar.find((x: any) => x && x._sku) : null;
-          if (hit) { p = { ...hit, _viaAnalog: `${alt.brand} ${alt.articleNumber}`.trim() }; break; }
-        }
-      } catch { /* optional — best effort */ }
+    // SICHERUNG: Die TecDoc-Ersatzteilliste ist NICHT zuverlässig — sie lieferte
+    // im Test zu einer Antriebswelle einen DENSO-Kühler und zu einer Wasserpumpe
+    // eine BLUE-PRINT-Bremsscheibe. Ein Ersatzteil wird deshalb nur akzeptiert,
+    // wenn seine Bezeichnung zum Originalteil passt. Ohne expectName: gar nicht.
+    if (!p && expectName) {
+      const key = partKey(expectName);
+      if (key) {
+        try {
+          const analogs = await apAnalogParts(artNo);
+          for (const alt of analogs.slice(0, 5)) {
+            if (!alt.articleNumber) continue;
+            const ar = await icCall("searchByIndex", { index: alt.articleNumber });
+            const cand = Array.isArray(ar) ? ar.find((x: any) => x && x._sku) : null;
+            if (!cand) continue;
+            if (partKey(String(cand.name || "")) !== key) continue; // Teileart weicht ab → verwerfen
+            p = { ...cand, _viaAnalog: `${alt.brand} ${alt.articleNumber}`.trim() };
+            break;
+          }
+        } catch { /* optional — best effort */ }
+      }
     }
 
     if (p) {
