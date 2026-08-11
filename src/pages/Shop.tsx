@@ -101,6 +101,68 @@ const isFrizProduct = (handle: string) =>
   handle.startsWith("hochglanz-antihologramm-politur") ||
   handle.startsWith("schleifpaste-perfect-heavy-cut");
 
+// ── Sortierung nach Marken ────────────────────────────────────────────────────
+// Shopify `vendor` ist bei uns nur der Lieferant ("Alex Autoshop"/"Beaven") —
+// die echte Marke steht im Titel. Daher Erkennung über Titel + Handle.
+//
+// Reihenfolge im Shop: Wunschfarben → Mipa → Eigenmarken (FRIZ, Master) → Rest.
+// Jede Marke bildet einen zusammenhängenden Block.
+const BRAND_ORDER: Array<{ brand: string; match: RegExp }> = [
+  { brand: "Mipa",          match: /\bmipa\b/i },
+  // Eigenmarken direkt danach (beste Marge)
+  { brand: "FRIZ",          match: /\bfriz\b/i },
+  { brand: "Master",        match: /\bmaster\b/i },
+  // Danach die Hauptmarken
+  { brand: "Standox",       match: /\bstandox\b/i },
+  { brand: "Glasurit",      match: /\bglasurit\b/i },
+  { brand: "Spies Hecker",  match: /\bspies[\s-]?hecker\b/i },
+  { brand: "Sikkens",       match: /\bsikkens\b/i },
+  { brand: "3M",            match: /\b3m\b/i },
+  { brand: "Mirka",         match: /\bmirka\b/i },
+  { brand: "Indasa",        match: /\bindasa\b/i },
+  { brand: "Koch-Chemie",   match: /\bkoch[\s-]?chemie\b/i },
+  { brand: "SATA",          match: /\bsata\b/i },
+  { brand: "DeVilbiss",     match: /\bdevilbiss\b/i },
+  { brand: "Rupes",         match: /\brupes\b/i },
+  { brand: "Colad",         match: /\bcolad\b/i },
+  { brand: "Sonax",         match: /\bsonax\b/i },
+  { brand: "Dr. Wack",      match: /\b(dr\.?\s?wack|a1)\b/i },
+  { brand: "Liqui Moly",    match: /\bliqui[\s-]?moly\b/i },
+  { brand: "Castrol",       match: /\bcastrol\b/i },
+  { brand: "FanFaro",       match: /\bfanfaro\b/i },
+  { brand: "Novol",         match: /\bnovol\b/i },
+  { brand: "Troton",        match: /\btroton\b/i },
+  { brand: "U-POL",         match: /\bu-?pol\b/i },
+  { brand: "APP",           match: /\bapp\b/i },
+  { brand: "AVO",           match: /\bavo\b/i },
+  { brand: "Petec",         match: /\bpetec\b/i },
+  { brand: "Tesa",          match: /\btesa\b/i },
+  { brand: "Kovax",         match: /\bkovax\b/i },
+  { brand: "Beaven",        match: /\bbeaven\b/i },
+];
+
+/** Index der Marke in BRAND_ORDER; unbekannte Marken landen hinten. */
+function brandRank(p: { node: { title?: string; handle: string; vendor?: string } }): number {
+  const hay = `${p.node.title || ""} ${p.node.handle.replace(/-/g, " ")}`;
+  const i = BRAND_ORDER.findIndex((b) => b.match.test(hay));
+  return i === -1 ? BRAND_ORDER.length : i;
+}
+
+/** Marken-Label für die Gruppierung (leer = unbekannt). */
+function brandName(p: { node: { title?: string; handle: string } }): string {
+  const hay = `${p.node.title || ""} ${p.node.handle.replace(/-/g, " ")}`;
+  return BRAND_ORDER.find((b) => b.match.test(hay))?.brand ?? "";
+}
+
+/** Wunschfarben = konfigurierbare Lacke (Shopify product_type "Autolack").
+ *  Fallback über Handle, falls productType am Produkt fehlt. */
+function isWunschfarbe(p: { node: { productType?: string; handle: string; title?: string } }): boolean {
+  if (/autolack/i.test(p.node.productType || "")) return true;
+  return /wunschfarbe|lackstift|spraydose|autolack/i.test(
+    `${p.node.handle} ${p.node.title || ""}`,
+  );
+}
+
 // ── Category Dropdown ──────────────────────────────────────────────────────────
 function CategoryDropdown({
   activeCategory,
@@ -298,20 +360,30 @@ export default function Shop() {
     return true;
   });
 
+  /** Shop-Sortierung: Wunschfarben ganz oben → Mipa komplett → Eigenmarken
+   *  (FRIZ, Master) → übrige Marken als geschlossene Blöcke → Unbekanntes zuletzt.
+   *  Innerhalb einer Marke bleibt PRODUCT_PRIORITY erhalten, danach alphabetisch. */
   const sortedGridProducts = useMemo(() => {
     return [...gridProducts].sort((a, b) => {
-      const ah = a.node.handle;
-      const bh = b.node.handle;
-      const ai = PRODUCT_PRIORITY.indexOf(ah);
-      const bi = PRODUCT_PRIORITY.indexOf(bh);
+      // 1. Wunschfarben-Konfiguratoren immer zuerst
+      const aw = isWunschfarbe(a) ? 0 : 1;
+      const bw = isWunschfarbe(b) ? 0 : 1;
+      if (aw !== bw) return aw - bw;
+
+      // 2. Markenblock (Mipa → FRIZ → Master → Standox → …)
+      const ar = brandRank(a);
+      const br = brandRank(b);
+      if (ar !== br) return ar - br;
+
+      // 3. Innerhalb der Marke: kuratierte Top-Produkte zuerst
+      const ai = PRODUCT_PRIORITY.indexOf(a.node.handle);
+      const bi = PRODUCT_PRIORITY.indexOf(b.node.handle);
       if (ai !== -1 && bi !== -1) return ai - bi;
       if (ai !== -1) return -1;
       if (bi !== -1) return 1;
-      const aFriz = isFrizProduct(ah);
-      const bFriz = isFrizProduct(bh);
-      if (aFriz && !bFriz) return 1;
-      if (!aFriz && bFriz) return -1;
-      return 0;
+
+      // 4. Rest alphabetisch — stabile, nachvollziehbare Reihenfolge
+      return (a.node.title || "").localeCompare(b.node.title || "", "de");
     });
   }, [gridProducts]);
 

@@ -278,6 +278,9 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
   // (Der native tecdoc-vin-check bräuchte einen separaten VIN_API_KEY am Server
   //  und läuft sonst 10s ins Timeout — daher hier bewusst nicht vorgeschaltet.)
   let make = '', model = '', ccm = 0, fuel = '';
+  // Zusatzmerkmale zur EXAKTEN Bestimmung — ohne die bleiben z.B. beim Vito W447
+  // alle Motorvarianten (114/116/119/124 CDI) übrig und der Nutzer muss wählen.
+  let kw = 0, ps = 0, awd: boolean | null = null, year = 0;
   try {
     const r3 = await ap(`/vin/decoder-v3/${encodeURIComponent(v)}`);
     const info: Record<string, string> = {};
@@ -289,6 +292,12 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
     const ft = String(info['Fuel type'] || '').toLowerCase();
     if (/diesel/.test(ft)) fuel = 'diesel';
     else if (/gas|petrol|benz/.test(ft)) fuel = 'benzin';
+
+    kw   = Math.round(parseFloat(String(info['Engine KiloWatts']   || ''))) || 0;
+    ps   = Math.round(parseFloat(String(info['Engine HorsePower']  || ''))) || 0;
+    year = parseInt(String(info['Model year'] || ''), 10) || 0;
+    const dl = String(info['Driveline'] || info['Drive'] || '').toLowerCase();
+    if (dl) awd = /4x4|four-wheel|all-wheel|awd|4matic|quattro/.test(dl);
   } catch { /* decoder nicht erreichbar */ }
   if (!make || !model) return null;
 
@@ -340,12 +349,59 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
         cands.push(veh);
       }
     }
-    if (ccm) {
-      cands.sort((a, b) => Math.abs(parseInt(a.ccm || '0', 10) - ccm) - Math.abs(parseInt(b.ccm || '0', 10) - ccm));
-    } else {
-      cands.sort((a, b) => (a.modelName || '').localeCompare(b.modelName || '') || (a.typeName || '').localeCompare(b.typeName || ''));
+    // ── Exakte Bestimmung über Leistung + Allrad + Baujahr ──────────────────
+    // Der decoder-v3 liefert kW/PS und Antriebsart aus dem Fahrzeugregister.
+    // Damit lässt sich die Motorvariante meist eindeutig festnageln, sodass
+    // der Auswahl-Dialog entfällt (Teileportal übernimmt bei genau 1 Treffer).
+    const AWD_RE = /4-?matic|4x4|quattro|xdrive|4motion|awd|allrad|4wd/i;
+    const isAwd = (c: ApVinCandidate) => AWD_RE.test(`${c.typeName || ''} ${c.modelName || ''}`);
+    const powerOf = (c: ApVinCandidate) => ({
+      kw: Math.round(parseFloat(c.power || '0')) || 0,
+      ps: Math.round(parseFloat(c.ps || '0')) || 0,
+    });
+    /** Toleranz 6 % — Register-kW und TecDoc-kW weichen leicht ab (233 HP ↔ 239 PS). */
+    const powerFits = (c: ApVinCandidate) => {
+      const p = powerOf(c);
+      if (kw && p.kw) return Math.abs(p.kw - kw) <= Math.max(4, kw * 0.06);
+      if (ps && p.ps) return Math.abs(p.ps - ps) <= Math.max(5, ps * 0.06);
+      return false;
+    };
+    const yearFits = (c: ApVinCandidate) => {
+      if (!year) return true;
+      const from = parseInt(String(c.buildFrom || '').slice(0, 4), 10) || 0;
+      const to   = parseInt(String(c.buildTo   || '').slice(0, 4), 10) || 9999;
+      return (!from || year >= from - 1) && year <= to + 1;
+    };
+
+    let exactHits = cands;
+    if (kw || ps) exactHits = exactHits.filter(powerFits);
+    if (awd !== null && exactHits.length > 1) {
+      const byDrive = exactHits.filter((c) => isAwd(c) === awd);
+      if (byDrive.length) exactHits = byDrive;
     }
-    return { manufacturer: make, model, candidates: cands.slice(0, 60) };
+    if (exactHits.length > 1) {
+      const byYear = exactHits.filter(yearFits);
+      if (byYear.length) exactHits = byYear;
+    }
+    // Genau ein Treffer → Fahrzeug steht fest, kein Dialog nötig.
+    if (exactHits.length === 1) {
+      return { manufacturer: make, model, exact: true, candidates: exactHits };
+    }
+
+    // Sonst: beste Kandidaten nach oben sortieren (Leistung → Hubraum → Name)
+    const rank = (c: ApVinCandidate) => {
+      let s = 0;
+      if (powerFits(c)) s -= 1000;
+      if (awd !== null && isAwd(c) === awd) s -= 100;
+      if (yearFits(c)) s -= 10;
+      if (ccm) s += Math.abs(parseInt(c.ccm || '0', 10) - ccm) / 1000;
+      return s;
+    };
+    const ordered = (exactHits.length ? exactHits : cands).slice();
+    ordered.sort((a, b) => rank(a) - rank(b)
+      || (a.modelName || '').localeCompare(b.modelName || '')
+      || (a.typeName || '').localeCompare(b.typeName || ''));
+    return { manufacturer: make, model, candidates: ordered.slice(0, 60) };
   } catch {
     // Auflösung fehlgeschlagen — trotzdem Marke/Modell melden (kein alter Fallback)
     return { manufacturer: make, model, candidates: [] };
