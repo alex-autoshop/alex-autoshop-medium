@@ -38,6 +38,12 @@ export const navCategories: Array<{
     label: "Öle & Flüssigkeiten",
     children: [
       { label: "Motoröl", slug: "motoroel", query: "tag:Motoröl" },
+      // Ölfilter nach MANN-Bauart getrennt (Tags in Shopify gesetzt):
+      // HU… = Filtereinsatz metallfrei · W/WP… = Anschraubfilter · H…KIT = Hydraulik
+      { label: "Ölfilter (alle)", slug: "oelfilter", query: "tag:Ölfilter" },
+      { label: "Ölfilter – Einsatz", slug: "oelfilter-einsatz", query: "tag:Filtereinsatz" },
+      { label: "Ölfilter – Anschraub", slug: "oelfilter-anschraub", query: "tag:Anschraubfilter" },
+      { label: "Hydraulikfilter", slug: "hydraulikfilter", query: "tag:Hydraulikfilter" },
       { label: "Bremsenreiniger", slug: "bremsenreiniger", query: "title:Bremsenreiniger" },
       { label: "Silikonentferner", slug: "silikonentferner", query: "title:Silikonentferner" },
     ],
@@ -90,7 +96,7 @@ export const collections = [
   { label: "Günstige Autoteile bestellen", slug: "autoteile", image: "/images/collection-autoteile.png", query: "title:Autoteile" },
   { label: "Alle Produkte", slug: "alle", image: "/images/collection-filter.png", query: "" },
   { label: "Günstige Lackierprodukte", slug: "lackierprodukte", image: "/images/collection-lackierprodukte.webp", query: "tag:Klarlack OR tag:Grundierung OR tag:Härter OR tag:Verdünnung OR tag:Spachtel" },
-  { label: "Öle & Flüssigkeiten", slug: "oele", image: "/images/collection-oele.webp", query: "tag:Motoröl OR title:Bremsenreiniger" },
+  { label: "Öle & Flüssigkeiten", slug: "oele", image: "/images/collection-oele.webp", query: "tag:Motoröl OR tag:Ölfilter OR title:Bremsenreiniger" },
   { label: "Karosserie & Reparaturmaterial", slug: "karosserie", image: "/images/collection-karosserie.webp", query: "tag:Steinschlagschutz OR tag:Dichtmasse OR tag:Spachtel OR tag:Strukturlack" },
   { label: "Wunschfarben erstellen", slug: "wunschfarben", image: "/images/collection-wunschfarben.png", query: "product_type:Autolack" },
 ];

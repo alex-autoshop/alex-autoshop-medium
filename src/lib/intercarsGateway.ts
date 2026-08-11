@@ -110,15 +110,18 @@ export async function icPriceLookup(articleNumber: string): Promise<IcLiveInfo |
       const avail = Number(p.stockQuantity) || 0;
 
       if (price) {
-        // IC liefert aus Zweigstelle ODER Zentrallager → immer 1 Werktag.
-        // avail=0 heißt nur lokales Lager leer, nicht Out-of-Stock.
+        // Lieferzeit kommt jetzt vom Server (aus IC latestDeliveryDate) statt
+        // pauschal "1 Werktag" — so stimmen auch 2–3-Tage-Teile.
+        const serverDays = Number(p.deliveryDays) || 1;
         result = {
           price,
           priceEK: ek,
           availability: avail > 0
-            ? `1 Werktag · ${avail >= 10 ? ">10" : avail} Stück`
-            : "1 Werktag · Zentrallager",
-          deliveryDays: 1,
+            ? `${serverDays} Werktag${serverDays > 1 ? "e" : ""} · ${avail >= 10 ? ">10" : avail} Stück`
+            : (p.availability && p.availability !== "auf Anfrage"
+                ? String(p.availability)
+                : `${serverDays} Werktag${serverDays > 1 ? "e" : ""} · Zentrallager`),
+          deliveryDays: serverDays,
           icSku: String(p._sku),
           imageUrl: extractImage(p),
         };

@@ -659,7 +659,8 @@ export default function Teileportal() {
     if (availFilter === 'instant') {
       result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 1);
     } else if (availFilter === 'fast') {
-      result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 2);
+      // "Bis 3 Tage": alles was Inter Cars per Nachtsprung/Zentrallager schafft
+      result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 3);
     }
 
     // Originalteil-Filter — unabhängig
@@ -1203,6 +1204,7 @@ export default function Teileportal() {
                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 shrink-0 mr-1">Schnellfilter</span>
                         {[
                           { id: 'instant',  label: 'Sofort lieferbar', icon: '📦' },
+                          { id: 'fast',     label: 'Bis 3 Tage',       icon: '🚚' },
                           { id: 'cheapest', label: 'Günstigste',        icon: '⚡' },
                           { id: 'quality',  label: 'Qualität',          icon: '★' },
                           { id: 'oem',      label: 'Originalteil',      icon: '✓' },
@@ -1210,6 +1212,7 @@ export default function Teileportal() {
                           // Jeder Chip hat seinen eigenen State — können gleichzeitig aktiv sein
                           const isActive =
                             f.id === 'instant'  ? availFilter === 'instant' :
+                            f.id === 'fast'     ? availFilter === 'fast' :
                             f.id === 'oem'      ? oemFilter :
                             sortOrder === f.id;
                           return (
@@ -1218,6 +1221,8 @@ export default function Teileportal() {
                               onClick={() => {
                                 if (f.id === 'instant') {
                                   setAvailFilter(prev => prev === 'instant' ? 'all' : 'instant');
+                                } else if (f.id === 'fast') {
+                                  setAvailFilter(prev => prev === 'fast' ? 'all' : 'fast');
                                 } else if (f.id === 'oem') {
                                   setOemFilter(prev => !prev);
                                 } else {

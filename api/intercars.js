@@ -241,10 +241,30 @@ function normalizeProduct(product, quote = null, stockLines = null) {
     .filter((l) => l.qty > 0);
   const qty     = perLocation.reduce((s, l) => s + l.qty, 0);
   const tenPlus = qty >= 10;
-  const avail   = qty > 0
+
+  // Lieferdatum AUCH aus Zeilen ohne Bestand lesen: IC nennt dort das Datum,
+  // an dem der Artikel aus dem Zentrallager kommt. Vorher landete alles ohne
+  // lokalen Bestand pauschal auf "auf Anfrage" — obwohl IC liefern kann.
+  const dates = lines
+    .map((l) => String(l?.latestDeliveryDate || ""))
+    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .sort();
+  let days = qty > 0 ? 1 : null;
+  if (dates[0]) {
+    const target = Date.parse(`${dates[0]}T00:00:00Z`);
+    const today  = new Date();
+    const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+    const diff = Math.round((target - todayUtc) / 86400000);
+    // 0 = heute noch → als 1 Werktag ausweisen; nach oben auf 14 Tage kappen
+    days = Math.min(Math.max(diff, 1), 14);
+  }
+  if (days == null) days = 3;
+
+  const avail = qty > 0
     ? (tenPlus ? "sofort (10+ Stück)" : `sofort (${qty} Stück)`)
-    : "auf Anfrage";
-  const days    = qty > 0 ? 1 : 3;
+    : dates[0]
+      ? `lieferbar · ${days} Werktag${days > 1 ? "e" : ""}`
+      : "auf Anfrage";
 
   const eans   = Array.isArray(product.eans) ? product.eans : [];
   const images = []; // IC API liefert in dieser Version keine Bilder
