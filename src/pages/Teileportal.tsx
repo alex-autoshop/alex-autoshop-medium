@@ -1034,29 +1034,41 @@ export default function Teileportal() {
 
             {/* ── OEM TEASER ────────────────────────────────────────────────── */}
             <div className="max-w-5xl mx-auto px-6 pb-6">
+              {/* Solide Farben statt Transparenz-Stufen (border-primary/60, bg-primary/10):
+                  die rendern hier nicht zuverlässig — es blieb nur das Icon-Quadrat
+                  sichtbar und der Button "erschien" erst beim Hovern. */}
               <button
                 onClick={() => setPhase('oem')}
-                className="w-full rounded-2xl border-2 border-primary/60 bg-primary/10 p-5 sm:p-6 flex items-center gap-4 text-left hover:border-primary hover:bg-primary/15 transition-all group shadow-sm"
+                style={{ backgroundColor: '#FFFBEB', borderColor: '#D4A017' }}
+                className="w-full rounded-2xl border-2 p-5 sm:p-6 flex items-center gap-4 text-left transition-all group shadow-sm hover:shadow-md"
               >
-                <div className="w-12 h-12 rounded-2xl bg-primary/20 border-2 border-primary/40 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Layers className="w-6 h-6 text-primary" />
+                <div
+                  style={{ backgroundColor: '#D4A017' }}
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"
+                >
+                  <Layers className="w-6 h-6 text-black" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-sm font-bold">OEM Original-Katalog</span>
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <span className="text-sm font-bold text-foreground">OEM Original-Katalog</span>
                     <span className="px-1.5 py-0.5 rounded bg-amber-500 text-black text-[10px] font-black">PREVIEW</span>
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
+                  <p className="text-xs text-foreground/70 leading-relaxed">
                     Explosionszeichnungen + OE-Nummern direkt in der Teilebörse — Vorschau anzeigen.
                   </p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-primary/60 group-hover:text-primary shrink-0 transition-colors" />
+                <ChevronRight className="w-5 h-5 shrink-0 transition-colors" style={{ color: '#D4A017' }} />
               </button>
             </div>
 
             {/* ── HINWEIS: Gespeicherte Fahrzeuge (Kategorien links in der Sidebar) ── */}
             <div className="max-w-5xl mx-auto px-6 pb-16">
-              <div className="max-w-2xl mx-auto rounded-2xl border-2 border-primary/50 bg-primary/8 p-6 sm:p-8 text-center shadow-sm">
+              {/* bg-primary/8 gibt es in Tailwind NICHT (Stufen sind 5,10,20,…) →
+                  die Klasse erzeugte gar nichts, der Kasten war unsichtbar. */}
+              <div
+                style={{ backgroundColor: '#FFFBEB', borderColor: '#D4A017' }}
+                className="max-w-2xl mx-auto rounded-2xl border-2 p-6 sm:p-8 text-center shadow-sm"
+              >
                 <div className="w-12 h-12 rounded-2xl bg-primary/20 border-2 border-primary/40 flex items-center justify-center mx-auto mb-4">
                   <Car className="w-6 h-6 text-primary" />
                 </div>
