@@ -993,8 +993,12 @@ export default function Teileportal() {
                           </div>
                           <div className="flex-1">
                             <label className="text-xs text-muted-foreground font-medium mb-1.5 block">Typschlüssel (TSN)</label>
-                            <input ref={tsnInputRef} value={tsn} onChange={e => setTsn(e.target.value)}
-                              placeholder="3-stellig" className="input-base w-full h-11" maxLength={3} />
+                            {/* TSN steht im Fahrzeugschein immer in Großbuchstaben —
+                                direkt beim Tippen umwandeln, damit die Abfrage sicher trifft. */}
+                            <input ref={tsnInputRef} value={tsn}
+                              onChange={e => setTsn(e.target.value.toUpperCase())}
+                              autoCapitalize="characters" autoCorrect="off" spellCheck={false}
+                              placeholder="3-stellig" className="input-base w-full h-11 uppercase tracking-wider" maxLength={3} />
                           </div>
                           <button type="submit" disabled={vehicleLoading} className="btn-primary px-5 h-11 gap-2 shrink-0">
                             {vehicleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Car className="w-4 h-4" />}
