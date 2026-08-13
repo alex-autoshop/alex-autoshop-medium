@@ -140,7 +140,8 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
     if (compact) return;
     const el = listRef.current;
     if (!el || typeof window === "undefined" || !("IntersectionObserver" in window)) return;
-    const key = `aa:modDemo:${m.level}`;
+    // Pro Seite einmal pro Sitzung (Startseite + /mitgliedschaft je einmal)
+    const key = `aa:modDemo:${m.level}:${window.location.pathname}`;
     try {
       if (sessionStorage.getItem(key)) return;
     } catch {

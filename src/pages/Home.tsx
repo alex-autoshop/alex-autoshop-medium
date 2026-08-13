@@ -146,7 +146,15 @@ export default function Home() {
               Monatlich kündbar, keine Mindestabnahme.
             </p>
           </motion.div>
-          <MembershipCards compact />
+          <MembershipCards />
+          <motion.div {...fadeUp} className="text-center mt-8">
+            <Link
+              to="/mitgliedschaft"
+              className="text-primary font-semibold text-sm hover:underline inline-flex items-center gap-1 min-h-[44px]"
+            >
+              Alle Details zur Mitgliedschaft <ArrowRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
         </div>
       </section>
 
