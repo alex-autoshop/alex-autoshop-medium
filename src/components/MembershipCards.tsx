@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Check, Zap, Loader2, Info, Clock } from "lucide-react";
+import { Check, Zap, Loader2, Info, Clock, MousePointer2, RotateCcw } from "lucide-react";
 import type { Feature } from "@/data/memberships";
 import { toast } from "sonner";
 import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
@@ -24,6 +24,20 @@ export function MembershipCards({ compact = false }: { compact?: boolean }) {
   );
 }
 
+/* ---------------------------------------------------------------------------
+ * Demo-Animation: zeigt Erstbesuchern EINMAL pro Sitzung, dass jedes Modul
+ * einzeln abwählbar ist — auch alle drei (= Basis-Mitgliedschaft).
+ * Ein Geister-Cursor tippt die Module von unten nach oben ab, der Preis fällt
+ * live mit, danach wird die ursprüngliche Auswahl wiederhergestellt.
+ * -------------------------------------------------------------------------*/
+const DEMO_FIRST_SLOT = 650;   // ms bis zum ersten Modul
+const DEMO_SLOT = 900;         // ms pro Modul
+const DEMO_TAP = 420;          // Tipp-Zeitpunkt innerhalb eines Slots
+const DEMO_HOLD_BASE = 1250;   // Basis-Zustand kurz stehen lassen
+const DEMO_RESTORE_STEP = 170; // Stagger beim Wiederherstellen
+
+type Cursor = { top: number; left: number; visible: boolean; tap: boolean };
+
 function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const { user, profile, updateProfile } = useAuth();
   const navigate = useNavigate();
@@ -34,6 +48,131 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const [loading, setLoading] = useState(false);
   const [trialLoading, setTrialLoading] = useState(false);
   const [openInfo, setOpenInfo] = useState<string | null>(null);
+
+  /* --- Demo-State ------------------------------------------------------- */
+  const [demoModules, setDemoModules] = useState<string[] | null>(null);
+  const [cursor, setCursor] = useState<Cursor | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const timers = useRef<number[]>([]);
+  const demoRef = useRef(false);
+  const touchedRef = useRef(false);
+  const modulesRef = useRef(modules);
+  modulesRef.current = modules;
+
+  const clearTimers = () => {
+    timers.current.forEach((t) => clearTimeout(t));
+    timers.current = [];
+  };
+  const at = (ms: number, fn: () => void) => {
+    timers.current.push(window.setTimeout(fn, ms));
+  };
+
+  const cancelDemo = useCallback(() => {
+    if (!demoRef.current) return;
+    demoRef.current = false;
+    clearTimers();
+    setDemoModules(null);
+    setCursor(null);
+    setFlash(null);
+  }, []);
+
+  const posOf = (mod: string) => {
+    const el = btnRefs.current[mod];
+    if (!el) return null;
+    // offsetTop/-Left beziehen sich auf den (position:relative) Modul-Container,
+    // sind also unabhängig von Layout-Verschiebungen ausserhalb der Liste.
+    return { top: el.offsetTop + el.offsetHeight / 2 - 5, left: el.offsetLeft + el.offsetWidth - 32 };
+  };
+
+  const runDemo = useCallback(() => {
+    if (compact) return;
+    clearTimers();
+    const start = modulesRef.current;
+    const order = [...m.modules].reverse(); // von unten nach oben abtippen
+    const firstPos = posOf(order[0]);
+    if (!firstPos) return;
+
+    demoRef.current = true;
+    setDemoModules(start);
+    setCursor({ ...firstPos, visible: false, tap: false });
+    at(60, () => setCursor((c) => (c ? { ...c, visible: true } : c)));
+
+    order.forEach((mod, i) => {
+      const slot = DEMO_FIRST_SLOT + i * DEMO_SLOT;
+      at(slot, () => {
+        const p = posOf(mod);
+        if (p) setCursor((c) => (c ? { ...c, ...p } : c));
+      });
+      // Nur "tippen", wenn das Modul überhaupt aktiv ist — sonst nur hinbewegen
+      if (!start.includes(mod)) return;
+      at(slot + DEMO_TAP, () => {
+        setCursor((c) => (c ? { ...c, tap: true } : c));
+        setFlash(mod);
+        setDemoModules((prev) => (prev ?? start).filter((x) => x !== mod));
+      });
+      at(slot + DEMO_TAP + 220, () => {
+        setCursor((c) => (c ? { ...c, tap: false } : c));
+        setFlash(null);
+      });
+    });
+
+    const restoreAt = DEMO_FIRST_SLOT + order.length * DEMO_SLOT + DEMO_HOLD_BASE;
+    at(restoreAt, () => setCursor((c) => (c ? { ...c, visible: false } : c)));
+    start.forEach((mod, i) => {
+      at(restoreAt + i * DEMO_RESTORE_STEP, () => {
+        setFlash(mod);
+        setDemoModules((prev) => (prev && prev.includes(mod) ? prev : [...(prev ?? []), mod]));
+      });
+      at(restoreAt + i * DEMO_RESTORE_STEP + 280, () => setFlash(null));
+    });
+    at(restoreAt + start.length * DEMO_RESTORE_STEP + 650, () => {
+      demoRef.current = false;
+      setDemoModules(null);
+      setCursor(null);
+      setFlash(null);
+    });
+  }, [compact, m.modules]);
+
+  // Auto-Start: einmal pro Sitzung, sobald die Modul-Liste im Blick ist
+  useEffect(() => {
+    if (compact) return;
+    const el = listRef.current;
+    if (!el || typeof window === "undefined" || !("IntersectionObserver" in window)) return;
+    const key = `aa:modDemo:${m.level}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+    } catch {
+      /* Private-Mode: dann eben ohne Merker */
+    }
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting || e.intersectionRatio < 0.85) continue;
+          io.disconnect();
+          try {
+            sessionStorage.setItem(key, "1");
+          } catch {
+            /* ignore */
+          }
+          at(450, () => {
+            if (!touchedRef.current && !document.hidden) runDemo();
+          });
+        }
+      },
+      { threshold: [0.85] }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [compact, m.level, runDemo]);
+
+  useEffect(() => clearTimers, []);
+
+  const demoActive = demoModules !== null;
+  const view = demoModules ?? modules;
 
   // Trial-Status für dieses Level
   const now = new Date();
@@ -82,16 +221,19 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
     }
   };
 
-  const toggle = (mod: string) =>
+  const toggle = (mod: string) => {
+    touchedRef.current = true;
+    cancelDemo();
     setModules((p) => (p.includes(mod) ? p.filter((x) => x !== mod) : [...p, mod]));
+  };
 
-  const isBase = modules.length === 0;
-  const ratio = modules.length / m.modules.length;
+  const isBase = view.length === 0;
+  const ratio = view.length / m.modules.length;
   const activeDiscount = isBase ? m.baseDiscountPercent : m.discountPercent;
 
   // Gratis-Farbe ist nur abwählbar wenn KEIN Lack-Modul aktiv ist (nur Teilebörse oder Basis).
   // Sobald Lackfarben/Lackmaterial gebucht sind, gehört die Gratis-Farbe fest dazu.
-  const noPaint = !modules.includes("Lackfarben") && !modules.includes("Lackmaterial");
+  const noPaint = !view.includes("Lackfarben") && !view.includes("Lackmaterial");
   const freePaintFeature = m.features.find((f) => f.label.startsWith("Gratis Farbe"));
   const freePaintOff = noPaint && !wantFreePaint;
   const freePaintDeduction = freePaintOff ? m.freePaintValue : 0;
@@ -99,8 +241,8 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   // Per-Modul-Preis: Autoteile günstigst, Lackmaterial mittig, Lackfarben teuerst
   const moduleSum = useMemo(() => {
     if (isBase) return 0;
-    return modules.reduce((sum, mod) => sum + (m.modulePrices[mod] ?? 0), 0);
-  }, [isBase, modules, m.modulePrices]);
+    return view.reduce((sum, mod) => sum + (m.modulePrices[mod] ?? 0), 0);
+  }, [isBase, view, m.modulePrices]);
 
   const totalModuleCost = Object.values(m.modulePrices).reduce((s, v) => s + v, 0);
   const moduleRatio = totalModuleCost > 0 ? moduleSum / totalModuleCost : ratio;
@@ -168,6 +310,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
   return (
     <div
+      onPointerDownCapture={cancelDemo}
       className={cn(
         "card-tilt hover:translate-y-0 p-6 flex flex-col relative",
         m.highlight && "border-primary ring-2 ring-primary/40 lg:scale-[1.03]"
@@ -193,7 +336,12 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
             {originalPrice.toLocaleString("de-DE")} €
           </span>
         )}
-        <span className="text-4xl font-display font-bold">
+        <span
+          className={cn(
+            "text-4xl font-display font-bold transition-colors duration-300",
+            demoActive && "text-primary"
+          )}
+        >
           <AnimatedNumber value={price} format={(n) => Math.round(n).toLocaleString("de-DE")} /> €
         </span>
         <span className="text-muted-foreground"> / Monat</span>
@@ -211,25 +359,53 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
       {!compact && (
         <>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mt-5 mb-2">
-            Module wählen
+          <div className="flex items-center justify-between gap-2 mt-5 mb-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Module wählen
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                cancelDemo();
+                runDemo();
+              }}
+              className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70 hover:text-primary transition-colors"
+              aria-label="Zeigen, wie die Module funktionieren"
+            >
+              <RotateCcw className="w-3 h-3" /> Zeig mir
+            </button>
+          </div>
+          <p
+            className={cn(
+              "text-[11px] leading-snug mb-2 transition-colors duration-300",
+              demoActive ? "text-primary font-semibold" : "text-muted-foreground"
+            )}
+          >
+            {demoActive
+              ? "Antippen zum Ab- oder Zuwählen — du zahlst nur, was du brauchst."
+              : "Frei kombinierbar: jedes Modul einzeln abwählbar — auch alle drei."}
           </p>
-          <div className="space-y-2">
+
+          <div ref={listRef} className="space-y-2 relative">
             {m.modules.map((mod) => {
-              const on = modules.includes(mod);
+              const on = view.includes(mod);
               return (
                 <button
                   key={mod}
+                  ref={(el) => {
+                    btnRefs.current[mod] = el;
+                  }}
                   type="button"
                   onClick={() => toggle(mod)}
                   className={cn(
-                    "w-full flex items-center justify-between px-4 py-3 rounded-lg border text-sm font-medium transition-colors min-h-[48px]",
+                    "w-full flex items-center justify-between px-4 py-3 rounded-lg border text-sm font-medium transition-all duration-300 min-h-[48px]",
                     on
                       ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border bg-secondary/40 text-muted-foreground/60"
+                      : "border-border bg-secondary/40 text-muted-foreground/60",
+                    flash === mod && "ring-2 ring-primary/70 scale-[1.02]"
                   )}
                 >
-                  <span className={cn(!on && "line-through")}>
+                  <span className={cn("text-left transition-all", !on && "line-through")}>
                     {m.discountPercent}% auf {mod === "Autoteile" ? "Autoteile (in der Teilebörse)" : mod}
                   </span>
                   {on ? (
@@ -244,10 +420,31 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
                 </button>
               );
             })}
+
+            {/* Geister-Cursor der Demo */}
+            {cursor && (
+              <span
+                className="pointer-events-none absolute z-20 block"
+                style={{
+                  top: cursor.top,
+                  left: cursor.left,
+                  opacity: cursor.visible ? 1 : 0,
+                  transform: `scale(${cursor.tap ? 0.8 : 1})`,
+                  transformOrigin: "top left",
+                  transition:
+                    "top .55s cubic-bezier(.4,0,.2,1), left .55s cubic-bezier(.4,0,.2,1), transform .18s ease-out, opacity .35s ease-out",
+                }}
+              >
+                {cursor.tap && (
+                  <span className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-primary/35 animate-ping" />
+                )}
+                <MousePointer2 className="relative w-7 h-7 text-foreground fill-primary drop-shadow-[0_3px_7px_rgba(0,0,0,0.4)]" />
+              </span>
+            )}
           </div>
 
           {/* Gratis-Farbe abwählbar — nur wenn kein Lack-Modul aktiv (Teilebörse-only oder Basis) */}
-          {noPaint && freePaintFeature && (
+          {!demoActive && noPaint && freePaintFeature && (
             <div className="mt-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 Gratis-Farbe (optional)
@@ -283,20 +480,36 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
           {/* Basis-Hinweis wenn alle Module abgewählt */}
           {isBase && (
-            <div className="mt-3 rounded-lg bg-secondary/60 border border-border px-4 py-3 text-xs text-muted-foreground leading-relaxed">
-              <span className="font-semibold text-foreground">{activeDiscount}% auf das gesamte Sortiment und Teilebörse</span> — {wantFreePaint ? "inkl. Gratis-Farbe und alle" : "alle weiteren"} Mitgliedsvorteile. Module einzeln zubuchbar.
+            <div
+              className={cn(
+                "mt-3 rounded-lg bg-secondary/60 border px-4 py-3 text-xs text-muted-foreground leading-relaxed transition-colors duration-300",
+                demoActive ? "border-primary/60 bg-primary/5" : "border-border"
+              )}
+            >
+              <span className="font-semibold text-foreground">
+                Alle Module abgewählt = Basis für {m.basePrice} € — {activeDiscount}% auf das gesamte
+                Sortiment und Teilebörse
+              </span>{" "}
+              — {wantFreePaint ? "inkl. Gratis-Farbe und alle" : "alle weiteren"} Mitgliedsvorteile.
+              Module jederzeit einzeln zubuchbar.
             </div>
           )}
 
           <ul className="space-y-2 mt-5 mb-5 flex-1">
             {m.features.map((f: Feature) => {
               const isCashback = f.label.includes("Cashback");
-              const autoteileAktiv = modules.includes("Autoteile");
+              const autoteileAktiv = view.includes("Autoteile");
               const isFreePaint = f.label.startsWith("Gratis Farbe");
               const inactive = (isCashback && !autoteileAktiv) || (isFreePaint && freePaintOff);
               const isOpen = openInfo === f.label;
               return (
-                <li key={f.label} className={cn("flex flex-col gap-0.5 text-sm", inactive && "opacity-40")}>
+                <li
+                  key={f.label}
+                  className={cn(
+                    "flex flex-col gap-0.5 text-sm transition-opacity duration-300",
+                    inactive && "opacity-40"
+                  )}
+                >
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                     <span className={cn("flex-1", inactive && "line-through")}>{f.label}</span>
