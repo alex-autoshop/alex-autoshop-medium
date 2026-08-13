@@ -11,11 +11,11 @@ import { cn } from "@/lib/utils";
 export function MembershipCards({ compact = false }: { compact?: boolean }) {
   return (
     <div>
-      <p className="text-center text-sm font-semibold mb-5 text-muted-foreground">
+      <p className="text-center text-sm font-semibold mb-10 sm:mb-12 text-muted-foreground">
         🇩🇪 <span className="text-foreground">Deutschlandweit</span> — jeder kann Mitglied werden,
         Werkstatt wie privat. Wir liefern direkt zu dir.
       </p>
-      <div className="grid lg:grid-cols-3 gap-5 items-start">
+      <div className="grid lg:grid-cols-3 gap-8 lg:gap-7 items-start">
         {MEMBERSHIP_LEVELS.map((m) => (
           <Card key={m.level} m={m} compact={compact} />
         ))}
