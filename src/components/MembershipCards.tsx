@@ -309,9 +309,11 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
     }
   };
 
+  // Nur ein echter Klick/Tipp bricht die Demo ab — Touch-Scrollen NICHT
+  // (deshalb onClickCapture statt onPointerDownCapture).
   return (
     <div
-      onPointerDownCapture={cancelDemo}
+      onClickCapture={cancelDemo}
       className={cn(
         "card-tilt hover:translate-y-0 p-6 flex flex-col relative",
         m.highlight && "border-primary ring-2 ring-primary/40 lg:scale-[1.03]"
