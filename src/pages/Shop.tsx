@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Palette, Droplets, Layers, Pipette, FlaskConical,
-  ChevronDown, X, Check, SlidersHorizontal,
+  ChevronDown, X, Check, SlidersHorizontal, LayoutGrid, Rows3,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { ProductGrid } from "@/components/ProductGrid";
@@ -15,6 +15,10 @@ import {
   type ShopifyProduct,
 } from "@/lib/shopify";
 import { allCategories, getCategoryBySlug, collections, navCategories } from "@/lib/categories";
+import {
+  ShopFilters, ActiveFilterChips, EMPTY_FILTERS, productPrice, productAvailable,
+  type ShopFilterState,
+} from "@/components/ShopFilters";
 import { cn } from "@/lib/utils";
 
 // Eigene-Farbe-Konfiguratoren: ganz oben, wenn man den Shop betritt.
@@ -147,6 +151,11 @@ const BRAND_ORDER: Array<{ brand: string; match: RegExp }> = [
  *  (zusammengeklebt stünde der Handle nie am Stringanfang). */
 function matchesBrand(re: RegExp, node: { title?: string; handle: string }): boolean {
   return re.test(node.title || "") || re.test(node.handle.replace(/-/g, " "));
+}
+
+/** Klartext-Marke für die Filterleiste — "Sonstige", wenn nichts greift. */
+export function brandOf(p: { node: { title?: string; handle: string } }): string {
+  return BRAND_ORDER.find((b) => matchesBrand(b.match, p.node))?.brand ?? "Sonstige";
 }
 
 /** Index der Marke in BRAND_ORDER; unbekannte Marken landen hinten. */
@@ -292,6 +301,16 @@ function CategoryDropdown({
 
 type ShopMode = 'standard' | 'schnell' | 'menge';
 
+type SortMode = "empfohlen" | "preis-auf" | "preis-ab" | "name" | "marke";
+
+const SORT_LABELS: Record<SortMode, string> = {
+  empfohlen: "Empfohlen",
+  "preis-auf": "Preis aufsteigend",
+  "preis-ab": "Preis absteigend",
+  name: "Name A–Z",
+  marke: "Marke A–Z",
+};
+
 // ── Shop Page ─────────────────────────────────────────────────────────────────
 export default function Shop() {
   const { category } = useParams();
@@ -300,6 +319,22 @@ export default function Shop() {
   const [shopMode, setShopMode] = useState<ShopMode>('standard');
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sidebar-Filter, Sortierung und Spaltenzahl
+  const [filters, setFilters] = useState<ShopFilterState>(EMPTY_FILTERS);
+  const [sortMode, setSortMode] = useState<SortMode>("empfohlen");
+  const [columns, setColumns] = useState<4 | 5 | 6>(() => {
+    const saved = Number(typeof window !== "undefined" ? localStorage.getItem("shop:cols") : 0);
+    return saved === 4 || saved === 5 || saved === 6 ? (saved as 4 | 5 | 6) : 5;
+  });
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const setCols = (c: 4 | 5 | 6) => {
+    setColumns(c);
+    try { localStorage.setItem("shop:cols", String(c)); } catch { /* egal */ }
+  };
+
+  // Kategorie-/Suchwechsel setzt die Filter zurück — sonst steht man vor 0 Treffern.
+  useEffect(() => { setFilters(EMPTY_FILTERS); }, [category, submittedSearch]);
 
   const activeCategory =
     category
@@ -367,11 +402,36 @@ export default function Shop() {
     return true;
   });
 
+  /** Sidebar-Filter anwenden — die Zählungen in der Sidebar beziehen sich auf
+   *  gridProducts (also VOR den Filtern), damit man sieht was noch käme. */
+  const filteredProducts = useMemo(() => {
+    return gridProducts.filter((p) => {
+      if (filters.brands.length && !filters.brands.includes(brandOf(p))) return false;
+      if (filters.tags.length) {
+        const tags = (p.node.tags ?? []).map((t) => t.toLowerCase());
+        if (!filters.tags.some((t) => tags.includes(t.toLowerCase()))) return false;
+      }
+      if (filters.priceMax !== null && productPrice(p) > filters.priceMax) return false;
+      if (filters.onlyAvailable && !productAvailable(p)) return false;
+      return true;
+    });
+  }, [gridProducts, filters]);
+
   /** Shop-Sortierung: Wunschfarben ganz oben → Mipa komplett → Eigenmarken
    *  (FRIZ, Master) → übrige Marken als geschlossene Blöcke → Unbekanntes zuletzt.
    *  Innerhalb einer Marke bleibt PRODUCT_PRIORITY erhalten, danach alphabetisch. */
   const sortedGridProducts = useMemo(() => {
-    return [...gridProducts].sort((a, b) => {
+    if (sortMode === "preis-auf") return [...filteredProducts].sort((a, b) => productPrice(a) - productPrice(b));
+    if (sortMode === "preis-ab") return [...filteredProducts].sort((a, b) => productPrice(b) - productPrice(a));
+    if (sortMode === "name")
+      return [...filteredProducts].sort((a, b) => (a.node.title || "").localeCompare(b.node.title || "", "de"));
+    if (sortMode === "marke")
+      return [...filteredProducts].sort(
+        (a, b) =>
+          brandOf(a).localeCompare(brandOf(b), "de") ||
+          (a.node.title || "").localeCompare(b.node.title || "", "de")
+      );
+    return [...filteredProducts].sort((a, b) => {
       // 1. Wunschfarben-Konfiguratoren immer zuerst
       const aw = isWunschfarbe(a) ? 0 : 1;
       const bw = isWunschfarbe(b) ? 0 : 1;
@@ -392,7 +452,7 @@ export default function Shop() {
       // 4. Rest alphabetisch — stabile, nachvollziehbare Reihenfolge
       return (a.node.title || "").localeCompare(b.node.title || "", "de");
     });
-  }, [gridProducts]);
+  }, [filteredProducts, sortMode]);
 
   const title = activeCategory ? activeCategory.label : "Shop";
 
@@ -411,7 +471,7 @@ export default function Shop() {
   }, []);
 
   return (
-    <div className="container py-8 sm:py-12">
+    <div className="mx-auto w-full max-w-[1760px] px-3 sm:px-6 py-8 sm:py-10">
       <Seo
         title={title}
         description={`${title} bei Alex Autoshop Wuppertal – Lackierprodukte, Autoteile und Werkstattbedarf mit B2B-Rabatten bis 40%.`}
@@ -439,6 +499,21 @@ export default function Shop() {
 
       {/* Sentinel for IntersectionObserver */}
       <div ref={stickyRef} className="h-px -mt-px" />
+
+      <div className="lg:grid lg:grid-cols-[264px_minmax(0,1fr)] lg:gap-7 lg:items-start">
+        {/* ── Sidebar: Kategorien, Marken, Produktart, Preis ────────────── */}
+        <aside className="hidden lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pb-4">
+          <ShopFilters
+            products={gridProducts}
+            brandOf={brandOf}
+            filters={filters}
+            onChange={setFilters}
+            activeSlug={category}
+          />
+        </aside>
+
+        {/* ── Hauptspalte ──────────────────────────────────────────────── */}
+        <div className="min-w-0">
 
       {/* ── Sticky Search Bar ───────────────────────────────────────────── */}
       <div
@@ -644,6 +719,59 @@ export default function Shop() {
         </div>
       )}
 
+      {/* ── Ergebnisleiste: Treffer · Ansicht · Sortierung ──────────────── */}
+      <div className="flex flex-wrap items-center gap-3 mb-4 py-2.5 px-4 rounded-xl border border-border bg-card">
+        <p className="text-sm font-semibold">
+          {isLoading && sortedGridProducts.length === 0 ? "lädt …" : `${sortedGridProducts.length} Produkte`}
+          {sortedGridProducts.length !== gridProducts.length && (
+            <span className="text-muted-foreground font-normal"> von {gridProducts.length}</span>
+          )}
+        </p>
+
+        <button
+          type="button"
+          onClick={() => setMobileFiltersOpen(true)}
+          className="lg:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:border-primary/50 transition-colors"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" /> Filter
+        </button>
+
+        <div className="ml-auto flex items-center gap-3">
+          {/* Spaltenzahl — wie bei den grossen Katalogen */}
+          <div className="hidden xl:flex items-center gap-0.5 rounded-lg border border-border bg-secondary/40 p-0.5">
+            {([4, 5, 6] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCols(c)}
+                title={`${c} Produkte pro Zeile`}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-xs font-bold tabular-nums transition-colors",
+                  columns === c ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="hidden sm:inline">Sortiert nach:</span>
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              className="h-9 rounded-lg border border-border bg-card px-2.5 text-sm text-foreground focus:outline-none focus:border-primary/60"
+            >
+              {(Object.keys(SORT_LABELS) as SortMode[]).map((k) => (
+                <option key={k} value={k}>{SORT_LABELS[k]}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <ActiveFilterChips filters={filters} onChange={setFilters} />
+
       {/* Mengenmodus: Alle Produkte als kompakte Liste mit Mengenfeld */}
       {shopMode === 'menge' ? (
         <div className="space-y-2 mb-8">
@@ -705,7 +833,47 @@ export default function Shop() {
         error={error}
         hasNextPage={hasNextPage}
         onLoadMore={loadMore}
+        columns={columns}
       />
+      )}
+        </div>{/* Ende Hauptspalte */}
+      </div>{/* Ende Layout-Grid */}
+
+      {/* ── Filter als Overlay auf dem Handy ────────────────────────────── */}
+      {mobileFiltersOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            onClick={() => setMobileFiltersOpen(false)}
+          />
+          <div className="absolute inset-y-0 left-0 w-[88%] max-w-[360px] bg-background border-r border-border overflow-y-auto p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-bold">Filter</p>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                className="w-9 h-9 rounded-lg border border-border flex items-center justify-center"
+                aria-label="Filter schliessen"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <ShopFilters
+              products={gridProducts}
+              brandOf={brandOf}
+              filters={filters}
+              onChange={setFilters}
+              activeSlug={category}
+            />
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen(false)}
+              className="btn-primary w-full mt-4"
+            >
+              {sortedGridProducts.length} Produkte anzeigen
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -16,6 +16,8 @@
  *   GET  /api/yqcat?diag=1                    Konfig-/Erreichbarkeitstest
  */
 
+export const config = { runtime: 'nodejs', maxDuration: 30 };
+
 const BASE = process.env.YQ_BASE || 'https://oem-api.yqservice.eu/restApi/v2';
 const LOGIN = process.env.YQ_LOGIN;
 const PASSWORD = process.env.YQ_PASSWORD;
@@ -104,7 +106,7 @@ async function callYq(action, body, language, timeoutMs = 25000) {
   }
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return send(res, 200, { ok: true });
 
   const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
@@ -159,4 +161,4 @@ module.exports = async (req, res) => {
   const out = await callYq(action, body, language);
   if (out.json) return send(res, out.status, out.json, out.status === 200 ? CACHE_SECONDS[action] : 0);
   return send(res, out.status, { error: out.text || 'Keine Antwort von YQ', ms: out.ms });
-};
+}
