@@ -44,17 +44,20 @@ export function MembershipSelect({ level, onChange }: { level: MemberLevelId; on
 // ─── IC-STYLE PREIS-BLOCK ────────────────────────────────────
 
 /**
- * Preisanzeige à la Intercars:
- * - Obere Zeile: EK-Preis (klein, grau) — nur wenn vorhanden
- * - Untere Zeile: Einzelhandel / UVP (groß, fett) = was Kunden zahlen
+ * Preisanzeige:
+ * - Einzelhandel / UVP (groß, fett) = was Kunden zahlen
  * - Mitgliedspreis: hervorgehoben mit Badge wenn Level gewählt
+ *
+ * WICHTIG: Der Einkaufspreis (priceEK) wird NIRGENDS angezeigt — Kunden dürfen
+ * unsere Einkaufskonditionen nicht sehen. Das Feld bleibt nur bestehen, damit
+ * bestehende Aufrufer nicht brechen; es wird bewusst ignoriert.
  */
 export function PriceBlock({
   price,
-  priceEK,
   level,
 }: {
   price: number;
+  /** @deprecated Einkaufspreis — wird NICHT mehr angezeigt. */
   priceEK?: number;
   level: MemberLevelId;
 }) {
@@ -64,13 +67,6 @@ export function PriceBlock({
 
   return (
     <div className="text-right">
-      {/* EK-Preis (Alex's Einkaufspreis) — kleine graue Zeile à la IC */}
-      {priceEK != null && priceEK > 0 && priceEK < price && (
-        <p className="text-[11px] text-muted-foreground/70 leading-none mb-0.5">
-          EK {eur(priceEK)}
-        </p>
-      )}
-
       {myPrice != null ? (
         <>
           <p className="text-xs text-muted-foreground leading-none mb-0.5">

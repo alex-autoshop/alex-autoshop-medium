@@ -10,6 +10,7 @@ import {
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
+import { PartnerStrip } from "@/components/PartnerStrip";
 import { apVehicleByKba, apResolveVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, apEnrichVehicle, type ApArticle, type ApCategoryNode, type ApVinCandidate } from "@/lib/autoparts";
 import { STATIC_CAT_TREE } from "@/lib/catTreeStatic";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
@@ -520,7 +521,7 @@ export default function Teileportal() {
             return;
           }
           if (res && res.candidates.length === 0 && res.manufacturer) {
-            setVehicleError(`${res.manufacturer}${res.model ? ' ' + res.model : ''} per VIN erkannt, aber keine passende TecDoc-Variante gefunden. Bitte HSN/TSN nutzen oder ruf uns an: ${SHOP_INFO.phone}`);
+            setVehicleError(`${res.manufacturer}${res.model ? ' ' + res.model : ''} per VIN erkannt, aber keine passende Motorvariante gefunden. Bitte HSN/TSN nutzen oder ruf uns an: ${SHOP_INFO.phone}`);
             setPhase('search'); setVehicleLoading(false); return;
           }
         } catch { /* weiter zu Fallback */ }
@@ -924,7 +925,7 @@ export default function Teileportal() {
               {/* Feature Badges */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
                 className="flex flex-wrap justify-center gap-2 mb-5">
-                {['5 Mio. Teile', 'Intercars & TecDoc', 'B2B-Preise ab Level 1', 'Next-Day Lieferung'].map(b => (
+                {['5 Mio. Teile', 'Günstigster Preis je Teil & Marke', 'B2B-Preise ab Level 1', 'Next-Day Lieferung'].map(b => (
                   <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium text-primary">
                     <Check className="w-3.5 h-3.5" /> {b}
                   </span>
@@ -1093,6 +1094,9 @@ export default function Teileportal() {
                   )}
                 </div>
               </div>
+
+              {/* Partner / Bezugsquellen */}
+              <PartnerStrip className="mt-10" />
 
               {/* Contact links */}
               <div className="flex justify-center gap-6 mt-10 pt-6 border-t border-border/50">
