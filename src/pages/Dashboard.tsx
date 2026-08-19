@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { B2BProductCard } from "@/components/B2BProductCard";
+import { MeineArtikel, Schnellerfassung, Bestelllisten } from "@/components/B2BTools";
 import { Inbox } from "@/components/Inbox";
 import { MaterialPlanner } from "@/components/MaterialPlanner";
 import Teileportal from "@/pages/Teileportal";
@@ -152,7 +153,7 @@ export default function Dashboard() {
       </div>
 
       {tab === "overview" && <Overview level={level} profile={profile} trialActive={trialActive} effectiveLevel={effectiveLevel} />}
-      {tab === "shop" && <DashboardShop level={effectiveLevel} profile={profile} trialActive={trialActive} />}
+      {tab === "shop" && <DashboardShop level={effectiveLevel} profile={profile} trialActive={trialActive} userId={user?.id} />}
       {tab === "teileboerse" && (
         <div className="-mt-4">
           <Teileportal />
@@ -323,7 +324,17 @@ function CurrentModules({ level, profile }: { level: number; profile: import("@/
   );
 }
 
-function DashboardShop({ level, profile, trialActive }: { level: number; profile: import("@/context/AuthContext").CompanyProfile; trialActive?: boolean }) {
+type B2BView = "katalog" | "meine" | "schnell" | "listen";
+
+const B2B_VIEWS: { id: B2BView; label: string; hint: string }[] = [
+  { id: "katalog", label: "Katalog",         hint: "Alle Artikel durchsuchen" },
+  { id: "meine",   label: "Meine Artikel",   hint: "Nachbestellen mit einem Klick" },
+  { id: "schnell", label: "Schnellerfassung", hint: "Artikelnummern direkt eintippen" },
+  { id: "listen",  label: "Bestelllisten",   hint: "Gespeicherte Zusammenstellungen" },
+];
+
+function DashboardShop({ level, profile, trialActive, userId }: { level: number; profile: import("@/context/AuthContext").CompanyProfile; trialActive?: boolean; userId?: string }) {
+  const [view, setView] = useState<B2BView>("katalog");
   const [category, setCategory] = useState<string>("");
   const [search, setSearch] = useState("");
   const [submitted, setSubmitted] = useState("");
@@ -359,6 +370,41 @@ function DashboardShop({ level, profile, trialActive }: { level: number; profile
         </div>
       </div>
 
+      {/* ── Werkzeuge: Katalog · Meine Artikel · Schnellerfassung · Listen ── */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {B2B_VIEWS.map((v) => (
+          <button
+            key={v.id}
+            onClick={() => setView(v.id)}
+            title={v.hint}
+            className={cn(
+              "px-4 py-2 rounded-xl border text-sm font-semibold transition-all",
+              view === v.id
+                ? "bg-night text-white border-night shadow-sm"
+                : "bg-card border-border text-muted-foreground hover:border-primary hover:text-foreground"
+            )}
+          >
+            {v.label}
+          </button>
+        ))}
+        <p className="w-full text-xs text-muted-foreground mt-0.5">
+          {B2B_VIEWS.find((v) => v.id === view)?.hint}
+        </p>
+      </div>
+
+      {view === "meine" && (
+        userId ? <MeineArtikel userId={userId} discount={discount} />
+               : <p className="text-sm text-muted-foreground">Bitte neu anmelden.</p>
+      )}
+      {view === "schnell" && (
+        <Schnellerfassung products={products} discount={discount} isLoading={isLoading} />
+      )}
+      {view === "listen" && (
+        userId ? <Bestelllisten userId={userId} discount={discount} />
+               : <p className="text-sm text-muted-foreground">Bitte neu anmelden.</p>
+      )}
+
+      {view === "katalog" && (<>
       <form
         className="relative mb-4 max-w-xl"
         onSubmit={(e) => {
@@ -422,6 +468,7 @@ function DashboardShop({ level, profile, trialActive }: { level: number; profile
           )}
         </>
       )}
+      </>)}
     </div>
   );
 }
