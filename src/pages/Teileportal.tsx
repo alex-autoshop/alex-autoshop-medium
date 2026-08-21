@@ -11,6 +11,7 @@ import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import { PartnerStrip } from "@/components/PartnerStrip";
+import { TeileWorkspace } from "@/components/TeileWorkspace";
 import { apVehicleByKba, apResolveVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, apEnrichVehicle, type ApArticle, type ApCategoryNode, type ApVinCandidate } from "@/lib/autoparts";
 import { STATIC_CAT_TREE } from "@/lib/catTreeStatic";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
@@ -1259,7 +1260,15 @@ export default function Teileportal() {
               {partsError && <p className="text-destructive text-sm">{partsError}</p>}
 
               {!partsLoading && articles.length > 0 && (
-                <div className="flex gap-5">
+                <TeileWorkspace
+                  articles={filtered}
+                  level={effectiveMemberLevel}
+                  brandLogo={(b) => getBrandLogo(b)}
+                  onAddToCart={(a, qty) => { for (let i = 0; i < qty; i++) addArticleToCart(a as Article); }}
+                  onZoom={(a) => openDetail(a as DetailArticle)}
+                  vehicleLabel={vehicleLabel}
+                  left={
+                    <div className="space-y-4">
                   {allBrands.length > 1 && (
                     <BrandFilter
                       brands={allBrands.map(b => ({ name: b, count: articles.filter(a => a.brand === b).length, logo: getBrandLogo(b, 'd') }))}
@@ -1268,7 +1277,10 @@ export default function Teileportal() {
                       onReset={() => setSelectedBrands(new Set())}
                     />
                   )}
-                  <div className="flex-1 min-w-0">
+                    </div>
+                  }
+                  title={
+                    <>
                     <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
                       <span className="font-bold">{activeCat ? activeCat.name : 'Suchergebnisse'}
                         <span className="text-muted-foreground font-normal text-sm ml-2">({totalCount > articles.length ? totalCount : articles.length})</span>
@@ -1280,6 +1292,10 @@ export default function Teileportal() {
                         {selectedBrands.size > 0 && <span className="text-sm text-muted-foreground">{filtered.length} gefiltert</span>}
                       </div>
                     </div>
+                    </>
+                  }
+                  toolbar={
+                    <>
                     {/* ── SCHNELLFILTER + FILTER-BAR ─────────────────────── */}
                     <div className="mb-4 rounded-xl border border-border bg-card/60 overflow-hidden">
                       {/* Schnellfilter-Chips */}
@@ -1391,122 +1407,9 @@ export default function Teileportal() {
                         )}
                       </div>
                     </div>
-
-                    {/* IC-Style Tabellen-Header — Desktop */}
-                    <div className="hidden lg:grid grid-cols-[56px_1fr_90px_180px_200px] gap-4 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/60 border-b border-border/60 mb-1">
-                      <span></span>
-                      <span>Produkt / Artikelnummer</span>
-                      <span className="text-center">Hersteller</span>
-                      <span>Lieferung</span>
-                      <span className="text-right">Preis (inkl. MwSt.)</span>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {filtered.map((a, aIdx) => (
-                        <motion.div key={a.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: Math.min(aIdx * 0.03, 0.3) }}
-                          className="border border-border rounded-xl bg-card hover:border-primary/40 hover:bg-card/80 transition-all duration-150 overflow-hidden group">
-
-                          {/* ── Haupt-Zeile ── */}
-                          <div className="flex items-center gap-3 px-3 py-3 lg:grid lg:grid-cols-[56px_1fr_90px_180px_200px] lg:gap-4 lg:px-4 lg:py-3.5">
-
-                            {/* Bild — 56×56, kompakt wie IC */}
-                            <div onClick={() => openDetail(a)} role="button" tabIndex={0}
-                              className="w-14 h-14 shrink-0 rounded-lg bg-white border border-border/60 flex items-center justify-center overflow-hidden cursor-zoom-in p-1 hover:border-primary/50 transition-colors">
-                              {a.imageUrl ? (
-                                <img src={a.imageUrl} alt={a.name} loading="lazy" className="w-full h-full object-contain"
-                                  onError={e => { const logo = getBrandLogo(a.brand); if (logo) { (e.target as HTMLImageElement).src = logo; (e.target as HTMLImageElement).className = 'w-full h-full object-contain p-1.5 opacity-70'; } else (e.target as HTMLImageElement).style.display = 'none'; }} />
-                              ) : getBrandLogo(a.brand) ? (
-                                <img src={getBrandLogo(a.brand)!} alt={a.brand} loading="lazy" className="w-full h-full object-contain p-1.5 opacity-70"
-                                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                              ) : <Package className="w-5 h-5 text-muted-foreground/40" />}
-                            </div>
-
-                            {/* Artikel-Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-sm text-primary">{a.articleNumber}</span>
-                                {a.brand && (
-                                  <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-secondary/80 text-secondary-foreground/80 uppercase tracking-wide">
-                                    {a.brand}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm font-medium leading-snug text-foreground/90 truncate mt-0.5">{a.name}</p>
-                              {a.oeNumbers && a.oeNumbers.length > 0 && (
-                                <p className="text-[11px] text-muted-foreground mt-0.5 truncate">OE: {a.oeNumbers.slice(0, 3).join(' · ')}</p>
-                              )}
-                            </div>
-
-                            {/* Brand-Logo — Desktop-Spalte */}
-                            <div className="hidden lg:flex items-center justify-center">
-                              {getBrandLogo(a.brand) ? (
-                                <img src={getBrandLogo(a.brand)!} alt={a.brand} loading="lazy"
-                                  className="max-h-7 max-w-[72px] w-auto object-contain opacity-80"
-                                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                              ) : (
-                                <span className="text-[10px] text-muted-foreground/60 font-medium text-center">{a.brand}</span>
-                              )}
-                            </div>
-
-                            {/* Lieferung — Desktop-Spalte, Mobile: hidden */}
-                            <div className="hidden lg:block">
-                              <DeliveryBadge deliveryDays={a.deliveryDays} availability={a.availability} />
-                            </div>
-
-                            {/* Preise + Warenkorb */}
-                            <div className="shrink-0 ml-auto lg:ml-0 flex flex-col items-end gap-1.5">
-                              {a.price != null ? (
-                                <>
-                                  {/* Mobile: kompakte Lieferung */}
-                                  <div className="lg:hidden">
-                                    {a.deliveryDays != null && (
-                                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold ${
-                                        a.deliveryDays <= 1 ? 'bg-green-500 text-white' : 'bg-amber-400 text-amber-900'
-                                      }`}>
-                                        {a.deliveryDays <= 1 ? '1 Werktag' : `${a.deliveryDays} Werktage`}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <PriceBlock price={a.price} priceEK={a.priceEK} level={effectiveMemberLevel} />
-                                  <button onClick={() => addArticleToCart(a)}
-                                    className="btn-primary text-xs px-3 py-1.5 min-h-0 h-auto inline-flex items-center gap-1.5 mt-0.5">
-                                    <ShoppingBag className="w-3.5 h-3.5" /> Warenkorb
-                                  </button>
-                                </>
-                              ) : (
-                                <>
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/50">
-                                    Preis auf Anfrage
-                                  </span>
-                                  <div className="flex gap-1.5 mt-1">
-                                    <button onClick={() => addArticleToCart(a)}
-                                      className="btn-primary text-xs px-2.5 py-1.5 min-h-0 h-auto inline-flex items-center gap-1">
-                                      <ShoppingBag className="w-3.5 h-3.5" /> Anfragen
-                                    </button>
-                                    <button onClick={() => openDetail(a)}
-                                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border text-xs font-medium hover:border-primary/50 hover:text-primary transition-colors">
-                                      Details
-                                    </button>
-                                  </div>
-                                  <a href={`tel:${SHOP_INFO.phone}`}
-                                    className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors mt-0.5">
-                                    <Phone className="w-3 h-3" /> {SHOP_INFO.phone}
-                                  </a>
-                                </>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Spec-Zeile */}
-                          <SpecStrip articleId={a.id} specs={a.specs} auto={aIdx < 12} />
-                          <ArticleExpander articleId={a.id} articleNumber={a.articleNumber} specs={a.specs} oeNumbers={a.oeNumbers}
-                            onSearchNumber={(no) => { setPartQuery(no); setActiveCat(null); setPhase('articles'); loadParts(no); }} />
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                    </>
+                  }
+                />
               )}
 
               {!partsLoading && articles.length === 0 && !partsError && (
