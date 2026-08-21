@@ -20,6 +20,7 @@ import { ArticleExpander, BrandFilter, SubCatList } from "@/components/Teileport
 import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip, type MemberLevelId } from "@/components/TeileportalPricing";
 import { useAuth } from "@/context/AuthContext";
 import { OemExplosionView } from "@/components/OemExplosionView";
+import { OemCatalog } from "@/components/OemCatalog";
 
 const BRAND_DOMAINS: Record<string, string> = {
   'BOSCH': 'bosch.com', 'BREMBO': 'brembo.com', 'ZIMMERMANN': 'zimmermann-brake.com',
@@ -1425,12 +1426,23 @@ export default function Teileportal() {
 
         {/* ── OEM EXPLOSIONSKATALOG ────────────────────────────── */}
         {phase === 'oem' && (
-          <OemExplosionView
-            vehicle={vehicle}
-            vehicleKtype={vehicleKtype}
-            vehicleVin={vehicleVin}
-            onBack={() => setPhase(vehicle ? 'categories' : 'search')}
-          />
+          vehicleVin ? (
+            /* Echter Hersteller-Katalog mit Explosionszeichnungen — braucht die FIN. */
+            <OemCatalog
+              vin={vehicleVin}
+              vehicleLabel={vehicleLabel}
+              onBack={() => setPhase(vehicle ? 'categories' : 'search')}
+              onAddToCart={(p) => addArticleToCart({ name: p.name, brand: 'OE', articleNumber: p.number })}
+            />
+          ) : (
+            /* Ohne FIN bleibt die Baugruppen-Übersicht aus dem Teilekatalog. */
+            <OemExplosionView
+              vehicle={vehicle}
+              vehicleKtype={vehicleKtype}
+              vehicleVin={vehicleVin}
+              onBack={() => setPhase(vehicle ? 'categories' : 'search')}
+            />
+          )
         )}
 
         </div>{/* end flex-1 main content */}
