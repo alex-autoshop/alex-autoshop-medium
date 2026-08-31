@@ -408,12 +408,13 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
         <span className="text-muted-foreground"> / Monat</span>
       </p>
 
+      {/* Untertitel bewusst in Rot: er soll aus dem goldenen Umfeld herausstechen */}
       {isBase ? (
-        <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
+        <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 mt-1">
           <Zap className="w-4 h-4" /> {activeDiscount}% auf das gesamte Sortiment und Teilebörse
         </p>
       ) : (
-        <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary mt-1">
+        <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 mt-1">
           <Zap className="w-4 h-4" /> Spare im Durchschnitt {savings!.toLocaleString("de-DE")} € / Monat
         </p>
       )}
