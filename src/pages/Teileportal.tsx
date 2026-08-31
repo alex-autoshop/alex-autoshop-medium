@@ -21,6 +21,7 @@ import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip, 
 import { useAuth } from "@/context/AuthContext";
 import { OemExplosionView } from "@/components/OemExplosionView";
 import { OemCatalog } from "@/components/OemCatalog";
+import { TeileboerseGate } from "@/components/TeileboerseGate";
 
 const BRAND_DOMAINS: Record<string, string> = {
   'BOSCH': 'bosch.com', 'BREMBO': 'brembo.com', 'ZIMMERMANN': 'zimmermann-brake.com',
@@ -814,6 +815,8 @@ export default function Teileportal() {
 
       <Seo title="Teilebörse – Autoteile per Schlüsselnummer oder VIN finden"
         description="HSN/TSN oder VIN eingeben, Fahrzeug erkennen, alle passenden Autoteile mit Bild und Preis." />
+
+      <TeileboerseGate />
 
       <div className="min-h-screen lg:flex">
 
