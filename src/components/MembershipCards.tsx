@@ -93,6 +93,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const navigate = useNavigate();
   const [modules, setModules] = useState<string[]>(m.defaultModules ?? m.modules);
   const [wantFreePaint, setWantFreePaint] = useState(true);
+  const [wantDetailing, setWantDetailing] = useState(true);
   const [email, setEmail] = useState("");
   const [payMethod, setPayMethod] = useState<"gocardless" | "stripe">("gocardless");
   const [loading, setLoading] = useState(false);
@@ -289,6 +290,12 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const freePaintOff = noPaint && !wantFreePaint;
   const freePaintDeduction = freePaintOff ? m.freePaintValue : 0;
 
+  // Aufbereitung ist ein eigener Posten, KEIN Rabatt-Modul: ihr Preis bleibt im
+  // Beitrag, auch wenn alle Module abgewählt sind. Sonst bekäme man 8 bzw. 30
+  // Aufbereitungen für den Basisbeitrag.
+  const detailingOn = !!m.detailing && wantDetailing;
+  const detailingCost = detailingOn ? m.detailing!.price : 0;
+
   // Per-Modul-Preis: Autoteile günstigst, Lackmaterial mittig, Lackfarben teuerst
   const moduleSum = useMemo(() => {
     if (isBase) return 0;
@@ -300,15 +307,15 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
   const price = useMemo(() => {
     const base = isBase ? m.basePrice : m.basePrice + moduleSum;
-    return Math.max(0, base - freePaintDeduction);
-  }, [isBase, moduleSum, m.basePrice, freePaintDeduction]);
+    return Math.max(0, base + detailingCost - freePaintDeduction);
+  }, [isBase, moduleSum, m.basePrice, freePaintDeduction, detailingCost]);
 
   const originalPrice = useMemo(() => {
     if (isBase || !m.originalPrice) return undefined;
     // originalPrice muss immer > actual price — proportional zum vollen Preisverhältnis
     const fullRatio = m.originalPrice / m.pricePerMonth;
-    return Math.round((m.basePrice + moduleSum) * fullRatio) - freePaintDeduction;
-  }, [isBase, moduleSum, m.originalPrice, m.pricePerMonth, m.basePrice, freePaintDeduction]);
+    return Math.round((m.basePrice + moduleSum) * fullRatio) + detailingCost - freePaintDeduction;
+  }, [isBase, moduleSum, m.originalPrice, m.pricePerMonth, m.basePrice, freePaintDeduction, detailingCost]);
 
   const savings = useMemo(() => {
     if (isBase) return null;
@@ -325,7 +332,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       const co = await fetch("/api/membership-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: mail, level: m.level, modules, price, method: payMethod, freePaint: noPaint ? wantFreePaint : true }),
+        body: JSON.stringify({ email: mail, level: m.level, modules, price, method: payMethod, freePaint: noPaint ? wantFreePaint : true, aufbereitung: detailingOn }),
       });
       const coData = await co.json().catch(() => ({}));
       if (co.ok && coData.url) {
@@ -343,6 +350,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
           modules,
           price,
           freePaint: noPaint ? wantFreePaint : true,
+          aufbereitung: detailingOn,
         }),
       });
       const data = await res.json();
@@ -531,6 +539,43 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
             </div>
           )}
 
+          {/* Aufbereitungs-Paket — abwählbar, aber preisrelevant (ab Level 2) */}
+          {!demoActive && m.detailing && (
+            <div className="mt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                Aufbereitungs-Paket (optional)
+              </p>
+              <button
+                type="button"
+                onClick={() => setWantDetailing((v) => !v)}
+                className={cn(
+                  "w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-colors min-h-[48px] text-left",
+                  detailingOn
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border bg-secondary/40 text-muted-foreground/60"
+                )}
+              >
+                <span className={cn(!detailingOn && "line-through")}>
+                  {m.detailing.vehicles} Fahrzeuge / Monat aufbereitet ({m.detailing.turnaround})
+                </span>
+                {detailingOn ? (
+                  <span className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center shrink-0">
+                    <Check className="w-3 h-3 text-primary-foreground" />
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold tracking-wide text-primary shrink-0">
+                    +{m.detailing.price} €
+                  </span>
+                )}
+              </button>
+              <p className="mt-1.5 text-[11px] text-muted-foreground leading-relaxed">
+                {detailingOn
+                  ? `Im Beitrag enthalten: ${m.detailing.price} € / Monat. Brauchst du keine Aufbereitung, abwählen und sparen.`
+                  : `Aufbereitung abgewählt — ${m.detailing.price} € / Monat gespart. Jederzeit wieder zubuchbar.`}
+              </p>
+            </div>
+          )}
+
           {/* Basis-Hinweis wenn alle Module abgewählt */}
           {isBase && (
             <div
@@ -540,8 +585,9 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
               )}
             >
               <span className="font-semibold text-foreground">
-                Alle Module abgewählt = Basis für {m.basePrice} € — {activeDiscount}% auf das gesamte
-                Sortiment und Teilebörse
+                Alle Module abgewählt = Basis für {m.basePrice + detailingCost} €
+                {detailingOn && m.detailing ? " (inkl. Aufbereitungs-Paket)" : ""} — {activeDiscount}%
+                auf das gesamte Sortiment und Teilebörse
               </span>{" "}
               — {wantFreePaint ? "inkl. Gratis-Farbe und alle" : "alle weiteren"} Mitgliedsvorteile.
               Module jederzeit einzeln zubuchbar.
@@ -553,7 +599,11 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
               const isCashback = f.label.includes("Cashback");
               const autoteileAktiv = view.includes("Autoteile");
               const isFreePaint = f.label.startsWith("Gratis Farbe");
-              const inactive = (isCashback && !autoteileAktiv) || (isFreePaint && freePaintOff);
+              const isDetailing = f.accent === "included";
+              const inactive =
+                (isCashback && !autoteileAktiv) ||
+                (isFreePaint && freePaintOff) ||
+                (isDetailing && !detailingOn);
               const isOpen = openInfo === f.label;
               const a = f.accent ? ACCENTS[f.accent] : null;
               const RowIcon = a ? a.Icon : Check;

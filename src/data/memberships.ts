@@ -25,6 +25,12 @@ export interface MembershipLevel {
   modulePrices: Record<string, number>;
   /** Monatlicher Abzug wenn das Mitglied die Gratis-Farbe abwählt (nur möglich wenn kein Lack-Modul aktiv) */
   freePaintValue: number;
+  /**
+   * Aufbereitungs-Paket als eigenständig abwählbarer Bestandteil (ab Level 2).
+   * Der Preis MUSS im Beitrag stecken bleiben, auch wenn alle Rabatt-Module
+   * abgewählt sind — sonst gäbe es 8 bzw. 30 Aufbereitungen zum Basispreis.
+   */
+  detailing?: { price: number; vehicles: number; turnaround: string };
   features: Feature[];
   savingsExample: number;
   highlight?: boolean;
@@ -138,6 +144,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     // Autoteile günstigst · Lackmaterial mittig · Lackfarben teuerst → Summe = 228 - 49 = 179 €
     modulePrices: { Autoteile: 7, Lackmaterial: 80, Lackfarben: 92 },
     freePaintValue: 15,
+    detailing: { price: 150, vehicles: 8, turnaround: "48 h" },
     savingsExample: 2347,
     features: [
       {
@@ -163,10 +170,10 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Teil oder Lackmaterial fehlt akut? Wir beschaffen und liefern im Raum Wuppertal innerhalb von etwa 2 Stunden. Zweimal pro Monat ohne Eilzuschlag, danach nur 15 € pro Einsatz. Mo–Sa bis 20:00 Uhr erreichbar.",
       },
       {
-        label: "Aufbereitung inklusive: 8 Fahrzeuge / Monat — 0 €",
+        label: "Aufbereitung inklusive: 8 Fahrzeuge / Monat (48 h)",
         accent: "included",
         badge: "Inklusive",
-        info: "Acht Fahrzeuge im Monat bereiten wir komplett auf — ohne Aufbereitungskosten. Innen und außen, verkaufsfertig innerhalb von 48 Stunden, Abholung im Raum Wuppertal inklusive. Voraussetzung: 1.200 € Monatsumsatz über Lack, Material oder Teile — dieselbe Schwelle wie beim Cashback. Die Aufbereitung ist unsere Gegenleistung dafür, dass du deinen kompletten Bedarf bei uns deckst. Weitere Fahrzeuge im selben Monat: 20 % Mitgliedsrabatt.",
+        info: "Acht Fahrzeuge im Monat bereiten wir komplett auf — innen und außen, verkaufsfertig innerhalb von 48 Stunden, Abholung im Raum Wuppertal inklusive. Keine Rechnung pro Fahrzeug: das Paket steckt mit 150 € im Monatsbeitrag und ist oben abwählbar, wenn du es nicht brauchst. Voraussetzung: 1.200 € Monatsumsatz über Lack, Material oder Teile — dieselbe Schwelle wie beim Cashback. Weitere Fahrzeuge im selben Monat: 20 % Mitgliedsrabatt.",
       },
       {
         label: "Willkommensgeschenk 250 €",
@@ -200,6 +207,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     // Autoteile günstigst · Lackmaterial mittig · Lackfarben teuerst → Summe = 430 - 89 = 341 €
     modulePrices: { Autoteile: 15, Lackmaterial: 145, Lackfarben: 181 },
     freePaintValue: 25,
+    detailing: { price: 250, vehicles: 30, turnaround: "24 h" },
     savingsExample: 5930,
     features: [
       {
@@ -231,10 +239,10 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Die direkte Handynummer von Alex persönlich. Anruf oder WhatsApp, rund um die Uhr, 7 Tage die Woche — auch sonntags und an Feiertagen. Kein Ticket, keine Warteschleife, kein Mitarbeiter dazwischen. Diese Nummer bekommst du ausschließlich als Level-3-Mitglied.",
       },
       {
-        label: "Händler-Aufbereitung inklusive: 30 Fahrzeuge / Monat — 0 € · 24-h-Garantie",
+        label: "Händler-Aufbereitung inklusive: 30 Fahrzeuge / Monat · 24-h-Garantie",
         accent: "included",
         badge: "Inklusive",
-        info: "Bis zu 30 Fahrzeuge im Monat, komplett ohne Aufbereitungskosten: Auto kommt rein, nach 24 Stunden geht es verkaufsfertig wieder raus. Hol- und Bringservice NRW-weit inklusive. Halten wir die 24 Stunden nicht ein, bekommst du 100 € Gutschrift für das Fahrzeug. Voraussetzung: 2.500 € Monatsumsatz über Lack, Material oder Teile — dieselbe Schwelle wie beim Cashback. Weitere Fahrzeuge im selben Monat: 30 % Mitgliedsrabatt.",
+        info: "Bis zu 30 Fahrzeuge im Monat: Auto kommt rein, nach 24 Stunden geht es verkaufsfertig wieder raus. Hol- und Bringservice NRW-weit inklusive. Halten wir die 24 Stunden nicht ein, bekommst du 100 € Gutschrift für das Fahrzeug. Keine Rechnung pro Fahrzeug: das Paket steckt mit 250 € im Monatsbeitrag und ist oben abwählbar. Voraussetzung: 2.500 € Monatsumsatz über Lack, Material oder Teile — dieselbe Schwelle wie beim Cashback. Weitere Fahrzeuge im selben Monat: 30 % Mitgliedsrabatt.",
       },
       {
         label: "Willkommensgeschenk 500 €",
