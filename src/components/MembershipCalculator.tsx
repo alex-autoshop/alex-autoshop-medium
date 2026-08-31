@@ -246,7 +246,9 @@ function ResultCard({
   const freePaintOff = noPaint && !wantFreePaint;
   const rate = isBase ? m.baseDiscountPercent : m.discountPercent;
 
-  // Beitrag (gleiche Logik wie auf den Mitgliedschaftskarten)
+  // Beitrag wie auf den Mitgliedschaftskarten, aber OHNE das Aufbereitungs-Paket:
+  // hier wird nur die Material-Ersparnis gerechnet, und 8 bzw. 30 Aufbereitungen
+  // gegen Lackkosten aufzurechnen würde das Ergebnis verfälschen.
   const price = useMemo(() => {
     const base = isBase
       ? m.basePrice
@@ -288,7 +290,10 @@ function ResultCard({
         <p className="font-bold">{m.name}</p>
         <span className="text-xs font-semibold text-primary">{rate}%</span>
       </div>
-      <p className="text-[11px] text-muted-foreground mb-2">{price} € Beitrag / Monat</p>
+      <p className="text-[11px] text-muted-foreground mb-2">
+        {price} € Beitrag / Monat
+        {m.detailing ? " · ohne Aufbereitungs-Paket" : ""}
+      </p>
 
       {/* Module – anklickbar */}
       <div className="space-y-1.5 mb-3">
