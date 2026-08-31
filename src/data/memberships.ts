@@ -1,6 +1,13 @@
+/** Optische Hervorhebung besonderer Leistungen in der Vorteilsliste. */
+export type FeatureAccent = "emergency" | "detailing" | "hotline";
+
 export interface Feature {
   label: string;
   info?: string;
+  /** Hebt die Zeile farbig hervor (Notfall / Aufbereitung / Hotline). */
+  accent?: FeatureAccent;
+  /** Kleines Label rechts, z.B. "NEU". */
+  badge?: string;
 }
 
 export interface MembershipLevel {
@@ -92,6 +99,18 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Im Raum Wuppertal liefern wir innerhalb von ca. 1 Stunde — wie Lieferando, aber für Lack & Teile. Mitglieder bestellen bis 17:30 Uhr (Nicht-Mitglieder bis 16:00).",
       },
       {
+        label: "Notfallbeschaffung in ~3 h",
+        accent: "emergency",
+        badge: "NEU",
+        info: "Mitten im Auftrag fehlt ein Teil oder das Lackmaterial ist leer? Wir beschaffen es und liefern im Raum Wuppertal (ca. 30 km) innerhalb von etwa 3 Stunden — auch wenn wir es selbst erst besorgen müssen. In Level 1 mit Eilzuschlag von 29 € pro Einsatz, Mo–Sa während der Öffnungszeiten.",
+      },
+      {
+        label: "Fahrzeugaufbereitung zum Mitgliedspreis (−10 %)",
+        accent: "detailing",
+        badge: "NEU",
+        info: "Aufbereitung in unserer Werkstatt zum Mitgliedspreis: 10 % Nachlass auf alle Aufbereitungspakete, 1 Fahrzeug pro Monat, Fertigstellung in der Regel innerhalb von 72 Stunden. An- und Abgabe bei uns in Wuppertal. Die Aufbereitung wird separat berechnet — die Mitgliedschaft sichert dir den Preis und den Platz.",
+      },
+      {
         label: "Willkommensgeschenk 50 €",
         info: "Einmalig beim Start deiner Mitgliedschaft: 50 € Guthaben auf deine erste Bestellung.",
       },
@@ -136,6 +155,18 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       {
         label: "Wuppertal-Express in ~1 h",
         info: "Im Raum Wuppertal liefern wir innerhalb von ca. 1 Stunde — wie Lieferando, aber für Lack & Teile. Mitglieder bestellen bis 17:30 Uhr (Nicht-Mitglieder bis 16:00).",
+      },
+      {
+        label: "Notfallbeschaffung in ~2 h · 2× / Monat ohne Zuschlag",
+        accent: "emergency",
+        badge: "NEU",
+        info: "Teil oder Lackmaterial fehlt akut? Wir beschaffen und liefern im Raum Wuppertal innerhalb von etwa 2 Stunden. Zweimal pro Monat ohne Eilzuschlag, danach nur 15 € pro Einsatz. Mo–Sa bis 20:00 Uhr erreichbar.",
+      },
+      {
+        label: "Aufbereitungs-Paket: 8 Fahrzeuge / Monat (−20 %)",
+        accent: "detailing",
+        badge: "NEU",
+        info: "Fester Aufbereitungs-Platz für bis zu 8 Fahrzeuge im Monat, 20 % Nachlass auf alle Pakete und Fertigstellung innerhalb von 48 Stunden. Abholung im Raum Wuppertal kostenlos. Gedacht für Händler und Werkstätten mit regelmäßigem Zulauf. Die Aufbereitung selbst wird separat berechnet — die Mitgliedschaft sichert dir Preis, Platz und Termin.",
       },
       {
         label: "Willkommensgeschenk 250 €",
@@ -186,6 +217,24 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       {
         label: "Wuppertal-Express in ~1 h",
         info: "Im Raum Wuppertal liefern wir innerhalb von ca. 1 Stunde. Mitglieder bestellen bis 17:30 Uhr (Nicht-Mitglieder bis 16:00).",
+      },
+      {
+        label: "Notfallbeschaffung in ~1 h · unbegrenzt, ohne Zuschlag",
+        accent: "emergency",
+        badge: "NEU",
+        info: "Teil oder Lackmaterial fehlt akut? Wir beschaffen und liefern im Raum Wuppertal innerhalb von etwa 1 Stunde — unbegrenzt oft und ohne Eilzuschlag, 7 Tage die Woche, auch sonntags.",
+      },
+      {
+        label: "Alex-Notfallnummer — 24/7, auch sonntags",
+        accent: "hotline",
+        badge: "NUR LEVEL 3",
+        info: "Die direkte Handynummer von Alex persönlich. Anruf oder WhatsApp, rund um die Uhr, 7 Tage die Woche — auch sonntags und an Feiertagen. Kein Ticket, keine Warteschleife, kein Mitarbeiter dazwischen. Diese Nummer bekommst du ausschließlich als Level-3-Mitglied.",
+      },
+      {
+        label: "Händler-Aufbereitung: 30 Fahrzeuge / Monat · 24-h-Garantie (−30 %)",
+        accent: "detailing",
+        badge: "NEU",
+        info: "Für Händler: bis zu 30 Fahrzeuge im Monat, 30 % Nachlass auf alle Aufbereitungspakete — und eine echte Termingarantie. Auto kommt rein, nach 24 Stunden geht es verkaufsfertig wieder raus. Halten wir die 24 Stunden nicht ein, ist die Aufbereitung für dich kostenlos. Abholung und Rückführung NRW-weit inklusive. Die Aufbereitung wird separat berechnet — die Mitgliedschaft sichert dir Preis, Kapazität und Termingarantie.",
       },
       {
         label: "Willkommensgeschenk 500 €",

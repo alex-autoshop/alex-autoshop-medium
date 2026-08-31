@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Check, Zap, Loader2, Info, Clock, MousePointer2, RotateCcw } from "lucide-react";
-import type { Feature } from "@/data/memberships";
+import {
+  Check,
+  Zap,
+  Loader2,
+  Info,
+  Clock,
+  MousePointer2,
+  RotateCcw,
+  Siren,
+  CarFront,
+  PhoneCall,
+} from "lucide-react";
+import type { Feature, FeatureAccent } from "@/data/memberships";
 import { toast } from "sonner";
 import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
 import { useAuth } from "@/context/AuthContext";
@@ -35,6 +46,38 @@ const DEMO_SLOT = 900;         // ms pro Modul
 const DEMO_TAP = 420;          // Tipp-Zeitpunkt innerhalb eines Slots
 const DEMO_HOLD_BASE = 1250;   // Basis-Zustand kurz stehen lassen
 const DEMO_RESTORE_STEP = 170; // Stagger beim Wiederherstellen
+
+/* ---------------------------------------------------------------------------
+ * Hervorgehobene Leistungen: Notfallbeschaffung, Aufbereitung und — exklusiv
+ * für Level 3 — die persönliche Notfallnummer. Rot signalisiert Dringlichkeit,
+ * Anthrazit/Gold das VIP-Feature. Alles andere bleibt die ruhige Häkchenliste.
+ * -------------------------------------------------------------------------*/
+const ACCENTS: Record<
+  FeatureAccent,
+  { Icon: typeof Siren; row: string; icon: string; text: string; note: string }
+> = {
+  emergency: {
+    Icon: Siren,
+    row: "border-red-200 bg-red-50",
+    icon: "text-red-600",
+    text: "text-red-900",
+    note: "bg-red-100/70 text-red-900",
+  },
+  detailing: {
+    Icon: CarFront,
+    row: "border-foreground/15 bg-foreground/[0.04]",
+    icon: "text-foreground/70",
+    text: "text-foreground",
+    note: "bg-foreground/[0.06] text-foreground/80",
+  },
+  hotline: {
+    Icon: PhoneCall,
+    row: "border-transparent bg-[#1a1a1a]",
+    icon: "text-gold-bright",
+    text: "text-white",
+    note: "bg-white/10 text-white/85",
+  },
+};
 
 type Cursor = { top: number; left: number; visible: boolean; tap: boolean };
 
@@ -505,22 +548,48 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
               const isFreePaint = f.label.startsWith("Gratis Farbe");
               const inactive = (isCashback && !autoteileAktiv) || (isFreePaint && freePaintOff);
               const isOpen = openInfo === f.label;
+              const a = f.accent ? ACCENTS[f.accent] : null;
+              const RowIcon = a ? a.Icon : Check;
               return (
                 <li
                   key={f.label}
                   className={cn(
                     "flex flex-col gap-0.5 text-sm transition-opacity duration-300",
+                    a && "rounded-xl border px-2.5 py-2",
+                    a?.row,
+                    a?.text,
                     inactive && "opacity-40"
                   )}
                 >
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                    <span className={cn("flex-1", inactive && "line-through")}>{f.label}</span>
+                  <div className="flex items-start gap-2">
+                    <RowIcon
+                      className={cn("w-4 h-4 mt-0.5 shrink-0", a ? a.icon : "text-primary")}
+                    />
+                    <span className={cn("flex-1 leading-snug", a && "font-semibold", inactive && "line-through")}>
+                      {f.label}
+                      {f.badge && (
+                        <span
+                          className={cn(
+                            "ml-1.5 align-middle inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wider whitespace-nowrap",
+                            f.accent === "hotline"
+                              ? "bg-gold-bright text-[#1a1a1a]"
+                              : "border border-current opacity-60"
+                          )}
+                        >
+                          {f.badge}
+                        </span>
+                      )}
+                    </span>
                     {f.info && (
                       <button
                         type="button"
                         onClick={() => setOpenInfo(isOpen ? null : f.label)}
-                        className="shrink-0 w-4 h-4 rounded-full border border-muted-foreground/40 flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                        className={cn(
+                          "shrink-0 w-4 h-4 mt-0.5 rounded-full border flex items-center justify-center transition-colors",
+                          a
+                            ? "border-current opacity-70 hover:opacity-100"
+                            : "border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary"
+                        )}
                         aria-label="Mehr Info"
                       >
                         <Info className="w-2.5 h-2.5" />
@@ -528,7 +597,12 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
                     )}
                   </div>
                   {isOpen && f.info && (
-                    <p className="ml-6 text-xs text-muted-foreground bg-secondary/60 rounded-md px-3 py-2 leading-relaxed">
+                    <p
+                      className={cn(
+                        "ml-6 mt-1 text-xs rounded-md px-3 py-2 leading-relaxed",
+                        a ? a.note : "text-muted-foreground bg-secondary/60"
+                      )}
+                    >
                       {f.info}
                     </p>
                   )}

@@ -50,6 +50,7 @@ import { whatsappLink } from "@/data/shopInfo";
 import { requestMembership, sendMessage } from "@/lib/inbox";
 import { MembershipCards } from "@/components/MembershipCards";
 import { cn } from "@/lib/utils";
+import { HotlineCard } from "@/components/HotlineCard";
 
 type Tab = "overview" | "shop" | "teileboerse" | "inbox" | "planner" | "orders" | "affiliate" | "profile" | "settings";
 
@@ -231,6 +232,9 @@ function Overview({ level, profile, trialActive, effectiveLevel }: {
           </div>
         </div>
       </div>
+
+      {/* Notfallnummer — nur für bezahlte Level-3-Mitglieder (kein Trial) */}
+      {level === 3 && <HotlineCard />}
 
       {/* Mitgliedschaft verwalten / wechseln */}
       <div className="card-tilt hover:translate-y-0 p-6">

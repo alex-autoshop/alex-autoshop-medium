@@ -15,6 +15,7 @@ const Shop = lazy(() => import("@/pages/Shop"));
 const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
 const Mitgliedschaft = lazy(() => import("@/pages/Mitgliedschaft"));
 const Teileportal = lazy(() => import("@/pages/Teileportal"));
+const AdminMembers = lazy(() => import("@/pages/AdminMembers"));
 const Fahrzeugmarkt = lazy(() => import("@/pages/Fahrzeugmarkt"));
 const Laden = lazy(() => import("@/pages/Laden"));
 const Konto = lazy(() => import("@/pages/Konto"));
@@ -51,6 +52,7 @@ export default function App() {
           <Routes>
             {/* Admin-Chat: kein Header, kein Footer, kein Widget */}
             <Route path="/admin/chat" element={<AdminChat />} />
+            <Route path="/admin/mitglieder" element={<AdminMembers />} />
             {/* Alle anderen Seiten mit normalem Layout */}
             <Route path="*" element={
               <div className="min-h-screen flex flex-col">
