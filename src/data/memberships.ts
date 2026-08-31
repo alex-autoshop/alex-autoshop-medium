@@ -1,5 +1,5 @@
 /** Optische Hervorhebung besonderer Leistungen in der Vorteilsliste. */
-export type FeatureAccent = "emergency" | "detailing" | "hotline";
+export type FeatureAccent = "emergency" | "detailing" | "included" | "hotline";
 
 export interface Feature {
   label: string;
@@ -108,7 +108,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         label: "Fahrzeugaufbereitung zum Mitgliedspreis (−10 %)",
         accent: "detailing",
         badge: "NEU",
-        info: "Aufbereitung in unserer Werkstatt zum Mitgliedspreis: 10 % Nachlass auf alle Aufbereitungspakete, 1 Fahrzeug pro Monat, Fertigstellung in der Regel innerhalb von 72 Stunden. An- und Abgabe bei uns in Wuppertal. Die Aufbereitung wird separat berechnet — die Mitgliedschaft sichert dir den Preis und den Platz.",
+        info: "Aufbereitung in unserer Werkstatt zum Mitgliedspreis: 10 % Nachlass auf alle Pakete, 1 Fahrzeug pro Monat, fertig in der Regel innerhalb von 72 Stunden. An- und Abgabe bei uns in Wuppertal. In Level 1 wird die Aufbereitung separat berechnet — ab Level 2 ist sie komplett inklusive.",
       },
       {
         label: "Willkommensgeschenk 50 €",
@@ -163,10 +163,10 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Teil oder Lackmaterial fehlt akut? Wir beschaffen und liefern im Raum Wuppertal innerhalb von etwa 2 Stunden. Zweimal pro Monat ohne Eilzuschlag, danach nur 15 € pro Einsatz. Mo–Sa bis 20:00 Uhr erreichbar.",
       },
       {
-        label: "Aufbereitungs-Paket: 8 Fahrzeuge / Monat (−20 %)",
-        accent: "detailing",
-        badge: "NEU",
-        info: "Fester Aufbereitungs-Platz für bis zu 8 Fahrzeuge im Monat, 20 % Nachlass auf alle Pakete und Fertigstellung innerhalb von 48 Stunden. Abholung im Raum Wuppertal kostenlos. Gedacht für Händler und Werkstätten mit regelmäßigem Zulauf. Die Aufbereitung selbst wird separat berechnet — die Mitgliedschaft sichert dir Preis, Platz und Termin.",
+        label: "Aufbereitung inklusive: 8 Fahrzeuge / Monat — 0 €",
+        accent: "included",
+        badge: "Inklusive",
+        info: "Acht Fahrzeuge im Monat bereiten wir komplett auf — ohne Aufbereitungskosten. Innen und außen, verkaufsfertig innerhalb von 48 Stunden, Abholung im Raum Wuppertal inklusive. Voraussetzung: 1.200 € Monatsumsatz über Lack, Material oder Teile — dieselbe Schwelle wie beim Cashback. Die Aufbereitung ist unsere Gegenleistung dafür, dass du deinen kompletten Bedarf bei uns deckst. Weitere Fahrzeuge im selben Monat: 20 % Mitgliedsrabatt.",
       },
       {
         label: "Willkommensgeschenk 250 €",
@@ -231,10 +231,10 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Die direkte Handynummer von Alex persönlich. Anruf oder WhatsApp, rund um die Uhr, 7 Tage die Woche — auch sonntags und an Feiertagen. Kein Ticket, keine Warteschleife, kein Mitarbeiter dazwischen. Diese Nummer bekommst du ausschließlich als Level-3-Mitglied.",
       },
       {
-        label: "Händler-Aufbereitung: 30 Fahrzeuge / Monat · 24-h-Garantie (−30 %)",
-        accent: "detailing",
-        badge: "NEU",
-        info: "Für Händler: bis zu 30 Fahrzeuge im Monat, 30 % Nachlass auf alle Aufbereitungspakete — und eine echte Termingarantie. Auto kommt rein, nach 24 Stunden geht es verkaufsfertig wieder raus. Halten wir die 24 Stunden nicht ein, ist die Aufbereitung für dich kostenlos. Abholung und Rückführung NRW-weit inklusive. Die Aufbereitung wird separat berechnet — die Mitgliedschaft sichert dir Preis, Kapazität und Termingarantie.",
+        label: "Händler-Aufbereitung inklusive: 30 Fahrzeuge / Monat — 0 € · 24-h-Garantie",
+        accent: "included",
+        badge: "Inklusive",
+        info: "Bis zu 30 Fahrzeuge im Monat, komplett ohne Aufbereitungskosten: Auto kommt rein, nach 24 Stunden geht es verkaufsfertig wieder raus. Hol- und Bringservice NRW-weit inklusive. Halten wir die 24 Stunden nicht ein, bekommst du 100 € Gutschrift für das Fahrzeug. Voraussetzung: 2.500 € Monatsumsatz über Lack, Material oder Teile — dieselbe Schwelle wie beim Cashback. Weitere Fahrzeuge im selben Monat: 30 % Mitgliedsrabatt.",
       },
       {
         label: "Willkommensgeschenk 500 €",

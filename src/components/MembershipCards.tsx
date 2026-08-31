@@ -70,6 +70,13 @@ const ACCENTS: Record<
     text: "text-foreground",
     note: "bg-foreground/[0.06] text-foreground/80",
   },
+  included: {
+    Icon: CarFront,
+    row: "border-primary/40 bg-primary/10",
+    icon: "text-primary",
+    text: "text-primary",
+    note: "bg-primary/10 text-foreground/80",
+  },
   hotline: {
     Icon: PhoneCall,
     row: "border-transparent bg-[#1a1a1a]",
@@ -571,8 +578,10 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
                         <span
                           className={cn(
                             "ml-1.5 align-middle inline-flex items-center rounded-full px-1.5 py-px text-[9px] font-bold uppercase tracking-wider whitespace-nowrap",
-                            f.accent === "hotline"
-                              ? "bg-gold-bright text-[#1a1a1a]"
+                            f.accent === "hotline" || f.accent === "included"
+                              ? f.accent === "hotline"
+                                ? "bg-gold-bright text-[#1a1a1a]"
+                                : "bg-primary text-primary-foreground"
                               : "border border-current opacity-60"
                           )}
                         >
