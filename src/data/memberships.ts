@@ -101,8 +101,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "3 Touren täglich durch NRW (8:00, 11:00, 14:00 Uhr). Als Mitglied kannst du bis 14:00 Uhr bestellen und bekommst noch heute deine Ware.",
       },
       {
-        label: "Wuppertal-Express in ~1 h",
-        info: "Im Raum Wuppertal liefern wir innerhalb von ca. 1 Stunde — wie Lieferando, aber für Lack & Teile. Mitglieder bestellen bis 17:30 Uhr (Nicht-Mitglieder bis 16:00).",
+        label: "Wuppertal-Expresslieferungen bis 21 Uhr",
+        info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Wie Lieferando, aber für Lack & Teile: bestellt, gepackt, gebracht. Nicht-Mitglieder erreichen uns nur bis 16:00 Uhr.",
       },
       {
         label: "Notfallbeschaffung in ~3 h",
@@ -161,8 +161,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "3 Touren täglich durch NRW (8:00, 11:00, 14:00 Uhr). Als Mitglied kannst du bis 14:00 Uhr bestellen und bekommst noch heute deine Ware.",
       },
       {
-        label: "Wuppertal-Express in ~1 h",
-        info: "Im Raum Wuppertal liefern wir innerhalb von ca. 1 Stunde — wie Lieferando, aber für Lack & Teile. Mitglieder bestellen bis 17:30 Uhr (Nicht-Mitglieder bis 16:00).",
+        label: "Wuppertal-Expresslieferungen bis 21 Uhr",
+        info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Wie Lieferando, aber für Lack & Teile: bestellt, gepackt, gebracht. Nicht-Mitglieder erreichen uns nur bis 16:00 Uhr.",
       },
       {
         label: "Notfallbeschaffung in ~2 h · 2× / Monat ohne Zuschlag",
@@ -224,8 +224,8 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "3 Touren täglich durch NRW (8:00, 11:00, 14:00 Uhr). Level-3-Mitglieder werden bei der Tourenplanung bevorzugt behandelt.",
       },
       {
-        label: "Wuppertal-Express in ~1 h",
-        info: "Im Raum Wuppertal liefern wir innerhalb von ca. 1 Stunde. Mitglieder bestellen bis 17:30 Uhr (Nicht-Mitglieder bis 16:00).",
+        label: "Wuppertal-Expresslieferungen bis 21 Uhr",
+        info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Level-3-Bestellungen werden dabei zuerst gefahren. Nicht-Mitglieder erreichen uns nur bis 16:00 Uhr.",
       },
       {
         label: "Notfallbeschaffung in ~1 h · unbegrenzt, ohne Zuschlag",
