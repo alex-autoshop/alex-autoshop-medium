@@ -419,7 +419,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                     <div key={item.uid} className="flex gap-3 border border-border rounded-xl p-3">
                       <div className="w-20 h-20 rounded-lg bg-secondary shrink-0 overflow-hidden">
                         {img && (
-                          <img src={img} alt={node.title} className="w-full h-full object-cover" loading="lazy" />
+                          <img src={img} alt={node.title} className="w-full h-full object-contain" loading="lazy" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">

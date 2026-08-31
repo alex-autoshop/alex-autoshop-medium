@@ -41,9 +41,9 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
   return (
     <div className="card-tilt overflow-hidden flex flex-col">
       <Link to={`/produkt/${node.handle}`} className="block group">
-        <div className="aspect-square bg-secondary overflow-hidden">
+        <div className="aspect-square bg-white overflow-hidden">
           {img ? (
-            <img src={img} alt={node.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <img src={img} alt={node.title} loading="lazy" className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Kein Bild</div>
           )}

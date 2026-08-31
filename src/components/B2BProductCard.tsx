@@ -52,9 +52,9 @@ export function B2BProductCard({
 
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden flex flex-col hover:border-primary/50 transition-colors">
-      <div className="aspect-square bg-secondary overflow-hidden">
+      <div className="aspect-square bg-white overflow-hidden">
         {img ? (
-          <img src={img} alt={node.title} loading="lazy" className="w-full h-full object-cover" />
+          <img src={img} alt={node.title} loading="lazy" className="w-full h-full object-contain p-2" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Kein Bild</div>
         )}

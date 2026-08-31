@@ -127,9 +127,9 @@ export default function ProductDetail() {
 
       <div className="grid md:grid-cols-2 gap-8 lg:gap-14">
         <div className="card-tilt overflow-hidden hover:translate-y-0">
-          <div className="aspect-square bg-secondary">
+          <div className="aspect-square bg-white">
             {img ? (
-              <img src={img} alt={product.title} className="w-full h-full object-cover" />
+              <img src={img} alt={product.title} className="w-full h-full object-contain p-4" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">Kein Bild</div>
             )}

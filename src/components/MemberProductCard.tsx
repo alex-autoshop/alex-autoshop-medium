@@ -43,9 +43,9 @@ export function MemberProductCard({
 
   return (
     <div className="card-tilt overflow-hidden flex flex-col">
-      <div className="aspect-square bg-secondary overflow-hidden">
+      <div className="aspect-square bg-white overflow-hidden">
         {img ? (
-          <img src={img} alt={node.title} loading="lazy" className="w-full h-full object-cover" />
+          <img src={img} alt={node.title} loading="lazy" className="w-full h-full object-contain p-2" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Kein Bild</div>
         )}
