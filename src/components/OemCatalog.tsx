@@ -5,10 +5,11 @@ import {
 } from "lucide-react";
 import {
   yqFindByVin, yqGroups, yqNavigationTree, yqUnits, yqUnitInfo, yqUnitParts,
-  linkTo, yqImage,
-  type YqLink, type YqNode, type YqUnitShort, type YqUnit, type YqPartSection, type YqPart, type YqVehicle,
+  yqAllParts, yqPartApplicability, linkTo, yqImage, partLabel, partNo,
+  type YqLink, type YqNode, type YqUnitShort, type YqUnit, type YqPartSection, type YqPart, type YqVehicle, type YqPartShort,
 } from "@/lib/yqcat";
 import { cn } from "@/lib/utils";
+import { OemOffers } from "@/components/OemOffers";
 
 /**
  * Original-Katalog im Werkstatt-Stil (Vorbild Partslink24):
@@ -201,9 +202,31 @@ export function OemCatalog({
   const [crumbs, setCrumbs] = useState<Crumb[]>([]);
   const [activePos, setActivePos] = useState<string | null>(null);
   const [treeSearch, setTreeSearch] = useState("");
+
+  /* Teilesuche im Fahrzeug: alle Teile einmal holen, dann sofort filtern.
+     Klick auf einen Treffer holt über getPartApplicability die Bildtafeln,
+     in denen das Teil sitzt, und öffnet die erste davon. */
+  const [catalogParts, setCatalogParts] = useState<YqPartShort[] | null>(null);
+  const [partHitBusy, setPartHitBusy] = useState<string | null>(null);
+  const [hitUnits, setHitUnits] = useState<{ label: string; category: string; link: YqLink }[]>([]);
+  const [hitNumber, setHitNumber] = useState<string | null>(null);
+  /** Teil, zu dem die kaufbaren Angebote unten eingeblendet werden. */
+  const [offerFor, setOfferFor] = useState<{ no: string; name: string } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+
+  const partHits = useMemo(() => {
+    const q = treeSearch.trim().toLowerCase();
+    if (!catalogParts || q.length < 2) return [];
+    return catalogParts
+      .filter(
+        (p) =>
+          (p.partName || "").toLowerCase().includes(q) ||
+          (p.partNumber || "").toLowerCase().replace(/\s/g, "").includes(q.replace(/\s/g, ""))
+      )
+      .slice(0, 60);
+  }, [catalogParts, treeSearch]);
 
   /* Fahrzeug per VIN bestimmen */
   const loadVehicle = useCallback(async () => {
@@ -268,9 +291,88 @@ export function OemCatalog({
   };
 
   const allParts = useMemo(
-    () => sections.flatMap((s) => (s.parts ?? []).map((p) => ({ ...p, section: s.name }))),
+    () => sections.flatMap((s) => (s.parts ?? []).map((p) => ({ ...p, section: s.title }))),
     [sections]
   );
+
+
+  /* Baugruppe laden und — wenn von der Suche kommend — das Teil markieren. */
+  const openUnitLink = useCallback(async (link: YqLink, highlightNumber?: string) => {
+    setBusy(true); setError(null);
+    try {
+      const [info, parts] = await Promise.all([
+        yqUnitInfo(link.token, filterState),
+        yqUnitParts(link.token, filterState),
+      ]);
+      setUnit(info.unit ?? null);
+      setSections(parts.sections);
+      setStep("unit");
+      setOfferFor(null);
+      const flat = parts.sections.flatMap((sec) => sec.parts ?? []);
+      const hit =
+        (highlightNumber &&
+          flat.find(
+            (x) =>
+              partNo(x).replace(/\s/g, "").toLowerCase() ===
+              highlightNumber.replace(/\s/g, "").toLowerCase()
+          )) ||
+        flat.find((x) => x.matched);
+      const pos = (hit?.areaCode || "").trim();
+      setActivePos(pos || null);
+      if (pos) setTimeout(() => rowRefs.current[pos]?.scrollIntoView({ block: "center" }), 60);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [filterState]);
+
+  /* Suchtreffer anklicken -> Bildtafeln ermitteln und erste öffnen. */
+  const openPartHit = useCallback(async (part: YqPartShort) => {
+    const number = (part.partNumber || "").trim();
+    if (!number || !vehicle?.token) return;
+    setPartHitBusy(number); setError(null);
+    try {
+      const { categories } = await yqPartApplicability(vehicle.token, number);
+      const found: { label: string; category: string; link: YqLink }[] = [];
+      for (const cat of categories) {
+        for (const u of cat.units ?? []) {
+          const link = linkTo(u.unit, "getUnitInfo");
+          if (link) {
+            found.push({
+              label: u.unit?.code || u.unit?.name || "Bildtafel",
+              category: cat.category?.name || "",
+              link,
+            });
+          }
+        }
+      }
+      setHitUnits(found);
+      setHitNumber(number);
+      if (found.length === 0) {
+        setError(`Zu ${number} liefert der Hersteller-Katalog keine Bildtafel.`);
+        return;
+      }
+      await openUnitLink(found[0].link, number);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPartHitBusy(null);
+    }
+  }, [vehicle?.token, openUnitLink]);
+
+
+  /* Einmal pro Fahrzeug alle Teile holen — danach sucht es ohne Netzverkehr. */
+  useEffect(() => {
+    const token = vehicle?.token;
+    if (!token) return;
+    let alive = true;
+    setCatalogParts(null);
+    yqAllParts(token)
+      .then((r) => { if (alive) setCatalogParts(r.parts); })
+      .catch(() => { if (alive) setCatalogParts([]); });
+    return () => { alive = false; };
+  }, [vehicle?.token]);
 
   const pickPos = (pos: string) => {
     setActivePos(pos);
@@ -335,10 +437,59 @@ export function OemCatalog({
             <input
               value={treeSearch}
               onChange={(e) => setTreeSearch(e.target.value)}
-              placeholder="Baugruppe suchen …"
+              placeholder="Teil oder Baugruppe suchen …"
               className="w-full h-9 pl-8 pr-2 rounded-lg border border-border bg-card text-[13px] focus:outline-none focus:border-primary/60"
             />
+            {catalogParts === null && vehicle?.token && (
+              <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-muted-foreground/50" />
+            )}
           </div>
+
+          {/* Teiletreffer — Klick springt direkt in die Explosionszeichnung */}
+          {treeSearch.trim().length >= 2 && (
+            <div className="mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1 mb-1">
+                Teile ({partHits.length}{partHits.length === 60 ? "+" : ""})
+              </p>
+              {partHits.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground px-1 py-2 leading-snug">
+                  {catalogParts === null
+                    ? "Teileliste wird geladen …"
+                    : "Kein Teil mit diesem Namen. Tipp: Originalbezeichnung tippen, z.B. Bremsscheibe."}
+                </p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {partHits.map((h, i) => {
+                    const no = (h.partNumber || "").trim();
+                    const active = hitNumber === no;
+                    return (
+                      <li key={`${no}-${i}`}>
+                        <button
+                          onClick={() => openPartHit(h)}
+                          className={cn(
+                            "w-full text-left px-2 py-1.5 rounded-md transition-colors flex items-start gap-2",
+                            active ? "bg-primary/12 ring-1 ring-inset ring-primary/40" : "hover:bg-secondary"
+                          )}
+                        >
+                          <span className="flex-1 min-w-0">
+                            <span className="block font-mono text-[11px] font-semibold truncate">{no}</span>
+                            <span className="block text-[11px] text-muted-foreground leading-snug">
+                              {h.partName || "—"}
+                            </span>
+                          </span>
+                          {partHitBusy === no ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-primary shrink-0 mt-0.5" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0 mt-0.5" />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
 
           {units.length > 0 ? (
             <>
@@ -377,7 +528,9 @@ export function OemCatalog({
               {treeNodes.map((n, i) => (
                 <TreeItem key={(n.code || n.name || i) + String(i)} node={n} depth={0} onOpen={openNode} />
               ))}
-              {treeNodes.length === 0 && !busy && (
+              {/* Nur melden wenn auch die Teilesuche nichts hat — sonst ist es Rauschen
+                  neben einer Trefferliste, die genau das Gesuchte schon zeigt. */}
+              {treeNodes.length === 0 && partHits.length === 0 && !busy && (
                 <p className="text-xs text-muted-foreground px-2 py-4">Keine Baugruppen gefunden.</p>
               )}
             </div>
@@ -385,19 +538,47 @@ export function OemCatalog({
         </aside>
 
         {/* ── Mitte: Zeichnung ── */}
-        <section className="border-r border-border min-w-0 h-[60vh] lg:h-auto">
-          {unit ? (
-            <Drawing unit={unit} activePos={activePos} onPick={pickPos} />
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center px-8 text-muted-foreground gap-2">
-              <Layers className="w-10 h-10 opacity-25" />
-              <p className="text-sm">Links eine Baugruppe wählen — die Explosionszeichnung erscheint hier.</p>
+        <section className="border-r border-border min-w-0 h-[60vh] lg:h-auto flex flex-col">
+          {/* Sitzt das gesuchte Teil in mehreren Bildtafeln, hier umschaltbar */}
+          {hitUnits.length > 1 && hitNumber && (
+            <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border bg-primary/5 overflow-x-auto">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0 pl-1">
+                {hitNumber} in
+              </span>
+              {hitUnits.map((h, i) => (
+                <button
+                  key={`${h.label}-${i}`}
+                  onClick={() => openUnitLink(h.link, hitNumber)}
+                  title={h.category}
+                  className={cn(
+                    "shrink-0 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors border",
+                    unit?.code === h.label
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card border-border text-muted-foreground hover:border-primary/60 hover:text-foreground"
+                  )}
+                >
+                  {h.label}
+                </button>
+              ))}
             </div>
           )}
+          <div className="flex-1 min-h-0">
+            {unit ? (
+              <Drawing unit={unit} activePos={activePos} onPick={pickPos} />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center px-8 text-muted-foreground gap-2">
+                <Layers className="w-10 h-10 opacity-25" />
+                <p className="text-sm">
+                  Teil suchen oder links eine Baugruppe wählen — die Explosionszeichnung erscheint hier.
+                </p>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* ── Rechts: Teileliste ── */}
-        <aside className="overflow-y-auto">
+        <aside className="flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-y-auto">
           {allParts.length > 0 ? (
             <table className="w-full text-[13px]">
               <thead className="sticky top-0 bg-secondary/90 backdrop-blur-sm">
@@ -410,17 +591,20 @@ export function OemCatalog({
               </thead>
               <tbody>
                 {allParts.map((p, i) => {
-                  const pos = (p.positionNumber || p.code || "").trim();
-                  const on = pos !== "" && pos === activePos;
-                  const no = p.number || p.oem || "";
+                  const pos = (p.areaCode || "").trim();
+                  const on = (pos !== "" && pos === activePos) || (!activePos && !!p.matched);
+                  const no = partNo(p);
                   return (
                     <tr
                       key={`${pos}-${no}-${i}`}
                       ref={(el) => { if (pos) rowRefs.current[pos] = el; }}
-                      onClick={() => pos && setActivePos(pos)}
+                      onClick={() => {
+                        if (pos) setActivePos(pos);
+                        if (no) setOfferFor({ no, name: partLabel(p) });
+                      }}
                       className={cn(
                         "border-b border-border/60 cursor-pointer transition-colors",
-                        on ? "bg-primary/10" : "hover:bg-secondary/60"
+                        on ? "bg-primary/15 ring-1 ring-inset ring-primary/40" : "hover:bg-secondary/60"
                       )}
                     >
                       <td className="px-2 py-2 align-top">
@@ -442,15 +626,15 @@ export function OemCatalog({
                             {copied === no ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-2.5 h-2.5 opacity-40" />}
                           </button>
                         )}
-                        <p className="text-muted-foreground leading-snug">{p.name || p.description}</p>
+                        <p className="text-muted-foreground leading-snug">{partLabel(p)}</p>
                       </td>
                       <td className="px-2 py-2 text-right align-top tabular-nums text-muted-foreground">
-                        {p.quantity || ""}
+                        {p.qty?.value ?? ""}
                       </td>
                       <td className="px-1 py-2 align-top">
                         {onAddToCart && no && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); onAddToCart({ name: p.name || p.description || no, number: no, unit: unit?.name }); }}
+                            onClick={(e) => { e.stopPropagation(); onAddToCart({ name: partLabel(p) || no, number: no, unit: unit?.name }); }}
                             title="Preis anfragen / in den Warenkorb"
                             className="w-7 h-7 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                           >
@@ -467,6 +651,23 @@ export function OemCatalog({
             <div className="h-full flex flex-col items-center justify-center text-center px-6 text-muted-foreground gap-2 py-16">
               <Package className="w-9 h-9 opacity-25" />
               <p className="text-sm">Hier stehen die Teile der gewählten Baugruppe — mit Positionsnummer zur Zeichnung.</p>
+            </div>
+          )}
+          </div>
+
+          {/* Kaufbare Alternativen zur angeklickten Originalnummer */}
+          {offerFor && (
+            <div className="max-h-[45%] flex flex-col min-h-0">
+              <OemOffers
+                oemNumber={offerFor.no}
+                partName={offerFor.name}
+                onClose={() => setOfferFor(null)}
+                onAddToCart={
+                  onAddToCart
+                    ? (a) => onAddToCart({ name: a.name, number: a.articleNumber, unit: a.brand })
+                    : undefined
+                }
+              />
             </div>
           )}
         </aside>

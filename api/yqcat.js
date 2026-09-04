@@ -40,6 +40,7 @@ const ACTIONS = new Set([
   'getFilter',
   'getUnitInfo',
   'getUnitParts',
+  'getAllParts',
   'getGroups',
   'getGroupParts',
   'getGroupPartsAll',
@@ -56,6 +57,7 @@ const CACHE_SECONDS = {
   getUnits: 3600,
   getUnitInfo: 3600,
   getUnitParts: 3600,
+  getAllParts: 3600,
 };
 
 function send(res, status, obj, cacheSec) {

@@ -102,7 +102,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       },
       {
         label: "Wuppertal-Expresslieferungen bis 21 Uhr",
-        info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Wie Lieferando, aber für Lack & Teile: bestellt, gepackt, gebracht. Nicht-Mitglieder erreichen uns nur bis 16:00 Uhr.",
+        info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Wie Lieferando, aber für Lack & Teile: bestellt, gepackt, gebracht. Nicht-Mitglieder erreichen uns bis 17:30 Uhr.",
       },
       {
         label: "Notfallbeschaffung in ~3 h",
@@ -162,7 +162,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       },
       {
         label: "Wuppertal-Expresslieferungen bis 21 Uhr",
-        info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Wie Lieferando, aber für Lack & Teile: bestellt, gepackt, gebracht. Nicht-Mitglieder erreichen uns nur bis 16:00 Uhr.",
+        info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Wie Lieferando, aber für Lack & Teile: bestellt, gepackt, gebracht. Nicht-Mitglieder erreichen uns bis 17:30 Uhr.",
       },
       {
         label: "Notfallbeschaffung in ~2 h · 2× / Monat ohne Zuschlag",
@@ -225,7 +225,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       },
       {
         label: "Wuppertal-Expresslieferungen bis 21 Uhr",
-        info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Level-3-Bestellungen werden dabei zuerst gefahren. Nicht-Mitglieder erreichen uns nur bis 16:00 Uhr.",
+        info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Level-3-Bestellungen werden dabei zuerst gefahren. Nicht-Mitglieder erreichen uns bis 17:30 Uhr.",
       },
       {
         label: "Notfallbeschaffung in ~1 h · unbegrenzt, ohne Zuschlag",

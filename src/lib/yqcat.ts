@@ -114,24 +114,67 @@ export interface YqUnit {
   attributes?: YqAttr[];
 }
 
-export interface YqPart {
-  /** Positionsnummer in der Zeichnung (passt zu areaCode). */
-  positionNumber?: string;
-  code?: string;
+/** Menge mit Einheit (MeasuredValue im YQ-Schema). */
+export interface YqMeasured {
+  value?: string | number;
+  unit?: string;
   name?: string;
-  description?: string;
-  /** OEM-Teilenummer. */
-  number?: string;
-  oem?: string;
-  quantity?: string;
+}
+
+/**
+ * Ein Teil aus getUnitParts / getGroupParts / getPartApplicability.
+ *
+ * ACHTUNG — die Feldnamen kommen genau so aus PartV2Dto. Insbesondere heißt
+ * die Positionsnummer in der Zeichnung `areaCode` (NICHT positionNumber) und
+ * ist der Schlüssel zu ImageMapArea.areaCode. `matched` markiert das Teil,
+ * das die Suche getroffen hat — damit lässt sich die Zeile wie bei Partslink
+ * gelb hervorheben.
+ */
+export interface YqPart {
+  partNumber?: string;
+  partName?: string;
+  partNumberFormatted?: string;
+  displayName?: string;
+  qty?: YqMeasured;
+  /** Positionsnummer in der Zeichnung — passt zu ImageMapArea.areaCode. */
+  areaCode?: string;
+  /** true, wenn dieses Teil der Suchtreffer ist. */
+  matched?: boolean;
   attributes?: YqAttr[];
+  refs?: YqLink[];
+  related?: YqPartSection;
   links?: YqLink[];
 }
 
+/** Anzeigename eines Teils, egal welches Feld der Katalog befüllt. */
+export function partLabel(p: YqPart): string {
+  return p.displayName || p.partName || p.partNumberFormatted || p.partNumber || "";
+}
+
+/** Teilenummer eines Teils in der Schreibweise des Herstellers. */
+export function partNo(p: YqPart): string {
+  return (p.partNumberFormatted || p.partNumber || "").trim();
+}
+
 export interface YqPartSection {
-  name?: string;
-  code?: string;
+  title?: string;
   parts?: YqPart[];
+}
+
+export interface YqPartShort {
+  partNumber?: string;
+  partName?: string;
+}
+
+/** Eine Baugruppe, in der ein gesuchtes Teil vorkommt. */
+export interface YqPartUnitHit {
+  unit?: YqUnitShort;
+  partSections?: YqPartSection[];
+}
+
+export interface YqPartCategory {
+  category?: { name?: string; code?: string };
+  units?: YqPartUnitHit[];
 }
 
 export interface YqError {
@@ -292,10 +335,10 @@ export async function yqPartReferences(oem: string) {
  */
 export function mapAreasToParts(unit: YqUnit | undefined, sections: YqPartSection[]) {
   const byPosition = new Map<string, YqPart>();
-  for (const s of sections) {
-    for (const p of s.parts ?? []) {
-      const pos = (p.positionNumber || p.code || "").trim();
-      if (pos) byPosition.set(pos, p);
+  for (const sec of sections) {
+    for (const p of sec.parts ?? []) {
+      const pos = (p.areaCode || "").trim();
+      if (pos && !byPosition.has(pos)) byPosition.set(pos, p);
     }
   }
   const areas = (unit?.imageMaps ?? []).flatMap((m) =>
@@ -306,4 +349,42 @@ export function mapAreasToParts(unit: YqUnit | undefined, sections: YqPartSectio
     }))
   );
   return { areas, byPosition };
+}
+
+/**
+ * ALLE Teile eines Fahrzeugs auf einmal (im PDF nicht dokumentiert, aber in
+ * der offiziellen YQ-Bibliothek enthalten: RequestFactory::getAllParts).
+ * Grundlage für die Sofortsuche innerhalb eines Fahrzeugs, ohne sich durch
+ * den Baugruppenbaum klicken zu müssen.
+ */
+export async function yqAllParts(vehicleToken: string, withNames = true) {
+  const r = await call<{ parts?: YqPartShort[] }>("getAllParts", {
+    token: vehicleToken,
+    formValues: [{ name: "WithNames", value: withNames ? "true" : "false" }],
+  });
+  return { parts: r.data?.parts ?? [], filterState: r.currentFilterState, envelope: r };
+}
+
+/**
+ * Kernstück für „zeig mir die Explosionszeichnung zu DIESEM Teil":
+ * Teilenummer + Fahrzeug -> in welchen Baugruppen sitzt das Teil.
+ *
+ * Je Kategorie kommen die Baugruppen samt Zeichnungs-URL (`imageNames`) und
+ * den Links `getUnitInfo` (anklickbare Bildbereiche) und `getUnitParts`
+ * (komplette Teilereihe) zurück — alles, was Trefferliste und Zeichnung
+ * daneben brauchen.
+ */
+export async function yqPartApplicability(
+  vehicleToken: string,
+  partNumber: string,
+  includeReplacements = true
+) {
+  const r = await call<{ categories?: YqPartCategory[] }>("getPartApplicability", {
+    token: vehicleToken,
+    formValues: [
+      { name: "PartNumber", value: partNumber.trim() },
+      { name: "IncludeReplacements", value: includeReplacements ? "true" : "false" },
+    ],
+  });
+  return { categories: r.data?.categories ?? [], filterState: r.currentFilterState, envelope: r };
 }
