@@ -8,6 +8,7 @@ const MAX = 500_000;
 const CATEGORIES = [
   { id: "lackfarbe", label: "Lackfarbe" },
   { id: "lackmaterial", label: "Lackmaterial" },
+  { id: "aufbereitungsmaterial", label: "Aufbereitungsmaterial" },
   { id: "fahrzeughandel", label: "Fahrzeughandel-Einkauf" },
   { id: "teile", label: "Teile Anschaffung" },
   { id: "sonstiges", label: "Sonstiges" },
@@ -18,6 +19,8 @@ const CATEGORIES = [
 const CATEGORY_MODULE: Record<string, "Autoteile" | "Lackfarben" | "Lackmaterial" | "any"> = {
   lackfarbe: "Lackfarben",
   lackmaterial: "Lackmaterial",
+  // Polituren, Pads, Reiniger laufen im Sortiment unter Lackmaterial
+  aufbereitungsmaterial: "Lackmaterial",
   fahrzeughandel: "Autoteile",
   teile: "Autoteile",
   sonstiges: "any",
@@ -43,6 +46,7 @@ export function MembershipCalculator() {
   const [enabled, setEnabled] = useState<Record<string, boolean>>({
     teile: true,
     lackmaterial: true,
+    aufbereitungsmaterial: true,
     lackfarbe: true,
   });
   const [months, setMonths] = useState<number[]>([0, 0, 0]);
