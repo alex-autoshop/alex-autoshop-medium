@@ -13,6 +13,7 @@ import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { useCartStore } from "@/stores/cartStore";
 import { PaintConfigurator } from "@/components/PaintConfigurator";
+import { DeliveryBadge } from "@/components/DeliveryBadge";
 import { cn } from "@/lib/utils";
 
 // Produkte mit Farb-Konfigurator (Marke → System → Menge → Fahrzeug → Farbcode)
@@ -146,6 +147,8 @@ export default function ProductDetail() {
           <p className="text-3xl font-bold">
             {price && formatPrice(String(priceNum * quantity), price.currencyCode)}
           </p>
+
+          <DeliveryBadge node={product} available={selectedVariant?.availableForSale !== false} size="md" className="mt-5" />
 
           {variants.length > 1 && (
             <div className="mt-6">

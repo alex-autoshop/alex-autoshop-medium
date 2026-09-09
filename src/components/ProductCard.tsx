@@ -7,6 +7,7 @@ import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useCartStore } from "@/stores/cartStore";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { cn } from "@/lib/utils";
+import { DeliveryBadge } from "@/components/DeliveryBadge";
 
 export function ProductCard({ product }: { product: ShopifyProduct }) {
   const addItem = useCartStore((s) => s.addItem);
@@ -66,6 +67,8 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
             <span className="text-[11px] font-normal text-muted-foreground ml-1">inkl. MwSt. · zzgl. <Link to="/versand" onClick={(e) => e.stopPropagation()} className="underline">Versand</Link></span>
           </p>
         </div>
+
+        <DeliveryBadge node={node} available={firstVariant?.availableForSale !== false} />
 
         {/* Mitgliedspreise ausklappbar */}
         <button

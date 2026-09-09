@@ -6,6 +6,7 @@ import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useCartStore } from "@/stores/cartStore";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { cn } from "@/lib/utils";
+import { DeliveryBadge } from "@/components/DeliveryBadge";
 
 // Professionelle B2B-Karte: Netto-Mitgliederpreis prominent, Mengen-Eingabe,
 // direkt bestellen — wie in einem Distributor-Portal.
@@ -62,6 +63,8 @@ export function B2BProductCard({
 
       <div className="p-3 flex flex-col flex-1 gap-2">
         <h3 className="font-semibold text-sm leading-snug line-clamp-2 min-h-[2.5rem]">{node.title}</h3>
+
+        <DeliveryBadge node={node} available={variant?.availableForSale !== false} />
 
         <div className="mt-auto">
           {discount > 0 ? (

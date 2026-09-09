@@ -4,6 +4,7 @@ import { type ShopifyProduct, formatPrice } from "@/lib/shopify";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useCartStore } from "@/stores/cartStore";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
+import { DeliveryBadge } from "@/components/DeliveryBadge";
 import { cn } from "@/lib/utils";
 
 // Produktkarte fürs Mitglieder-Dashboard: zeigt pro Mitgliedschaftsstufe,
@@ -65,6 +66,8 @@ export function MemberProductCard({
             <p className="text-xs text-muted-foreground line-through">{formatPrice(String(basePrice), cur)}</p>
           )}
         </div>
+
+        <DeliveryBadge node={node} available={variant?.availableForSale !== false} />
 
         {/* Ersparnis je Stufe */}
         <div className="rounded-xl bg-secondary/70 p-3 space-y-1.5">
