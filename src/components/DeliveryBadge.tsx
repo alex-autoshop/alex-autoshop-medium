@@ -47,7 +47,7 @@ export function DeliveryBadge({ node, available = true, size = "sm", className }
             Lieferzeit {label}
           </p>
           <p className="text-muted-foreground text-xs mt-0.5">
-            Versand innerhalb Deutschlands · Bestellungen bis 15 Uhr gehen am selben Werktag raus
+            Versand innerhalb Deutschlands · Abholung im Laden in Wuppertal möglich
           </p>
         </div>
       </div>
