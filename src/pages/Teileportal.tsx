@@ -21,6 +21,7 @@ import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip, 
 import { useAuth } from "@/context/AuthContext";
 import { OemExplosionView } from "@/components/OemExplosionView";
 import { OemCatalog } from "@/components/OemCatalog";
+import { OemDrawingBar } from "@/components/OemDrawingBar";
 import { TeileboerseGate } from "@/components/TeileboerseGate";
 
 const BRAND_DOMAINS: Record<string, string> = {
@@ -1277,6 +1278,13 @@ export default function Teileportal() {
                   onAddToCart={(a, qty) => { for (let i = 0; i < qty; i++) addArticleToCart(a as Article); }}
                   onZoom={(a) => openDetail(a as DetailArticle)}
                   vehicleLabel={vehicleLabel}
+                  oemSlot={() => (
+                    <OemDrawingBar
+                      vin={vehicleVin}
+                      onOpen={() => setPhase('oem')}
+                      onVin={(v) => { setVehicleVin(v); setPhase('oem'); }}
+                    />
+                  )}
                   left={
                     <div className="space-y-4">
                   {allBrands.length > 1 && (

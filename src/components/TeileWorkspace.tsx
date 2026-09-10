@@ -146,6 +146,7 @@ function OfferPanel({
   onZoom,
   vehicleLabel,
   onClose,
+  oemSlot,
 }: {
   a: WorkArticle;
   alternatives: WorkArticle[];
@@ -156,6 +157,7 @@ function OfferPanel({
   onZoom?: (a: WorkArticle) => void;
   vehicleLabel?: string;
   onClose?: () => void;
+  oemSlot?: (articleNumber: string, name: string) => React.ReactNode;
 }) {
   const [qty, setQty] = useState(1);
   const [copied, setCopied] = useState(false);
@@ -215,6 +217,8 @@ function OfferPanel({
             <Check className="w-3.5 h-3.5 shrink-0" /> Passt zu {vehicleLabel}
           </p>
         )}
+
+        {oemSlot?.(a.articleNumber, a.name)}
 
         {/* Preis + Menge + Warenkorb */}
         <div className="p-4 border-b border-border">
@@ -338,6 +342,7 @@ export function TeileWorkspace({
   left,
   toolbar,
   title,
+  oemSlot,
 }: {
   articles: WorkArticle[];
   level: MemberLevelId;
@@ -350,6 +355,8 @@ export function TeileWorkspace({
   /** Sortier-/Suchleiste über der Liste. */
   toolbar?: React.ReactNode;
   title?: React.ReactNode;
+  /** Einstieg in den Original-Katalog, direkt beim angeklickten Teil. */
+  oemSlot?: (articleNumber: string, name: string) => React.ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -480,6 +487,7 @@ export function TeileWorkspace({
             onPick={(alt) => pick(alt)}
             onZoom={onZoom}
             vehicleLabel={vehicleLabel}
+            oemSlot={oemSlot}
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center px-6 text-muted-foreground">
@@ -511,6 +519,7 @@ export function TeileWorkspace({
                 onPick={(alt) => pick(alt)}
                 onZoom={onZoom}
                 vehicleLabel={vehicleLabel}
+                oemSlot={oemSlot}
                 onClose={() => setSheetOpen(false)}
               />
             </motion.div>
