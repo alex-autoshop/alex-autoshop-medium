@@ -397,6 +397,26 @@ export async function yqUnitParts(token: string, filterState?: string) {
   return { sections, filterState: r.currentFilterState, envelope: r };
 }
 
+/**
+ * Baugruppen einer Gruppe über getGroupParts.
+ *
+ * Nicht jede Marke liefert `getUnits`. Opel etwa hängt die Baugruppen an
+ * `getGroupParts` — dieselbe Struktur wie bei getPartApplicability, also
+ * Kategorien mit Baugruppen samt Zeichnung und Teileliste.
+ */
+export async function yqGroupParts(token: string, all = false, filterState?: string) {
+  const r = await call<{ categories?: YqPartCategory[] }>(all ? "getGroupPartsAll" : "getGroupParts", {
+    token,
+    currentFilterState: filterState,
+  });
+  const categories = r.data?.categories ?? [];
+  // Für die Baugruppen-Liste interessiert nur die flache Reihe der Units.
+  const units: YqUnitShort[] = categories.flatMap((c) =>
+    (c.units ?? []).map((u) => u.unit).filter((u): u is YqUnitShort => !!u)
+  );
+  return { categories, units, filterState: r.currentFilterState, envelope: r };
+}
+
 /** OEM-Querverweise zu einer Teilenummer. */
 export async function yqPartReferences(oem: string) {
   const r = await call<{ references?: unknown[] }>("findPartReferences", {

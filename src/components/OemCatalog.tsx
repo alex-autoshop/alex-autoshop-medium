@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import {
   yqFindByVin, yqGroups, yqNavigationTree, yqUnits, yqUnitInfo, yqUnitParts,
-  yqAllParts, yqPartApplicability, linkTo, yqImage, partLabel, partNo, partQty,
+  yqAllParts, yqPartApplicability, yqGroupParts, linkTo, yqImage, partLabel, partNo, partQty,
   type YqLink, type YqNode, type YqUnitShort, type YqUnit, type YqPartSection, type YqPart, type YqVehicle, type YqPartShort,
 } from "@/lib/yqcat";
 import { cn } from "@/lib/utils";
@@ -210,6 +210,8 @@ export function OemCatalog({
      Klick auf einen Treffer holt über getPartApplicability die Bildtafeln,
      in denen das Teil sitzt, und öffnet die erste davon. */
   const [catalogParts, setCatalogParts] = useState<YqPartShort[] | null>(null);
+  /** true, wenn der Dienst die Volltextsuche für diesen Zugang sperrt. */
+  const [partSearchBlocked, setPartSearchBlocked] = useState(false);
   const [partHitBusy, setPartHitBusy] = useState<string | null>(null);
   const [hitUnits, setHitUnits] = useState<{ label: string; category: string; link: YqLink; partsToken?: string }[]>([]);
   const [hitNumber, setHitNumber] = useState<string | null>(null);
@@ -280,6 +282,22 @@ export function OemCatalog({
   const openNode = async (n: YqNode) => {
     const unitsLink = linkTo(n, "getUnits");
     const groupLink = linkTo(n, "getGroups");
+    // Manche Marken (z.B. Opel) liefern die Baugruppen nicht über getUnits,
+    // sondern über getGroupParts — gleiche Zeichnungen, anderer Endpunkt.
+    const gpLink = linkTo(n, "getGroupParts") || linkTo(n, "getGroupPartsAll");
+    if (!unitsLink && gpLink) {
+      setBusy(true); setError(null);
+      try {
+        const res = await yqGroupParts(gpLink.token, gpLink.action === "getGroupPartsAll", filterState);
+        setUnits(res.units);
+        setFilterState(res.filterState ?? filterState);
+        setCrumbs([{ label: n.name || "Gruppe", token: gpLink.token, action: gpLink.action }]);
+        if (res.units.length === 0) setError(`Für „${n.name}" liefert der Katalog keine Zeichnung.`);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Baugruppen konnten nicht geladen werden.");
+      } finally { setBusy(false); }
+      return;
+    }
     if (unitsLink) {
       setBusy(true);
       try {
@@ -380,9 +398,16 @@ export function OemCatalog({
     if (!token) return;
     let alive = true;
     setCatalogParts(null);
+    setPartSearchBlocked(false);
     yqAllParts(token)
       .then((r) => { if (alive) setCatalogParts(r.parts); })
-      .catch(() => { if (alive) setCatalogParts([]); });
+      .catch((e) => {
+        if (!alive) return;
+        setCatalogParts([]);
+        // "Access denied" heißt: der Endpunkt ist für diesen Zugang nicht
+        // freigeschaltet — nicht, dass es das Teil nicht gibt.
+        setPartSearchBlocked(/access denied|forbidden|denied/i.test(String(e?.message || e)));
+      });
     return () => { alive = false; };
   }, [vehicle?.token]);
 
@@ -433,9 +458,13 @@ export function OemCatalog({
     );
   }
 
-  const treeNodes = (tree?.childs ?? tree?.children ?? []).filter((n) =>
-    !treeSearch || (n.name || "").toLowerCase().includes(treeSearch.toLowerCase())
-  );
+  const allTreeNodes = tree?.childs ?? tree?.children ?? [];
+  const q = treeSearch.trim().toLowerCase();
+  const matched = q ? allTreeNodes.filter((n) => (n.name || "").toLowerCase().includes(q)) : allTreeNodes;
+  // Trifft die Suche keine Baugruppe, wird trotzdem der ganze Baum gezeigt —
+  // sonst wirkt der Katalog leer, obwohl alle Kategorien da sind.
+  const treeNodes = matched.length ? matched : allTreeNodes;
+  const searchMissedTree = !!q && matched.length === 0 && allTreeNodes.length > 0;
 
   return (
     <div>
@@ -467,6 +496,8 @@ export function OemCatalog({
                 <p className="text-[11px] text-muted-foreground px-1 py-2 leading-snug">
                   {catalogParts === null
                     ? "Teileliste wird geladen …"
+                    : partSearchBlocked
+                    ? "Die Teile-Volltextsuche ist für diesen Marken-Katalog nicht freigeschaltet. Nimm die Baugruppen unten — die Zeichnungen sind vollständig da."
                     : "Kein Teil mit diesem Namen. Tipp: Originalbezeichnung tippen, z.B. Bremsscheibe."}
                 </p>
               ) : (
@@ -542,6 +573,11 @@ export function OemCatalog({
               ))}
               {/* Nur melden wenn auch die Teilesuche nichts hat — sonst ist es Rauschen
                   neben einer Trefferliste, die genau das Gesuchte schon zeigt. */}
+              {searchMissedTree && (
+                <p className="text-[11px] text-muted-foreground px-2 pb-2 leading-snug">
+                  Keine Baugruppe heißt „{treeSearch.trim()}" — hier stehen alle {allTreeNodes.length}.
+                </p>
+              )}
               {treeNodes.length === 0 && partHits.length === 0 && !busy && (
                 <p className="text-xs text-muted-foreground px-2 py-4">Keine Baugruppen gefunden.</p>
               )}
