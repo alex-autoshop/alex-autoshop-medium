@@ -49,6 +49,11 @@ export interface YqAttr {
   key?: string;
   name?: string;
   value?: string;
+  /** Echte API: code ("amount", "note"), label und values[] statt value. */
+  code?: string;
+  label?: string;
+  values?: string[];
+  type?: string;
 }
 
 export interface YqCatalog {
@@ -56,6 +61,7 @@ export interface YqCatalog {
   name: string;
   brand?: string;
   archived?: boolean;
+  links?: YqLink[];
 }
 
 export interface YqVehicle {
@@ -149,6 +155,27 @@ export interface YqPart {
 /** Anzeigename eines Teils, egal welches Feld der Katalog befüllt. */
 export function partLabel(p: YqPart): string {
   return p.displayName || p.partName || p.partNumberFormatted || p.partNumber || "";
+}
+
+/**
+ * Stückzahl eines Teils. Die echte API legt sie NICHT in `qty` ab, sondern als
+ * Attribut mit `code: "amount"` — `qty` bleibt nur als Fallback.
+ */
+export function partQty(p: YqPart): string {
+  const a = (p.attributes ?? []).find(
+    (x) => x.code === "amount" || /menge|amount|quantity/i.test(x.label || x.name || "")
+  );
+  const v = a?.values?.[0] ?? a?.value;
+  if (v != null && String(v).trim()) return String(v).trim();
+  return p.qty?.value != null ? String(p.qty.value) : "";
+}
+
+/** Freitext-Anmerkungen des Herstellers zu einem Teil (Motorvariante, Baujahr …). */
+export function partNotes(p: YqPart): string[] {
+  return (p.attributes ?? [])
+    .filter((x) => x.code === "note" || /anmerkung|note/i.test(x.label || x.name || ""))
+    .flatMap((x) => x.values ?? (x.value ? [x.value] : []))
+    .filter(Boolean);
 }
 
 /** Teilenummer eines Teils in der Schreibweise des Herstellers. */
@@ -253,8 +280,35 @@ export async function yqWhoAmI() {
 
 /** Alle freigeschalteten Marken-Kataloge. */
 export async function yqCatalogs(): Promise<{ catalogs: YqCatalog[]; forms?: YqForm[] }> {
-  const r = await call<{ catalogs?: YqCatalog[] }>("catalogs", {});
-  return { catalogs: r.data?.catalogs ?? [], forms: r.forms };
+  const r = await call<{ catalogs?: YqCatalog[]; forms?: YqForm[] }>("catalogs", {});
+  // ACHTUNG: forms/links liegen bei dieser API UNTER `data`, nicht daneben.
+  return { catalogs: r.data?.catalogs ?? [], forms: r.data?.forms ?? r.forms };
+}
+
+/**
+ * Katalog-Detail einer Marke — liefert vor allem die Suchformulare samt der
+ * Token, die `findVehicle` und `findApplicableVehicles` zwingend brauchen.
+ */
+export async function yqCatalogInfo(catalogToken: string) {
+  const r = await call<{ forms?: YqForm[]; token?: string; name?: string; brand?: string }>(
+    "getCatalogInfo",
+    { token: catalogToken }
+  );
+  return { info: r.data, forms: r.data?.forms ?? [] };
+}
+
+/** Katalog einer Marke heraussuchen (tolerant gegenüber Schreibweisen). */
+export function matchCatalog(catalogs: YqCatalog[], brand: string): YqCatalog | undefined {
+  const norm = (x: string) => x.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const b = norm(brand);
+  if (!b) return undefined;
+  return (
+    catalogs.find((c) => norm(c.brand || "") === b || norm(c.name || "") === b) ||
+    catalogs.find((c) => {
+      const n = norm(c.name || c.brand || "");
+      return n.length > 2 && (n.includes(b) || b.includes(n));
+    })
+  );
 }
 
 /**
@@ -264,11 +318,31 @@ export async function yqCatalogs(): Promise<{ catalogs: YqCatalog[]; forms?: YqF
  */
 export async function yqFindByVin(
   vin: string,
-  catalogToken?: string
+  brand?: string
 ): Promise<{ vehicles: YqVehicle[]; envelope: YqEnvelope<{ vehicles?: YqVehicle[] }> }> {
+  const clean = vin.trim().toUpperCase();
+  const { catalogs } = await yqCatalogs();
+  if (!catalogs.length) throw new YqApiError("Der OEM-Katalog liefert keine Marken.");
+
+  const hit = brand ? matchCatalog(catalogs, brand) : undefined;
+  if (!hit) {
+    throw new YqApiError(
+      brand
+        ? `Für „${brand}" gibt es im Original-Katalog keine Freischaltung.`
+        : "Ohne Marke kann der Original-Katalog die FIN nicht zuordnen."
+    );
+  }
+
+  const catLink = linkTo(hit, "getCatalogInfo");
+  const { forms } = await yqCatalogInfo(catLink?.token || hit.token);
+  const form = forms.find((f) => f.action === "findVehicle");
+  if (!form) throw new YqApiError(`${hit.name}: keine FIN-Suche im Katalog hinterlegt.`);
+
+  // WICHTIG: findVehicle braucht den Token DES FORMULARS, nicht den des
+  // Katalogs — mit Katalog-Token antwortet der Dienst mit einer leeren Liste.
   const r = await call<{ vehicles?: YqVehicle[] }>("findVehicle", {
-    token: catalogToken,
-    formValues: [{ name: "IdentString", value: vin.trim().toUpperCase() }],
+    token: form.token,
+    formValues: [{ name: "IdentString", value: clean }],
   });
   return { vehicles: r.data?.vehicles ?? [], envelope: r };
 }
@@ -313,11 +387,13 @@ export async function yqUnitInfo(token: string, filterState?: string) {
 
 /** Teileliste einer Baugruppe — Positionsnummern passen zu den Bildbereichen. */
 export async function yqUnitParts(token: string, filterState?: string) {
-  const r = await call<{ sections?: YqPartSection[]; parts?: YqPart[] }>("getUnitParts", {
-    token,
-    currentFilterState: filterState,
-  });
-  const sections = r.data?.sections ?? (r.data?.parts ? [{ parts: r.data.parts }] : []);
+  const r = await call<{ partSections?: YqPartSection[]; sections?: YqPartSection[]; parts?: YqPart[] }>(
+    "getUnitParts",
+    { token, currentFilterState: filterState }
+  );
+  // Echte API liefert `partSections`. `sections`/`parts` bleiben als Fallback.
+  const sections =
+    r.data?.partSections ?? r.data?.sections ?? (r.data?.parts ? [{ parts: r.data.parts }] : []);
   return { sections, filterState: r.currentFilterState, envelope: r };
 }
 

@@ -392,6 +392,7 @@ export default function Teileportal() {
   const [vehicle, setVehicle] = useState<VehicleInfo | null>(null);
   const [vehicleKtype, setVehicleKtype] = useState<number | null>(null);
   const [vehicleVin, setVehicleVin] = useState('');
+  const [vehicleBrand, setVehicleBrand] = useState('');
   const [vehicleLoading, setVehicleLoading] = useState(false);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
   const [activeCat, setActiveCat] = useState<typeof CATEGORIES[0] | null>(null);
@@ -524,7 +525,12 @@ export default function Teileportal() {
             return;
           }
           if (res && res.candidates.length === 0 && res.manufacturer) {
-            setVehicleError(`${res.manufacturer}${res.model ? ' ' + res.model : ''} per VIN erkannt, aber keine passende Motorvariante gefunden. Bitte HSN/TSN nutzen oder ruf uns an: ${SHOP_INFO.phone}`);
+            // Der Zubehör-Katalog braucht die exakte Motorvariante, der
+            // Original-Katalog nicht: YQ löst die FIN selbst auf. Also FIN und
+            // Marke behalten und den OEM-Katalog trotzdem anbieten.
+            setVehicleVin(normVin);
+            setVehicleBrand(res.manufacturer);
+            setVehicleError(`${res.manufacturer}${res.model ? ' ' + res.model : ''} per FIN erkannt, aber keine passende Motorvariante im Zubehör-Katalog. Der Original-Katalog mit Explosionszeichnungen funktioniert trotzdem — oder nutze HSN/TSN bzw. ruf uns an: ${SHOP_INFO.phone}`);
             setPhase('search'); setVehicleLoading(false); return;
           }
         } catch { /* weiter zu Fallback */ }
@@ -1433,6 +1439,7 @@ export default function Teileportal() {
             /* Echter Hersteller-Katalog mit Explosionszeichnungen — braucht die FIN. */
             <OemCatalog
               vin={vehicleVin}
+              brand={vehicleBrand || vehicle?.manufacturer || ''}
               vehicleLabel={vehicleLabel}
               onBack={() => setPhase(vehicle ? 'categories' : 'search')}
               onAddToCart={(p) => addArticleToCart({ name: p.name, brand: 'OE', articleNumber: p.number })}

@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import {
   yqFindByVin, yqGroups, yqNavigationTree, yqUnits, yqUnitInfo, yqUnitParts,
-  yqAllParts, yqPartApplicability, linkTo, yqImage, partLabel, partNo,
+  yqAllParts, yqPartApplicability, linkTo, yqImage, partLabel, partNo, partQty,
   type YqLink, type YqNode, type YqUnitShort, type YqUnit, type YqPartSection, type YqPart, type YqVehicle, type YqPartShort,
 } from "@/lib/yqcat";
 import { cn } from "@/lib/utils";
@@ -180,11 +180,14 @@ function Drawing({
 
 export function OemCatalog({
   vin,
+  brand,
   vehicleLabel,
   onBack,
   onAddToCart,
 }: {
   vin?: string;
+  /** Marke des Fahrzeugs — ohne sie kann YQ die FIN keinem Katalog zuordnen. */
+  brand?: string;
   vehicleLabel?: string;
   onBack: () => void;
   onAddToCart?: (p: { name: string; number: string; unit?: string }) => void;
@@ -208,7 +211,7 @@ export function OemCatalog({
      in denen das Teil sitzt, und öffnet die erste davon. */
   const [catalogParts, setCatalogParts] = useState<YqPartShort[] | null>(null);
   const [partHitBusy, setPartHitBusy] = useState<string | null>(null);
-  const [hitUnits, setHitUnits] = useState<{ label: string; category: string; link: YqLink }[]>([]);
+  const [hitUnits, setHitUnits] = useState<{ label: string; category: string; link: YqLink; partsToken?: string }[]>([]);
   const [hitNumber, setHitNumber] = useState<string | null>(null);
   /** Teil, zu dem die kaufbaren Angebote unten eingeblendet werden. */
   const [offerFor, setOfferFor] = useState<{ no: string; name: string } | null>(null);
@@ -233,7 +236,7 @@ export function OemCatalog({
     if (!vin) return;
     setBusy(true); setError(null);
     try {
-      const { vehicles, envelope } = await yqFindByVin(vin);
+      const { vehicles, envelope } = await yqFindByVin(vin, brand);
       const v = vehicles[0];
       if (!v) { setError("Zu dieser FIN liefert der Hersteller-Katalog kein Fahrzeug."); return; }
       setVehicle(v);
@@ -251,12 +254,18 @@ export function OemCatalog({
   useEffect(() => { loadVehicle(); }, [loadVehicle]);
 
   /* Baugruppe öffnen → Zeichnung + Teileliste */
-  const openUnit = async (token: string, label: string) => {
+  const openUnit = async (u: YqUnitShort, label: string) => {
+    const infoLink = linkTo(u, "getUnitInfo");
+    const partsLink = linkTo(u, "getUnitParts");
+    const token = infoLink?.token || partsLink?.token || u.token || "";
+    if (!token) return;
     setBusy(true); setError(null); setActivePos(null);
     try {
+      // Jeder Link trägt seinen EIGENEN Token. getUnitParts mit dem
+      // getUnitInfo-Token beantwortet der Dienst mit einer leeren Liste.
       const [info, parts] = await Promise.all([
         yqUnitInfo(token, filterState),
-        yqUnitParts(token, filterState),
+        yqUnitParts(partsLink?.token || token, filterState),
       ]);
       setUnit(info.unit ?? null);
       setSections(parts.sections);
@@ -297,12 +306,14 @@ export function OemCatalog({
 
 
   /* Baugruppe laden und — wenn von der Suche kommend — das Teil markieren. */
-  const openUnitLink = useCallback(async (link: YqLink, highlightNumber?: string) => {
+  const openUnitLink = useCallback(async (link: YqLink, highlightNumber?: string, partsToken?: string) => {
     setBusy(true); setError(null);
     try {
+      // Jeder Link trägt seinen eigenen Token — getUnitParts mit dem
+      // getUnitInfo-Token liefert eine leere Teileliste.
       const [info, parts] = await Promise.all([
         yqUnitInfo(link.token, filterState),
-        yqUnitParts(link.token, filterState),
+        yqUnitParts(partsToken || link.token, filterState),
       ]);
       setUnit(info.unit ?? null);
       setSections(parts.sections);
@@ -334,7 +345,7 @@ export function OemCatalog({
     setPartHitBusy(number); setError(null);
     try {
       const { categories } = await yqPartApplicability(vehicle.token, number);
-      const found: { label: string; category: string; link: YqLink }[] = [];
+      const found: { label: string; category: string; link: YqLink; partsToken?: string }[] = [];
       for (const cat of categories) {
         for (const u of cat.units ?? []) {
           const link = linkTo(u.unit, "getUnitInfo");
@@ -343,6 +354,7 @@ export function OemCatalog({
               label: u.unit?.code || u.unit?.name || "Bildtafel",
               category: cat.category?.name || "",
               link,
+              partsToken: linkTo(u.unit, "getUnitParts")?.token,
             });
           }
         }
@@ -353,7 +365,7 @@ export function OemCatalog({
         setError(`Zu ${number} liefert der Hersteller-Katalog keine Bildtafel.`);
         return;
       }
-      await openUnitLink(found[0].link, number);
+      await openUnitLink(found[0].link, number, found[0].partsToken);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -506,7 +518,7 @@ export function OemCatalog({
                   return (
                     <button
                       key={(u.code || "") + i}
-                      onClick={() => link && openUnit(link.token, u.name || u.code || "Baugruppe")}
+                      onClick={() => link && openUnit(u, u.name || u.code || "Baugruppe")}
                       className={cn(
                         "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-[13px] transition-colors",
                         active ? "bg-primary/10 text-foreground font-semibold" : "hover:bg-secondary text-muted-foreground hover:text-foreground"
@@ -548,7 +560,7 @@ export function OemCatalog({
               {hitUnits.map((h, i) => (
                 <button
                   key={`${h.label}-${i}`}
-                  onClick={() => openUnitLink(h.link, hitNumber)}
+                  onClick={() => openUnitLink(h.link, hitNumber, h.partsToken)}
                   title={h.category}
                   className={cn(
                     "shrink-0 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors border",
@@ -629,7 +641,7 @@ export function OemCatalog({
                         <p className="text-muted-foreground leading-snug">{partLabel(p)}</p>
                       </td>
                       <td className="px-2 py-2 text-right align-top tabular-nums text-muted-foreground">
-                        {p.qty?.value ?? ""}
+                        {partQty(p)}
                       </td>
                       <td className="px-1 py-2 align-top">
                         {onAddToCart && no && (
