@@ -397,6 +397,10 @@ export default function Teileportal() {
   const [vehicleBrand, setVehicleBrand] = useState('');
   const [vehicleLoading, setVehicleLoading] = useState(false);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
+  // Gesetzt, wenn der Zubehoer-Katalog passen muss, der Original-Katalog aber
+  // liefert. Dann steht in der roten Meldung ein Knopf, der direkt dorthin
+  // fuehrt — sonst muesste der Kunde die OEM-Kachel selbst suchen.
+  const [oemRescue, setOemRescue] = useState<string | null>(null);
   const [activeCat, setActiveCat] = useState<typeof CATEGORIES[0] | null>(null);
   const [partQuery, setPartQuery] = useState('');
   const [articles, setArticles] = useState<Article[]>([]);
@@ -507,6 +511,7 @@ export default function Teileportal() {
     const mode = modeOverride ?? searchMode;
     setVehicleLoading(true);
     setVehicleError(null);
+    setOemRescue(null);
     setVehicle(null);
     setVehicleKtype(null);
     setCatTree(null); setCatNodes({}); setOpenCatId(null);
@@ -532,7 +537,8 @@ export default function Teileportal() {
             // Marke behalten und den OEM-Katalog trotzdem anbieten.
             setVehicleVin(normVin);
             setVehicleBrand(res.manufacturer);
-            setVehicleError(`${res.manufacturer}${res.model ? ' ' + res.model : ''} per FIN erkannt, aber keine passende Motorvariante im Zubehör-Katalog. Der Original-Katalog mit Explosionszeichnungen funktioniert trotzdem — oder nutze HSN/TSN bzw. ruf uns an: ${SHOP_INFO.phone}`);
+            setOemRescue(res.manufacturer);
+            setVehicleError(`${res.manufacturer}${res.model ? ' ' + res.model : ''} per FIN erkannt, aber keine passende Motorvariante im Zubehör-Katalog. Für Zubehörteile nutze HSN/TSN oder ruf uns an: ${SHOP_INFO.phone}`);
             setPhase('search'); setVehicleLoading(false); return;
           }
           // Der Zubehör-Katalog kennt diese FIN gar nicht. Der Hersteller-
@@ -543,7 +549,8 @@ export default function Teileportal() {
             if (marke) {
               setVehicleVin(normVin);
               setVehicleBrand(marke);
-              setVehicleError(`Diese FIN steht nicht im Zubehör-Katalog. Im Original-Katalog von ${marke} findest du sie trotzdem — mit Explosionszeichnungen. Für Zubehörteile nutze HSN/TSN oder ruf uns an: ${SHOP_INFO.phone}`);
+              setOemRescue(marke);
+              setVehicleError(`Diese FIN steht nicht im Zubehör-Katalog. Für Zubehörteile nutze HSN/TSN oder ruf uns an: ${SHOP_INFO.phone}`);
               setPhase('search'); setVehicleLoading(false); return;
             }
           }
@@ -1052,7 +1059,25 @@ export default function Teileportal() {
                   </AnimatePresence>
 
                   {vehicleError && (
-                    <div className="mt-3 rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-xs text-destructive">{vehicleError}</div>
+                    <div className="mt-3 rounded-lg bg-destructive/10 border border-destructive/30 p-3">
+                      <p className="text-xs text-destructive leading-relaxed">{vehicleError}</p>
+                      {oemRescue && (
+                        /* Die Meldung sagte bisher nur, dass es im Original-Katalog
+                           trotzdem geht — den Weg dorthin musste der Kunde selbst
+                           finden. Jetzt ist er ein Klick. */
+                        <button
+                          onClick={() => setPhase('oem')}
+                          style={{ backgroundColor: '#D4A017' }}
+                          className="mt-3 w-full rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left text-black hover:brightness-95 transition-all shadow-sm"
+                        >
+                          <Layers className="w-4 h-4 shrink-0" />
+                          <span className="flex-1 min-w-0 text-[13px] font-bold leading-tight">
+                            Explosionszeichnungen von {oemRescue} öffnen
+                          </span>
+                          <ChevronRight className="w-4 h-4 shrink-0" />
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               </motion.div>

@@ -10,6 +10,7 @@ import {
 } from "@/lib/yqcat";
 import { cn } from "@/lib/utils";
 import { OemOffers } from "@/components/OemOffers";
+import { SHOP_INFO } from "@/data/shopInfo";
 
 /**
  * Original-Katalog im Werkstatt-Stil (Vorbild Partslink24):
@@ -266,7 +267,13 @@ export function OemCatalog({
     try {
       const { vehicles, envelope } = await yqFindByVin(vin, brand);
       const v = vehicles[0];
-      if (!v) { setError("Zu dieser FIN liefert der Hersteller-Katalog kein Fahrzeug."); return; }
+      // Zwei Ursachen sehen gleich aus: Tippfehler in der FIN — oder eine Marke,
+      // die statt der FIN eine Modellauswahl verlangt (Hyundai, Kia, Nissan, Mazda).
+      // Deshalb keine Ursachen-Behauptung, sondern ein Weg, der immer funktioniert.
+      if (!v) {
+        setError(`Zu dieser FIN liefert der Katalog${brand ? " von " + brand : ""} kein Fahrzeug. Prüf die FIN — oder ruf uns an: ${SHOP_INFO.phone}, wir schlagen die Zeichnung für dich nach.`);
+        return;
+      }
       setVehicle(v);
       const link = linkTo(v, "getGroups") || linkTo(v, "getNavigationTree") || linkTo(envelope, "getGroups");
       if (!link) { setError("Der Katalog liefert für dieses Fahrzeug keine Baugruppen."); return; }
@@ -277,7 +284,7 @@ export function OemCatalog({
     } catch (e) {
       setError(e instanceof Error ? e.message : "Der Katalog antwortet gerade nicht.");
     } finally { setBusy(false); }
-  }, [vin]);
+  }, [vin, brand]);
 
   useEffect(() => { loadVehicle(); }, [loadVehicle]);
 
