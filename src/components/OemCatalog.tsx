@@ -35,23 +35,49 @@ function TreeItem({
   const kids = node.childs ?? node.children ?? [];
   const [open, setOpen] = useState(depth === 0);
   const hasKids = kids.length > 0;
+  // Ein Knoten kann BEIDES haben: Unterknoten und eine eigene Zeichnung
+  // (z.B. Opel "Scheibenbremse"). Früher klappte so einer nur auf und ließ
+  // sich nie öffnen — der Klick blieb wirkungslos.
+  const openable = !!(
+    linkTo(node, "getUnits") ||
+    linkTo(node, "getGroupParts") ||
+    linkTo(node, "getGroupPartsAll") ||
+    linkTo(node, "getGroups")
+  );
+
   return (
     <div>
-      <button
-        onClick={() => (hasKids ? setOpen((o) => !o) : onOpen(node))}
-        className={cn(
-          "w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-left text-[13px] transition-colors",
-          "hover:bg-secondary text-muted-foreground hover:text-foreground"
-        )}
+      <div
+        className="w-full flex items-stretch rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
         style={{ paddingLeft: 8 + depth * 12 }}
       >
         {hasKids ? (
-          <ChevronRight className={cn("w-3 h-3 shrink-0 transition-transform", open && "rotate-90")} />
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-label={open ? "Zuklappen" : "Aufklappen"}
+            className="shrink-0 w-5 flex items-center justify-center"
+          >
+            <ChevronRight className={cn("w-3 h-3 transition-transform", open && "rotate-90")} />
+          </button>
         ) : (
-          <span className="w-3 shrink-0" />
+          <span className="w-5 shrink-0" />
         )}
-        <span className="truncate">{node.name || node.code}</span>
-      </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (openable) { onOpen(node); if (hasKids) setOpen(true); }
+            else setOpen((o) => !o);
+          }}
+          className={cn(
+            "flex-1 min-w-0 text-left text-[13px] py-1.5 pr-2",
+            openable && "font-medium"
+          )}
+          title={openable ? "Zeichnungen anzeigen" : undefined}
+        >
+          <span className="truncate block">{node.name || node.code}</span>
+        </button>
+      </div>
       {open && hasKids && (
         <div>
           {kids.map((k, i) => (
