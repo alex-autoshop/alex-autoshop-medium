@@ -22,6 +22,7 @@ import { useAuth } from "@/context/AuthContext";
 import { OemExplosionView } from "@/components/OemExplosionView";
 import { OemCatalog } from "@/components/OemCatalog";
 import { OemDrawingBar } from "@/components/OemDrawingBar";
+import { brandFromVin } from "@/lib/wmi";
 import { TeileboerseGate } from "@/components/TeileboerseGate";
 
 const BRAND_DOMAINS: Record<string, string> = {
@@ -533,6 +534,18 @@ export default function Teileportal() {
             setVehicleBrand(res.manufacturer);
             setVehicleError(`${res.manufacturer}${res.model ? ' ' + res.model : ''} per FIN erkannt, aber keine passende Motorvariante im Zubehör-Katalog. Der Original-Katalog mit Explosionszeichnungen funktioniert trotzdem — oder nutze HSN/TSN bzw. ruf uns an: ${SHOP_INFO.phone}`);
             setPhase('search'); setVehicleLoading(false); return;
+          }
+          // Der Zubehör-Katalog kennt diese FIN gar nicht. Der Hersteller-
+          // Katalog kann sie trotzdem auflösen — er braucht nur die Marke,
+          // und die steht genormt in den ersten drei Zeichen der FIN.
+          if (normVin.length === 17) {
+            const marke = brandFromVin(normVin);
+            if (marke) {
+              setVehicleVin(normVin);
+              setVehicleBrand(marke);
+              setVehicleError(`Diese FIN steht nicht im Zubehör-Katalog. Im Original-Katalog von ${marke} findest du sie trotzdem — mit Explosionszeichnungen. Für Zubehörteile nutze HSN/TSN oder ruf uns an: ${SHOP_INFO.phone}`);
+              setPhase('search'); setVehicleLoading(false); return;
+            }
           }
         } catch { /* weiter zu Fallback */ }
       } else {
