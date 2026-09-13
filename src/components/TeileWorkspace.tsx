@@ -5,6 +5,7 @@ import {
   ArrowDown, ArrowUp, CornerDownLeft, Search as SearchIcon, ZoomIn,
 } from "lucide-react";
 import { PriceBlock, DeliveryBadge, SpecStrip, eur, memberPrice, MEMBER_LEVELS, type MemberLevelId } from "@/components/TeileportalPricing";
+import { usePartImage } from "@/hooks/usePartImage";
 import { cn } from "@/lib/utils";
 
 /**
@@ -37,6 +38,15 @@ const key = (a: WorkArticle) => String(a.id);
 
 /* ───────────────────────── Trefferzeile ───────────────────────── */
 
+/**
+ * Grosse Zeile im Grosshandels-Stil.
+ *
+ * Vorbild ist der Katalog, mit dem in der Werkstatt taeglich gearbeitet wird:
+ * jedes Teil mit Foto, Name und Nummer gross genug zum Lesen aus einem Meter
+ * Abstand, daneben Lieferzeit, Preis und Menge — Kaufen ohne die Zeile zu
+ * verlassen. Das Foto ist dabei nicht Zierde: es ist die schnellste Kontrolle,
+ * ob das gefundene Teil das gesuchte ist.
+ */
 function Row({
   a,
   active,
@@ -51,11 +61,17 @@ function Row({
   level: MemberLevelId;
   brandLogo?: string;
   onSelect: () => void;
-  onAdd: () => void;
+  onAdd: (menge: number) => void;
   innerRef: (el: HTMLDivElement | null) => void;
 }) {
   const lvl = MEMBER_LEVELS.find((l) => l.id === level);
   const shown = a.price != null ? (lvl ? memberPrice(a.price, lvl.pct) : a.price) : null;
+  const [menge, setMenge] = useState(1);
+  const bild = usePartImage(a.imageUrl, a.articleNumber, a.brand, a.id);
+
+  // Die zwei, drei Masse, an denen man ein Filter erkennt — mehr wuerde die
+  // Zeile zumuellen, weniger zwingt zum Aufklappen.
+  const daten = (a.specs ?? []).filter((x) => x.name && x.value).slice(0, 4);
 
   return (
     <div
@@ -65,71 +81,120 @@ function Row({
       aria-selected={active}
       tabIndex={-1}
       className={cn(
-        "grid grid-cols-[40px_1fr_auto] lg:grid-cols-[40px_minmax(0,1fr)_92px_104px_100px_32px] items-center gap-3 px-3 py-2 cursor-pointer border-l-[3px] transition-colors",
-        active
-          ? "border-l-primary bg-primary/[0.07]"
-          : "border-l-transparent hover:bg-secondary/60"
+        "px-3 sm:px-4 py-3 cursor-pointer border-l-[3px] transition-colors",
+        active ? "border-l-primary bg-primary/[0.06]" : "border-l-transparent hover:bg-secondary/50"
       )}
     >
-      <div className="w-10 h-10 rounded-lg bg-white border border-border/60 flex items-center justify-center overflow-hidden p-0.5 shrink-0">
-        {a.imageUrl ? (
-          <img src={a.imageUrl} alt="" loading="lazy" className="w-full h-full object-contain"
-            onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }} />
-        ) : brandLogo ? (
-          <img src={brandLogo} alt="" className="w-full h-full object-contain p-1 opacity-60" />
-        ) : (
-          <Package className="w-4 h-4 text-muted-foreground/40" />
-        )}
-      </div>
+      <div className="flex items-start gap-3 sm:gap-4">
+        {/* Produktfoto */}
+        <div className="w-[72px] h-[72px] sm:w-[104px] sm:h-[104px] shrink-0 rounded-xl bg-white border border-border flex items-center justify-center overflow-hidden p-1.5">
+          {bild.src ? (
+            <img
+              src={bild.src}
+              alt={a.name}
+              loading="lazy"
+              onError={bild.meldeFehler}
+              className="w-full h-full object-contain"
+            />
+          ) : bild.sucht ? (
+            <div className="w-full h-full rounded-lg bg-secondary animate-pulse" />
+          ) : brandLogo ? (
+            <img src={brandLogo} alt={a.brand} className="w-full h-full object-contain p-2 opacity-50" />
+          ) : (
+            <Package className="w-7 h-7 text-muted-foreground/30" />
+          )}
+        </div>
 
-      <div className="min-w-0">
-        <p className={cn("text-[13px] leading-tight truncate", active ? "font-semibold" : "font-medium")}>
-          {a.name}
-        </p>
-        <p className="text-[11px] text-muted-foreground font-mono truncate">{a.articleNumber}</p>
-      </div>
-
-      <span className="hidden lg:block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground truncate">
-        {a.brand}
-      </span>
-
-      <div className="hidden lg:block">
-        {a.deliveryDays != null ? (
-          <span className={cn(
-            "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border",
-            a.deliveryDays <= 1
-              ? "bg-green-500/15 text-green-700 border-green-500/30 dark:text-green-400"
-              : a.deliveryDays === 2
-              ? "bg-amber-400/15 text-amber-700 border-amber-400/30 dark:text-amber-300"
-              : "bg-secondary text-muted-foreground border-border"
-          )}>
-            {a.deliveryDays <= 1 ? "1 Werktag" : `${a.deliveryDays} Werktage`}
-          </span>
-        ) : (
-          <span className="text-[11px] text-muted-foreground/60">auf Anfrage</span>
-        )}
-      </div>
-
-      <div className="text-right">
-        {shown != null ? (
-          <>
-            <p className="text-sm font-bold tabular-nums leading-tight">{eur(shown)}</p>
-            {lvl && a.price != null && (
-              <p className="text-[10px] text-muted-foreground line-through tabular-nums">{eur(a.price)}</p>
+        {/* Bezeichnung, Nummer, Marke, Masse */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-2">
+            <p className={cn("text-[15px] sm:text-base leading-snug", active ? "font-bold" : "font-semibold")}>
+              {a.name}
+            </p>
+            {brandLogo ? (
+              <img
+                src={brandLogo}
+                alt={a.brand}
+                className="hidden sm:block h-6 max-w-[86px] object-contain shrink-0 ml-auto"
+              />
+            ) : (
+              <span className="hidden sm:block ml-auto shrink-0 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                {a.brand}
+              </span>
             )}
-          </>
-        ) : (
-          <span className="text-[11px] text-muted-foreground">auf Anfrage</span>
-        )}
-      </div>
+          </div>
 
-      <button
-        onClick={(e) => { e.stopPropagation(); onAdd(); }}
-        title="In den Teile-Warenkorb"
-        className="hidden lg:flex w-8 h-8 rounded-lg border border-border items-center justify-center text-muted-foreground hover:border-primary hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
-      >
-        <ShoppingBag className="w-3.5 h-3.5" />
-      </button>
+          <p className="mt-0.5 text-[13px] font-mono text-muted-foreground">
+            {a.articleNumber}
+            <span className="sm:hidden"> · {a.brand}</span>
+          </p>
+
+          {daten.length > 0 && (
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              {daten.map((d, i) => (
+                // Ohne nowrap bricht "78 mm" mitten im Wert um.
+                <span key={d.name} className="whitespace-nowrap">
+                  {i > 0 && <span className="mx-1.5 opacity-40">·</span>}
+                  {d.name}: <b className="font-semibold text-foreground/80">{d.value}</b>
+                </span>
+              ))}
+            </p>
+          )}
+
+          {/* Lieferung — auf schmalen Schirmen unter dem Namen */}
+          <div className="mt-2 lg:hidden">
+            <DeliveryBadge deliveryDays={a.deliveryDays} availability={a.availability} />
+          </div>
+        </div>
+
+        {/* Lieferung */}
+        <div className="hidden lg:block w-[190px] shrink-0">
+          <DeliveryBadge deliveryDays={a.deliveryDays} availability={a.availability} />
+        </div>
+
+        {/* Preis, Menge, Warenkorb */}
+        <div className="w-[104px] sm:w-[168px] shrink-0 text-right">
+          {shown != null ? (
+            <>
+              <p className="text-lg sm:text-xl font-bold tabular-nums leading-none">{eur(shown)}</p>
+              {lvl && a.price != null && a.price > shown && (
+                <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">
+                  Einzelhandel <span className="line-through">{eur(a.price)}</span>
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-[13px] text-muted-foreground">Preis auf Anfrage</p>
+          )}
+
+          <div className="mt-2 flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <div className="hidden sm:flex items-center border border-border rounded-lg h-9 bg-card">
+              <button
+                onClick={() => setMenge((q) => Math.max(1, q - 1))}
+                className="w-7 h-full text-muted-foreground hover:text-foreground font-bold leading-none"
+                aria-label="Menge verringern"
+              >
+                −
+              </button>
+              <span className="w-6 text-center text-[13px] font-mono tabular-nums">{menge}</span>
+              <button
+                onClick={() => setMenge((q) => Math.min(99, q + 1))}
+                className="w-7 h-full text-muted-foreground hover:text-foreground font-bold leading-none"
+                aria-label="Menge erhoehen"
+              >
+                +
+              </button>
+            </div>
+            <button
+              onClick={() => onAdd(menge)}
+              title="In den Teile-Warenkorb"
+              className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:bg-gold-deep transition-colors shrink-0"
+            >
+              <ShoppingBag className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -164,6 +229,7 @@ function OfferPanel({
 }) {
   const [qty, setQty] = useState(1);
   const [copied, setCopied] = useState(false);
+  const panelBild = usePartImage(a.imageUrl, a.articleNumber, a.brand, a.id);
   useEffect(() => { setQty(1); }, [a.id]);
 
   const copy = () => {
@@ -182,10 +248,12 @@ function OfferPanel({
       <div className="flex items-start gap-3 p-4 border-b border-border">
         <button
           onClick={() => onZoom?.(a)}
-          className="w-20 h-20 rounded-xl bg-white border border-border flex items-center justify-center overflow-hidden p-1.5 shrink-0 relative group"
+          className="w-28 h-28 rounded-xl bg-white border border-border flex items-center justify-center overflow-hidden p-2 shrink-0 relative group"
         >
-          {a.imageUrl ? (
-            <img src={a.imageUrl} alt={a.name} className="w-full h-full object-contain" />
+          {panelBild.src ? (
+            <img src={panelBild.src} alt={a.name} onError={panelBild.meldeFehler} className="w-full h-full object-contain" />
+          ) : panelBild.sucht ? (
+            <span className="w-full h-full rounded-lg bg-secondary animate-pulse" />
           ) : (
             <Package className="w-7 h-7 text-muted-foreground/40" />
           )}
@@ -438,13 +506,13 @@ export function TeileWorkspace({
         {toolbar}
 
         <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <div className="hidden lg:grid grid-cols-[40px_minmax(0,1fr)_92px_104px_100px_32px] gap-3 px-3 py-2 bg-secondary/60 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            <span />
-            <span>Teil / Artikelnummer</span>
-            <span>Marke</span>
-            <span>Lieferung</span>
-            <span className="text-right">Preis</span>
-            <span />
+          {/* Kopfzeile mit denselben Spaltenbreiten wie die Zeile darunter —
+              sonst steht "Lieferung" ueber dem Preis. */}
+          <div className="hidden lg:flex items-center gap-4 px-4 py-2 bg-secondary/60 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <span className="w-[104px] shrink-0" />
+            <span className="flex-1 min-w-0">Teil / Artikelnummer</span>
+            <span className="w-[190px] shrink-0">Lieferung</span>
+            <span className="w-[168px] shrink-0 text-right">Preis · Menge</span>
           </div>
 
           <div ref={listRef} className="divide-y divide-border/60 max-h-[calc(100vh-220px)] overflow-y-auto" role="listbox">
@@ -456,7 +524,7 @@ export function TeileWorkspace({
                 level={level}
                 brandLogo={brandLogo?.(a.brand)}
                 onSelect={() => pick(a, true)}
-                onAdd={() => onAddToCart(a, 1)}
+                onAdd={(menge) => onAddToCart(a, menge)}
                 innerRef={(el) => { rowRefs.current[key(a)] = el; }}
               />
             ))}

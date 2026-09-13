@@ -4,6 +4,8 @@
  * Liefert Fahrzeuge (KBA/VIN) und Artikel MIT Produktbildern.
  */
 
+import { istBildAdresse } from '@/lib/partImages';
+
 const LANG = 1;      // Deutsch
 const COUNTRY = 63;  // Deutschland
 const TYPE_PC = 1;   // Passenger Car
@@ -87,14 +89,17 @@ function pickArray(obj: any, ...keys: string[]): any[] {
 }
 
 function pickImage(a: any): string | undefined {
+  // ACHTUNG: `s3image` haelt nicht immer ein Bild. Bei manchen Artikeln steht
+  // dort das Datenblatt als PDF (z.B. MANN "W 712/93") — als <img> ergibt das
+  // genau das graue Kaestchen, das in der Trefferliste nichts verloren hat.
   const direct = first(a?.s3image, a?.imageUrl, a?.imageLink, a?.imgUrl, a?.image, a?.pictureUrl, a?.s3ImageLink, a?.mediaUrl);
-  if (typeof direct === 'string' && /^https?:/.test(direct)) return direct;
+  if (istBildAdresse(direct)) return direct;
   for (const key of ['images', 'allMedia', 'media', 'pictures']) {
     const arr = a?.[key];
     if (Array.isArray(arr) && arr.length) {
       const m = arr[0];
-      const u = typeof m === 'string' ? m : first(m?.imageURL400, m?.imageURL200, m?.imageUrl, m?.url, m?.normalUrl, m?.bigUrl, m?.link);
-      if (typeof u === 'string' && /^https?:/.test(u)) return u;
+      const u = typeof m === 'string' ? m : first(m?.s3image, m?.imageURL400, m?.imageURL200, m?.imageUrl, m?.url, m?.normalUrl, m?.bigUrl, m?.link);
+      if (istBildAdresse(u)) return u;
     }
   }
   return undefined;

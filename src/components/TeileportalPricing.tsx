@@ -124,7 +124,7 @@ export function deliveryForecast(days: number): string {
 
 /**
  * Lieferbadge à la Intercars:
- * 🟢 Heute (in der Zweigstelle) 06:00
+ * 🟢 Heute (in der Filiale) 06:00
  * ⚡ 1 Werktag
  */
 export function DeliveryBadge({
@@ -167,7 +167,7 @@ export function DeliveryBadge({
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
           </span>
         )}
-        {is1day ? "Heute · Zweigstelle · 06:00" : `${deliveryForecast(deliveryDays)} · ca. 9:00`}
+        {is1day ? "Heute · Filiale · 06:00" : `${deliveryForecast(deliveryDays)} · ca. 9:00`}
       </span>
 
       {/* Werktage-Badge */}
