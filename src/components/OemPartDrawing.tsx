@@ -92,7 +92,9 @@ async function sucheZeichnung(vin: string, brand: string, oeNummern: string[]): 
 
       return {
         unit,
-        bild: yqImage(map.imageName),
+        // Nur die Variante "source" liefert der Bildserver aus; ohne Groessenangabe
+        // oder mit "small"/"medium" kommt nichts zurueck (live geprueft).
+        bild: yqImage(map.imageName, "source"),
         bereich,
         position,
         oe: nummer,
@@ -161,7 +163,11 @@ export function OemPartDrawing({
     // Dreifache seiner Kantenlaenge, in einem 4:3-Kasten, und nie so nah, dass
     // die Strichzeichnung ausfranst (mindestens 12 % der Tafelbreite).
     const F = 3;
-    let w = Math.max(bw * F, (bh * F * 4) / 3, nat.w * 0.12);
+    // Untergrenze absolut statt prozentual: ein 37x34-Kaestchen auf einer
+    // 706er Tafel waere bei 12 % der Breite kaum zu erkennen. 200 px ist der
+    // Kompromiss: Marke deutlich sichtbar, Strichzeichnung noch scharf.
+    const boden = Math.min(nat.w, Math.max(200, nat.w * 0.08));
+    let w = Math.max(bw * F, (bh * F * 4) / 3, boden);
     let h = (w * 3) / 4;
     if (w > nat.w) { w = nat.w; h = (w * 3) / 4; }
     if (h > nat.h) { h = nat.h; w = Math.min(nat.w, (h * 4) / 3); }

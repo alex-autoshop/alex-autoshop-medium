@@ -163,7 +163,8 @@ function Drawing({
         >
           <div className="relative max-w-full max-h-full">
             <img
-              src={yqImage(map.imageName)}
+              // "source" ist die einzige Variante, die der Bildserver ausliefert.
+              src={yqImage(map.imageName, "source")}
               alt={unit.name || "Explosionszeichnung"}
               draggable={false}
               onLoad={(e) => {
@@ -589,7 +590,7 @@ export function OemCatalog({
                       )}
                     >
                       {u.imageNames?.[0] ? (
-                        <img src={yqImage(u.imageNames[0], "small")} alt="" className="w-8 h-8 object-contain bg-white rounded border border-border/60 shrink-0" />
+                        <img src={yqImage(u.imageNames[0], "source")} alt="" loading="lazy" className="w-8 h-8 object-contain bg-white rounded border border-border/60 shrink-0" />
                       ) : (
                         <Layers className="w-4 h-4 shrink-0 opacity-40" />
                       )}
