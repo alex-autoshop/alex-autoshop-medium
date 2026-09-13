@@ -130,10 +130,40 @@ export function deliveryForecast(days: number): string {
 export function DeliveryBadge({
   deliveryDays,
   availability,
+  compact = false,
 }: {
   deliveryDays?: number;
   availability?: string;
+  /** Eine Zeile statt drei — fuer die Trefferliste, wo Platz knapp ist. */
+  compact?: boolean;
 }) {
+  if (compact) {
+    if (deliveryDays == null) {
+      return (
+        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+          <Truck className="w-3.5 h-3.5 shrink-0 opacity-60" /> Lieferzeit auf Anfrage
+        </span>
+      );
+    }
+    const heute = deliveryDays <= 1;
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 text-[12px] font-semibold",
+          heute ? "text-green-700 dark:text-green-400" : "text-muted-foreground"
+        )}
+      >
+        <span
+          className={cn(
+            "w-1.5 h-1.5 rounded-full shrink-0",
+            heute ? "bg-green-500" : deliveryDays === 2 ? "bg-yellow-500" : "bg-amber-500"
+          )}
+        />
+        {heute ? "Heute in der Filiale · 06:00" : `${deliveryForecast(deliveryDays)} · ${deliveryDays} Werktage`}
+      </span>
+    );
+  }
+
   if (deliveryDays == null) {
     return (
       <div className="space-y-1">
