@@ -713,12 +713,14 @@ export default function Teileportal() {
   // Schnellfilter-Chips sind EINZELN schaltbar und beliebig kombinierbar.
   // (Vorher teilten sich instant/fast einen State und cheapest/quality den
   //  sortOrder — dadurch ging immer nur einer von beiden.)
-  const [fInstant, setFInstant] = useState(false);
+  // Standardmaessig an: wer ein Teil sucht, will es meistens SCHNELL. Der Chip
+  // ist sichtbar aktiv und mit einem Klick wieder aus — kein verstecktes Filtern.
+  const [fInstant, setFInstant] = useState(true);
   const [fFast,    setFFast]    = useState(false);
   const [fCheap,   setFCheap]   = useState(false);
   const [fQuality, setFQuality] = useState(false);
 
-  const filtered = useMemo(() => {
+  const { list: filtered, lieferfilterLeer } = useMemo(() => {
     let result = selectedBrands.size > 0 ? articles.filter(a => selectedBrands.has(a.brand)) : articles;
 
     // Artikel-Textsuche
@@ -733,6 +735,7 @@ export default function Teileportal() {
 
     // Lieferzeit-Chips: beide gleichzeitig möglich → Vereinigung der Zeiträume.
     // "Sofort" (≤1 Tag) ist eine Teilmenge von "Bis 3 Tage", zusammen also ≤3.
+    const vorLieferfilter = result;
     if (fInstant || fFast) {
       const maxDays = fFast ? 3 : 1;
       result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= maxDays);
@@ -740,6 +743,16 @@ export default function Teileportal() {
       result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 1);
     } else if (availFilter === 'fast') {
       result = result.filter(a => a.deliveryDays != null && a.deliveryDays <= 3);
+    }
+
+    // Sicherheitsnetz fuer den Standardfilter: bei vielen Teilen steht die
+    // Lieferzeit auf "auf Anfrage". Wuerde der Filter dann ALLES wegnehmen,
+    // waere eine leere Trefferliste die schlechteste aller Antworten. Also
+    // zeigen wir doch alles — und sagen in einer Zeile, warum.
+    let lieferfilterLeer = false;
+    if (result.length === 0 && vorLieferfilter.length > 0) {
+      result = vorLieferfilter;
+      lieferfilterLeer = true;
     }
 
     // Originalteil-Filter — unabhängig
@@ -762,7 +775,7 @@ export default function Teileportal() {
         if (fCheap) return (a.price ?? Infinity) - (b.price ?? Infinity);
         return 0;
       });
-      return sorted;
+      return { list: sorted, lieferfilterLeer };
     }
 
     switch (sortOrder) {
@@ -787,7 +800,7 @@ export default function Teileportal() {
       case 'brand':
         sorted.sort((a, b) => (a.brand || '').localeCompare(b.brand || '')); break;
     }
-    return sorted;
+    return { list: sorted, lieferfilterLeer };
   }, [articles, selectedBrands, artSearch, quickFilter, sortOrder, availFilter, oemFilter, fInstant, fFast, fCheap, fQuality]);
 
   const inquiry = (article?: Article) => {
@@ -1466,7 +1479,11 @@ export default function Teileportal() {
                         </select>
 
                         {/* Ergebnis-Zähler */}
-                        {filtered.length < articles.length && (
+                        {lieferfilterLeer ? (
+                          <span className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
+                            Kein Teil ist sofort lieferbar — wir zeigen dir alle.
+                          </span>
+                        ) : filtered.length < articles.length && (
                           <span className="text-[11px] text-muted-foreground whitespace-nowrap">
                             {filtered.length} von {articles.length}
                           </span>
