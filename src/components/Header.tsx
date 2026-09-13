@@ -17,7 +17,7 @@ const NAV: Array<{ to: string; label: string; href?: string; beta?: boolean }> =
   { to: "/shop", label: "Shop" },
   { to: "/teileboerse", label: "Teilebörse", beta: true },
   // Fahrzeugmarkt bewusst ausgeblendet (in Arbeit) — Seite bleibt unter /fahrzeugmarkt erreichbar
-  { to: "/mitgliedschaft", label: "Mitgliedschaft", beta: true },
+  { to: "/mitgliedschaft", label: "Mitgliedschaft" },
   { to: "/laden", label: "Laden & Kontakt" },
 ];
 

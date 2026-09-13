@@ -147,6 +147,7 @@ function OfferPanel({
   vehicleLabel,
   onClose,
   oemSlot,
+  oemDrawingSlot,
 }: {
   a: WorkArticle;
   alternatives: WorkArticle[];
@@ -158,6 +159,8 @@ function OfferPanel({
   vehicleLabel?: string;
   onClose?: () => void;
   oemSlot?: (articleNumber: string, name: string) => React.ReactNode;
+  /** Explosionszeichnung zum Teil — steht dort, wo vorher nur die OE-Nummern standen. */
+  oemDrawingSlot?: (oeNumbers: string[], name: string) => React.ReactNode;
 }) {
   const [qty, setQty] = useState(1);
   const [copied, setCopied] = useState(false);
@@ -310,6 +313,9 @@ function OfferPanel({
           </div>
         )}
 
+        {/* Explosionszeichnung — das Teil im Zusammenhang, nicht nur seine Nummer */}
+        {a.oeNumbers && a.oeNumbers.length > 0 && oemDrawingSlot?.(a.oeNumbers, a.name)}
+
         {/* OE-Nummern */}
         {a.oeNumbers && a.oeNumbers.length > 0 && (
           <div className="p-4">
@@ -343,6 +349,7 @@ export function TeileWorkspace({
   toolbar,
   title,
   oemSlot,
+  oemDrawingSlot,
 }: {
   articles: WorkArticle[];
   level: MemberLevelId;
@@ -357,6 +364,8 @@ export function TeileWorkspace({
   title?: React.ReactNode;
   /** Einstieg in den Original-Katalog, direkt beim angeklickten Teil. */
   oemSlot?: (articleNumber: string, name: string) => React.ReactNode;
+  /** Explosionszeichnung zum angeklickten Teil. */
+  oemDrawingSlot?: (oeNumbers: string[], name: string) => React.ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -488,6 +497,7 @@ export function TeileWorkspace({
             onZoom={onZoom}
             vehicleLabel={vehicleLabel}
             oemSlot={oemSlot}
+            oemDrawingSlot={oemDrawingSlot}
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center px-6 text-muted-foreground">
@@ -520,6 +530,7 @@ export function TeileWorkspace({
                 onZoom={onZoom}
                 vehicleLabel={vehicleLabel}
                 oemSlot={oemSlot}
+                oemDrawingSlot={oemDrawingSlot}
                 onClose={() => setSheetOpen(false)}
               />
             </motion.div>

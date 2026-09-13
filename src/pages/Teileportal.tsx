@@ -22,6 +22,7 @@ import { useAuth } from "@/context/AuthContext";
 import { OemExplosionView } from "@/components/OemExplosionView";
 import { OemCatalog } from "@/components/OemCatalog";
 import { OemDrawingBar } from "@/components/OemDrawingBar";
+import { OemPartDrawing } from "@/components/OemPartDrawing";
 import { brandFromVin } from "@/lib/wmi";
 import { TeileboerseGate } from "@/components/TeileboerseGate";
 
@@ -1321,6 +1322,15 @@ export default function Teileportal() {
                       vin={vehicleVin}
                       onOpen={() => setPhase('oem')}
                       onVin={(v) => { setVehicleVin(v); setPhase('oem'); }}
+                    />
+                  )}
+                  oemDrawingSlot={(oe, name) => (
+                    <OemPartDrawing
+                      vin={vehicleVin}
+                      brand={vehicleBrand || vehicle?.manufacturer || ''}
+                      oeNumbers={oe}
+                      partName={name}
+                      onOpenCatalog={() => setPhase('oem')}
                     />
                   )}
                   left={
