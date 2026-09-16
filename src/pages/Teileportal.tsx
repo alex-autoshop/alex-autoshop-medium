@@ -280,8 +280,6 @@ interface Article {
   oeNumbers?: string[];
   specs?: { name: string; value: string }[];
   price?: number;        // Einzelhandel / UVP — was Kunden sehen (listPriceGross)
-  priceEK?: number;      // EK-Preis (customerPriceGross) — Alex's Einkaufspreis
-  priceOriginal?: number; // legacy alias für priceEK
   availability?: string;
   deliveryDays?: number;
   source?: "intercars" | "static";
@@ -291,7 +289,6 @@ type Phase = 'search' | 'categories' | 'articles' | 'oem';
 type SearchMode = 'vin' | 'kba';
 type HeroTab = 'search' | 'vin' | 'kba' | 'vehicle' | 'number';
 // VK = EK × 2.0 → immer unter IC-Listenpreis, Level 3 (-40%) = EK × 1.2 (noch profitabel)
-const PRICE_MARKUP = 2.0;
 
 async function postJson(url: string, payload: Record<string, unknown>, ms: number) {
   const ctrl = new AbortController();
@@ -308,16 +305,9 @@ const intercarsApi = (p: Record<string, unknown>) => postJson("/api/intercars", 
 function parseIntercarsArticles(data: any): Article[] {
   const items: any[] = data?.articles ?? data?.results ?? (Array.isArray(data) ? data : []);
   return items.map((ic: any) => {
-    // IC gibt zurück:
-    //   price         = customerPriceGross (EK-Preis inkl. MwSt, z.B. 4,50€)
-    //   priceOriginal = listPriceGross (Intercars-UVP — wird NICHT verwendet)
-    // UVP = EK * PRICE_MARKUP (1.5). Intercars-Listenpreis als letzter Fallback wenn kein EK.
-    const ekPrice: number | undefined = ic.price > 0 ? Number(ic.price) : undefined;
-    const uvpPrice: number | undefined = ekPrice != null
-      ? Math.ceil(ekPrice * PRICE_MARKUP * 100) / 100
-      : ic.priceOriginal != null && ic.priceOriginal > 0
-        ? Number(ic.priceOriginal)
-        : undefined;
+    // Der Server liefert den fertigen Verkaufspreis. Der Einkaufspreis wird
+    // gar nicht mehr ausgeliefert — hier gibt es also nichts mehr zu rechnen.
+    const uvpPrice: number | undefined = Number(ic.price) > 0 ? Number(ic.price) : undefined;
     const imgRaw = ic.images?.[0];
     const imageUrl: string | undefined = typeof imgRaw === "string" ? imgRaw : imgRaw?.url ?? imgRaw?.imageURL;
     return {
@@ -329,7 +319,6 @@ function parseIntercarsArticles(data: any): Article[] {
       oeNumbers: ic.oemNumbers ?? [],
       specs: ic.specs ? Object.entries(ic.specs).map(([name, value]) => ({ name, value: String(value) })) : [],
       price: uvpPrice,      // Einzelhandel — für Kunden
-      priceEK: ekPrice,     // EK-Preis — für interne Anzeige
       availability: ic.availability,
       deliveryDays: ic.deliveryDays,
       source: "intercars" as const,
@@ -651,7 +640,7 @@ export default function Teileportal() {
    *  WICHTIG — Limit: Kategorien wie "Bremsbelag" liefern 900+ Artikel. Ohne Kappung
    *  würden pro Suche tausende IC-Requests rausgehen (Rate-Limit + langsame Seite).
    *  Nur was der Nutzer zuerst sieht wird angereichert; beim Nachladen mehr.
-   *  price = UVP/Einzelhandel, priceEK = EK (customerPriceGross). */
+   *  price = fertiger Verkaufspreis vom Server. */
   const IC_ENRICH_LIMIT = 24;
   const enrichTopWithIc = (arts: Article[]) => {
     const toEnrich = arts
@@ -666,8 +655,7 @@ export default function Teileportal() {
           setArticles((prev) => prev.map((x) => x.articleNumber === a.articleNumber
             ? {
                 ...x,
-                price: live.price,           // UVP / Einzelhandel
-                priceEK: live.priceEK,       // EK-Preis
+                price: live.price,           // Einzelhandel
                 availability: live.availability,
                 deliveryDays: live.deliveryDays,
                 imageUrl: x.imageUrl ?? live.imageUrl,
@@ -728,7 +716,7 @@ export default function Teileportal() {
   // ── Schnellfilter-States ─────────────────────────────────────────────────
   const [artSearch,    setArtSearch]    = useState('');
   const [quickFilter,  setQuickFilter]  = useState<string | null>(null);
-  const [sortOrder,    setSortOrder]    = useState<'popular' | 'cheapest' | 'quality' | 'savings' | 'fast' | 'brand'>('popular');
+  const [sortOrder,    setSortOrder]    = useState<'popular' | 'cheapest' | 'quality' | 'fast' | 'brand'>('popular');
   const [availFilter,  setAvailFilter]  = useState<'all' | 'instant' | 'fast'>('all');
   const [oemFilter,    setOemFilter]    = useState(false);
   // Schnellfilter-Chips sind EINZELN schaltbar und beliebig kombinierbar.
@@ -809,12 +797,6 @@ export default function Teileportal() {
           const qb = isKnownBrand(b.brand) ? 1 : 0;
           if (qb !== qa) return qb - qa;
           return (a.price ?? Infinity) - (b.price ?? Infinity);
-        }); break;
-      case 'savings':
-        sorted.sort((a, b) => {
-          const savA = a.priceEK != null && a.price != null ? a.price - a.priceEK : 0;
-          const savB = b.priceEK != null && b.price != null ? b.price - b.priceEK : 0;
-          return savB - savA;
         }); break;
       case 'fast':
         sorted.sort((a, b) => (a.deliveryDays ?? 99) - (b.deliveryDays ?? 99)); break;
@@ -1511,7 +1493,6 @@ export default function Teileportal() {
                         >
                           <option value="popular">↕ Beliebt</option>
                           <option value="cheapest">↕ Günstigste</option>
-                          <option value="savings">↕ Max. Ersparnis</option>
                           <option value="fast">↕ Schnellste Lieferung</option>
                           <option value="brand">↕ Marke A–Z</option>
                         </select>

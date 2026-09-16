@@ -12,19 +12,16 @@ import { apAnalogParts } from "@/lib/autoparts";
  * Ein Call `searchByIndex` liefert bereits alles: Preis, Bestand, EAN, Lagerorte.
  *
  * Preislogik (unverändert):
- *   priceEK = customerPriceGross (Alex' EK nach Rabattstufe)
- *   price   = EK × PRICE_MARKUP  (Kundenpreis; IC-Listenpreis nur als Fallback)
+ *   price   = fertiger Verkaufspreis vom Server (der Einkaufspreis bleibt dort)
  */
 
 // VK = EK × 2.0 — konsistent mit parseIntercarsArticles in Teileportal.tsx
-const PRICE_MARKUP = 2.0;
 
 const _cache = new Map<string, { v: unknown; ts: number }>();
 const TTL = 5 * 60 * 1000; // 5 Minuten
 
 export interface IcLiveInfo {
   price: number;        // UVP / Einzelhandel (listPriceGross) — für Kunden
-  priceEK?: number;     // EK-Preis (customerPriceGross) — nur intern
   availability: string; // z.B. "1 Werktag · 5 Stück"
   deliveryDays: number;
   icSku: string;
@@ -153,11 +150,9 @@ export async function icPriceLookup(
     }
 
     if (p) {
-      // p.price = customerPriceGross (EK) · p.priceOriginal = listPriceGross (IC-UVP)
-      const ek = Number(p.price) > 0 ? Number(p.price) : undefined;
-      const price = ek != null
-        ? Math.ceil(ek * PRICE_MARKUP * 100) / 100
-        : Number(p.priceOriginal) > 0 ? Number(p.priceOriginal) : undefined;
+      // p.price ist der fertige Verkaufspreis. Der Aufschlag passiert in
+      // api/intercars.js — der Einkaufspreis kommt hier gar nicht mehr an.
+      const price = Number(p.price) > 0 ? Number(p.price) : undefined;
       const avail = Number(p.stockQuantity) || 0;
 
       if (price) {
@@ -174,7 +169,6 @@ export async function icPriceLookup(
         const analog = p._viaAnalog ? String(p._viaAnalog) : undefined;
         result = {
           price,
-          priceEK: ek,
           availability: analog ? `≙ ${analog} · ${base}` : base,
           deliveryDays: serverDays,
           icSku: String(p._sku),

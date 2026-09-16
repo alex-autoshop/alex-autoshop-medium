@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { X, Send, MessageCircle, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { chatClient } from "@/lib/supabase";
 
 // Immer online — Alex antwortet via ntfy wann immer möglich
 function isOnline(): boolean { return true; }
@@ -23,6 +23,9 @@ export function LiveChatWidget() {
   const [open, setOpen] = useState(false);
   const [online, setOnline] = useState(isOnline());
   const [sessionId, setSessionId] = useState<string | null>(null);
+  // Eigener Client mit der Sitzungs-ID im Header — nur damit gibt die
+  // Datenbank die eigene Unterhaltung heraus (siehe Migration 20260917).
+  const chatDb = useMemo(() => (sessionId ? chatClient(sessionId) : null), [sessionId]);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [name, setName] = useState("");
@@ -47,34 +50,29 @@ export function LiveChatWidget() {
     }
   }, []);
 
-  // Nachrichten laden + Realtime abonnieren wenn Session aktiv
+  // Nachrichten laden. Realtime faellt weg: die Tabellen sind zu, und der
+  // Realtime-Kanal kann den Sitzungs-Header nicht mitschicken. Alle 4 Sekunden
+  // nachfragen ist fuer einen Chat schnell genug.
   useEffect(() => {
-    if (!sessionId || !supabase) return;
-
-    // Alle bisherigen Nachrichten laden
-    supabase
-      .from("chat_messages")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("created_at", { ascending: true })
-      .then(({ data }) => { if (data) setMsgs(data as Msg[]); });
-
-    // Realtime-Subscription für neue Nachrichten
-    const channel = supabase
-      .channel(`chat:${sessionId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "chat_messages", filter: `session_id=eq.${sessionId}` },
-        (payload) => {
-          const msg = payload.new as Msg;
-          setMsgs((prev) => [...prev, msg]);
-          if (msg.sender === "agent") setAgentTyping(false);
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [sessionId]);
+    if (!sessionId || !chatDb) return;
+    let aktiv = true;
+    const laden = async () => {
+      const { data } = await chatDb
+        .from("chat_messages")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true });
+      if (!aktiv || !data) return;
+      setMsgs((prev) => {
+        const neu = data as Msg[];
+        if (neu.length > prev.length && neu[neu.length - 1]?.sender === "agent") setAgentTyping(false);
+        return neu;
+      });
+    };
+    laden();
+    const t = setInterval(laden, 4000);
+    return () => { aktiv = false; clearInterval(t); };
+  }, [sessionId, chatDb]);
 
   // Scroll to bottom wenn neue Nachricht
   useEffect(() => {
@@ -83,30 +81,29 @@ export function LiveChatWidget() {
 
   // Session anlegen + erste Nachricht senden
   const startChat = async (firstMsg: string) => {
-    if (!supabase) return;
     setSending(true);
     try {
-      // Session in Supabase anlegen
-      const { data: session } = await supabase
-        .from("chat_sessions")
-        .insert({ visitor_name: name.trim() || null })
-        .select("id")
-        .single();
-      if (!session) throw new Error("Session konnte nicht erstellt werden");
+      // Die Sitzungs-ID wird hier erzeugt, nicht von der Datenbank vergeben:
+      // sie muss feststehen, bevor die erste Zeile geschrieben wird — sonst
+      // koennte der Nachweis-Header nicht mitgeschickt werden.
+      const sid = crypto.randomUUID();
+      const db = chatClient(sid);
+      if (!db) throw new Error("Chat nicht verfügbar");
 
-      const sid = session.id as string;
+      const { error: sitzungsFehler } = await db
+        .from("chat_sessions")
+        .insert({ id: sid, visitor_name: name.trim() || null });
+      if (sitzungsFehler) throw sitzungsFehler;
+
       setSessionId(sid);
       localStorage.setItem(SESSION_KEY, sid);
 
-      // Erste Nachricht einfügen
-      await supabase.from("chat_messages").insert({
+      await db.from("chat_messages").insert({
         session_id: sid,
         sender: "visitor",
         message: firstMsg,
       });
-
-      // Session last_msg_at aktualisieren
-      await supabase.from("chat_sessions").update({ last_msg_at: new Date().toISOString() }).eq("id", sid);
+      await db.from("chat_sessions").update({ last_msg_at: new Date().toISOString() }).eq("id", sid);
 
       // Email-Benachrichtigung an Alex
       fetch("/api/chat-notify", {
@@ -123,15 +120,15 @@ export function LiveChatWidget() {
 
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text || !supabase || sending) return;
+    if (!text || sending) return;
     setInput("");
     setSending(true);
     try {
-      if (!sessionId) {
+      if (!sessionId || !chatDb) {
         await startChat(text);
       } else {
-        await supabase.from("chat_messages").insert({ session_id: sessionId, sender: "visitor", message: text });
-        await supabase.from("chat_sessions").update({ last_msg_at: new Date().toISOString() }).eq("id", sessionId);
+        await chatDb.from("chat_messages").insert({ session_id: sessionId, sender: "visitor", message: text });
+        await chatDb.from("chat_sessions").update({ last_msg_at: new Date().toISOString() }).eq("id", sessionId);
       }
     } finally {
       setSending(false);

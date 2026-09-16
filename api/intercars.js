@@ -297,8 +297,21 @@ function normalizeProduct(product, quote = null, stockLines = null) {
   const vatPct         = p.vatPercentage ?? 19;
   const currency       = p.currencyCode  ?? "EUR";
 
-  const price         = customerPrice || listPrice || 0;
-  const priceOriginal = listPrice > customerPrice && listPrice > 0 ? listPrice : undefined;
+  // ── Der Einkaufspreis verlaesst diesen Server NICHT ──────────────────────
+  // Frueher ging customerPriceGross (Alex' EK nach Rabattstufe) roh an den
+  // Browser und erst dort wurde mal 2 gerechnet. In den Entwicklertools stand
+  // damit der Einkaufspreis jedes Teils — und aus EK und Verkaufspreis liest
+  // ein Wettbewerber die Rabattstufe ab. Der Aufschlag passiert jetzt hier,
+  // und nur das Ergebnis geht raus.
+  const AUFSCHLAG = Number(process.env.PRICE_MARKUP) > 0 ? Number(process.env.PRICE_MARKUP) : 2.0;
+  const aufschlagen = (ek) => Math.ceil(ek * AUFSCHLAG * 100) / 100;
+  // ACHTUNG, unveraendert uebernommen: fehlt der EK, wurde bisher der
+  // IC-Listenpreis in dasselbe Feld gelegt und im Browser ebenfalls
+  // verdoppelt. Das ergibt fuer eine UVP einen sehr hohen Preis und ist
+  // vermutlich ungewollt — aber es zu aendern waere eine Preisaenderung,
+  // und darum geht es hier nicht. Verhalten bleibt also 1:1 wie vorher.
+  const basis = customerPrice || listPrice || 0;
+  const price = basis > 0 ? aufschlagen(basis) : 0;
 
   const specs = {};
   if (product.index)   specs["Index"]    = product.index;
@@ -316,8 +329,6 @@ function normalizeProduct(product, quote = null, stockLines = null) {
     name,
     brand,
     price,
-    priceOriginal,
-    priceNet:      Number(p.customerPriceNet) || undefined,
     availability:  avail,
     deliveryDays:  days,
     specs,

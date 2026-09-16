@@ -1,13 +1,33 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Send, Loader2, CheckCircle, ChevronLeft, Lock, MessageCircle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 
 interface Session { id: string; visitor_name: string | null; last_msg_at: string; status: string }
 interface Msg { id: string; session_id: string; sender: string; message: string; created_at: string }
 
-const ADMIN_PIN = "alex2024";
 const PIN_KEY = "aa-admin-auth";
+
+/**
+ * Die PIN steht NICHT mehr im Code.
+ *
+ * Vorher stand die PIN als Zeichenkette direkt hier — im oeffentlichen Repo und
+ * im ausgelieferten JS-Bundle. Sie hat ohnehin nichts geschuetzt: die
+ * Chat-Tabellen waren fuer jeden lesbar, der den oeffentlichen Key nimmt.
+ *
+ * Jetzt liegt die PIN nur in Vercel (ADMIN_PIN), geprueft wird sie auf dem
+ * Server, und die Chatdaten kommen ausschliesslich von dort.
+ */
+async function adminRuf(pin: string, was: string, params?: Record<string, string>, body?: unknown) {
+  const qs = new URLSearchParams({ was, ...(params || {}) });
+  const r = await fetch(`/api/admin-chat?${qs}`, {
+    method: body ? "POST" : "GET",
+    headers: { "x-admin-pin": pin, ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(j?.hinweis ? `${j.error} — ${j.hinweis}` : j?.error || `Fehler ${r.status}`);
+  return j;
+}
 
 function timeAgo(iso: string) {
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -17,18 +37,28 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString("de-DE");
 }
 
-function PinScreen({ onAuth }: { onAuth: () => void }) {
+function PinScreen({ onAuth }: { onAuth: (pin: string) => void }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
+  const [meldung, setMeldung] = useState<string | null>(null);
+  const [pruefe, setPruefe] = useState(false);
 
-  const submit = () => {
-    if (pin === ADMIN_PIN) {
-      localStorage.setItem(PIN_KEY, ADMIN_PIN);
-      onAuth();
-    } else {
+  const submit = async () => {
+    if (!pin.trim() || pruefe) return;
+    setPruefe(true);
+    setMeldung(null);
+    try {
+      // Der Server entscheidet, nicht der Browser.
+      await adminRuf(pin, "sitzungen");
+      localStorage.setItem(PIN_KEY, pin);
+      onAuth(pin);
+    } catch (e) {
       setError(true);
       setPin("");
+      setMeldung(e instanceof Error ? e.message : "Anmeldung fehlgeschlagen");
       setTimeout(() => setError(false), 1500);
+    } finally {
+      setPruefe(false);
     }
   };
 
@@ -53,9 +83,11 @@ function PinScreen({ onAuth }: { onAuth: () => void }) {
             error ? "border-red-500 bg-red-500/10" : "border-white/10 focus:border-primary"
           }`}
         />
-        <button onClick={submit} className="w-full py-4 rounded-2xl bg-primary text-night font-bold text-base active:scale-95 transition-all">
-          Einloggen
+        <button onClick={submit} disabled={pruefe}
+          className="w-full py-4 rounded-2xl bg-primary text-night font-bold text-base active:scale-95 transition-all disabled:opacity-60">
+          {pruefe ? "Prüfe …" : "Einloggen"}
         </button>
+        {meldung && <p className="text-xs text-red-400 text-center leading-relaxed">{meldung}</p>}
       </div>
     </div>
   );
@@ -63,7 +95,8 @@ function PinScreen({ onAuth }: { onAuth: () => void }) {
 
 export default function AdminChat() {
   const [params] = useSearchParams();
-  const [authed, setAuthed] = useState(() => localStorage.getItem(PIN_KEY) === ADMIN_PIN);
+  const [pin, setPin] = useState<string | null>(() => localStorage.getItem(PIN_KEY));
+  const [fehler, setFehler] = useState<string | null>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeId, setActiveId] = useState<string | null>(params.get("session"));
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -72,61 +105,72 @@ export default function AdminChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Sessions laden + Realtime
+  // Sitzungen vom Server holen. Realtime faellt weg: die Tabellen sind jetzt
+  // zu, und der Browser hat keinen Schluessel mehr dafuer. Alle 5 Sekunden
+  // nachfragen reicht fuer einen Posteingang vollkommen.
   useEffect(() => {
-    if (!authed || !supabase) return;
-    const load = async () => {
-      const { data } = await supabase
-        .from("chat_sessions").select("*")
-        .eq("status", "open")
-        .order("last_msg_at", { ascending: false });
-      if (data) setSessions(data as Session[]);
+    if (!pin) return;
+    let aktiv = true;
+    const laden = async () => {
+      try {
+        const j = await adminRuf(pin, "sitzungen");
+        if (!aktiv) return;
+        setSessions((j?.sitzungen ?? []).filter((x: Session) => x.status === "open"));
+        setFehler(null);
+      } catch (e) {
+        if (!aktiv) return;
+        const m = e instanceof Error ? e.message : String(e);
+        setFehler(m);
+        if (/PIN/i.test(m)) { localStorage.removeItem(PIN_KEY); setPin(null); }
+      }
     };
-    load();
-    const ch = supabase.channel("admin-sessions")
-      .on("postgres_changes", { event: "*", schema: "public", table: "chat_sessions" }, load)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [authed]);
+    laden();
+    const t = setInterval(laden, 5000);
+    return () => { aktiv = false; clearInterval(t); };
+  }, [pin]);
 
-  // Nachrichten für aktive Session
+  // Nachrichten der offenen Unterhaltung
   useEffect(() => {
-    if (!activeId || !supabase) return;
+    if (!activeId || !pin) return;
+    let aktiv = true;
     setMsgs([]);
-    supabase.from("chat_messages").select("*")
-      .eq("session_id", activeId).order("created_at", { ascending: true })
-      .then(({ data }) => { if (data) setMsgs(data as Msg[]); });
-
-    const ch = supabase.channel(`admin-msgs:${activeId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `session_id=eq.${activeId}` },
-        (p) => setMsgs(prev => [...prev, p.new as Msg]))
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [activeId]);
+    const laden = async () => {
+      try {
+        const j = await adminRuf(pin, "nachrichten", { session: activeId });
+        if (aktiv) setMsgs(j?.nachrichten ?? []);
+      } catch { /* der Sitzungs-Abruf meldet den Fehler bereits */ }
+    };
+    laden();
+    const t = setInterval(laden, 4000);
+    return () => { aktiv = false; clearInterval(t); };
+  }, [activeId, pin]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const send = async () => {
     const text = input.trim();
-    if (!text || !activeId || !supabase || sending) return;
+    if (!text || !activeId || !pin || sending) return;
     setInput("");
     setSending(true);
     try {
-      await supabase.from("chat_messages").insert({ session_id: activeId, sender: "agent", message: text });
-      await supabase.from("chat_sessions").update({ last_msg_at: new Date().toISOString() }).eq("id", activeId);
+      const j = await adminRuf(pin, "antworten", undefined, { session: activeId, text });
+      if (j?.gespeichert) setMsgs((prev) => [...prev, j.gespeichert as Msg]);
+    } catch (e) {
+      setFehler(e instanceof Error ? e.message : String(e));
+      setInput(text);
     } finally { setSending(false); }
   };
 
   const closeSession = async (id: string) => {
-    if (!supabase) return;
-    await supabase.from("chat_sessions").update({ status: "closed" }).eq("id", id);
+    if (!pin) return;
+    try { await adminRuf(pin, "schliessen", undefined, { session: id }); } catch { /* egal */ }
     setSessions(p => p.filter(s => s.id !== id));
     if (activeId === id) setActiveId(null);
   };
 
   const activeSession = sessions.find(s => s.id === activeId);
 
-  if (!authed) return <PinScreen onAuth={() => setAuthed(true)} />;
+  if (!pin) return <PinScreen onAuth={(p) => setPin(p)} />;
 
   // Mobile: zeige Chat wenn aktiv, sonst Liste
   const showChat = !!activeId;
@@ -142,6 +186,9 @@ export default function AdminChat() {
           <div>
             <p className="font-bold text-sm">Live Chats</p>
             <p className="text-xs text-muted-foreground">{sessions.length} offen</p>
+            {fehler && (
+              <p className="mt-1 text-[11px] text-red-500 leading-snug">{fehler}</p>
+            )}
           </div>
         </div>
         {/* Liste */}

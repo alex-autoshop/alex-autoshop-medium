@@ -35,3 +35,22 @@ try {
 
 export const supabase = client;
 export const isAuthConfigured = client !== null;
+
+/**
+ * Eigener Client für den Besucher-Chat.
+ *
+ * Seit die Chat-Tabellen zu sind (Migration 20260917), darf ein Besucher nur
+ * noch die EIGENE Unterhaltung sehen. Nachgewiesen wird sie über den Header
+ * `x-chat-session` mit der Sitzungs-ID — einer zufälligen UUID, die nur der
+ * Besucher selbst hat. Ohne Header: keine Zeile.
+ */
+export function chatClient(sessionId: string): SupabaseClient | null {
+  if (!sessionId) return null;
+  try {
+    return createClient(url, key, {
+      global: { headers: { "x-chat-session": sessionId } },
+    });
+  } catch {
+    return null;
+  }
+}

@@ -48,7 +48,7 @@ export function MembershipSelect({ level, onChange }: { level: MemberLevelId; on
  * - Einzelhandel / UVP (groß, fett) = was Kunden zahlen
  * - Mitgliedspreis: hervorgehoben mit Badge wenn Level gewählt
  *
- * WICHTIG: Der Einkaufspreis (priceEK) wird NIRGENDS angezeigt — Kunden dürfen
+ * WICHTIG: Der Einkaufspreis verlaesst den Server gar nicht mehr — Kunden duerfen
  * unsere Einkaufskonditionen nicht sehen. Das Feld bleibt nur bestehen, damit
  * bestehende Aufrufer nicht brechen; es wird bewusst ignoriert.
  */
@@ -58,7 +58,6 @@ export function PriceBlock({
 }: {
   price: number;
   /** @deprecated Einkaufspreis — wird NICHT mehr angezeigt. */
-  priceEK?: number;
   level: MemberLevelId;
 }) {
   const [open, setOpen] = useState(false);
