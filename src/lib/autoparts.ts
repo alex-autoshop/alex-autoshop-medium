@@ -244,6 +244,27 @@ export async function apVehicleByKba(hsn: string, tsn: string): Promise<ApVehicl
   return veh;
 }
 
+/**
+ * Modelljahr aus Stelle 10 der FIN (ISO 3779).
+ *
+ * Der Code wiederholt sich alle 30 Jahre — "N" heisst 1992 ODER 2022. Wir
+ * nehmen den juengeren Jahrgang, weil ein 30 Jahre aelteres Fahrzeug in der
+ * Werkstatt die Ausnahme ist. Weil die Stelle bei europaeischen Herstellern
+ * nicht verbindlich belegt ist, wird der Wert nur benutzt, wenn mindestens
+ * ein Kandidat dazu passt — sonst faellt er stillschweigend weg.
+ */
+export function vinModelYear(vin: string): number | undefined {
+  const c = (vin || '').trim().toUpperCase()[9];
+  if (!c) return undefined;
+  const codes = 'ABCDEFGHJKLMNPRSTVWXY123456789';
+  const i = codes.indexOf(c);
+  if (i < 0) return undefined;
+  const jetzt = new Date().getFullYear();
+  let jahr = 1980 + i;
+  while (jahr + 30 <= jetzt + 1) jahr += 30;
+  return jahr;
+}
+
 /** Fahrzeug per VIN (TecDoc-VIN-Check, Fallback strukturierter Decoder). */
 export async function apVehicleByVin(vin: string): Promise<ApVehicle | null> {
   const v = vin.trim().toUpperCase();
@@ -378,35 +399,73 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
       return (!from || year >= from - 1) && year <= to + 1;
     };
 
-    let exactHits = cands;
-    if (kw || ps) exactHits = exactHits.filter(powerFits);
-    if (awd !== null && exactHits.length > 1) {
-      const byDrive = exactHits.filter((c) => isAwd(c) === awd);
-      if (byDrive.length) exactHits = byDrive;
-    }
-    if (exactHits.length > 1) {
-      const byYear = exactHits.filter(yearFits);
-      if (byYear.length) exactHits = byYear;
-    }
-    // Genau ein Treffer → Fahrzeug steht fest, kein Dialog nötig.
-    if (exactHits.length === 1) {
-      return { manufacturer: make, model, exact: true, candidates: exactHits };
-    }
-
-    // Sonst: beste Kandidaten nach oben sortieren (Leistung → Hubraum → Name)
-    const rank = (c: ApVinCandidate) => {
-      let s = 0;
-      if (powerFits(c)) s -= 1000;
-      if (awd !== null && isAwd(c) === awd) s -= 100;
-      if (yearFits(c)) s -= 10;
-      if (ccm) s += Math.abs(parseInt(c.ccm || '0', 10) - ccm) / 1000;
-      return s;
+    // ── Eine Variante. Keine Auswahl. ─────────────────────────────────────
+    // Jeder Schritt grenzt nur ein, wenn danach noch etwas uebrig bleibt —
+    // ein Filter, der die Liste leert, hat sich geirrt und wird verworfen.
+    const eingrenzen = (
+      liste: ApVinCandidate[],
+      passt: (c: ApVinCandidate) => boolean
+    ): ApVinCandidate[] => {
+      if (liste.length <= 1) return liste;
+      const rest = liste.filter(passt);
+      return rest.length ? rest : liste;
     };
-    const ordered = (exactHits.length ? exactHits : cands).slice();
-    ordered.sort((a, b) => rank(a) - rank(b)
-      || (a.modelName || '').localeCompare(b.modelName || '')
-      || (a.typeName || '').localeCompare(b.typeName || ''));
-    return { manufacturer: make, model, candidates: ordered.slice(0, 60) };
+
+    /** Hubraum trennt 2.5 TDI von 2.7 TDI — das staerkste Merkmal nach dem Kraftstoff. */
+    const ccmFits = (c: ApVinCandidate) => {
+      const v = parseInt(String(c.ccm || '0'), 10) || 0;
+      if (!ccm || !v) return true;
+      return Math.abs(v - ccm) <= Math.max(60, ccm * 0.05);
+    };
+    // Baujahr: aus dem Fahrzeugregister, sonst aus der FIN selbst.
+    const finJahr = vinModelYear(v);
+    const jahr = year || finJahr || 0;
+    const bauzeit = (c: ApVinCandidate) => ({
+      von: parseInt(String(c.buildFrom || '').slice(0, 4), 10) || 0,
+      bis: parseInt(String(c.buildTo || '').slice(0, 4), 10) || 9999,
+    });
+    const jahrFits = (c: ApVinCandidate) => {
+      if (!jahr) return true;
+      const { von, bis } = bauzeit(c);
+      return (!von || jahr >= von - 1) && jahr <= bis + 1;
+    };
+
+    let treffer = cands;
+    if (ccm) treffer = eingrenzen(treffer, ccmFits);
+    if (kw || ps) treffer = eingrenzen(treffer, powerFits);
+    if (awd !== null) treffer = eingrenzen(treffer, (c) => isAwd(c) === awd);
+    if (jahr) treffer = eingrenzen(treffer, jahrFits);
+
+    // Bleibt mehr als einer uebrig, entscheidet die Rangfolge — nicht der Kunde.
+    // Letztes Kriterium ist bewusst das juengere Fahrzeug: ein Ford Transit von
+    // 1971 ist als Vorauswahl schlicht falsch, wenn auch Baujahr 2000 in Frage
+    // kaeme.
+    const abstand = (a: number, b: number) => (a && b ? Math.abs(a - b) : 0);
+    const rang = (c: ApVinCandidate) => {
+      const p = powerOf(c);
+      const { bis } = bauzeit(c);
+      return [
+        jahrFits(c) ? 0 : 1,
+        ccmFits(c) ? 0 : 1,
+        powerFits(c) ? 0 : 1,
+        abstand(parseInt(String(c.ccm || '0'), 10) || 0, ccm),
+        abstand(kw ? p.kw : p.ps, kw || ps),
+        -Math.min(bis, 9998),
+      ];
+    };
+    treffer = treffer.slice().sort((a, b) => {
+      const ra = rang(a), rb = rang(b);
+      for (let i = 0; i < ra.length; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
+      return (a.typeName || '').localeCompare(b.typeName || '');
+    });
+
+    // Genau EIN Fahrzeug zurueck — die Seite soll nie eine Auswahl anbieten.
+    return {
+      manufacturer: make,
+      model,
+      exact: treffer.length === 1,
+      candidates: treffer.slice(0, 1),
+    };
   } catch {
     // Auflösung fehlgeschlagen — trotzdem Marke/Modell melden (kein alter Fallback)
     return { manufacturer: make, model, candidates: [] };

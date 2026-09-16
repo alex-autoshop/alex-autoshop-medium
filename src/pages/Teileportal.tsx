@@ -398,6 +398,10 @@ export default function Teileportal() {
   const [vehicleBrand, setVehicleBrand] = useState('');
   const [vehicleLoading, setVehicleLoading] = useState(false);
   const [vehicleError, setVehicleError] = useState<string | null>(null);
+  // false = die Motorvariante liess sich aus den Fahrzeugdaten nicht
+  // eindeutig bestimmen, die Rangfolge hat entschieden. Kein Dialog —
+  // aber der Kunde soll wissen, dass hier eine Annahme drinsteckt.
+  const [vehicleExact, setVehicleExact] = useState(true);
   // Gesetzt, wenn der Zubehoer-Katalog passen muss, der Original-Katalog aber
   // liefert. Dann steht in der roten Meldung ein Knopf, der direkt dorthin
   // fuehrt — sonst muesste der Kunde die OEM-Kachel selbst suchen.
@@ -414,8 +418,6 @@ export default function Teileportal() {
   const navigate = useNavigate();
   const [authModal, setAuthModal] = useState<null | { name: string; brand: string; articleNumber: string; imageUrl?: string; price?: number }>(null);
   // VIN-Auflösung: Motorvarianten zur Auswahl (wenn VIN nicht exakt eine Variante trifft)
-  const [vinCandidates, setVinCandidates] = useState<ApVinCandidate[]>([]);
-  const [vinBase, setVinBase] = useState<{ manufacturer: string; model: string; vin: string } | null>(null);
   const [catTree, setCatTree] = useState<ApCategoryNode[] | null>(null);
   const [openCatId, setOpenCatId] = useState<string | null>(null);
   const [catNodes, setCatNodes] = useState<Record<string, ApCategoryNode[]>>({});
@@ -503,7 +505,6 @@ export default function Teileportal() {
       ps: veh.ps, ccm: veh.ccm, fuel: veh.fuel, bodyType: veh.bodyType,
       buildFrom: veh.buildFrom, buildTo: veh.buildTo, engineCodes: veh.engineCodes,
       vin: vinStr || undefined, ktype: veh.vehicleId ?? null });
-    setVinCandidates([]); setVinBase(null);
     setPhase('categories');
   };
 
@@ -512,23 +513,25 @@ export default function Teileportal() {
     const mode = modeOverride ?? searchMode;
     setVehicleLoading(true);
     setVehicleError(null);
+    setVehicleExact(true);
     setOemRescue(null);
     setVehicle(null);
     setVehicleKtype(null);
     setCatTree(null); setCatNodes({}); setOpenCatId(null);
     setArticles([]);
     setActiveCat(null);
-    setVinCandidates([]); setVinBase(null);
     const normVin = vin.trim().toUpperCase().replace(/\s/g,'').replace(/I/g,'1').replace(/O/g,'0').replace(/Q/g,'0');
     try {
       // ── VIN: Marke+Modell auflösen, Motorvarianten zur Auswahl anbieten ──
       if (mode === 'vin') {
         try {
           const res = await apResolveVin(normVin);
-          if (res && res.candidates.length === 1) { applyVehicle(res.candidates[0], normVin); setVehicleLoading(false); return; }
-          if (res && res.candidates.length > 1) {
-            setVinBase({ manufacturer: res.manufacturer, model: res.model, vin: normVin });
-            setVinCandidates(res.candidates);
+          // Die FIN bestimmt das Fahrzeug — nicht der Kunde. apResolveVin gibt
+          // hoechstens einen Kandidaten zurueck; gibt es mehrere gleich gute,
+          // hat dort bereits die Rangfolge entschieden.
+          if (res && res.candidates.length >= 1) {
+            setVehicleExact(res.exact !== false);
+            applyVehicle(res.candidates[0], normVin);
             setVehicleLoading(false);
             return;
           }
@@ -1201,6 +1204,11 @@ export default function Teileportal() {
                         ({fmtBau(vehicle.buildFrom)} – {fmtBau(vehicle.buildTo) || 'heute'})
                       </span>
                     )}
+                    {!vehicleExact && (
+                      <span className="text-xs text-muted-foreground shrink-0 hidden md:inline" title="Die Fahrzeugdaten liessen mehrere Motorvarianten zu — wir haben die wahrscheinlichste genommen.">
+                        · Variante automatisch bestimmt
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => { setPhase('search'); setVehicle(null); setVehicleKtype(null); setCatTree(null); setCatNodes({}); setOpenCatId(null); setArticles([]); setActiveCat(null); }}
@@ -1537,49 +1545,6 @@ export default function Teileportal() {
       <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin} />
 
       {/* ── VIN-Variantenauswahl ─────────────────────────────────── */}
-      {vinCandidates.length > 0 && vinBase && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-night/60 backdrop-blur-sm p-0 sm:p-6"
-          onClick={() => { setVinCandidates([]); setVinBase(null); }}>
-          <div className="bg-card w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-border shadow-xl max-h-[85vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}>
-            <div className="p-5 border-b border-border">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-primary">VIN erkannt</p>
-                  <h3 className="text-lg font-bold leading-tight">{vinBase.manufacturer} {vinBase.model}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Wähle deine genaue Motorvariante für exakt passende Teile.</p>
-                </div>
-                <button onClick={() => { setVinCandidates([]); setVinBase(null); }}
-                  className="shrink-0 w-8 h-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <div className="overflow-y-auto p-2">
-              {vinCandidates.map((c) => (
-                <button key={c.vehicleId}
-                  onClick={() => applyVehicle(c, vinBase.vin)}
-                  className="w-full text-left px-3 py-3 rounded-xl hover:bg-primary/5 border border-transparent hover:border-primary/40 transition-colors flex items-center gap-3 min-h-[56px]">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold leading-tight">{c.typeName || c.modelName}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {[c.modelName, [c.ps && `${c.ps} PS`, c.ccm && `${c.ccm} ccm`, c.fuel].filter(Boolean).join(' · ')].filter(Boolean).join(' — ')}
-                    </p>
-                    {(c.buildFrom || c.buildTo) && (
-                      <p className="text-[11px] text-muted-foreground/70">{fmtBau(c.buildFrom)} – {fmtBau(c.buildTo) || 'heute'}</p>
-                    )}
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground/50 shrink-0" />
-                </button>
-              ))}
-            </div>
-            <div className="p-3 border-t border-border text-center">
-              <p className="text-[11px] text-muted-foreground">Nicht dabei? <a href={`tel:${SHOP_INFO.phone}`} className="text-primary font-medium">{SHOP_INFO.phone} anrufen</a></p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── Auth-Modal: Anmelden / Registrieren / Als Gast bestellen ── */}
       <AnimatePresence>
         {authModal && (
