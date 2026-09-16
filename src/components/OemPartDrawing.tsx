@@ -50,8 +50,11 @@ function fahrzeugToken(vin: string, brand: string): Promise<string | null> {
 const gleich = (a: string, b: string) =>
   a.replace(/[^a-z0-9]/gi, "").toLowerCase() === b.replace(/[^a-z0-9]/gi, "").toLowerCase();
 
-async function sucheZeichnung(vin: string, brand: string, oeNummern: string[]): Promise<Treffer | null> {
-  const token = await fahrzeugToken(vin, brand);
+async function sucheZeichnung(vin: string, brand: string, oeNummern: string[], vorabToken?: string): Promise<Treffer | null> {
+  // Hat die Teilebörse das Fahrzeug beim FIN-Eintippen schon bestimmt, wird der
+  // Token durchgereicht — das spart die zweite Aufloesung und funktioniert auch
+  // bei Marken, deren Namen wir nie richtig erraten haetten.
+  const token = vorabToken || (await fahrzeugToken(vin, brand));
   if (!token) return null;
 
   // Mehrere OE-Nummern pro Artikel sind der Normalfall (verschiedene Baujahre).
@@ -108,11 +111,11 @@ async function sucheZeichnung(vin: string, brand: string, oeNummern: string[]): 
   return null;
 }
 
-function holeZeichnung(vin: string, brand: string, oeNummern: string[]): Promise<Treffer | null> {
-  const key = `${vin}|${brand}|${oeNummern.slice(0, 4).join(",")}`.toUpperCase();
+function holeZeichnung(vin: string, brand: string, oeNummern: string[], vorabToken?: string): Promise<Treffer | null> {
+  const key = `${vorabToken || vin}|${brand}|${oeNummern.slice(0, 4).join(",")}`.toUpperCase();
   let p = zeichnungCache.get(key);
   if (!p) {
-    p = sucheZeichnung(vin, brand, oeNummern);
+    p = sucheZeichnung(vin, brand, oeNummern, vorabToken);
     zeichnungCache.set(key, p);
   }
   return p;
@@ -121,12 +124,15 @@ function holeZeichnung(vin: string, brand: string, oeNummern: string[]): Promise
 export function OemPartDrawing({
   vin,
   brand,
+  vehicleToken,
   oeNumbers,
   partName,
   onOpenCatalog,
 }: {
   vin?: string;
   brand?: string;
+  /** Fahrzeug-Token aus der FIN-Bestimmung — erspart die zweite Aufloesung. */
+  vehicleToken?: string;
   oeNumbers?: string[];
   partName?: string;
   /** Ganze Bildtafel im Original-Katalog öffnen. */
@@ -141,16 +147,16 @@ export function OemPartDrawing({
   const lauf = useRef(0);
 
   useEffect(() => {
-    if (!vin || !brand || nummern.length === 0) return;
+    if ((!vehicleToken && (!vin || !brand)) || nummern.length === 0) return;
     const id = ++lauf.current;
     setLaden(true); setFertig(false); setTreffer(null); setNat(null); setGanz(false);
-    holeZeichnung(vin, brand, nummern).then((t) => {
+    holeZeichnung(vin ?? "", brand ?? "", nummern, vehicleToken).then((t) => {
       if (lauf.current !== id) return;
       setTreffer(t); setLaden(false); setFertig(true);
     });
-  }, [vin, brand, nummern]);
+  }, [vin, brand, vehicleToken, nummern]);
 
-  if (!vin || !brand || nummern.length === 0) return null;
+  if ((!vehicleToken && (!vin || !brand)) || nummern.length === 0) return null;
 
   /* Ausschnitt um die markierte Position — in Bildkoordinaten. */
   const sicht = (() => {

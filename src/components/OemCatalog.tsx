@@ -209,13 +209,20 @@ function Drawing({
 export function OemCatalog({
   vin,
   brand,
+  vorabFahrzeug,
   vehicleLabel,
   onBack,
   onAddToCart,
 }: {
   vin?: string;
-  /** Marke des Fahrzeugs — ohne sie kann YQ die FIN keinem Katalog zuordnen. */
+  /** Marke des Fahrzeugs — nur noch Notnagel, falls kein vorabFahrzeug vorliegt. */
   brand?: string;
+  /**
+   * Fahrzeug, das die Teilebörse beim FIN-Eintippen schon bestimmt hat.
+   * Liegt es vor, entfaellt hier die zweite FIN-Aufloesung — und mit ihr das
+   * Raten der Marke, an dem frueher ganze Hersteller gescheitert sind.
+   */
+  vorabFahrzeug?: YqVehicle | null;
   vehicleLabel?: string;
   onBack: () => void;
   onAddToCart?: (p: { name: string; number: string; unit?: string }) => void;
@@ -263,11 +270,16 @@ export function OemCatalog({
 
   /* Fahrzeug per VIN bestimmen */
   const loadVehicle = useCallback(async () => {
-    if (!vin) return;
+    if (!vin && !vorabFahrzeug) return;
     setBusy(true); setError(null);
     try {
-      const { vehicles, envelope } = await yqFindByVin(vin, brand);
-      const v = vehicles[0];
+      let v = vorabFahrzeug ?? null;
+      let envelope: Parameters<typeof linkTo>[0] = v ?? undefined;
+      if (!v) {
+        const r = await yqFindByVin(vin!, brand);
+        v = r.vehicles[0] ?? null;
+        envelope = r.envelope as Parameters<typeof linkTo>[0];
+      }
       // Zwei Ursachen sehen gleich aus: Tippfehler in der FIN — oder eine Marke,
       // die statt der FIN eine Modellauswahl verlangt (Hyundai, Kia, Nissan, Mazda).
       // Deshalb keine Ursachen-Behauptung, sondern ein Weg, der immer funktioniert.
@@ -285,7 +297,7 @@ export function OemCatalog({
     } catch (e) {
       setError(e instanceof Error ? e.message : "Der Katalog antwortet gerade nicht.");
     } finally { setBusy(false); }
-  }, [vin, brand]);
+  }, [vin, brand, vorabFahrzeug]);
 
   useEffect(() => { loadVehicle(); }, [loadVehicle]);
 

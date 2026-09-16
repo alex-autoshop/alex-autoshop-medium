@@ -296,7 +296,22 @@ export async function apVehicleByVin(vin: string): Promise<ApVehicle | null> {
  * 2) Fallback decoder-v3 (Fahrzeugregister): Marke + Modell (+ Hubraum/Kraftstoff),
  *    dann Marke→Modellreihe→Motorvarianten auflösen. Der Nutzer wählt die exakte Variante.
  */
-export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
+/**
+ * Belege aus dem Hersteller-Katalog. Der liefert zur FIN das exakte Fahrzeug
+ * samt Baujahr, Hubraum und Leistung — das sind keine Schaetzwerte wie beim
+ * Fahrzeugregister-Decoder, sondern Herstellerangaben. Wo sie vorliegen,
+ * schlagen sie den Decoder.
+ */
+export interface VinHinweise {
+  brand?: string;
+  model?: string;
+  baujahr?: number;
+  ccm?: number;
+  kw?: number;
+  ps?: number;
+}
+
+export async function apResolveVin(vin: string, hinweise?: VinHinweise): Promise<ApVinResult | null> {
   const v = vin.trim().toUpperCase();
   if (v.length !== 17) return null;
 
@@ -325,6 +340,18 @@ export async function apResolveVin(vin: string): Promise<ApVinResult | null> {
     const dl = String(info['Driveline'] || info['Drive'] || '').toLowerCase();
     if (dl) awd = /4x4|four-wheel|all-wheel|awd|4matic|quattro/.test(dl);
   } catch { /* decoder nicht erreichbar */ }
+
+  // Herstellerangaben ueberschreiben den Decoder. Marke und Modell nur dann,
+  // wenn der Decoder gar nichts hatte: die OEM-Modellnamen ("BERLINGO PKW (B9)")
+  // passen schlechter auf den Zubehoerkatalog als die des Registers.
+  if (hinweise) {
+    if (hinweise.ccm) ccm = hinweise.ccm;
+    if (hinweise.kw) kw = hinweise.kw;
+    if (hinweise.ps) ps = hinweise.ps;
+    if (hinweise.baujahr) year = hinweise.baujahr;
+    if (!make && hinweise.brand) make = hinweise.brand;
+    if (!model && hinweise.model) model = hinweise.model;
+  }
   if (!make || !model) return null;
 
   // Lokale Normalisierung (bewusst NICHT die modulweite normCat — die kann beim

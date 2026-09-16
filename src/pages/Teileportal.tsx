@@ -23,6 +23,7 @@ import { OemExplosionView } from "@/components/OemExplosionView";
 import { OemCatalog } from "@/components/OemCatalog";
 import { OemDrawingBar } from "@/components/OemDrawingBar";
 import { OemPartDrawing } from "@/components/OemPartDrawing";
+import { yqIdentify, type YqIdent } from "@/lib/yqVehicle";
 import { brandFromVin } from "@/lib/wmi";
 import { TeileboerseGate } from "@/components/TeileboerseGate";
 
@@ -402,6 +403,9 @@ export default function Teileportal() {
   // eindeutig bestimmen, die Rangfolge hat entschieden. Kein Dialog —
   // aber der Kunde soll wissen, dass hier eine Annahme drinsteckt.
   const [vehicleExact, setVehicleExact] = useState(true);
+  // Fahrzeug aus dem Hersteller-Katalog: liefert die Belege fuer die
+  // Variantenbestimmung UND den Token fuer Baugruppen und Zeichnungen.
+  const [yqIdent, setYqIdent] = useState<YqIdent | null>(null);
   // Gesetzt, wenn der Zubehoer-Katalog passen muss, der Original-Katalog aber
   // liefert. Dann steht in der roten Meldung ein Knopf, der direkt dorthin
   // fuehrt — sonst muesste der Kunde die OEM-Kachel selbst suchen.
@@ -514,6 +518,7 @@ export default function Teileportal() {
     setVehicleLoading(true);
     setVehicleError(null);
     setVehicleExact(true);
+    setYqIdent(null);
     setOemRescue(null);
     setVehicle(null);
     setVehicleKtype(null);
@@ -525,7 +530,16 @@ export default function Teileportal() {
       // ── VIN: Marke+Modell auflösen, Motorvarianten zur Auswahl anbieten ──
       if (mode === 'vin') {
         try {
-          const res = await apResolveVin(normVin);
+          // Zuerst der Hersteller-Katalog. Er kennt zur FIN das exakte Fahrzeug
+          // samt Baujahr, Hubraum und Leistung — und braucht dafuer keine Marke.
+          // Diese Angaben gehen als Belege in die Variantenbestimmung des
+          // Zubehoerkatalogs, der sie sich sonst zusammenreimen muesste.
+          const ident = await yqIdentify(normVin);
+          if (ident) setYqIdent(ident);
+          const res = await apResolveVin(normVin, ident ? {
+            brand: ident.brand, model: ident.model, baujahr: ident.baujahr,
+            ccm: ident.ccm, kw: ident.kw, ps: ident.ps,
+          } : undefined);
           // Die FIN bestimmt das Fahrzeug — nicht der Kunde. apResolveVin gibt
           // hoechstens einen Kandidaten zurueck; gibt es mehrere gleich gute,
           // hat dort bereits die Rangfolge entschieden.
@@ -539,9 +553,10 @@ export default function Teileportal() {
             // Der Zubehör-Katalog braucht die exakte Motorvariante, der
             // Original-Katalog nicht: YQ löst die FIN selbst auf. Also FIN und
             // Marke behalten und den OEM-Katalog trotzdem anbieten.
+            const marke = ident?.brand || res.manufacturer;
             setVehicleVin(normVin);
-            setVehicleBrand(res.manufacturer);
-            setOemRescue(res.manufacturer);
+            setVehicleBrand(marke);
+            setOemRescue(marke);
             setVehicleError(`${res.manufacturer}${res.model ? ' ' + res.model : ''} per FIN erkannt, aber keine passende Motorvariante im Zubehör-Katalog. Für Zubehörteile nutze HSN/TSN oder ruf uns an: ${SHOP_INFO.phone}`);
             setPhase('search'); setVehicleLoading(false); return;
           }
@@ -549,7 +564,10 @@ export default function Teileportal() {
           // Katalog kann sie trotzdem auflösen — er braucht nur die Marke,
           // und die steht genormt in den ersten drei Zeichen der FIN.
           if (normVin.length === 17) {
-            const marke = brandFromVin(normVin);
+            // Der Hersteller-Katalog kennt das Fahrzeug oft, auch wenn der
+            // Zubehoerkatalog nichts findet. Erst wenn auch der passt, wird
+            // die Marke aus dem FIN-Praefix geraten.
+            const marke = ident?.brand || brandFromVin(normVin);
             if (marke) {
               setVehicleVin(normVin);
               setVehicleBrand(marke);
@@ -1210,6 +1228,17 @@ export default function Teileportal() {
                       </span>
                     )}
                   </div>
+                  {/* Solange das Fahrzeug steht, sind die Original-Zeichnungen einen
+                      Klick entfernt — vorher lagen sie auf der Startseite der
+                      Teilebörse, also genau dort, wo man sie noch nicht braucht. */}
+                  {(yqIdent || vehicleVin) && (
+                    <button
+                      onClick={() => setPhase('oem')}
+                      style={{ backgroundColor: '#FFFBEB', borderColor: '#D4A017' }}
+                      className="shrink-0 hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-black px-2.5 py-1 rounded border">
+                      <Layers className="w-3.5 h-3.5" /> Explosionszeichnungen
+                    </button>
+                  )}
                   <button
                     onClick={() => { setPhase('search'); setVehicle(null); setVehicleKtype(null); setCatTree(null); setCatNodes({}); setOpenCatId(null); setArticles([]); setActiveCat(null); }}
                     className="shrink-0 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded border border-border/60 hover:border-destructive/30">
@@ -1349,6 +1378,7 @@ export default function Teileportal() {
                     <OemPartDrawing
                       vin={vehicleVin}
                       brand={vehicleBrand || vehicle?.manufacturer || ''}
+                      vehicleToken={yqIdent?.token}
                       oeNumbers={oe}
                       partName={name}
                       onOpenCatalog={() => setPhase('oem')}
@@ -1516,11 +1546,12 @@ export default function Teileportal() {
 
         {/* ── OEM EXPLOSIONSKATALOG ────────────────────────────── */}
         {phase === 'oem' && (
-          vehicleVin ? (
+          (vehicleVin || yqIdent) ? (
             /* Echter Hersteller-Katalog mit Explosionszeichnungen — braucht die FIN. */
             <OemCatalog
               vin={vehicleVin}
               brand={vehicleBrand || vehicle?.manufacturer || ''}
+              vorabFahrzeug={yqIdent?.vehicle}
               vehicleLabel={vehicleLabel}
               onBack={() => setPhase(vehicle ? 'categories' : 'search')}
               onAddToCart={(p) => addArticleToCart({ name: p.name, brand: 'OE', articleNumber: p.number })}
