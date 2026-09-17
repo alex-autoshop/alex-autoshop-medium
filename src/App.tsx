@@ -7,7 +7,6 @@ import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { MaterialPlannerWidget } from "@/components/MaterialPlannerWidget";
-import { LiveChatWidget } from "@/components/LiveChatWidget";
 import { CookieConsent } from "@/components/CookieConsent";
 
 const Home = lazy(() => import("@/pages/Home"));
@@ -86,7 +85,11 @@ export default function App() {
                 </main>
                 <Footer />
                 <MaterialPlannerWidget />
-                <LiveChatWidget />
+                {/* Live-Chat vorerst abgehaengt — die Ecke bleibt leer.
+                    Die Komponente liegt weiter unter components/LiveChatWidget.tsx
+                    und die Admin-Seite unter /admin/chat: zurueckholen ist eine
+                    Zeile. Solange nichts eingehaengt ist, entsteht auch keine
+                    neue Chat-Sitzung mehr. */}
                 <CookieConsent />
               </div>
             } />
