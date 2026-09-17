@@ -72,6 +72,7 @@ export function PriceBlock({
             Einzelhandel <span className="line-through">{eur(price)}</span>
           </p>
           <p className="font-bold text-lg leading-tight text-primary">{eur(myPrice)}</p>
+          <p className="text-[10px] text-muted-foreground leading-none mb-0.5">inkl. MwSt</p>
           <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary leading-none">
             −{my!.pct} % {my!.name}
           </span>
@@ -80,6 +81,7 @@ export function PriceBlock({
         <>
           <p className="text-[11px] text-muted-foreground/70 leading-none mb-0.5">Einzelhandel</p>
           <p className="font-bold text-lg leading-tight">{eur(price)}</p>
+          <p className="text-[10px] text-muted-foreground leading-none">inkl. MwSt</p>
         </>
       )}
 

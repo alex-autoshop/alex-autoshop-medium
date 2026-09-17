@@ -467,6 +467,16 @@ export default async function handler(req, res) {
 
   // ── DIAGNOSE: wo genau klemmt es? (Credentials → OAuth → Catalog) ──────────
   if (action === "diag") {
+    // ── NUR FUER ALEX ────────────────────────────────────────────────────────
+    // Diese Aktion gibt die ROHEN Antworten von Inter Cars zurueck, und darin
+    // stehen customerPriceNet/customerPriceGross — also der Einkaufspreis.
+    // Ohne Sperre kann das JEDER mit einem einzigen POST abrufen. Gemessen am
+    // 17.09.2026: {"action":"diag"} lieferte listPriceNet/Gross UND
+    // customerPriceNet/Gross im Klartext. Deshalb: PIN erforderlich.
+    const pin = req.headers.get("x-admin-pin") || "";
+    const soll = process.env.ADMIN_PIN || "";
+    if (!soll || pin !== soll) return json({ error: "Nicht erlaubt" }, 403);
+
     const out = { hasCreds: true, payerId, branch, runtime: "nodejs" };
     const t0 = Date.now();
     try {
@@ -480,7 +490,9 @@ export default async function handler(req, res) {
             ? { method: "POST", headers: { ...hdrs, "Content-Type": "application/json" }, body: JSON.stringify(postBody) }
             : { headers: hdrs };
           const r = await withTimeout(fetch(`${IC_BASE_URL}${path}`, opts), 9000, "probe");
-          const txt = (await r.text()).slice(0, 400);
+          let txt = (await r.text()).slice(0, 400);
+          // Guertel und Hosentraeger: EK-Felder auch hier unkenntlich machen.
+          txt = txt.replace(/("customerPrice(?:Net|Gross)"\s*:\s*)[0-9.]+/g, "$1\"***\"");
           return { status: r.status, ms: Date.now() - t, body: txt };
         } catch (e) { return { status: 0, ms: Date.now() - t, body: String(e.message).slice(0, 200) }; }
       };

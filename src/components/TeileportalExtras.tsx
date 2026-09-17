@@ -5,10 +5,11 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Car, X, Plus, Minus, Trash2, ShoppingCart, MessageCircle, Package, Phone } from "lucide-react";
+import { Car, X, Plus, Minus, Trash2, ShoppingCart, MessageCircle, Package, Phone, CreditCard, Landmark, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
-import { formatSpecValue } from "@/components/TeileportalPricing";
+import { formatSpecValue, memberPrice, MEMBER_LEVELS, eur, type MemberLevelId } from "@/components/TeileportalPricing";
 
 // ─── TYPEN ──────────────────────────────────────────────────
 
@@ -231,23 +232,82 @@ export function PartsCartButton({ count, onClick }: { count: number; onClick: ()
   );
 }
 
-export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin }: {
+export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin, level = "none" }: {
   open: boolean;
   onClose: () => void;
   cart: ReturnType<typeof usePartsCart>;
   vehicleLabel: string;
   vehicleVin?: string;
+  level?: MemberLevelId;
 }) {
-  const { items, setQty, clear, subtotal, allPriced } = cart;
+  const { items, setQty, clear, allPriced } = cart;
+
+  // ── Mitgliedspreis auch im Warenkorb ──────────────────────────────────────
+  // Der Korb speichert absichtlich den LISTENPREIS. Der Mitgliedsrabatt wird
+  // erst hier gerechnet, damit ein Level-Wechsel den Korb sofort korrigiert
+  // statt einen alten Preis aus dem localStorage weiterzuschleppen.
+  // Vorher fehlte das komplett: die Liste zeigte 24,41 EUR (Level 3), der Korb
+  // 33,90 EUR — das Mitglied hat seinen Rabatt an der Kasse wieder verloren.
+  const [zahlt, setZahlt] = useState<"" | "stripe" | "gocardless">("");
+  const [zahlFehler, setZahlFehler] = useState("");
+
+  const lvl = MEMBER_LEVELS.find((l) => l.id === level);
+  const stueckPreis = (listenpreis: number) => (lvl ? memberPrice(listenpreis, lvl.pct) : listenpreis);
+  const mitPreis = items.filter((i) => i.price != null);
+  const subtotal = mitPreis.reduce((s, i) => s + stueckPreis(i.price as number) * i.quantity, 0);
+  const subtotalListe = mitPreis.reduce((s, i) => s + (i.price as number) * i.quantity, 0);
+  const ersparnis = Math.round((subtotalListe - subtotal) * 100) / 100;
   const orderText = [
     "🛒 BESTELLANFRAGE — Alex Autoshop Teilebörse",
     vehicleLabel ? `Fahrzeug: ${vehicleLabel}` : "",
     vehicleVin ? `FIN: ${vehicleVin}` : "",
     "",
-    ...items.map((i, n) => `${n + 1}. ${i.quantity}× ${i.brand} ${i.name} — Art.-Nr. ${i.articleNumber}${i.price != null ? ` — ${(i.price * i.quantity).toFixed(2)} €` : ""}`),
+    ...items.map((i, n) => `${n + 1}. ${i.quantity}× ${i.brand} ${i.name} — Art.-Nr. ${i.articleNumber}${i.price != null ? ` — ${(stueckPreis(i.price) * i.quantity).toFixed(2)} €` : ""}`),
     "",
     allPriced ? `Zwischensumme: ${subtotal.toFixed(2)} €` : "Bitte Preise und Verfügbarkeit bestätigen.",
   ].filter((l) => l !== null).join("\n");
+
+  /**
+   * Bezahlen. Es gehen NUR Artikelnummer, Marke und Menge raus — kein Preis.
+   * Den holt /api/parts-checkout selbst, sonst koennte man den Betrag im
+   * Browser umschreiben und sich das Teil fuer einen Euro kaufen.
+   */
+  const bezahlen = async (methode: "stripe" | "gocardless") => {
+    setZahlFehler("");
+    setZahlt(methode);
+    try {
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const r = await fetch("/api/parts-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          method: methode,
+          vehicleLabel,
+          vin: vehicleVin,
+          items: items.map((i) => ({
+            articleNumber: i.articleNumber,
+            brand: i.brand,
+            name: i.name,
+            quantity: i.quantity,
+          })),
+        }),
+      });
+      const d = await r.json().catch(() => null);
+      if (d?.url) { window.location.href = d.url; return; }
+      if (d?.fallback) {
+        setZahlFehler("Online-Zahlung ist noch nicht freigeschaltet — schick es bitte als Anfrage.");
+      } else {
+        setZahlFehler(d?.error || "Zahlung konnte nicht gestartet werden.");
+      }
+    } catch {
+      setZahlFehler("Keine Verbindung — bitte nochmal versuchen.");
+    } finally {
+      setZahlt("");
+    }
+  };
 
   return createPortal(
     <AnimatePresence>
@@ -278,7 +338,18 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin 
                         <span className="text-sm font-bold w-6 text-center">{i.quantity}</span>
                         <button onClick={() => setQty(i.key, i.quantity + 1)} className="p-1.5 hover:text-primary" aria-label="Mehr"><Plus className="w-3.5 h-3.5" /></button>
                       </div>
-                      <span className="text-sm font-bold">{i.price != null ? `${(i.price * i.quantity).toFixed(2).replace(".", ",")} €` : "auf Anfrage"}</span>
+                      <span className="text-sm font-bold text-right leading-tight">
+                        {i.price != null ? (
+                          <>
+                            {eur(stueckPreis(i.price) * i.quantity)}
+                            {lvl && stueckPreis(i.price) < i.price && (
+                              <span className="block text-[10px] font-normal text-muted-foreground line-through tabular-nums">
+                                {eur(i.price * i.quantity)}
+                              </span>
+                            )}
+                          </>
+                        ) : "auf Anfrage"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -287,11 +358,45 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin 
             {items.length > 0 && (
               <div className="p-4 border-t border-border space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{allPriced ? "Zwischensumme" : "Positionen mit Preis"}</span>
+                  <span className="text-muted-foreground">{allPriced ? "Zwischensumme" : "Positionen mit Preis"} <span className="text-[10px]">inkl. MwSt</span></span>
                   <span className="font-bold">{subtotal > 0 ? `${subtotal.toFixed(2).replace(".", ",")} €` : "—"}</span>
                 </div>
+                {lvl && ersparnis > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-primary font-semibold">{lvl.name} (−{lvl.pct} %)</span>
+                    <span className="text-primary font-semibold">du sparst {eur(ersparnis)}</span>
+                  </div>
+                )}
                 {!allPriced && <p className="text-xs text-muted-foreground">Endpreise & Verfügbarkeit bestätigen wir sofort nach der Anfrage — meist ist das Teil am selben Tag da.</p>}
-                <a href={whatsappLink(orderText)} target="_blank" rel="noopener noreferrer" className="btn-primary w-full gap-2">
+                {subtotal > 0 && (
+                  <>
+                    <button onClick={() => bezahlen("stripe")} disabled={zahlt !== ""}
+                      className="btn-primary w-full gap-2 disabled:opacity-60">
+                      {zahlt === "stripe"
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
+                        : <><CreditCard className="w-4 h-4" /> {eur(subtotal)} bezahlen</>}
+                    </button>
+                    <button onClick={() => bezahlen("gocardless")} disabled={zahlt !== ""}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-secondary disabled:opacity-60">
+                      {zahlt === "gocardless"
+                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
+                        : <><Landmark className="w-4 h-4" /> Per SEPA-Lastschrift</>}
+                    </button>
+                    {!allPriced && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Positionen ohne Preis sind nicht dabei — die klären wir über die Anfrage.
+                      </p>
+                    )}
+                    {zahlFehler && <p className="text-xs text-destructive">{zahlFehler}</p>}
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                      <span className="h-px flex-1 bg-border" />oder<span className="h-px flex-1 bg-border" />
+                    </div>
+                  </>
+                )}
+                <a href={whatsappLink(orderText)} target="_blank" rel="noopener noreferrer"
+                   className={subtotal > 0
+                     ? "w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-secondary"
+                     : "btn-primary w-full gap-2"}>
                   <MessageCircle className="w-4 h-4" /> Bestellanfrage senden
                 </a>
                 <div className="flex justify-between items-center">

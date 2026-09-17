@@ -20,6 +20,14 @@
 --                Der umgeht RLS, deshalb braucht es hier keine Admin-Regel.
 --   Alle anderen — nichts.
 
+-- RLS einschalten. NACHGEMESSEN am 17.09.2026: RLS stand auf diesen beiden
+-- Tabellen AUS. Solange es aus ist, werden Policies nie geprueft — egal wie
+-- streng sie sind. Das war der Grund, warum der erste Durchlauf nichts
+-- bewirkt hat. Nachweis: ein INSERT mit erfundener session_id lief in den
+-- Fremdschluessel-Fehler (23503) statt in die Policy (42501).
+ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+
 -- Alte, offene Regeln weg
 DROP POLICY IF EXISTS "chat_sessions_insert" ON chat_sessions;
 DROP POLICY IF EXISTS "chat_sessions_select" ON chat_sessions;
@@ -27,14 +35,27 @@ DROP POLICY IF EXISTS "chat_sessions_update" ON chat_sessions;
 DROP POLICY IF EXISTS "chat_messages_insert" ON chat_messages;
 DROP POLICY IF EXISTS "chat_messages_select" ON chat_messages;
 
--- Sitzungs-ID aus dem Request-Header lesen (NULL, wenn keiner mitkam)
+-- Sitzungs-ID aus dem Request-Header lesen.
+-- Gibt NULL zurueck, wenn kein Header kam, er leer ist oder keine gueltige
+-- UUID enthaelt. Wichtig: NICHTS darf hier einen Fehler werfen — sonst koennte
+-- ein Besucher mit einem kaputten Header die ganze Abfrage abbrechen lassen.
 CREATE OR REPLACE FUNCTION chat_sitzung_aus_header()
 RETURNS uuid
-LANGUAGE sql STABLE AS $$
-  SELECT NULLIF(
-    current_setting('request.headers', true)::json ->> 'x-chat-session',
-    ''
-  )::uuid
+LANGUAGE plpgsql STABLE
+SET search_path = pg_catalog, public
+AS $$
+DECLARE roh text;
+BEGIN
+  roh := NULLIF(current_setting('request.headers', true), '')::json ->> 'x-chat-session';
+  IF roh IS NULL
+     OR roh !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  THEN
+    RETURN NULL;
+  END IF;
+  RETURN roh::uuid;
+EXCEPTION WHEN others THEN
+  RETURN NULL;
+END;
 $$;
 
 -- ── chat_sessions ───────────────────────────────────────────

@@ -722,10 +722,11 @@ export default function Teileportal() {
   // Schnellfilter-Chips sind EINZELN schaltbar und beliebig kombinierbar.
   // (Vorher teilten sich instant/fast einen State und cheapest/quality den
   //  sortOrder — dadurch ging immer nur einer von beiden.)
-  // Standardmaessig an: wer ein Teil sucht, will es meistens SCHNELL. Der Chip
-  // ist sichtbar aktiv und mit einem Klick wieder aus — kein verstecktes Filtern.
+  // Standardmaessig an: wer ein Teil sucht, will es meistens SCHNELL. Beide
+  // Chips sind sichtbar aktiv und mit einem Klick wieder aus — kein
+  // verstecktes Filtern. Zusammen ergeben sie "alles, was in 3 Tagen da ist".
   const [fInstant, setFInstant] = useState(true);
-  const [fFast,    setFFast]    = useState(false);
+  const [fFast,    setFFast]    = useState(true);
   const [fCheap,   setFCheap]   = useState(false);
   const [fQuality, setFQuality] = useState(false);
 
@@ -1500,7 +1501,9 @@ export default function Teileportal() {
                         {/* Ergebnis-Zähler */}
                         {lieferfilterLeer ? (
                           <span className="text-[11px] text-amber-700 dark:text-amber-400 leading-snug">
-                            Kein Teil ist sofort lieferbar — wir zeigen dir alle.
+                            {fFast
+                              ? 'Kein Teil kommt innerhalb von 3 Tagen — wir zeigen dir alle.'
+                              : 'Kein Teil ist sofort lieferbar — wir zeigen dir alle.'}
                           </span>
                         ) : filtered.length < articles.length && (
                           <span className="text-[11px] text-muted-foreground whitespace-nowrap">
@@ -1554,7 +1557,7 @@ export default function Teileportal() {
       <PartDetailModal article={detailArticle} vehicleLabel={vehicleLabel} onClose={() => setDetailArticle(null)}
         onAddToCart={(a) => addArticleToCart(a)} brandLogo={detailArticle ? getBrandLogo(detailArticle.brand) : undefined} />
       <PartsCartButton count={cart.count} onClick={() => setCartOpen(true)} />
-      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin} />
+      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin} level={effectiveMemberLevel} />
 
       {/* ── VIN-Variantenauswahl ─────────────────────────────────── */}
       {/* ── Auth-Modal: Anmelden / Registrieren / Als Gast bestellen ── */}
