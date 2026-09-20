@@ -415,7 +415,8 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
 
 // ─── ARTIKEL-EXPANDER (wie Inter Cars: Mehr Info / Ersatz / Anwendungen / OE) ─
 
-import { ChevronDown, Loader2 } from "lucide-react";
+// Loader2 kommt schon aus dem Import ganz oben — doppelt importiert bricht der Build ab.
+import { ChevronDown } from "lucide-react";
 import { apArticleSpecs, apAnalogParts, apCompatibleCars, type ApAnalogPart } from "@/lib/autoparts";
 
 type ExpTab = "info" | "ersatz" | "anwendungen" | "oe";

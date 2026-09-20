@@ -770,6 +770,46 @@ export async function apArticlesByNumber(articleNo: string): Promise<ApArticle[]
   return raw.map(toApArticle).filter((a): a is ApArticle => !!a && !!a.articleNumber);
 }
 
+/**
+ * Rohe OE-Treffer zu EINER Originalnummer — mit dem Hersteller, zu dem die
+ * Nummer gehört (`oeHersteller`).
+ *
+ * Genau dieses Feld fehlte bisher, und das war gefährlich: dieselbe Ziffern-
+ * folge gibt es bei verschiedenen Autoherstellern. Gemessen am 20.09.2026:
+ * Opel-Katalognummer 650209 (Ölfiltergehäuse) lieferte über die OE-Suche
+ * einen "Federbalg, Luftfederung" — die Nummer gehört dort zu DENNIS (Busse).
+ * Wer nach dem Hersteller filtert, bekommt so etwas nie angezeigt.
+ */
+export interface ApOeTreffer {
+  articleId: number;
+  articleNo: string;
+  productName: string;
+  supplierName: string;
+  /** Autohersteller, zu dem die OE-Nummer gehört (TecDoc manufacturerName). */
+  oeHersteller: string;
+  image?: string;
+}
+
+export async function apOeTreffer(oeNummer: string): Promise<ApOeTreffer[]> {
+  const nr = (oeNummer || '').trim();
+  if (nr.length < 4) return [];
+  try {
+    const r = await ap('/articles-oem/search-by-article-oem-no', { articleOemNo: nr, langId: LANG });
+    return pickArray(r, 'articles')
+      .map((a: any) => ({
+        articleId: Number(first(a?.articleId, a?.id)) || 0,
+        articleNo: String(first(a?.articleNo, a?.articleNumber) || '').trim(),
+        productName: String(first(a?.articleProductName, a?.productName, a?.genericArticleName) || '').trim(),
+        supplierName: String(first(a?.supplierName, a?.brandName) || '').trim(),
+        oeHersteller: String(first(a?.manufacturerName, a?.mfrName) || '').trim(),
+        image: pickImage(a),
+      }))
+      .filter((x: ApOeTreffer) => x.articleNo && x.supplierName);
+  } catch {
+    return [];
+  }
+}
+
 // ─── ARTIKEL-ZUSATZDATEN (on-demand, für Aufklapp-Tabs) ─────
 
 export interface ApAnalogPart { brand: string; articleNumber: string; }

@@ -52,7 +52,7 @@ const key = (a: WorkArticle) => String(a.id);
  * Deshalb steht alles Textliche untereinander im selben schrumpfbaren Block,
  * und nur der Preis haelt rechts seinen Platz.
  */
-function Row({
+export function TeileZeile({
   a,
   active,
   level,
@@ -60,6 +60,7 @@ function Row({
   onSelect,
   onAdd,
   innerRef,
+  kompakt = false,
 }: {
   a: WorkArticle;
   active: boolean;
@@ -67,7 +68,14 @@ function Row({
   brandLogo?: string;
   onSelect: () => void;
   onAdd: (menge: number) => void;
-  innerRef: (el: HTMLDivElement | null) => void;
+  innerRef?: (el: HTMLDivElement | null) => void;
+  /**
+   * Schmale Spalte (z.B. neben der Explosionszeichnung): feste kleine Maße,
+   * unabhängig von der Fensterbreite. Die sm:-Stufen richten sich nach dem
+   * Fenster, nicht nach der Spalte — in 420 px neben der Zeichnung würden
+   * sonst Foto und Preisleiste den Namen erdrücken.
+   */
+  kompakt?: boolean;
 }) {
   const lvl = MEMBER_LEVELS.find((l) => l.id === level);
   const shown = a.price != null ? (lvl ? memberPrice(a.price, lvl.pct) : a.price) : null;
@@ -85,12 +93,16 @@ function Row({
       aria-selected={active}
       tabIndex={-1}
       className={cn(
-        "flex gap-3 sm:gap-4 px-3 sm:px-4 py-3.5 cursor-pointer border-l-2 transition-colors",
+        kompakt ? "flex gap-3 px-3 py-3 cursor-pointer border-l-2 transition-colors"
+                : "flex gap-3 sm:gap-4 px-3 sm:px-4 py-3.5 cursor-pointer border-l-2 transition-colors",
         active ? "border-l-primary bg-primary/[0.05]" : "border-l-transparent hover:bg-secondary/40"
       )}
     >
       {/* Foto */}
-      <div className="w-16 h-16 sm:w-[84px] sm:h-[84px] shrink-0 rounded-lg bg-white border border-border/70 flex items-center justify-center overflow-hidden p-1.5">
+      <div className={cn(
+        "shrink-0 rounded-lg bg-white border border-border/70 flex items-center justify-center overflow-hidden p-1.5",
+        kompakt ? "w-14 h-14" : "w-16 h-16 sm:w-[84px] sm:h-[84px]"
+      )}>
         {bild.src ? (
           <img
             src={bild.src}
@@ -110,7 +122,7 @@ function Row({
 
       {/* Text — schrumpft als Block, nie einzeln uebereinander */}
       <div className="min-w-0 flex-1">
-        <p className={cn("text-[15px] leading-snug truncate", active ? "font-bold" : "font-semibold")}>
+        <p className={cn(kompakt ? "text-[13.5px]" : "text-[15px]", "leading-snug truncate", active ? "font-bold" : "font-semibold")}>
           {a.name}
         </p>
         <p className="mt-0.5 text-[12px] text-muted-foreground truncate">
@@ -138,11 +150,11 @@ function Row({
       {/* Rechte Schiene: fester Platz, damit Preise und Knoepfe der ganzen
           Liste auf einer Linie stehen. Nur eine feste Spalte — bei zweien
           bleibt fuer den Namen zu wenig uebrig und alles schiebt sich. */}
-      <div className="w-[104px] sm:w-[150px] shrink-0 flex flex-col items-end justify-between gap-2">
+      <div className={cn("shrink-0 flex flex-col items-end justify-between gap-2", kompakt ? "w-[96px]" : "w-[104px] sm:w-[150px]")}>
         <div className="text-right">
           {shown != null ? (
             <>
-              <p className="text-[17px] sm:text-lg font-bold tabular-nums leading-none">{eur(shown)}</p>
+              <p className={cn("font-bold tabular-nums leading-none", kompakt ? "text-[16px]" : "text-[17px] sm:text-lg")}>{eur(shown)}</p>
               {lvl && a.price != null && a.price > shown && (
                 <p className="mt-1 text-[11px] text-muted-foreground tabular-nums line-through">{eur(a.price)}</p>
               )}
@@ -150,14 +162,14 @@ function Row({
           ) : (
             // Auf dem Handy ist die Schiene 104 px schmal — da passt nur die Kurzform.
             <p className="text-[12px] text-muted-foreground whitespace-nowrap">
-              <span className="sm:hidden">auf Anfrage</span>
-              <span className="hidden sm:inline">Preis auf Anfrage</span>
+              <span className={kompakt ? "" : "sm:hidden"}>auf Anfrage</span>
+              {!kompakt && <span className="hidden sm:inline">Preis auf Anfrage</span>}
             </p>
           )}
         </div>
 
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <div className="hidden sm:flex items-center h-8 rounded-lg border border-border bg-card">
+          <div className={cn("items-center h-8 rounded-lg border border-border bg-card", kompakt ? "hidden" : "hidden sm:flex")}>
             <button
               onClick={() => setMenge((q) => Math.max(1, q - 1))}
               className="w-7 h-full text-muted-foreground hover:text-foreground leading-none"
@@ -497,7 +509,7 @@ export function TeileWorkspace({
 
           <div ref={listRef} className="divide-y divide-border/60 max-h-[calc(100vh-220px)] overflow-y-auto" role="listbox">
             {articles.map((a) => (
-              <Row
+              <TeileZeile
                 key={key(a)}
                 a={a}
                 active={key(a) === selectedId}

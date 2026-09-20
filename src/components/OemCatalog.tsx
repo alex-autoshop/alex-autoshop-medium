@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, ChevronRight, Loader2, Search, ZoomIn, ZoomOut, Maximize2,
-  Package, AlertCircle, ShoppingBag, Copy, Check, Layers, Car,
+  Package, AlertCircle, Copy, Check, Layers, Car, Tag,
 } from "lucide-react";
 import {
   yqFindByVin, yqGroups, yqNavigationTree, yqUnits, yqUnitInfo, yqUnitParts,
@@ -9,13 +9,22 @@ import {
   type YqLink, type YqNode, type YqUnitShort, type YqUnit, type YqPartSection, type YqPart, type YqVehicle, type YqPartShort,
 } from "@/lib/yqcat";
 import { cn } from "@/lib/utils";
-import { OemOffers } from "@/components/OemOffers";
 import { SHOP_INFO } from "@/data/shopInfo";
+import { sucheBaugruppen, aehnlicheBaugruppen, type BaugruppenTreffer } from "@/lib/baugruppenSuche";
+import { oeNummernAusTeil } from "@/lib/oeAftermarket";
+import { OemAftermarket, type KaufTeil } from "@/components/OemAftermarket";
+import { type WorkArticle } from "@/components/TeileWorkspace";
+import { type MemberLevelId } from "@/components/TeileportalPricing";
 
 /**
- * Original-Katalog im Werkstatt-Stil (Vorbild Partslink24):
+ * Explosionszeichnungen im Werkstatt-Stil (Vorbild Partslink24):
  *
- *   Baugruppen │ Explosionszeichnung │ Teileliste
+ *   Baugruppen │ Explosionszeichnung │ Teileliste → Ersatzteile mit Preis
+ *
+ * Der Weg zum Kauf ist EIN System: Teil in der Zeichnung anklicken → rechts
+ * stehen sofort die passenden Ersatzteile in derselben Zeile wie überall in
+ * der Teilebörse, mit Mitgliedspreis, Lieferzeit und Warenkorb. Die
+ * Originalnummer ist nur das Bindeglied — gekauft wird das Ersatzteil.
  *
  * Die Zeichnung kommt als Bild plus Koordinaten-Rechtecke ("imageMaps") vom
  * YQ-Katalog. Positionsnummer im Bild und Zeile in der Teileliste sind in
@@ -29,6 +38,15 @@ type Step = "vehicle" | "groups" | "unit";
 interface Crumb { label: string; token: string; action: string; }
 
 /* ── Baumknoten links ─────────────────────────────────────────────── */
+
+const kinderVon = (n: YqNode) => n.childs ?? n.children ?? [];
+const hatZeichnung = (n: YqNode) => !!(
+  linkTo(n, "getUnits") ||
+  linkTo(n, "getGroupParts") ||
+  linkTo(n, "getGroupPartsAll") ||
+  linkTo(n, "getGroups")
+);
+const SUCHZUGRIFF = { kinder: kinderVon, name: (n: YqNode) => n.name || "", oeffenbar: hatZeichnung };
 
 function TreeItem({
   node, depth, onOpen,
@@ -212,7 +230,8 @@ export function OemCatalog({
   vorabFahrzeug,
   vehicleLabel,
   onBack,
-  onAddToCart,
+  level = "none",
+  onAddArticle,
 }: {
   vin?: string;
   /** Marke des Fahrzeugs — nur noch Notnagel, falls kein vorabFahrzeug vorliegt. */
@@ -225,7 +244,10 @@ export function OemCatalog({
   vorabFahrzeug?: YqVehicle | null;
   vehicleLabel?: string;
   onBack: () => void;
-  onAddToCart?: (p: { name: string; number: string; unit?: string }) => void;
+  /** Mitgliedsstufe — damit die Ersatzteile denselben Preis zeigen wie die Teilebörse. */
+  level?: MemberLevelId;
+  /** Ersatzteil in den Teile-Warenkorb — dieselbe Funktion wie in der Trefferliste. */
+  onAddArticle?: (a: WorkArticle, menge: number) => void;
 }) {
   const [step, setStep] = useState<Step>("vehicle");
   const [busy, setBusy] = useState(false);
@@ -250,8 +272,9 @@ export function OemCatalog({
   const [partHitBusy, setPartHitBusy] = useState<string | null>(null);
   const [hitUnits, setHitUnits] = useState<{ label: string; category: string; link: YqLink; partsToken?: string }[]>([]);
   const [hitNumber, setHitNumber] = useState<string | null>(null);
-  /** Teil, zu dem die kaufbaren Angebote unten eingeblendet werden. */
-  const [offerFor, setOfferFor] = useState<{ no: string; name: string } | null>(null);
+  /** Teil aus der Zeichnung, zu dem rechts die kaufbaren Ersatzteile stehen. */
+  const [kaufTeil, setKaufTeil] = useState<KaufTeil | null>(null);
+  const suchfeld = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
@@ -267,6 +290,21 @@ export function OemCatalog({
       )
       .slice(0, 60);
   }, [catalogParts, treeSearch]);
+
+  /* Baugruppen-Suche über den GANZEN Baum. Vorher wurde nur die oberste
+     Ebene verglichen ("Motor", "Filter" …) — "Ölfilter" steht zwei Ebenen
+     tiefer und wurde nie gefunden. */
+  const suchText = treeSearch.trim();
+  const baugruppenTreffer: BaugruppenTreffer<YqNode>[] = useMemo(
+    () => (tree && suchText.length >= 2 ? sucheBaugruppen(tree, suchText, SUCHZUGRIFF, 12) : []),
+    [tree, suchText]
+  );
+  const aehnlich: BaugruppenTreffer<YqNode>[] = useMemo(
+    () => (tree && suchText.length >= 2 && baugruppenTreffer.length === 0
+      ? aehnlicheBaugruppen(tree, suchText, SUCHZUGRIFF, 3)
+      : []),
+    [tree, suchText, baugruppenTreffer.length]
+  );
 
   /* Fahrzeug per VIN bestimmen */
   const loadVehicle = useCallback(async () => {
@@ -307,7 +345,7 @@ export function OemCatalog({
     const partsLink = linkTo(u, "getUnitParts");
     const token = infoLink?.token || partsLink?.token || u.token || "";
     if (!token) return;
-    setBusy(true); setError(null); setActivePos(null);
+    setBusy(true); setError(null); setActivePos(null); setKaufTeil(null);
     try {
       // Jeder Link trägt seinen EIGENEN Token. getUnitParts mit dem
       // getUnitInfo-Token beantwortet der Dienst mit einer leeren Liste.
@@ -324,8 +362,9 @@ export function OemCatalog({
     } finally { setBusy(false); }
   };
 
-  /* Knoten im Baum anklicken → Baugruppen laden */
-  const openNode = async (n: YqNode) => {
+  /* Knoten im Baum anklicken → Baugruppen laden. Gibt die Baugruppen zurück,
+     damit die Suche bei genau einer Zeichnung direkt hineinspringen kann. */
+  const openNode = async (n: YqNode): Promise<YqUnitShort[]> => {
     const unitsLink = linkTo(n, "getUnits");
     const groupLink = linkTo(n, "getGroups");
     // Manche Marken (z.B. Opel) liefern die Baugruppen nicht über getUnits,
@@ -339,10 +378,11 @@ export function OemCatalog({
         setFilterState(res.filterState ?? filterState);
         setCrumbs([{ label: n.name || "Gruppe", token: gpLink.token, action: gpLink.action }]);
         if (res.units.length === 0) setError(`Für „${n.name}" liefert der Katalog keine Zeichnung.`);
+        return res.units;
       } catch (e) {
         setError(e instanceof Error ? e.message : "Baugruppen konnten nicht geladen werden.");
       } finally { setBusy(false); }
-      return;
+      return [];
     }
     if (unitsLink) {
       setBusy(true);
@@ -351,6 +391,7 @@ export function OemCatalog({
         setUnits(res.units);
         setFilterState(res.filterState ?? filterState);
         setCrumbs([{ label: n.name || "Gruppe", token: unitsLink.token, action: "getUnits" }]);
+        return res.units;
       } catch (e) {
         setError(e instanceof Error ? e.message : "Baugruppen konnten nicht geladen werden.");
       } finally { setBusy(false); }
@@ -360,6 +401,17 @@ export function OemCatalog({
         const res = await yqGroups(groupLink.token, filterState);
         setTree((res.data as YqNode) ?? null);
       } finally { setBusy(false); }
+    }
+    return [];
+  };
+
+  /* Suchtreffer (Baugruppe) anklicken: Gruppe laden — und gibt es darin genau
+     EINE Zeichnung, gleich hinein. "Ölfilter" tippen, Enter, Zeichnung da. */
+  const oeffneTreffer = async (n: YqNode) => {
+    const geladen = await openNode(n);
+    if (geladen.length === 1) {
+      const u = geladen[0];
+      await openUnit(u, u.name || n.name || "Baugruppe");
     }
   };
 
@@ -382,7 +434,7 @@ export function OemCatalog({
       setUnit(info.unit ?? null);
       setSections(parts.sections);
       setStep("unit");
-      setOfferFor(null);
+      setKaufTeil(null);
       const flat = parts.sections.flatMap((sec) => sec.parts ?? []);
       const hit =
         (highlightNumber &&
@@ -457,9 +509,24 @@ export function OemCatalog({
     return () => { alive = false; };
   }, [vehicle?.token]);
 
+  /** Teil der Zeichnung → rechts die kaufbaren Ersatzteile dazu. */
+  const kaufen = (p: YqPart) => {
+    const nummern = oeNummernAusTeil(p);
+    if (nummern.length === 0) return;
+    const pos = (p.areaCode || "").trim();
+    if (pos) setActivePos(pos);
+    setKaufTeil({ pos, nummer: partNo(p), name: partLabel(p), nummern });
+  };
+
   const pickPos = (pos: string) => {
     setActivePos(pos);
-    rowRefs.current[pos]?.scrollIntoView({ block: "center", behavior: "smooth" });
+    // Steht an der Stelle genau EIN Teil, gleich die Ersatzteile zeigen.
+    // Mehrere Nummern an derselben Stelle (links/rechts, alt/neu): erst die
+    // Liste — da muss man selbst wählen, sonst kauft jemand die falsche Seite.
+    const hier = allParts.filter((x) => (x.areaCode || "").trim() === pos && partNo(x));
+    if (hier.length === 1) { kaufen(hier[0]); return; }
+    setKaufTeil(null);
+    setTimeout(() => rowRefs.current[pos]?.scrollIntoView({ block: "center", behavior: "smooth" }), 30);
   };
 
   const copyNo = (no: string) => {
@@ -478,7 +545,7 @@ export function OemCatalog({
       <span className="text-muted-foreground/30">|</span>
       <Car className="w-4 h-4 text-primary shrink-0" />
       <span className="text-sm font-semibold truncate">
-        {vehicle ? [vehicle.brand, vehicle.name || vehicle.model, vehicle.description].filter(Boolean).join(" ") : vehicleLabel || "Original-Katalog"}
+        {vehicle ? [vehicle.brand, vehicle.name || vehicle.model, vehicle.description].filter(Boolean).join(" ") : vehicleLabel || "Explosionszeichnungen"}
       </span>
       {crumbs.map((c) => (
         <span key={c.token} className="hidden sm:flex items-center gap-2 min-w-0">
@@ -496,7 +563,7 @@ export function OemCatalog({
         {header}
         <div className="max-w-lg mx-auto text-center py-20 px-6">
           <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4" />
-          <p className="font-semibold mb-1">Original-Katalog gerade nicht verfügbar</p>
+          <p className="font-semibold mb-1">Explosionszeichnungen gerade nicht verfügbar</p>
           <p className="text-sm text-muted-foreground">{error}</p>
           <button onClick={onBack} className="btn-outline mt-6">Zurück zur Teilesuche</button>
         </div>
@@ -504,83 +571,143 @@ export function OemCatalog({
     );
   }
 
-  const allTreeNodes = tree?.childs ?? tree?.children ?? [];
-  const q = treeSearch.trim().toLowerCase();
-  const matched = q ? allTreeNodes.filter((n) => (n.name || "").toLowerCase().includes(q)) : allTreeNodes;
-  // Trifft die Suche keine Baugruppe, wird trotzdem der ganze Baum gezeigt —
-  // sonst wirkt der Katalog leer, obwohl alle Kategorien da sind.
-  const treeNodes = matched.length ? matched : allTreeNodes;
-  const searchMissedTree = !!q && matched.length === 0 && allTreeNodes.length > 0;
+  const treeNodes = tree?.childs ?? tree?.children ?? [];
+  const sucht = suchText.length >= 2;
+  const hatMengen = allParts.some((p) => partQty(p));
 
   return (
     <div>
       {header}
 
-      <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)_420px] lg:h-[calc(100vh-108px)]">
-        {/* ── Links: Baugruppen ── */}
-        <aside className="border-r border-border overflow-y-auto p-2 hidden lg:block">
+      <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)_440px] lg:h-[calc(100vh-108px)]">
+        {/* ── Links: Suche + Baugruppen ── */}
+        {/* Auf dem Handy oben, begrenzt hoch — vorher war die Spalte dort ganz
+            ausgeblendet und man kam an keine Baugruppe heran. */}
+        <aside className="border-b lg:border-b-0 lg:border-r border-border overflow-y-auto p-2 max-h-[45vh] lg:max-h-none">
           <div className="relative mb-2">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
             <input
+              ref={suchfeld}
               value={treeSearch}
               onChange={(e) => setTreeSearch(e.target.value)}
-              placeholder="Teil oder Baugruppe suchen …"
-              className="w-full h-9 pl-8 pr-2 rounded-lg border border-border bg-card text-[13px] focus:outline-none focus:border-primary/60"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const t = baugruppenTreffer[0];
+                  if (t) { setTreeSearch(""); oeffneTreffer(t.node); }
+                  else if (partHits[0]) openPartHit(partHits[0]);
+                }
+                if (e.key === "Escape") setTreeSearch("");
+              }}
+              placeholder="Baugruppe — z.B. Ölfilter"
+              className="w-full h-9 pl-8 pr-7 rounded-lg border border-border bg-card text-[13px] focus:outline-none focus:border-primary/60"
             />
-            {catalogParts === null && vehicle?.token && (
-              <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-muted-foreground/50" />
+            {treeSearch && (
+              <button
+                onClick={() => { setTreeSearch(""); suchfeld.current?.focus(); }}
+                aria-label="Suche leeren"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/60 hover:text-foreground"
+              >
+                ×
+              </button>
             )}
           </div>
 
-          {/* Teiletreffer — Klick springt direkt in die Explosionszeichnung */}
-          {treeSearch.trim().length >= 2 && (
+          {sucht && (
             <div className="mb-3">
+              {/* Baugruppen — Klick öffnet die Gruppe, bei einer Zeichnung gleich diese */}
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1 mb-1">
-                Teile ({partHits.length}{partHits.length === 60 ? "+" : ""})
+                Baugruppen ({baugruppenTreffer.length})
               </p>
-              {partHits.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground px-1 py-2 leading-snug">
-                  {catalogParts === null
-                    ? "Teileliste wird geladen …"
-                    : partSearchBlocked
-                    ? "Die Teile-Volltextsuche ist für diesen Marken-Katalog nicht freigeschaltet. Nimm die Baugruppen unten — die Zeichnungen sind vollständig da."
-                    : "Kein Teil mit diesem Namen. Tipp: Originalbezeichnung tippen, z.B. Bremsscheibe."}
-                </p>
-              ) : (
+              {baugruppenTreffer.length > 0 ? (
                 <ul className="space-y-0.5">
-                  {partHits.map((h, i) => {
-                    const no = (h.partNumber || "").trim();
-                    const active = hitNumber === no;
-                    return (
-                      <li key={`${no}-${i}`}>
-                        <button
-                          onClick={() => openPartHit(h)}
-                          className={cn(
-                            "w-full text-left px-2 py-1.5 rounded-md transition-colors flex items-start gap-2",
-                            active ? "bg-primary/12 ring-1 ring-inset ring-primary/40" : "hover:bg-secondary"
-                          )}
-                        >
-                          <span className="flex-1 min-w-0">
-                            <span className="block font-mono text-[11px] font-semibold truncate">{no}</span>
-                            <span className="block text-[11px] text-muted-foreground leading-snug">
-                              {h.partName || "—"}
+                  {baugruppenTreffer.map((t, i) => (
+                    <li key={t.pfad.join("›") + i}>
+                      <button
+                        onClick={() => { setTreeSearch(""); oeffneTreffer(t.node); }}
+                        className={cn(
+                          "w-full text-left px-2 py-1.5 rounded-md transition-colors flex items-start gap-2",
+                          i === 0 ? "bg-primary/[0.07] hover:bg-primary/12" : "hover:bg-secondary"
+                        )}
+                      >
+                        <Layers className="w-3.5 h-3.5 shrink-0 mt-0.5 text-primary/70" />
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[13px] font-semibold leading-tight">{t.pfad[t.pfad.length - 1]}</span>
+                          {t.pfad.length > 1 && (
+                            <span className="block text-[10.5px] text-muted-foreground truncate">
+                              {t.pfad.slice(0, -1).join(" › ")}
                             </span>
-                          </span>
-                          {partHitBusy === no ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-primary shrink-0 mt-0.5" />
-                          ) : (
-                            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0 mt-0.5" />
                           )}
-                        </button>
-                      </li>
-                    );
-                  })}
+                        </span>
+                        {i === 0 && <span className="text-[9px] text-muted-foreground/70 mt-0.5 shrink-0">Enter</span>}
+                      </button>
+                    </li>
+                  ))}
                 </ul>
+              ) : (
+                <p className="text-[11px] text-muted-foreground px-1 py-1.5 leading-snug">
+                  Keine Baugruppe „{suchText}" bei diesem Fahrzeug.
+                  {aehnlich.length > 0 && (
+                    <>
+                      {" "}Ähnlich:{" "}
+                      {aehnlich.map((t, i) => (
+                        <span key={t.pfad.join("›")}>
+                          {i > 0 && ", "}
+                          <button
+                            onClick={() => { setTreeSearch(""); oeffneTreffer(t.node); }}
+                            className="text-primary font-semibold hover:underline"
+                          >
+                            {t.pfad[t.pfad.length - 1]}
+                          </button>
+                        </span>
+                      ))}
+                    </>
+                  )}
+                </p>
+              )}
+
+              {/* Einzelteile per Volltext — nur, wenn der Marken-Katalog sie liefert.
+                  Wo er gesperrt ist, bleibt der Abschnitt weg statt eine Fehlermeldung
+                  anzuzeigen: die Baugruppen-Suche oben deckt es ab. */}
+              {partHits.length > 0 && (
+                <>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1 mt-3 mb-1">
+                    Teile ({partHits.length}{partHits.length === 60 ? "+" : ""})
+                  </p>
+                  <ul className="space-y-0.5">
+                    {partHits.map((h, i) => {
+                      const no = (h.partNumber || "").trim();
+                      const active = hitNumber === no;
+                      return (
+                        <li key={`${no}-${i}`}>
+                          <button
+                            onClick={() => openPartHit(h)}
+                            className={cn(
+                              "w-full text-left px-2 py-1.5 rounded-md transition-colors flex items-start gap-2",
+                              active ? "bg-primary/12 ring-1 ring-inset ring-primary/40" : "hover:bg-secondary"
+                            )}
+                          >
+                            <span className="flex-1 min-w-0">
+                              <span className="block font-mono text-[11px] font-semibold truncate">{no}</span>
+                              <span className="block text-[11px] text-muted-foreground leading-snug">{h.partName || "—"}</span>
+                            </span>
+                            {partHitBusy === no ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-primary shrink-0 mt-0.5" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0 mt-0.5" />
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
               )}
             </div>
           )}
 
-          {units.length > 0 ? (
+          {/* Baum bzw. Baugruppen der gewählten Gruppe — während der Suche mit
+              Treffern ausgeblendet, sonst steht das Gesuchte unter 300 Zeilen. */}
+          {(!sucht || baugruppenTreffer.length === 0) && (units.length > 0 ? (
             <>
               <button
                 onClick={() => { setUnits([]); setCrumbs([]); }}
@@ -617,18 +744,11 @@ export function OemCatalog({
               {treeNodes.map((n, i) => (
                 <TreeItem key={(n.code || n.name || i) + String(i)} node={n} depth={0} onOpen={openNode} />
               ))}
-              {/* Nur melden wenn auch die Teilesuche nichts hat — sonst ist es Rauschen
-                  neben einer Trefferliste, die genau das Gesuchte schon zeigt. */}
-              {searchMissedTree && (
-                <p className="text-[11px] text-muted-foreground px-2 pb-2 leading-snug">
-                  Keine Baugruppe heißt „{treeSearch.trim()}" — hier stehen alle {allTreeNodes.length}.
-                </p>
-              )}
-              {treeNodes.length === 0 && partHits.length === 0 && !busy && (
+              {treeNodes.length === 0 && !busy && (
                 <p className="text-xs text-muted-foreground px-2 py-4">Keine Baugruppen gefunden.</p>
               )}
             </div>
-          )}
+          ))}
         </aside>
 
         {/* ── Mitte: Zeichnung ── */}
@@ -670,99 +790,99 @@ export function OemCatalog({
           </div>
         </section>
 
-        {/* ── Rechts: Teileliste ── */}
-        <aside className="flex flex-col min-h-0 overflow-hidden">
-          <div className="flex-1 min-h-0 overflow-y-auto">
-          {allParts.length > 0 ? (
-            <table className="w-full text-[13px]">
-              <thead className="sticky top-0 bg-secondary/90 backdrop-blur-sm">
-                <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  <th className="text-left font-bold px-2 py-2 w-10">Pos.</th>
-                  <th className="text-left font-bold px-2 py-2">Teilenummer / Bezeichnung</th>
-                  <th className="text-right font-bold px-2 py-2 w-12">Anz.</th>
-                  <th className="w-9" />
-                </tr>
-              </thead>
-              <tbody>
-                {allParts.map((p, i) => {
-                  const pos = (p.areaCode || "").trim();
-                  const on = (pos !== "" && pos === activePos) || (!activePos && !!p.matched);
-                  const no = partNo(p);
-                  return (
-                    <tr
-                      key={`${pos}-${no}-${i}`}
-                      ref={(el) => { if (pos) rowRefs.current[pos] = el; }}
-                      onClick={() => {
-                        if (pos) setActivePos(pos);
-                        if (no) setOfferFor({ no, name: partLabel(p) });
-                      }}
-                      className={cn(
-                        "border-b border-border/60 cursor-pointer transition-colors",
-                        on ? "bg-primary/15 ring-1 ring-inset ring-primary/40" : "hover:bg-secondary/60"
-                      )}
-                    >
-                      <td className="px-2 py-2 align-top">
-                        <span className={cn(
-                          "inline-flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded text-[11px] font-bold",
-                          on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                        )}>
-                          {pos || "–"}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 align-top min-w-0">
-                        {no && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); copyNo(no); }}
-                            className="font-mono text-[12px] font-semibold hover:text-primary inline-flex items-center gap-1"
-                            title="Teilenummer kopieren"
-                          >
-                            {no}
-                            {copied === no ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-2.5 h-2.5 opacity-40" />}
-                          </button>
-                        )}
-                        <p className="text-muted-foreground leading-snug">{partLabel(p)}</p>
-                      </td>
-                      <td className="px-2 py-2 text-right align-top tabular-nums text-muted-foreground">
-                        {partQty(p)}
-                      </td>
-                      <td className="px-1 py-2 align-top">
-                        {onAddToCart && no && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onAddToCart({ name: partLabel(p) || no, number: no, unit: unit?.name }); }}
-                            title="Preis anfragen / in den Warenkorb"
-                            className="w-7 h-7 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                          >
-                            <ShoppingBag className="w-3 h-3" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {/* ── Rechts: Teileliste → Ersatzteile ── */}
+        <aside className="flex flex-col min-h-0 overflow-hidden h-[70vh] lg:h-auto">
+          {kaufTeil ? (
+            <OemAftermarket
+              teil={kaufTeil}
+              fahrzeugMarke={vehicle?.brand || brand || ""}
+              fahrzeugLabel={vehicle ? [vehicle.brand, vehicle.name || vehicle.model].filter(Boolean).join(" ") : vehicleLabel}
+              level={level}
+              onAdd={onAddArticle}
+              onZurueck={() => setKaufTeil(null)}
+            />
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center px-6 text-muted-foreground gap-2 py-16">
-              <Package className="w-9 h-9 opacity-25" />
-              <p className="text-sm">Hier stehen die Teile der gewählten Baugruppe — mit Positionsnummer zur Zeichnung.</p>
-            </div>
-          )}
-          </div>
-
-          {/* Kaufbare Alternativen zur angeklickten Originalnummer */}
-          {offerFor && (
-            <div className="max-h-[45%] flex flex-col min-h-0">
-              <OemOffers
-                oemNumber={offerFor.no}
-                partName={offerFor.name}
-                onClose={() => setOfferFor(null)}
-                onAddToCart={
-                  onAddToCart
-                    ? (a) => onAddToCart({ name: a.name, number: a.articleNumber, unit: a.brand })
-                    : undefined
-                }
-              />
-            </div>
+            <>
+              {allParts.length > 0 && (
+                <p className="shrink-0 px-3 py-2 text-[11px] text-muted-foreground border-b border-border/60 bg-primary/[0.04] flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-primary shrink-0" />
+                  Teil anklicken — hier erscheinen die passenden Ersatzteile mit Preis.
+                </p>
+              )}
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                {allParts.length > 0 ? (
+                  <table className="w-full text-[13px]">
+                    <thead className="sticky top-0 bg-secondary/90 backdrop-blur-sm">
+                      <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <th className="text-left font-bold px-2 py-2 w-10">Pos.</th>
+                        <th className="text-left font-bold px-2 py-2">Teilenummer / Bezeichnung</th>
+                        {hatMengen && <th className="text-right font-bold px-2 py-2 w-12">Anz.</th>}
+                        <th className="w-8" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allParts.map((p, i) => {
+                        const pos = (p.areaCode || "").trim();
+                        const on = (pos !== "" && pos === activePos) || (!activePos && !!p.matched);
+                        const no = partNo(p);
+                        return (
+                          <tr
+                            key={`${pos}-${no}-${i}`}
+                            ref={(el) => { if (pos) rowRefs.current[pos] = el; }}
+                            onClick={() => no && kaufen(p)}
+                            title={no ? "Passende Ersatzteile mit Preis anzeigen" : undefined}
+                            className={cn(
+                              "border-b border-border/60 transition-colors group",
+                              no ? "cursor-pointer" : "cursor-default",
+                              on ? "bg-primary/15 ring-1 ring-inset ring-primary/40" : "hover:bg-secondary/60"
+                            )}
+                          >
+                            <td className="px-2 py-2 align-top">
+                              <span className={cn(
+                                "inline-flex items-center justify-center min-w-[22px] h-[22px] px-1 rounded text-[11px] font-bold",
+                                on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                              )}>
+                                {pos || "–"}
+                              </span>
+                            </td>
+                            <td className="px-2 py-2 align-top min-w-0">
+                              {no && (
+                                <span className="inline-flex items-center gap-1">
+                                  {/* Die Nummer selbst führt zu den Ersatzteilen (früher: kopieren). */}
+                                  <span className="font-mono text-[12px] font-semibold group-hover:text-primary">{no}</span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); copyNo(no); }}
+                                    className="w-5 h-5 inline-flex items-center justify-center rounded text-muted-foreground/50 hover:text-primary hover:bg-secondary"
+                                    title="Nummer kopieren"
+                                    aria-label="Nummer kopieren"
+                                  >
+                                    {copied === no ? <Check className="w-3 h-3 text-primary" /> : <Copy className="w-2.5 h-2.5" />}
+                                  </button>
+                                </span>
+                              )}
+                              <p className="text-muted-foreground leading-snug">{partLabel(p)}</p>
+                            </td>
+                            {hatMengen && (
+                              <td className="px-2 py-2 text-right align-top tabular-nums text-muted-foreground">
+                                {partQty(p)}
+                              </td>
+                            )}
+                            <td className="px-1 py-2 align-top">
+                              {no && <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary mt-0.5" />}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center px-6 text-muted-foreground gap-2 py-16">
+                    <Package className="w-9 h-9 opacity-25" />
+                    <p className="text-sm">Hier stehen die Teile der gewählten Baugruppe — anklicken, und die passenden Ersatzteile mit Preis erscheinen.</p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </aside>
       </div>

@@ -1538,7 +1538,11 @@ export default function Teileportal() {
               vorabFahrzeug={yqIdent?.vehicle}
               vehicleLabel={vehicleLabel}
               onBack={() => setPhase(vehicle ? 'categories' : 'search')}
-              onAddToCart={(p) => addArticleToCart({ name: p.name, brand: 'OE', articleNumber: p.number })}
+              level={effectiveMemberLevel}
+              /* Aus der Zeichnung wird das ERSATZTEIL gekauft — mit Preis, Bild und
+                 Lieferzeit, genau wie aus der Trefferliste. Früher landete hier die
+                 nackte Originalnummer als Marke "OE" im Korb, ohne Preis. */
+              onAddArticle={(a, qty) => { for (let i = 0; i < qty; i++) addArticleToCart(a as Article); }}
             />
           ) : (
             /* Ohne FIN bleibt die Baugruppen-Übersicht aus dem Teilekatalog. */
