@@ -89,6 +89,11 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     savingsExample: 467,
     features: [
       {
+        label: "Teilefinder Pro",
+        badge: "NEU",
+        info: "Der Teilefinder ist für alle frei: FIN eingeben, Explosionszeichnung des Herstellers öffnen, Teil anklicken — und du siehst sofort die passenden Ersatzteile mit Preis und Lieferzeit. Als Mitglied schaltest du Pro frei: die Fahrzeugakte, in der jedes verbaute Teil mit Nummer, Datum und Preis stehen bleibt, und den Kostenvoranschlag mit Arbeitszeit zum Ausdrucken — mit deinem Betrieb im Kopf. Teile zurücklegen, Fahrzeugschein scannen und Team-Konten kommen als Nächstes dazu.",
+      },
+      {
         label: "Gratis Farbe 250 ml / Monat",
         info: "Monatlich gratis: 1 Dose Wunschfarbe bis 250 ml — kein Aufpreis, direkt mit der nächsten Bestellung.",
       },
@@ -148,6 +153,11 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     detailing: { price: 99, vehicles: 8, turnaround: "48 h" },
     savingsExample: 2347,
     features: [
+      {
+        label: "Teilefinder Pro",
+        badge: "NEU",
+        info: "Alles aus Level 1 — Fahrzeugakte je FIN und Kostenvoranschlag mit Arbeitszeit — plus die Fahrzeuge deines ganzen Betriebs an einem Ort. Wer einmal ein Jahr Historie drin hat, sucht Teile nicht mehr woanders.",
+      },
       {
         label: "Gratis Farbe 1 L / Monat",
         info: "Monatlich gratis: 1 L Wunschfarbe deiner Wahl — einfach bei der Bestellung angeben.",
@@ -211,6 +221,11 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     detailing: { price: 149, vehicles: 30, turnaround: "24 h" },
     savingsExample: 5930,
     features: [
+      {
+        label: "Teilefinder Pro",
+        badge: "NEU",
+        info: "Der komplette Teilefinder Pro mit Fahrzeugakte, Kostenvoranschlag und allen kommenden Werkstatt-Werkzeugen. Level-3-Mitglieder bekommen neue Funktionen zuerst — und bestimmen mit, was als Nächstes gebaut wird.",
+      },
       {
         label: "Gratis Farbe 2 L / Monat",
         info: "Monatlich gratis: 2 L Wunschfarbe — inklusive Sondermischungen auf Anfrage.",

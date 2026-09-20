@@ -15,6 +15,7 @@ import { oeNummernAusTeil } from "@/lib/oeAftermarket";
 import { OemAftermarket, type KaufTeil } from "@/components/OemAftermarket";
 import { type WorkArticle } from "@/components/TeileWorkspace";
 import { type MemberLevelId } from "@/components/TeileportalPricing";
+import { TeilefinderStufen, ProBereich, CampusBereich, type Stufe, type KvaPosition } from "@/components/TeilefinderPro";
 
 /**
  * Explosionszeichnungen im Werkstatt-Stil (Vorbild Partslink24):
@@ -232,6 +233,10 @@ export function OemCatalog({
   onBack,
   level = "none",
   onAddArticle,
+  istMitglied = false,
+  istAdmin = false,
+  kvaPositionen = [],
+  startTeil,
 }: {
   vin?: string;
   /** Marke des Fahrzeugs — nur noch Notnagel, falls kein vorabFahrzeug vorliegt. */
@@ -248,6 +253,18 @@ export function OemCatalog({
   level?: MemberLevelId;
   /** Ersatzteil in den Teile-Warenkorb — dieselbe Funktion wie in der Trefferliste. */
   onAddArticle?: (a: WorkArticle, menge: number) => void;
+  /** Zahlendes Mitglied? Entscheidet über den Pro-Bereich. */
+  istMitglied?: boolean;
+  /** Nur Alex: blendet den internen Campus-Reiter ein. */
+  istAdmin?: boolean;
+  /** Warenkorb-Positionen für das Angebot im Pro-Bereich. */
+  kvaPositionen?: KvaPosition[];
+  /**
+   * Teil, mit dem der Finder geöffnet wurde (aus der Trefferliste).
+   * Damit springt er direkt auf die passende Zeichnung, statt die
+   * Bezeichnung nochmal abzufragen.
+   */
+  startTeil?: { name: string; articleNumber?: string; oeNumbers?: string[] } | null;
 }) {
   const [step, setStep] = useState<Step>("vehicle");
   const [busy, setBusy] = useState(false);
@@ -274,6 +291,7 @@ export function OemCatalog({
   const [hitNumber, setHitNumber] = useState<string | null>(null);
   /** Teil aus der Zeichnung, zu dem rechts die kaufbaren Ersatzteile stehen. */
   const [kaufTeil, setKaufTeil] = useState<KaufTeil | null>(null);
+  const [stufe, setStufe] = useState<Stufe>("finder");
   const suchfeld = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -478,7 +496,7 @@ export function OemCatalog({
       setHitUnits(found);
       setHitNumber(number);
       if (found.length === 0) {
-        setError(`Zu ${number} liefert der Hersteller-Katalog keine Bildtafel.`);
+        setError(`Zu ${number} liefert der Teilefinder keine Zeichnung.`);
         return;
       }
       await openUnitLink(found[0].link, number, found[0].partsToken);
@@ -509,6 +527,61 @@ export function OemCatalog({
     return () => { alive = false; };
   }, [vehicle?.token]);
 
+  /* ── Direkt zum Teil, mit dem der Finder geöffnet wurde ──────────────
+     Vorher landete man auf der leeren Zeichnungsfläche und musste die
+     Bezeichnung ein zweites Mal eintippen. Jetzt: erst über die
+     Originalnummer die echte Bildtafel suchen, sonst über die Bezeichnung
+     die Baugruppe — und nur wenn beides nichts findet, steht der Begriff
+     wenigstens schon im Suchfeld. */
+  const startErledigt = useRef(false);
+  useEffect(() => {
+    const token = vehicle?.token;
+    if (!startTeil || startErledigt.current || !tree || !token) return;
+    startErledigt.current = true;
+    let lebt = true;
+
+    const begriffe = (name: string) => {
+      const teile = [name, ...name.split(/[,/(]/).map((x) => x.trim())]
+        .map((x) => x.replace(/\s+/g, " ").trim())
+        .filter((x) => x.length >= 4);
+      return [...new Set(teile)];
+    };
+
+    (async () => {
+      setBusy(true);
+      try {
+        for (const nr of (startTeil.oeNumbers ?? []).slice(0, 3)) {
+          if (!lebt) return;
+          const { categories } = await yqPartApplicability(token, nr);
+          for (const cat of categories) {
+            for (const u of cat.units ?? []) {
+              const link = linkTo(u.unit, "getUnitInfo");
+              if (link && lebt) {
+                await openUnitLink(link, nr, linkTo(u.unit, "getUnitParts")?.token);
+                return;
+              }
+            }
+          }
+        }
+        for (const b of begriffe(startTeil.name)) {
+          const treffer = sucheBaugruppen(tree, b, SUCHZUGRIFF, 1);
+          if (treffer[0] && lebt) {
+            await oeffneTreffer(treffer[0].node);
+            return;
+          }
+        }
+        if (lebt) setTreeSearch(startTeil.name);
+      } catch {
+        if (lebt) setTreeSearch(startTeil.name);
+      } finally {
+        if (lebt) setBusy(false);
+      }
+    })();
+
+    return () => { lebt = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startTeil, tree, vehicle?.token]);
+
   /** Teil der Zeichnung → rechts die kaufbaren Ersatzteile dazu. */
   const kaufen = (p: YqPart) => {
     const nummern = oeNummernAusTeil(p);
@@ -538,22 +611,25 @@ export function OemCatalog({
 
   /* ── Kopfzeile ── */
   const header = (
-    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-20">
+    <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-20">
       <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors shrink-0">
-        <ArrowLeft className="w-4 h-4" /> Teileportal
+        <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Teileportal</span>
       </button>
-      <span className="text-muted-foreground/30">|</span>
+      <span className="text-muted-foreground/30 hidden sm:inline">|</span>
       <Car className="w-4 h-4 text-primary shrink-0" />
-      <span className="text-sm font-semibold truncate">
-        {vehicle ? [vehicle.brand, vehicle.name || vehicle.model, vehicle.description].filter(Boolean).join(" ") : vehicleLabel || "Explosionszeichnungen"}
+      <span className="text-sm font-semibold truncate min-w-0">
+        {vehicle ? [vehicle.brand, vehicle.name || vehicle.model, vehicle.description].filter(Boolean).join(" ") : vehicleLabel || "Teilefinder"}
       </span>
-      {crumbs.map((c) => (
-        <span key={c.token} className="hidden sm:flex items-center gap-2 min-w-0">
+      {stufe === "finder" && crumbs.map((c) => (
+        <span key={c.token} className="hidden xl:flex items-center gap-2 min-w-0">
           <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
           <span className="text-sm text-muted-foreground truncate">{c.label}</span>
         </span>
       ))}
-      {busy && <Loader2 className="w-4 h-4 animate-spin text-primary ml-auto shrink-0" />}
+      {busy && stufe === "finder" && <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />}
+      <div className="ml-auto shrink-0">
+        <TeilefinderStufen stufe={stufe} setStufe={setStufe} istMitglied={istMitglied} istAdmin={istAdmin} />
+      </div>
     </div>
   );
 
@@ -563,7 +639,7 @@ export function OemCatalog({
         {header}
         <div className="max-w-lg mx-auto text-center py-20 px-6">
           <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4" />
-          <p className="font-semibold mb-1">Explosionszeichnungen gerade nicht verfügbar</p>
+          <p className="font-semibold mb-1">Teilefinder gerade nicht verfügbar</p>
           <p className="text-sm text-muted-foreground">{error}</p>
           <button onClick={onBack} className="btn-outline mt-6">Zurück zur Teilesuche</button>
         </div>
@@ -574,12 +650,38 @@ export function OemCatalog({
   const treeNodes = tree?.childs ?? tree?.children ?? [];
   const sucht = suchText.length >= 2;
   const hatMengen = allParts.some((p) => partQty(p));
+  const vehicleVinAnzeige = (vin || "").trim().toUpperCase();
+  const fahrzeugName = vehicle
+    ? [vehicle.brand, vehicle.name || vehicle.model].filter(Boolean).join(" ")
+    : (vehicleLabel || "");
 
   return (
     <div>
       {header}
 
-      <div className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)_440px] lg:h-[calc(100vh-108px)]">
+      {stufe === "pro" && (
+        <div className="h-[calc(100vh-108px)]">
+          <ProBereich
+            istMitglied={istMitglied}
+            vin={vehicleVinAnzeige}
+            fahrzeug={fahrzeugName}
+            level={level}
+            positionen={kvaPositionen}
+          />
+        </div>
+      )}
+
+      {stufe === "campus" && istAdmin && (
+        <div className="h-[calc(100vh-108px)]"><CampusBereich /></div>
+      )}
+
+      {/* Der Finder bleibt beim Wechsel nach Pro/Campus GELADEN (Zeichnung,
+          Baugruppen, Suche) — nur unsichtbar. display per style, weil die
+          Klasse "hidden" von "lg:grid" wieder überschrieben würde. */}
+      <div
+        style={{ display: stufe === "finder" ? undefined : "none" }}
+        className="lg:grid lg:grid-cols-[260px_minmax(0,1fr)_440px] lg:h-[calc(100vh-108px)]"
+      >
         {/* ── Links: Suche + Baugruppen ── */}
         {/* Auf dem Handy oben, begrenzt hoch — vorher war die Spalte dort ganz
             ausgeblendet und man kam an keine Baugruppe heran. */}
@@ -783,7 +885,7 @@ export function OemCatalog({
               <div className="h-full flex flex-col items-center justify-center text-center px-8 text-muted-foreground gap-2">
                 <Layers className="w-10 h-10 opacity-25" />
                 <p className="text-sm">
-                  Teil suchen oder links eine Baugruppe wählen — die Explosionszeichnung erscheint hier.
+                  Baugruppe suchen oder links wählen — die Zeichnung erscheint hier.
                 </p>
               </div>
             )}

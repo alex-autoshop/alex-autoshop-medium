@@ -473,7 +473,10 @@ export default async function handler(req, res) {
     // Ohne Sperre kann das JEDER mit einem einzigen POST abrufen. Gemessen am
     // 17.09.2026: {"action":"diag"} lieferte listPriceNet/Gross UND
     // customerPriceNet/Gross im Klartext. Deshalb: PIN erforderlich.
-    const pin = req.headers.get("x-admin-pin") || "";
+    // ACHTUNG: Node-Signatur (req, res) — req.headers ist ein OBJEKT, kein
+    // Headers. Mit .get() stirbt die Funktion mit 500 statt 403 zu antworten
+    // (am 20.09.2026 live gemessen).
+    const pin = String(req.headers["x-admin-pin"] || "");
     const soll = process.env.ADMIN_PIN || "";
     if (!soll || pin !== soll) return json({ error: "Nicht erlaubt" }, 403);
 

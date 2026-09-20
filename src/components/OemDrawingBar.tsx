@@ -38,7 +38,7 @@ export function OemDrawingBar({
         className="w-full flex items-center gap-2 px-4 py-2.5 border-b border-border bg-primary/8 hover:bg-primary/14 transition-colors text-left"
       >
         <Layers className="w-4 h-4 text-primary shrink-0" />
-        <span className="flex-1 text-[13px] font-semibold">Explosionszeichnung ansehen</span>
+        <span className="flex-1 text-[13px] font-semibold">Im Teilefinder ansehen</span>
         <ChevronRight className="w-4 h-4 text-primary shrink-0" />
       </button>
     );
@@ -52,7 +52,7 @@ export function OemDrawingBar({
       >
         <Layers className="w-4 h-4 text-muted-foreground shrink-0" />
         <span className="flex-1 text-[12px] text-muted-foreground leading-snug">
-          <span className="font-semibold text-foreground">Explosionszeichnung</span> — mit der
+          <span className="font-semibold text-foreground">Teilefinder</span> — mit der
           Fahrgestellnummer zeigen wir dir die Original-Zeichnung zu diesem Teil.
         </span>
         <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -108,7 +108,7 @@ export function OemDrawingBar({
       </form>
       <p className="mt-1.5 text-[11px] text-muted-foreground leading-relaxed">
         Steht im Fahrzeugschein unter <strong className="text-foreground">E</strong>. Nur damit kennt
-        der Hersteller-Katalog die genaue Ausstattung deines Fahrzeugs.
+        der Teilefinder die genaue Ausstattung deines Fahrzeugs.
       </p>
     </div>
   );

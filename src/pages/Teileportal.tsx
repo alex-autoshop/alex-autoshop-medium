@@ -16,6 +16,8 @@ import { apVehicleByKba, apResolveVin, apArticlesForVehicle, apArticlesByNumber,
 import { STATIC_CAT_TREE } from "@/lib/catTreeStatic";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
 import { icPriceLookup } from "@/lib/intercarsGateway";
+import { ADMIN_EMAILS } from "@/lib/inbox";
+import { akteEintragen } from "@/lib/fahrzeugakte";
 import { ArticleExpander, BrandFilter, SubCatList } from "@/components/TeileportalExtras";
 import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip, type MemberLevelId } from "@/components/TeileportalPricing";
 import { useAuth } from "@/context/AuthContext";
@@ -432,6 +434,8 @@ export default function Teileportal() {
     return chosenIdx <= actualIdx ? memberLevel : actualLevel;
   })();
   const [detailArticle, setDetailArticle] = useState<DetailArticle | null>(null);
+  /** Teil, mit dem der Teilefinder geöffnet wurde — er springt direkt dorthin. */
+  const [startTeil, setStartTeil] = useState<{ name: string; articleNumber?: string; oeNumbers?: string[] } | null>(null);
   const [heroTab, setHeroTab] = useState<HeroTab>('search');
 
   const activateGarageVehicle = (g: GarageVehicle) => {
@@ -474,6 +478,14 @@ export default function Teileportal() {
     }
     cart.add({ key: `${a.brand}::${a.articleNumber}`.toLowerCase(), name: a.name, brand: a.brand,
       articleNumber: a.articleNumber, imageUrl: a.imageUrl, price: a.price, vehicleLabel });
+    // Fahrzeugakte (Teilefinder Pro): was an diesem Auto verbaut wurde, bleibt
+    // beim Betrieb. Ohne FIN gibt es keine Akte — dann passiert hier nichts.
+    if (vehicleVin) {
+      akteEintragen(vehicleVin, vehicleLabel, {
+        name: a.name, brand: a.brand, articleNumber: a.articleNumber,
+        menge: 1, preis: a.price, ueberOe: a.oeNumbers?.[0],
+      });
+    }
   };
 
   const addArticleAsGuest = () => {
@@ -1090,7 +1102,7 @@ export default function Teileportal() {
                         >
                           <Layers className="w-4 h-4 shrink-0" />
                           <span className="flex-1 min-w-0 text-[13px] font-bold leading-tight">
-                            Explosionszeichnungen von {oemRescue} öffnen
+                            Teilefinder von {oemRescue} öffnen
                           </span>
                           <ChevronRight className="w-4 h-4 shrink-0" />
                         </button>
@@ -1119,11 +1131,11 @@ export default function Teileportal() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                    <span className="text-sm font-bold text-foreground">OEM Original-Katalog</span>
+                    <span className="text-sm font-bold text-foreground">Teilefinder</span>
                     <span className="px-1.5 py-0.5 rounded bg-amber-500 text-black text-[10px] font-black">PREVIEW</span>
                   </div>
                   <p className="text-xs text-foreground/70 leading-relaxed">
-                    Explosionszeichnungen + OE-Nummern direkt in der Teilebörse — Vorschau anzeigen.
+                    Zeichnung anklicken, Ersatzteil mit Preis bekommen — Vorschau anzeigen.
                   </p>
                 </div>
                 <ChevronRight className="w-5 h-5 shrink-0 transition-colors" style={{ color: '#D4A017' }} />
@@ -1219,7 +1231,7 @@ export default function Teileportal() {
                       onClick={() => setPhase('oem')}
                       style={{ backgroundColor: '#FFFBEB', borderColor: '#D4A017' }}
                       className="shrink-0 hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-black px-2.5 py-1 rounded border">
-                      <Layers className="w-3.5 h-3.5" /> Explosionszeichnungen
+                      <Layers className="w-3.5 h-3.5" /> Teilefinder
                     </button>
                   )}
                   <button
@@ -1350,11 +1362,14 @@ export default function Teileportal() {
                   onAddToCart={(a, qty) => { for (let i = 0; i < qty; i++) addArticleToCart(a as Article); }}
                   onZoom={(a) => openDetail(a as DetailArticle)}
                   vehicleLabel={vehicleLabel}
-                  oemSlot={() => (
+                  oemSlot={(articleNumber, name, oeNumbers) => (
                     <OemDrawingBar
                       vin={vehicleVin}
-                      onOpen={() => setPhase('oem')}
-                      onVin={(v) => { setVehicleVin(v); setPhase('oem'); }}
+                      /* Das angeklickte Teil wandert mit in den Teilefinder — der
+                         springt damit direkt auf die richtige Zeichnung, statt
+                         die Bezeichnung nochmal abzufragen. */
+                      onOpen={() => { setStartTeil({ name, articleNumber, oeNumbers }); setPhase('oem'); }}
+                      onVin={(v) => { setVehicleVin(v); setStartTeil({ name, articleNumber, oeNumbers }); setPhase('oem'); }}
                     />
                   )}
                   oemDrawingSlot={(oe, name) => (
@@ -1539,6 +1554,13 @@ export default function Teileportal() {
               vehicleLabel={vehicleLabel}
               onBack={() => setPhase(vehicle ? 'categories' : 'search')}
               level={effectiveMemberLevel}
+              istMitglied={actualLevel !== 'none'}
+              istAdmin={!!user?.email && ADMIN_EMAILS.includes(user.email)}
+              startTeil={startTeil}
+              kvaPositionen={cart.items.map((i) => ({
+                name: i.name, brand: i.brand, articleNumber: i.articleNumber,
+                quantity: i.quantity, price: i.price,
+              }))}
               /* Aus der Zeichnung wird das ERSATZTEIL gekauft — mit Preis, Bild und
                  Lieferzeit, genau wie aus der Trefferliste. Früher landete hier die
                  nackte Originalnummer als Marke "OE" im Korb, ohne Preis. */

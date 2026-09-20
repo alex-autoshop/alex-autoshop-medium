@@ -187,7 +187,7 @@ export function OemPartDrawing({
       <div className="flex items-center gap-2 mb-2">
         <Layers className="w-3.5 h-3.5 text-primary shrink-0" />
         <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground flex-1 min-w-0 truncate">
-          Explosionszeichnung
+          Teilefinder
         </p>
         {laden && <Loader2 className="w-3.5 h-3.5 animate-spin text-primary shrink-0" />}
         {treffer?.bereich && (
@@ -212,7 +212,7 @@ export function OemPartDrawing({
       {fertig && !treffer && (
         <p className="text-[11px] text-muted-foreground leading-relaxed">
           Zu {nummern.length > 1 ? "diesen Originalnummern" : `der Originalnummer ${nummern[0]}`} führt der
-          Hersteller-Katalog keine Bildtafel für dieses Fahrzeug.
+          Teilefinder keine Zeichnung für dieses Fahrzeug.
         </p>
       )}
 

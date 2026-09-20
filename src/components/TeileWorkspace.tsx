@@ -223,7 +223,7 @@ function OfferPanel({
   onZoom?: (a: WorkArticle) => void;
   vehicleLabel?: string;
   onClose?: () => void;
-  oemSlot?: (articleNumber: string, name: string) => React.ReactNode;
+  oemSlot?: (articleNumber: string, name: string, oeNumbers?: string[]) => React.ReactNode;
   /** Explosionszeichnung zum Teil — steht dort, wo vorher nur die OE-Nummern standen. */
   oemDrawingSlot?: (oeNumbers: string[], name: string) => React.ReactNode;
 }) {
@@ -289,7 +289,7 @@ function OfferPanel({
           </p>
         )}
 
-        {oemSlot?.(a.articleNumber, a.name)}
+        {oemSlot?.(a.articleNumber, a.name, a.oeNumbers)}
 
         {/* Preis + Menge + Warenkorb */}
         <div className="p-4 border-b border-border">
@@ -431,7 +431,7 @@ export function TeileWorkspace({
   toolbar?: React.ReactNode;
   title?: React.ReactNode;
   /** Einstieg in den Original-Katalog, direkt beim angeklickten Teil. */
-  oemSlot?: (articleNumber: string, name: string) => React.ReactNode;
+  oemSlot?: (articleNumber: string, name: string, oeNumbers?: string[]) => React.ReactNode;
   /** Explosionszeichnung zum angeklickten Teil. */
   oemDrawingSlot?: (oeNumbers: string[], name: string) => React.ReactNode;
 }) {
