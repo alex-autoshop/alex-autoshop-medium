@@ -52,11 +52,11 @@ export interface ApVinResult {
 
 // ─── Fetch über Proxy ───────────────────────────────────────
 
-async function ap(path: string, params?: Record<string, string | number>): Promise<any> {
+async function ap(path: string, params?: Record<string, string | number>, wartezeitMs = 15_000): Promise<any> {
   const qs = new URLSearchParams({ p: path });
   if (params) for (const [k, v] of Object.entries(params)) qs.set(k, String(v));
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 15_000);
+  const timer = setTimeout(() => ctrl.abort(), wartezeitMs);
   try {
     const res = await fetch(`/api/autoparts?${qs}`, { signal: ctrl.signal });
     clearTimeout(timer);
@@ -309,6 +309,14 @@ export interface VinHinweise {
   ccm?: number;
   kw?: number;
   ps?: number;
+  /** Motorkennungen des Herstellers ("Z12XEP", "651.930") — das stärkste Merkmal. */
+  motorcodes?: string[];
+  /** Mercedes-Modellcode "117.303" — steht im Typnamen des Zubehörkatalogs. */
+  modellcode?: string;
+  /** Baureihen-Codes ("F74", "117") — stehen im Modellnamen "(C117)". */
+  baureihen?: string[];
+  /** Aufbau laut Hersteller ("4-TUERIGES COUPE") — Coupé vs. Shooting Brake. */
+  aufbau?: string;
 }
 
 export async function apResolveVin(vin: string, hinweise?: VinHinweise): Promise<ApVinResult | null> {
@@ -323,7 +331,9 @@ export async function apResolveVin(vin: string, hinweise?: VinHinweise): Promise
   // alle Motorvarianten (114/116/119/124 CDI) übrig und der Nutzer muss wählen.
   let kw = 0, ps = 0, awd: boolean | null = null, year = 0;
   try {
-    const r3 = await ap(`/vin/decoder-v3/${encodeURIComponent(v)}`);
+    // Weiß der Hersteller-Katalog schon Marke und Modell, wird auf den
+    // Register-Decoder nicht 15 Sekunden gewartet (bei manchen FINs hängt er).
+    const r3 = await ap(`/vin/decoder-v3/${encodeURIComponent(v)}`, undefined, hinweise?.brand && hinweise?.model ? 6_000 : 15_000);
     const info: Record<string, string> = {};
     if (Array.isArray(r3)) for (const sec of r3) if (sec && sec.information) Object.assign(info, sec.information);
     make = String(info['Make'] || '');
@@ -374,10 +384,43 @@ export async function apResolveVin(vin: string, hinweise?: VinHinweise): Promise
       'models'
     );
     const nModel = norm(model);
+    // Baureihen-Code im Klammerteil des Modellnamens: "CLA Coupe (C117)", "2 Gran Coupe (F74)"
+    const codes = (hinweise?.baureihen ?? []).map((c) => String(c).toUpperCase()).filter(Boolean);
+    const klammer = (name: string) => (String(name).match(/\(([^)]*)\)/)?.[1] || '').toUpperCase();
+    const codeTrifft = (name: string) => {
+      const k = klammer(name);
+      return !!k && codes.some((c) => new RegExp(`(^|[^A-Z0-9])[A-Z]{0,2}${c.replace(/[^A-Z0-9]/g, '')}([^0-9]|$)`).test(k));
+    };
     let matched = models.filter((m: any) => norm(String(m.modelName)).includes(nModel));
     if (matched.length === 0) matched = models.filter((m: any) => nModel.includes(norm(String(m.modelName))));
+    // "CLA 220 CDI" heißt im Zubehörkatalog "CLA Coupe (C117)": über den
+    // Baureihen-Code des Herstellers, sonst über das erste Wort des Modells.
+    if (matched.length === 0 && codes.length) matched = models.filter((m: any) => codeTrifft(String(m.modelName)));
+    if (matched.length === 0) {
+      const erstes = norm(String(model).split(/[\s-]+/)[0] || '');
+      if (erstes.length >= 2) matched = models.filter((m: any) => norm(String(m.modelName).split(/[\s(]+/)[0] || '') === erstes);
+    }
     if (matched.length === 0) return { manufacturer: make, model, candidates: [] };
-    matched = matched.slice(0, 6);
+
+    // Rangfolge der Modelle: passender Baureihen-Code, passender Aufbau, und
+    // ein Pkw vor der Kastenwagen-Ausführung, wenn nichts anderes bekannt ist.
+    const NUTZ = /kasten|pritsche|fahrgestell|pick-?up|\bbus\b|\bvan\b|kombi-?bus|utility/i;
+    const aufbauN = norm(hinweise?.aufbau || '');
+    const nutzGewollt = NUTZ.test(hinweise?.aufbau || '');
+    const aufbauTrifft = (name: string) => {
+      const n = norm(name);
+      if (!aufbauN) return false;
+      if (/coupe/.test(aufbauN) && /coupe/.test(n)) return true;
+      if (/shooting/.test(aufbauN) && /shooting/.test(n)) return true;
+      if (/(kombi|tmodell|touring|estate|variant|avant)/.test(aufbauN) && /(kombi|tmodell|touring|estate|variant|avant|shooting)/.test(n)) return true;
+      if (/(cabrio|roadster)/.test(aufbauN) && /(cabrio|roadster)/.test(n)) return true;
+      return false;
+    };
+    const modellRang = (m: any) => {
+      const name = String(m.modelName);
+      return (codes.length && codeTrifft(name) ? 0 : 4) + (aufbauTrifft(name) ? 0 : 2) + (!nutzGewollt && NUTZ.test(name) ? 1 : 0);
+    };
+    matched = matched.slice().sort((a: any, b: any) => modellRang(a) - modellRang(b)).slice(0, 6);
 
     const cands: ApVinCandidate[] = [];
     const seen = new Set<number>();
@@ -457,7 +500,22 @@ export async function apResolveVin(vin: string, hinweise?: VinHinweise): Promise
       return (!von || jahr >= von - 1) && jahr <= bis + 1;
     };
 
+    // ── Hersteller-Merkmale zuerst: die sind exakt, keine Schätzung ────────
+    const kurz = (x: string) => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const motorcodes = (hinweise?.motorcodes ?? []).map(kurz).filter((c) => c.length >= 3);
+    const modellcode = String(hinweise?.modellcode || '').trim();
+    const motorFits = (c: ApVinCandidate) => {
+      const e = kurz(c.engineCodes || '');
+      return !!e && motorcodes.some((m) => e.includes(m));
+    };
+    const modellcodeFits = (c: ApVinCandidate) => !!modellcode && String(c.typeName || '').includes(modellcode);
+    const GAS = /lpg|cng|autogas|erdgas/i;
+    const istGas = (c: ApVinCandidate) => GAS.test(`${c.fuel || ''} ${c.typeName || ''}`);
+    const istNutz = (c: ApVinCandidate) => /kasten|pritsche|fahrgestell|pick-?up|\bbus\b|\bvan\b/i.test(c.modelName || '');
+
     let treffer = cands;
+    if (modellcode) treffer = eingrenzen(treffer, modellcodeFits);
+    if (motorcodes.length) treffer = eingrenzen(treffer, motorFits);
     if (ccm) treffer = eingrenzen(treffer, ccmFits);
     if (kw || ps) treffer = eingrenzen(treffer, powerFits);
     if (awd !== null) treffer = eingrenzen(treffer, (c) => isAwd(c) === awd);
@@ -472,7 +530,12 @@ export async function apResolveVin(vin: string, hinweise?: VinHinweise): Promise
       const p = powerOf(c);
       const { bis } = bauzeit(c);
       return [
+        modellcode ? (modellcodeFits(c) ? 0 : 1) : 0,
+        motorcodes.length ? (motorFits(c) ? 0 : 1) : 0,
         jahrFits(c) ? 0 : 1,
+        // Autogas-Umbau und Kastenwagen nur, wenn es so im Fahrzeug steht
+        istGas(c) && !GAS.test(hinweise?.aufbau || '') ? 1 : 0,
+        istNutz(c) && !/kasten|pritsche|van|bus/i.test(hinweise?.aufbau || '') ? 1 : 0,
         ccmFits(c) ? 0 : 1,
         powerFits(c) ? 0 : 1,
         abstand(parseInt(String(c.ccm || '0'), 10) || 0, ccm),
@@ -486,11 +549,20 @@ export async function apResolveVin(vin: string, hinweise?: VinHinweise): Promise
       return (a.typeName || '').localeCompare(b.typeName || '');
     });
 
+    // Eindeutig ist es auch, wenn Motor-/Modellcode des Herstellers den ersten
+    // klar vor den zweiten setzen (Corsa 1.2 Z12XEP vor dem Autogas-Umbau).
+    const vorne = (c: ApVinCandidate) => rang(c).slice(0, 5);
+    const klarVorn = treffer.length > 1 && (motorcodes.length > 0 || !!modellcode) && (() => {
+      const a = vorne(treffer[0]), b = vorne(treffer[1]);
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i];
+      return false;
+    })();
+
     // Genau EIN Fahrzeug zurueck — die Seite soll nie eine Auswahl anbieten.
     return {
       manufacturer: make,
       model,
-      exact: treffer.length === 1,
+      exact: treffer.length === 1 || klarVorn,
       candidates: treffer.slice(0, 1),
     };
   } catch {

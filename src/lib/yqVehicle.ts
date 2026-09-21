@@ -36,6 +36,17 @@ export interface YqIdent {
   ps?: number;
   /** Herstellereigener Motorcode, z.B. "B57P" oder "DYHA". */
   motorcode?: string;
+  /**
+   * Alle Motorkennungen, die der Hersteller nennt — für den Abgleich mit den
+   * Motorcodes im Zubehörkatalog ("Z12XEP" ↔ "Z 12 XEP", "651.930" ↔ "OM 651.930").
+   */
+  motorcodes?: string[];
+  /** Mercedes-Modellcode, z.B. "117.303" — steht im Zubehörkatalog im Typnamen. */
+  modellcode?: string;
+  /** Baureihen-/Fahrgestellcodes, z.B. "F74", "117" — stehen dort im Modellnamen "(C117)". */
+  baureihen?: string[];
+  /** Aufbau laut Hersteller, z.B. "4-TUERIGES COUPE", "Gran Coupé". */
+  aufbau?: string;
 }
 
 const speicher = new Map<string, Promise<YqIdent | null>>();
@@ -93,35 +104,86 @@ export function yqMerkmale(v: YqVehicle) {
     }
   }
 
+  // Motorkennungen: Motorfeld ("Z12XEP", "B38N (115kW)") und bei Mercedes die
+  // Aggregate ("… (651.930 M651 D22, R4-DIESELMOTOR OM651 D 22)").
+  const motorcodes = new Set<string>();
+  const motorFeld = (nachCode.get("engine") || "").replace(/\(.*?\)/g, " ").trim();
+  for (const w of motorFeld.split(/[\s,;/]+/)) if (/^[A-Z0-9]{3,}$/i.test(w) && /\d/.test(w) && /[A-Z]/i.test(w)) motorcodes.add(w.toUpperCase());
+  const aggregate = nachCode.get("aggregates") || "";
+  const motorTeil = aggregate.match(/Motor:[^;]*/i)?.[0] || "";
+  for (const m of motorTeil.matchAll(/\b(\d{3}\.\d{3})\b/g)) motorcodes.add(m[1]);
+
+  // Mercedes-Modellcode "117.303" (Feld "model" bzw. Label "Modellcode")
+  const mcRoh = nachCode.get("model") || alle.find((a) => /modellcode|model code/i.test(a.label))?.wert || "";
+  const modellcode = /^\d{3}\.\d{3}$/.test(mcRoh.trim()) ? mcRoh.trim() : undefined;
+
+  const baureihen = new Set<string>();
+  const serie = (nachCode.get("series_code") || "").trim().toUpperCase();
+  if (/^[A-Z]{0,2}\d{2,3}[A-Z]?$/.test(serie)) baureihen.add(serie);
+  if (modellcode) baureihen.add(modellcode.slice(0, 3));
+
+  const aufbau =
+    alle.find((a) => /aufbau|karosserie|body/i.test(a.label))?.wert ||
+    (/coupe|coupé|limousine|kombi|t-modell|cabrio|roadster|shooting|kastenwagen|pritsche/i.test(nachCode.get("description") || "")
+      ? nachCode.get("description") : undefined);
+
   return {
     baujahr:
       jahrAus(nachCode.get("manufactured")) ??
       jahrAus(nachCode.get("date")) ??
+      jahrAus(nachCode.get("production_date")) ??
       jahrAus(nachCode.get("prodrange")),
     ccm,
-    kw: zahl(info, /(\d{2,4})\s*kw/i),
+    kw: zahl(info, /(\d{2,4})\s*kw/i) ?? zahl(nachCode.get("engine"), /(\d{2,4})\s*kw/i),
     ps: zahl(info, /(\d{2,4})\s*(?:hp|ps)/i),
     motorcode: nachCode.get("engine") || undefined,
+    motorcodes: [...motorcodes],
+    modellcode,
+    baureihen: [...baureihen],
+    aufbau: aufbau || undefined,
   };
 }
+
+/** Katalog vorübergehend nicht erreichbar/überlastet — kein Urteil über die FIN. */
+class YqStoerung extends Error {}
+
+const pause = (ms: number) => new Promise((ok) => setTimeout(ok, ms));
 
 async function bestimmen(vin: string): Promise<YqIdent | null> {
   const clean = vin.trim().toUpperCase();
   if (clean.length < 11) return null;
+  // Das FIN-Formular hängt an der Katalogliste selbst — markenübergreifend.
+  // Der Umweg über "erst Marke raten, dann deren Katalogformular holen" ist
+  // damit überflüssig, und Marken, die wir nicht erraten hätten, gehen auch.
+  let forms;
   try {
-    // Das FIN-Formular hängt an der Katalogliste selbst — markenübergreifend.
-    // Der Umweg über "erst Marke raten, dann deren Katalogformular holen" ist
-    // damit überflüssig, und Marken, die wir nicht erraten hätten, gehen auch.
-    const { forms } = await yqCatalogs();
-    const form = (forms ?? []).find((f) => f.action === "findVehicle");
-    if (!form?.token) return null;
+    forms = (await yqCatalogs()).forms;
+  } catch {
+    throw new YqStoerung("Katalogliste nicht erreichbar");
+  }
+  const form = (forms ?? []).find((f) => f.action === "findVehicle");
+  if (!form?.token) return null;
 
-    const r = await fetch(`/api/yqcat?action=findVehicle`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: form.token, formValues: [{ name: "IdentString", value: clean }] }),
-    });
-    if (!r.ok) return null;
+  // "Too many requests" (429) oder Serverfehler: einmal kurz warten, dann
+  // nochmal. Bleibt es dabei, ist das eine Störung — und KEIN "unbekannt".
+  let r: Response | null = null;
+  for (let versuch = 0; versuch < 2; versuch++) {
+    try {
+      r = await fetch(`/api/yqcat?action=findVehicle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: form.token, formValues: [{ name: "IdentString", value: clean }] }),
+      });
+    } catch {
+      r = null;
+    }
+    if (r && r.ok) break;
+    if (r && r.status < 500 && r.status !== 429) break; // echte Absage
+    if (versuch === 0) await pause(1200);
+  }
+  if (!r || r.status === 429 || r.status >= 500) throw new YqStoerung(`Katalog ${r?.status ?? "offline"}`);
+  if (!r.ok) return null;
+  {
     const j = (await r.json().catch(() => null)) as { data?: { vehicles?: YqVehicle[] } } | null;
     const v = j?.data?.vehicles?.[0];
     if (!v?.token) return null;
@@ -136,8 +198,6 @@ async function bestimmen(vin: string): Promise<YqIdent | null> {
       label: [brand, model].filter(Boolean).join(" ").trim(),
       ...yqMerkmale(v),
     };
-  } catch {
-    return null;
   }
 }
 
@@ -147,7 +207,12 @@ export function yqIdentify(vin: string): Promise<YqIdent | null> {
   if (!key) return Promise.resolve(null);
   let p = speicher.get(key);
   if (!p) {
-    p = bestimmen(key);
+    // Gemerkt wird nur ein echtes Ergebnis ("dieses Auto" oder "unbekannt").
+    // Eine Störung wird vergessen — beim nächsten Suchen wird neu gefragt.
+    p = bestimmen(key).catch(() => {
+      speicher.delete(key);
+      return null;
+    });
     speicher.set(key, p);
   }
   return p;

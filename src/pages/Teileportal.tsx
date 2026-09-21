@@ -567,6 +567,9 @@ export default function Teileportal() {
           const res = await apResolveVin(normVin, ident ? {
             brand: ident.brand, model: ident.model, baujahr: ident.baujahr,
             ccm: ident.ccm, kw: ident.kw, ps: ident.ps,
+            // Die exakten Herstellermerkmale: Motorcode, Modellcode, Baureihe, Aufbau
+            motorcodes: ident.motorcodes, modellcode: ident.modellcode,
+            baureihen: ident.baureihen, aufbau: ident.aufbau,
           } : undefined);
           // Die FIN bestimmt das Fahrzeug — nicht der Kunde. apResolveVin gibt
           // hoechstens einen Kandidaten zurueck; gibt es mehrere gleich gute,
