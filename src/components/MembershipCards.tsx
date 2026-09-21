@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { empfehlungLesen } from "@/lib/empfehlung";
+import { mitgliedsbeitrag } from "../../shared/mitgliedspreise.js";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { cn } from "@/lib/utils";
 
@@ -334,11 +336,30 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
     if (!mail) return toast.error("Bitte E-Mail angeben");
     setLoading(true);
     try {
+      // Beitrag aus der ECHTEN Auswahl (nicht aus einer laufenden Vorschau) —
+      // dieselbe Rechnung macht der Server und lehnt Abweichungen ab.
+      const echteAuswahl = {
+        level: m.level,
+        modules,
+        freePaint: wantFreePaint,
+        aufbereitung: !!m.detailing && wantDetailing,
+      };
+      const beitrag = mitgliedsbeitrag(echteAuswahl);
+      const auswahl = {
+        email: mail,
+        level: m.level,
+        modules: beitrag?.module ?? modules,
+        price: beitrag?.preis ?? price,
+        freePaint: beitrag?.freePaint ?? true,
+        aufbereitung: beitrag?.aufbereitung ?? false,
+        ref: empfehlungLesen() || undefined,
+      };
+
       // 1) Echte Zahlung versuchen (Stripe-Abo bzw. GoCardless-SEPA)
       const co = await fetch("/api/membership-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: mail, level: m.level, modules, price, method: payMethod, freePaint: noPaint ? wantFreePaint : true, aufbereitung: detailingOn }),
+        body: JSON.stringify({ ...auswahl, method: payMethod }),
       });
       const coData = await co.json().catch(() => ({}));
       if (co.ok && coData.url) {
@@ -346,24 +367,27 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
         window.location.href = coData.url;
         return;
       }
+      if (co.status === 409 || co.status === 400) {
+        throw new Error(coData.error || "Buchung nicht möglich — bitte Seite neu laden.");
+      }
       // 2) Fallback: Anbieter noch nicht konfiguriert → bisheriger E-Mail-Anfrage-Flow
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
       const res = await fetch("/api/membership-email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: mail,
-          level: m.level,
-          modules,
-          price,
-          freePaint: noPaint ? wantFreePaint : true,
-          aufbereitung: detailingOn,
-        }),
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(auswahl),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Unbekannter Fehler");
-      toast.success("Anfrage gesendet! 📬", {
-        description: "Wir melden uns zur Zahlung. Klick auf 'Zum Dashboard' in der Mail — du wirst automatisch eingeloggt.",
-      });
+      if (data.schonDa) {
+        toast.success("Deine Anfrage ist schon bei uns 📬", {
+          description: "Schau in dein Postfach (auch im Spam-Ordner). Sonst ruf uns an: 0202 82690.",
+        });
+      } else {
+        toast.success("Anfrage gesendet! 📬", {
+          description: "Wir melden uns zur Zahlung. Klick auf 'Zum Dashboard' in der Mail — du wirst automatisch eingeloggt.",
+        });
+      }
       setEmail("");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

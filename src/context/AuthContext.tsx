@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, isAuthConfigured } from "@/lib/supabase";
+import { empfehlungLesen, empfehlungVergessen } from "@/lib/empfehlung";
 
 // Projekt-Fahrzeug des Kunden — wird in Supabase user_metadata gespeichert.
 export interface Vehicle {
@@ -110,6 +111,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // Kam das Konto über einen Empfehlungslink? Dann den Werber eintragen
+  // lassen — das macht der Server (app_metadata), nicht der Browser.
+  useEffect(() => {
+    if (!user || !supabase) return;
+    const code = empfehlungLesen();
+    if (!code) return;
+    const a = (user.app_metadata ?? {}) as Record<string, unknown>;
+    if (a.referred_by || a.referred_by_id) { empfehlungVergessen(); return; }
+    let lebt = true;
+    (async () => {
+      const token = (await supabase!.auth.getSession()).data.session?.access_token;
+      if (!token) return;
+      const r = await fetch("/api/empfehlung", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code }),
+      }).catch(() => null);
+      if (!r || r.status >= 500) return; // später nochmal versuchen
+      const d = await r.json().catch(() => null);
+      empfehlungVergessen();
+      if (lebt && d?.ergebnis === "ok") {
+        const { data } = await supabase!.auth.refreshSession();
+        if (lebt && data.user) setUser(data.user);
+      }
+    })();
+    return () => { lebt = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const signUp: AuthState["signUp"] = async (email, password, profile) => {
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };

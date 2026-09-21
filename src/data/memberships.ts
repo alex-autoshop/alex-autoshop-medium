@@ -1,3 +1,7 @@
+// Preise kommen aus EINER Datei, die auch der Server zum Nachrechnen nutzt.
+// Beiträge ändern: nur in shared/mitgliedspreise.js.
+import { MITGLIEDSPREISE as P } from "../../shared/mitgliedspreise.js";
+
 /** Optische Hervorhebung besonderer Leistungen in der Vorteilsliste. */
 export type FeatureAccent = "emergency" | "detailing" | "included" | "hotline";
 
@@ -78,14 +82,14 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     name: "Level 1",
     pricePerMonth: 49,
     discountPercent: 15,
-    basePrice: 19,
+    basePrice: P[1].basePrice,
     baseDiscountPercent: 10,
     tagline: "Für Aufbereiter & kleine Werkstätten — clever ab Tag 1",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     defaultModules: ["Lackfarben", "Lackmaterial"],
     // Teilebörse wiegt am schwersten · dann Lackfarben · dann Lackmaterial → Summe = 49 - 19 = 30 €
-    modulePrices: { Autoteile: 12, Lackfarben: 10, Lackmaterial: 8 },
-    freePaintValue: 6,
+    modulePrices: P[1].modulePrices,
+    freePaintValue: P[1].freePaintValue,
     savingsExample: 467,
     features: [
       {
@@ -140,7 +144,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     name: "Level 2",
     pricePerMonth: 180,
     discountPercent: 28,
-    basePrice: 39,
+    basePrice: P[2].basePrice,
     baseDiscountPercent: 15,
     tagline: "Der Bestseller für aktive Werkstätten",
     highlight: true,
@@ -148,9 +152,9 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     // Teilebörse trägt das meiste Gewicht → Summe = 180 - 39 = 141 €
     // Lackfarben + Lackmaterial ohne Teilebörse = 39 + 45 + 37 = 121 €
-    modulePrices: { Autoteile: 59, Lackfarben: 45, Lackmaterial: 37 },
-    freePaintValue: 15,
-    detailing: { price: 99, vehicles: 8, turnaround: "48 h" },
+    modulePrices: P[2].modulePrices,
+    freePaintValue: P[2].freePaintValue,
+    detailing: { price: P[2].detailingPrice, vehicles: 8, turnaround: "48 h" },
     savingsExample: 2347,
     features: [
       {
@@ -210,15 +214,15 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
     pricePerMonth: 318,
     originalPrice: 410,
     discountPercent: 40,
-    basePrice: 69,
+    basePrice: P[3].basePrice,
     baseDiscountPercent: 20,
     tagline: "Höchstrabatt & VIP-Service für Lackier- & Karosseriebetriebe",
     badge: "Premium",
     modules: ["Autoteile", "Lackfarben", "Lackmaterial"],
     // Teilebörse trägt das meiste Gewicht → Summe = 318 - 69 = 249 €
-    modulePrices: { Autoteile: 105, Lackfarben: 79, Lackmaterial: 65 },
-    freePaintValue: 25,
-    detailing: { price: 149, vehicles: 30, turnaround: "24 h" },
+    modulePrices: P[3].modulePrices,
+    freePaintValue: P[3].freePaintValue,
+    detailing: { price: P[3].detailingPrice, vehicles: 30, turnaround: "24 h" },
     savingsExample: 5930,
     features: [
       {

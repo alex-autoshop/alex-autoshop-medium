@@ -18,7 +18,7 @@ interface Member {
   id: string; email: string; company: string; contact: string; phone: string; address: string;
   level: number; modules: string[];
   trialUsed: boolean; trialLevel: number | null; trialExpires: string | null; trialActive: boolean;
-  referralCode: string; referredBy: string; affiliateCredit: number; sepa: boolean;
+  referralCode: string; referredBy: string; affiliateCredit: number; sepa: boolean; geworben?: number;
   createdAt: string; lastSignIn: string | null; confirmed: boolean;
   orders: number; revenue: number; lastOrder: string | null;
 }
@@ -252,6 +252,7 @@ export default function AdminMembers() {
                     <p>{m.orders} Bestellungen · {eur(m.revenue)}</p>
                     <p className="text-muted-foreground">letzte: {datum(m.lastOrder)}</p>
                     <p className="text-muted-foreground">Code: {m.referralCode || "—"}{m.referredBy ? ` · geworben von ${m.referredBy}` : ""}</p>
+                    {!!m.geworben && <p className="text-muted-foreground">hat {m.geworben} Kollegen geworben</p>}
                     {m.affiliateCredit > 0 && <p className="text-primary font-semibold">Guthaben {eur(m.affiliateCredit)}</p>}
                   </div>
                 </div>

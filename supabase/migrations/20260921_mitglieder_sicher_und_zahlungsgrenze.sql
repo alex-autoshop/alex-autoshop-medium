@@ -15,6 +15,8 @@
 -- "app_metadata". Die kann ausschließlich der Server bzw. dieser Editor
 -- schreiben, nie der Nutzer selbst.
 --
+-- Neu seit 22.09.: Empfehlungslinks werden ausgewertet (Abschnitt 5b).
+--
 -- Unten kommt am Ende eine Liste aller Mitglieder — bitte kurz durchsehen.
 -- ===========================================================================
 
@@ -159,6 +161,86 @@ alter table public.teile_zahlungen enable row level security;
 drop policy if exists "zahlungen lesen eigene" on public.teile_zahlungen;
 create policy "zahlungen lesen eigene" on public.teile_zahlungen
   for select using (auth.uid() = user_id);
+
+
+-- 5b) EMPFEHLUNGEN: Werber finden und zuordnen -----------------------------
+-- Wer über einen Empfehlungslink (…/mitgliedschaft?ref=CODE) kommt, wird dem
+-- Werber zugeordnet. Die ersten drei Funktionen darf NUR der Server aufrufen
+-- (Service-Key) — sonst könnte jeder fremde Konten verknüpfen.
+
+-- Konto-ID zu einer E-Mail (Server)
+create or replace function public.nutzer_id(mail text)
+returns uuid
+language sql stable security definer set search_path = public, auth
+as $$
+  select id from auth.users where lower(email) = lower(mail) order by created_at limit 1;
+$$;
+
+-- Werber zu einem Code: eigener Werbe-Code oder — wie im Kundenkonto angezeigt —
+-- die ersten 8 Zeichen der Konto-ID.
+create or replace function public.werber_finden(code text)
+returns table (user_id uuid, werbe_code text)
+language sql stable security definer set search_path = public, auth
+as $$
+  select u.id,
+         coalesce(nullif(u.raw_app_meta_data ->> 'referral_code', ''), upper(left(u.id::text, 8)))
+  from auth.users u
+  where length(coalesce(code, '')) between 6 and 8
+    and (upper(u.raw_app_meta_data ->> 'referral_code') = upper(code)
+         or upper(left(u.id::text, 8)) = upper(code))
+  order by (upper(u.raw_app_meta_data ->> 'referral_code') = upper(code)) desc nulls last, u.created_at
+  limit 1;
+$$;
+
+-- Werber eintragen — nur wenn noch keiner drinsteht, das Konto jünger als
+-- 30 Tage ist und es nicht der eigene Code ist.
+create or replace function public.werber_zuordnen(ziel uuid, code text)
+returns text
+language plpgsql security definer set search_path = public, auth
+as $$
+declare
+  z_meta jsonb;
+  z_angelegt timestamptz;
+  w_id uuid;
+  w_code text;
+begin
+  select raw_app_meta_data, created_at into z_meta, z_angelegt from auth.users where id = ziel;
+  if not found then return 'kein_konto'; end if;
+  if coalesce(z_meta ->> 'referred_by_id', z_meta ->> 'referred_by') is not null then
+    return 'schon_zugeordnet';
+  end if;
+  if z_angelegt < now() - interval '30 days' then return 'zu_alt'; end if;
+
+  select f.user_id, f.werbe_code into w_id, w_code from public.werber_finden(code) f;
+  if w_id is null then return 'code_unbekannt'; end if;
+  if w_id = ziel then return 'eigener_code'; end if;
+
+  update auth.users
+  set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+      || jsonb_build_object('referred_by', w_code, 'referred_by_id', w_id::text)
+  where id = ziel;
+  return 'ok';
+end;
+$$;
+
+revoke all on function public.nutzer_id(text) from public, anon, authenticated;
+revoke all on function public.werber_finden(text) from public, anon, authenticated;
+revoke all on function public.werber_zuordnen(uuid, text) from public, anon, authenticated;
+grant execute on function public.nutzer_id(text) to service_role;
+grant execute on function public.werber_finden(text) to service_role;
+grant execute on function public.werber_zuordnen(uuid, text) to service_role;
+
+-- Wie viele Kollegen habe ICH geworben? (für das Kundenkonto — nur die eigene Zahl)
+create or replace function public.meine_empfehlungen()
+returns integer
+language sql stable security definer set search_path = public, auth
+as $$
+  select count(*)::int from auth.users u
+  where (u.raw_app_meta_data ->> 'referred_by_id') = auth.uid()::text;
+$$;
+
+revoke all on function public.meine_empfehlungen() from public, anon;
+grant execute on function public.meine_empfehlungen() to authenticated;
 
 
 -- 6) ZUM DURCHSEHEN: Mitglieder, Admins und bisheriges Guthaben -----------

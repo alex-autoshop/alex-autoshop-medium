@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { empfehlungMerken } from "@/lib/empfehlung";
 import { Toaster } from "sonner";
 import { MotionConfig } from "framer-motion";
 import { Header } from "@/components/Header";
@@ -35,6 +36,14 @@ function ScrollToTop() {
   return null;
 }
 
+/** Empfehlungslink (?ref=CODE) auf JEDER Seite merken — eingetragen wird
+ *  der Werber später auf dem Server. */
+function EmpfehlungMerken() {
+  const { search } = useLocation();
+  useEffect(() => { empfehlungMerken(search); }, [search]);
+  return null;
+}
+
 const PageFallback = () => (
   <div className="min-h-[50vh] flex items-center justify-center text-muted-foreground">
     Lädt …
@@ -47,6 +56,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <ScrollToTop />
+        <EmpfehlungMerken />
         <Suspense fallback={<PageFallback />}>
           <Routes>
             {/* Admin-Chat: kein Header, kein Footer, kein Widget */}

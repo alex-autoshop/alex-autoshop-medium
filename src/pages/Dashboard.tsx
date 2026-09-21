@@ -40,6 +40,7 @@ import { MaterialPlanner } from "@/components/MaterialPlanner";
 import Teileportal from "@/pages/Teileportal";
 import { useProducts } from "@/hooks/useProducts";
 import { useAuth, type Vehicle } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useCartStore } from "@/stores/cartStore";
 import { getOrders, type Order } from "@/lib/orders";
@@ -591,6 +592,17 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
   const referralLink  = `https://www.alex-autoshop.de/mitgliedschaft?ref=${referralCode}`;
   const credit        = profile.affiliate_credit ?? 0;
 
+  // Echte Anzahl aus der Datenbank (vorher stand hier fest "0").
+  const [geworben, setGeworben] = useState<number | null>(null);
+  useEffect(() => {
+    let lebt = true;
+    if (!user || !supabase) return;
+    supabase.rpc("meine_empfehlungen").then(({ data, error }) => {
+      if (lebt && !error && typeof data === "number") setGeworben(data);
+    });
+    return () => { lebt = false; };
+  }, [user?.id]);
+
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(referralLink);
@@ -629,7 +641,7 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
         </div>
         <div className="card-tilt hover:translate-y-0 p-6">
           <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">Empfohlene Kollegen</p>
-          <p className="text-4xl font-display font-bold">0</p>
+          <p className="text-4xl font-display font-bold">{geworben ?? "–"}</p>
           <p className="text-xs text-muted-foreground mt-2">Live-Tracking — aktualisiert sich automatisch</p>
         </div>
       </div>

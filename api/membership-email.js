@@ -1,5 +1,31 @@
 export const config = { runtime: 'edge' };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Zwei Wege hier herein:
+//   1. INTERN nach bestätigter Zahlung (Webhook → _activate-membership.js),
+//      erkennbar an der Signatur im Header "x-intern" (api/_intern.js).
+//   2. ÖFFENTLICH aus dem Mitgliedschafts-Formular, wenn noch keine
+//      Online-Zahlung eingerichtet ist ("Anfrage").
+//
+// Bis 22.09.2026 war Weg 2 völlig offen: jeder konnte über diese Adresse
+// Mails von mitgliedschaft@alex-autoshop.de an beliebige Empfänger schicken
+// lassen — mit eigenem Text im Modul-Feld (Phishing mit echter Absender-
+// Domain), beliebig oft, samt angelegtem Konto. Jetzt:
+//   • nur eine gültige E-Mail, Stufe 1–3, bekannte Module; Preis rechnet
+//     der Server selbst (shared/mitgliedspreise.js) — kein fremder Text
+//     landet mehr in einer Mail
+//   • pro Adresse höchstens 1 Anfrage in 24 Stunden
+//   • insgesamt höchstens ANFRAGEN_JE_10_MIN in 10 Minuten
+//   • wer angemeldet ist, kann nur für die eigene Adresse anfragen
+// ─────────────────────────────────────────────────────────────────────────────
+
+import { mitgliedsbeitrag, MODULE } from '../shared/mitgliedspreise.js';
+import { internPruefen } from './_intern.js';
+
+const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
+const REF_OK = /^[A-Z0-9]{6,8}$/;
+const ANFRAGEN_JE_10_MIN = 20;
+
 // ─── Config ──────────────────────────────────────────────────────────────────
 const RESEND_API_KEY   = process.env.RESEND_API_KEY;
 const SUPABASE_URL     = process.env.VITE_SUPABASE_URL;
@@ -18,6 +44,49 @@ const LEVEL_INFO = {
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+const svcHeaders = () => ({
+  'Content-Type':  'application/json',
+  'apikey':        SUPABASE_SVC_KEY,
+  'Authorization': `Bearer ${SUPABASE_SVC_KEY}`,
+});
+
+/** Missbrauchsbremse für den öffentlichen Weg: 'ok' | 'schonDa' | 'zuViele'. */
+async function bremsePruefen(email) {
+  if (!SUPABASE_URL || !SUPABASE_SVC_KEY) return 'ok';
+  try {
+    const seit24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const r1 = await fetch(
+      `${SUPABASE_URL}/rest/v1/membership_requests?select=id&email=eq.${encodeURIComponent(email)}&created_at=gte.${encodeURIComponent(seit24h)}&limit=1`,
+      { headers: svcHeaders() },
+    );
+    if (r1.ok) { const a = await r1.json(); if (Array.isArray(a) && a.length > 0) return 'schonDa'; }
+
+    const seit10 = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const r2 = await fetch(
+      `${SUPABASE_URL}/rest/v1/membership_requests?select=id&created_at=gte.${encodeURIComponent(seit10)}&limit=${ANFRAGEN_JE_10_MIN}`,
+      { headers: svcHeaders() },
+    );
+    if (r2.ok) { const a = await r2.json(); if (Array.isArray(a) && a.length >= ANFRAGEN_JE_10_MIN) return 'zuViele'; }
+  } catch {
+    /* Bremse ist Schutz, kein Muss — bei einer Störung lieber durchlassen */
+  }
+  return 'ok';
+}
+
+/** Supabase-Funktion aufrufen (nur mit Service-Key erlaubt). */
+async function rpc(name, args) {
+  if (!SUPABASE_URL || !SUPABASE_SVC_KEY) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      method: 'POST', headers: svcHeaders(), body: JSON.stringify(args),
+    });
+    if (!r.ok) return null; // z.B. SQL-Datei noch nicht ausgeführt
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
 function calcNet(brutto) {
   const net = Math.round((brutto / 1.19) * 100) / 100;
   const tax = Math.round((brutto - net) * 100) / 100;
@@ -466,9 +535,55 @@ export default async function handler(req) {
   try { body = await req.json(); }
   catch { return jsonError('Ungültiger Request-Body', 400); }
 
-  const { email, level, modules = [], price } = body;
-  if (!email || !level) return jsonError('email und level sind erforderlich', 400);
+  const { email: emailRoh, level: levelRoh, modules: modulesRoh = [], price: priceRoh, freePaint, aufbereitung, ref: refRoh } = body || {};
+  const email = String(emailRoh || '').trim().toLowerCase();
+  if (!EMAIL_OK.test(email)) return jsonError('Bitte eine gültige E-Mail-Adresse angeben.', 400);
   if (!RESEND_API_KEY)  return jsonError('RESEND_API_KEY nicht konfiguriert', 500);
+
+  const intern = await internPruefen(req, 'membership-email', email, String(levelRoh));
+  let level, modules, price;
+  if (intern) {
+    // Nach bestätigter Zahlung: die Werte stammen aus UNSEREN Zahlungsdaten.
+    level = Math.floor(Number(levelRoh));
+    if (!(level >= 1 && level <= 3)) return jsonError('Ungültige Stufe', 400);
+    const liste = (Array.isArray(modulesRoh) ? modulesRoh : String(modulesRoh).split(',')).map((x) => String(x).trim());
+    modules = MODULE.filter((m) => liste.includes(m));
+    price = Math.round(Number(priceRoh) * 100) / 100;
+    if (!(price >= 0 && price <= 5000)) return jsonError('Ungültiger Preis', 400);
+  } else {
+    // Öffentlich: Stufe, Module und Preis nur aus der festen Preistabelle.
+    const b = mitgliedsbeitrag({ level: levelRoh, modules: modulesRoh, freePaint, aufbereitung });
+    if (!b) return jsonError('Unbekannte Mitgliedsstufe.', 400);
+    level = b.level;
+    modules = b.module;
+    price = b.preis;
+
+    // Angemeldet? Dann nur für die eigene Adresse.
+    const auth = req.headers.get('authorization') || '';
+    if (auth.startsWith('Bearer ') && SUPABASE_URL && SUPABASE_SVC_KEY) {
+      const me = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: { apikey: SUPABASE_SVC_KEY, Authorization: auth },
+      }).catch(() => null);
+      const u = me && me.ok ? await me.json().catch(() => null) : null;
+      if (u?.email && String(u.email).toLowerCase() !== email) {
+        return jsonError('Mit diesem Konto kannst du nur für deine eigene E-Mail-Adresse anfragen.', 403);
+      }
+    }
+
+    const bremse = await bremsePruefen(email);
+    if (bremse === 'schonDa') {
+      return new Response(JSON.stringify({ ok: true, schonDa: true }), {
+        status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+    if (bremse === 'zuViele') {
+      return jsonError('Gerade gehen sehr viele Anfragen ein — bitte in ein paar Minuten nochmal oder ruf uns an: 0202 82690.', 429);
+    }
+  }
+
+  // Werbe-Code (Empfehlungslink) — Werber vorab bestimmen
+  const ref = String(refRoh || '').trim().toUpperCase();
+  const werber = REF_OK.test(ref) ? (await rpc('werber_finden', { code: ref }))?.[0] || null : null;
 
   const tempPassword  = generatePassword(10);
   const referralCode  = generateReferralCode();
@@ -485,7 +600,7 @@ export default async function handler(req) {
   if (SUPABASE_URL && SUPABASE_SVC_KEY) {
     try {
       // 1. User erstellen — email_confirm: true = sofort bestätigt, kein extra Klick
-      await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+      const neuRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
         method: 'POST',
         headers: {
           'Content-Type':  'application/json',
@@ -507,10 +622,23 @@ export default async function handler(req) {
           app_metadata: {
             referral_code: referralCode,
             affiliate_credit: 0,
+            // Kam über einen Empfehlungslink → Werber gleich festhalten
+            ...(werber?.user_id ? { referred_by: werber.werbe_code, referred_by_id: werber.user_id } : {}),
           },
         }),
       });
       // User existiert eventuell schon — das ist ok, Magic Link funktioniert trotzdem
+      let userId = null;
+      if (neuRes.ok) {
+        userId = (await neuRes.json().catch(() => null))?.id || null;
+      } else {
+        userId = (await rpc('nutzer_id', { mail: email })) || null;
+        // Bestehendes Konto: Werber nur nach BESTÄTIGTER Zahlung nachtragen —
+        // sonst könnte jeder fremden Konten einen Werber unterschieben.
+        if (intern && werber?.user_id && userId) {
+          await rpc('werber_zuordnen', { ziel: userId, code: ref });
+        }
+      }
 
       // 2. Magic Link generieren → leitet direkt zu /dashboard?welcome=1
       const linkRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
@@ -531,24 +659,28 @@ export default async function handler(req) {
         if (d.action_link) magicLink = d.action_link;
       }
 
-      // 3. Mitgliedschaftsantrag speichern
-      await fetch(`${SUPABASE_URL}/rest/v1/membership_requests`, {
+      // 3. Mitgliedschaftsantrag speichern — MIT user_id: ohne die setzte
+      //    "Freischalten" im Postfach die Stufe gar nicht (Anfrage ohne Konto).
+      const antrag = {
+        email,
+        level,
+        modules,
+        status:       'pending',
+        ...(userId ? { user_id: userId } : {}),
+      };
+      const ar = await fetch(`${SUPABASE_URL}/rest/v1/membership_requests`, {
         method:  'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'apikey':        SUPABASE_SVC_KEY,
-          'Authorization': `Bearer ${SUPABASE_SVC_KEY}`,
-          'Prefer':        'return=minimal',
-        },
-        body: JSON.stringify({
-          email,
-          level,
-          modules,
-          status:       'pending',
-          member_no:    memberNo,
-          referral_code: referralCode,
-        }),
+        headers: { ...svcHeaders(), 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ ...antrag, member_no: memberNo, referral_code: referralCode }),
       });
+      // Ältere Tabellen haben member_no/referral_code nicht → ohne nochmal
+      if (!ar.ok) {
+        await fetch(`${SUPABASE_URL}/rest/v1/membership_requests`, {
+          method:  'POST',
+          headers: { ...svcHeaders(), 'Prefer': 'return=minimal' },
+          body: JSON.stringify(antrag),
+        });
+      }
     } catch (e) {
       console.error('Supabase (non-fatal):', e?.message);
     }

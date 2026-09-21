@@ -5,14 +5,15 @@
 // 2) legt die Mitgliedschaft als echte Shopify-Bestellung an (Betrag sichtbar).
 
 import { createShopifyOrder } from "./_shopify-order.js";
+import { internSignatur } from "./_intern.js";
 
 const BASE = () => process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de";
 
 /**
- * @param {Object} meta  { email, level, modules(string[]|string), price, provider, providerId }
+ * @param {Object} meta  { email, level, modules(string[]|string), price, provider, providerId, ref }
  */
 export async function activateMembership(meta) {
-  const email = meta.email;
+  const email = String(meta.email || "").trim().toLowerCase();
   const level = Number(meta.level);
   const price = Number(meta.price);
   const modules = Array.isArray(meta.modules)
@@ -24,10 +25,15 @@ export async function activateMembership(meta) {
 
   // 1) Freischaltung + E-Mails (bestehender Flow)
   try {
+    // Signiert: nur so akzeptiert membership-email die Werte aus der Zahlung
+    // (und legt ohne Missbrauchsbremse Konto + Mails an).
     const r = await fetch(`${BASE()}/api/membership-email`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, level, modules, price, paid: true, provider }),
+      headers: {
+        "Content-Type": "application/json",
+        "x-intern": await internSignatur("membership-email", email, String(level)),
+      },
+      body: JSON.stringify({ email, level, modules, price, paid: true, provider, ref: meta.ref || "" }),
     });
     results.membershipEmail = r.ok;
     if (!r.ok) results.errors.push(`membership-email ${r.status}`);

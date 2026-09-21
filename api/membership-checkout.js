@@ -9,8 +9,18 @@
 //   GOCARDLESS_ACCESS_TOKEN      (sandbox_… / live_…)
 //   GOCARDLESS_ENVIRONMENT       "sandbox" | "live"  (Default: sandbox)
 //   PUBLIC_BASE_URL              z.B. https://alex-autoshop.de (Default gesetzt)
+//
+// PREIS: Der Beitrag wird HIER berechnet (shared/mitgliedspreise.js) — der
+// Browser schickt nur die Auswahl. Bis 22.09.2026 kam der Betrag aus dem
+// Browser: mit einer umgeschriebenen Anfrage gab es Level 3 für 1 Cent/Monat.
 
 export const config = { runtime: "edge" };
+
+import { mitgliedsbeitrag } from "../shared/mitgliedspreise.js";
+
+const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
+const REF_OK = /^[A-Z0-9]{6,8}$/;
+const refAus = (x) => { const r = String(x || "").trim().toUpperCase(); return REF_OK.test(r) ? r : ""; };
 
 const BASE = () => process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de";
 
@@ -23,7 +33,7 @@ const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", ...CORS } });
 
 // ── Stripe: Checkout Session (subscription) ──────────────────────────────────
-async function createStripeSession({ email, level, modules, price }) {
+async function createStripeSession({ email, level, modules, price, paket, ref }) {
   const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
   if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
 
@@ -44,6 +54,8 @@ async function createStripeSession({ email, level, modules, price }) {
   form.set("metadata[level]", String(level));
   form.set("metadata[modules]", (modules || []).join(","));
   form.set("metadata[price]", String(price));
+  form.set("metadata[paket]", paket);
+  if (ref) form.set("metadata[ref]", ref);
   form.set("subscription_data[metadata][email]", email);
   form.set("subscription_data[metadata][level]", String(level));
   form.set("subscription_data[metadata][modules]", (modules || []).join(","));
@@ -60,7 +72,7 @@ async function createStripeSession({ email, level, modules, price }) {
 }
 
 // ── GoCardless: Billing Request + Flow (SEPA-Mandat) ─────────────────────────
-async function createGoCardlessFlow({ email, level, modules, price }) {
+async function createGoCardlessFlow({ email, level, modules, price, paket, ref }) {
   // Nur ein echter Token zählt (Platzhalter in Vercel → freundlicher Hinweis),
   // und live/sandbox ergibt sich aus dem Token selbst.
   const token = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
@@ -81,11 +93,12 @@ async function createGoCardlessFlow({ email, level, modules, price }) {
     body: JSON.stringify({
       billing_requests: {
         mandate_request: { scheme: "sepa_core", currency: "EUR" },
+        // GoCardless erlaubt höchstens 3 Metadaten-Felder (vorher 4 → die
+        // SEPA-Buchung wäre abgelehnt worden). Der Webhook packt "paket" aus.
         metadata: {
           email,
-          level: String(level),
-          modules: (modules || []).join(","),
-          price: String(price),
+          paket,
+          ...(ref ? { ref } : {}),
         },
       },
     }),
@@ -118,14 +131,36 @@ export default async function handler(req) {
 
   let body;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
-  const { email, level, modules = [], price, method } = body || {};
-  if (!email || !level || !price) return json({ error: "email, level, price erforderlich" }, 400);
+  const { email: emailRoh, level, modules = [], price, method, freePaint, aufbereitung, ref: refRoh } = body || {};
+  const email = String(emailRoh || "").trim().toLowerCase();
+  if (!EMAIL_OK.test(email)) return json({ error: "Bitte eine gültige E-Mail-Adresse angeben." }, 400);
   if (!["stripe", "gocardless"].includes(method)) return json({ error: "method muss stripe|gocardless sein" }, 400);
+
+  // Beitrag hier rechnen — der Browser-Preis dient nur zum Abgleich.
+  const b = mitgliedsbeitrag({ level, modules, freePaint, aufbereitung });
+  if (!b) return json({ error: "Unbekannte Mitgliedsstufe." }, 400);
+  if (price !== undefined && Number(price) !== b.preis) {
+    return json({
+      error: "Der Preis hat sich gerade geändert — bitte die Seite neu laden.",
+      preis: b.preis,
+    }, 409);
+  }
+  if (!(b.preis > 0)) return json({ error: "Dieser Beitrag kann nicht online gebucht werden — bitte ruf uns an." }, 400);
+
+  // Kompakt für GoCardless (max. 3 Felder) — Webhook liest es wieder aus.
+  const paket = [
+    `L${b.level}`,
+    b.module.join(",") || "-",
+    String(b.preis),
+    b.freePaint ? "farbe" : "ohneFarbe",
+    b.aufbereitung ? "aufb" : "ohneAufb",
+  ].join("|");
+  const arg = { email, level: b.level, modules: b.module, price: b.preis, paket, ref: refAus(refRoh) };
 
   try {
     const result = method === "stripe"
-      ? await createStripeSession({ email, level, modules, price })
-      : await createGoCardlessFlow({ email, level, modules, price });
+      ? await createStripeSession(arg)
+      : await createGoCardlessFlow(arg);
 
     // Anbieter noch nicht konfiguriert → Frontend soll E-Mail-Flow nutzen
     if (result.fallback) return json({ fallback: true, reason: `${method} noch nicht konfiguriert` });

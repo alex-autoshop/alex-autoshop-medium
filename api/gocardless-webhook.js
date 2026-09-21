@@ -68,6 +68,23 @@ async function verifyGoCardless(rawBody, sigHeader, secret) {
   return diff === 0;
 }
 
+// Mitgliedschaft: seit 22.09.2026 steckt die Auswahl kompakt in "paket"
+// ("L2|Autoteile,Lackfarben|180|farbe|aufb"), weil GoCardless nur 3
+// Metadaten-Felder erlaubt. Ältere Anfragen hatten einzelne Felder.
+function paketAuspacken(meta) {
+  if (meta.paket) {
+    const [l, mods, preis] = String(meta.paket).split("|");
+    return {
+      email: meta.email,
+      level: Number(String(l || "").replace(/^L/i, "")),
+      modules: mods && mods !== "-" ? mods : "",
+      price: Number(preis),
+      ref: meta.ref || "",
+    };
+  }
+  return { email: meta.email, level: Number(meta.level), modules: meta.modules || "", price: Number(meta.price), ref: meta.ref || "" };
+}
+
 async function handleBillingRequestFulfilled(billingRequestId) {
   // 1) Billing Request laden → Metadaten + Mandat
   const brRes = await fetch(`${gcHost()}/billing_requests/${billingRequestId}`, { headers: gcHeaders() });
@@ -89,7 +106,8 @@ async function handleBillingRequestFulfilled(billingRequestId) {
   }
 
   const mandateId = br.links?.mandate_request_mandate;
-  const price = Number(meta.price);
+  const paket = paketAuspacken(meta);
+  const price = paket.price;
 
   // 2) Monatliches Abo anlegen (best effort — Fehler blockt Freischaltung nicht)
   if (mandateId && price > 0) {
@@ -102,7 +120,7 @@ async function handleBillingRequestFulfilled(billingRequestId) {
             amount: Math.round(price * 100),
             currency: "EUR",
             interval_unit: "monthly",
-            name: `Alex Autoshop Mitgliedschaft Level ${meta.level}`,
+            name: `Alex Autoshop Mitgliedschaft Level ${paket.level}`,
             links: { mandate: mandateId },
             metadata: meta,
           },
@@ -114,8 +132,8 @@ async function handleBillingRequestFulfilled(billingRequestId) {
   }
 
   // 3) Mitgliedschaft freischalten + Shopify-Bestellung
-  if (meta.email && meta.level) {
-    const r = await activateMembership({ ...meta, provider: "gocardless", providerId: mandateId });
+  if (paket.email && paket.level) {
+    const r = await activateMembership({ ...paket, provider: "gocardless", providerId: mandateId });
     console.log("[gocardless-webhook] aktiviert:", JSON.stringify(r));
   }
 }

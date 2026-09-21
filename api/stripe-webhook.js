@@ -101,7 +101,7 @@ export default async function handler(req) {
     if (m.email && m.level) {
       const r = await activateMembership({
         email: m.email, level: m.level, modules: m.modules, price: m.price,
-        provider: "stripe", providerId: s.subscription || s.id,
+        provider: "stripe", providerId: s.subscription || s.id, ref: m.ref || "",
       });
       console.log("[stripe-webhook] aktiviert:", JSON.stringify(r));
     }

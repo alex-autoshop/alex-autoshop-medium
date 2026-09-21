@@ -81,6 +81,12 @@ export default async function handler(req, res) {
     }
 
     const now = Date.now();
+    // Wer hat wie viele geworben? (referred_by_id steht beim Geworbenen)
+    const geworben = new Map();
+    for (const u of users) {
+      const w = u.app_metadata?.referred_by_id;
+      if (w) geworben.set(w, (geworben.get(w) || 0) + 1);
+    }
     const members = users.map((u) => {
       const m = u.user_metadata || {};
       // Stufe und Teststunde zählen nur aus app_metadata (nicht vom Nutzer änderbar).
@@ -107,6 +113,7 @@ export default async function handler(req, res) {
         referralCode: a.referral_code || '',
         referredBy: a.referred_by || '',
         affiliateCredit: Number(a.affiliate_credit) || 0,
+        geworben: geworben.get(u.id) || 0,
         sepa: !!m.sepa_mandate_accepted,
         createdAt: u.created_at,
         lastSignIn: u.last_sign_in_at || null,
