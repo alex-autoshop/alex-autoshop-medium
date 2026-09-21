@@ -16,6 +16,7 @@ import { OemAftermarket, type KaufTeil } from "@/components/OemAftermarket";
 import { type WorkArticle } from "@/components/TeileWorkspace";
 import { type MemberLevelId } from "@/components/TeileportalPricing";
 import { TeileboerseReiter, ProBereich, CampusBereich, type Stufe, type KvaPosition } from "@/components/TeilefinderPro";
+import { Gesamtansicht } from "@/components/FahrzeugZeichnung";
 
 /**
  * Explosionszeichnungen im Werkstatt-Stil (Vorbild Partslink24):
@@ -112,11 +113,13 @@ function TreeItem({
 /* ── Zeichnung mit anklickbaren Stellen ───────────────────────────── */
 
 function Drawing({
-  unit, activePos, onPick,
+  unit, activePos, onPick, onGesamt,
 }: {
   unit: YqUnit;
   activePos: string | null;
   onPick: (pos: string) => void;
+  /** Zurück zur Zeichnung des ganzen Autos. */
+  onGesamt?: () => void;
 }) {
   const map = unit.imageMaps?.[0];
   const [nat, setNat] = useState<{ w: number; h: number } | null>(null);
@@ -131,6 +134,11 @@ function Drawing({
       <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
         <Package className="w-10 h-10 opacity-25" />
         <p className="text-sm">Für diese Baugruppe gibt es keine Zeichnung.</p>
+        {onGesamt && (
+          <button onClick={onGesamt} className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary hover:underline">
+            <Car className="w-3.5 h-3.5" /> Zur Gesamtansicht
+          </button>
+        )}
       </div>
     );
   }
@@ -142,6 +150,18 @@ function Drawing({
     <div className="relative h-full flex flex-col">
       {/* Werkzeugleiste */}
       <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border bg-card/70">
+        {onGesamt && (
+          <>
+            <button
+              onClick={onGesamt}
+              className="h-8 px-2 rounded-md hover:bg-secondary flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground hover:text-primary"
+              title="Zurück zur Zeichnung des ganzen Autos"
+            >
+              <Car className="w-4 h-4" /> <span className="hidden sm:inline">Gesamtansicht</span>
+            </button>
+            <span className="w-px h-5 bg-border mx-1" />
+          </>
+        )}
         <button onClick={() => setZoom((z) => Math.min(6, z * 1.3))} className="w-8 h-8 rounded-md hover:bg-secondary flex items-center justify-center" title="Vergrößern">
           <ZoomIn className="w-4 h-4" />
         </button>
@@ -669,6 +689,29 @@ export function OemCatalog({
   const fahrzeugName = vehicle
     ? [vehicle.brand, vehicle.name || vehicle.model].filter(Boolean).join(" ")
     : (vehicleLabel || "");
+  // Für die Gesamtansicht gern mit Baureihe ("2' F74 Gran Coupé") und Motor
+  const attrWert = (re: RegExp) => {
+    const a = (vehicle?.attributes ?? []).find((x) => re.test(`${x.code || ""} ${x.label || ""} ${x.name || ""}`));
+    return a ? (a.values ?? [a.value]).filter(Boolean).join(" ") : "";
+  };
+  const baureihe = attrWert(/series_description|baureihe/i);
+  const fahrzeugTitel = [fahrzeugName, baureihe && !fahrzeugName.includes(baureihe) ? baureihe : ""].filter(Boolean).join(" · ")
+    || vehicleLabel || "";
+
+  /** Zurück von einer Zeichnung zum ganzen Auto. */
+  const zurGesamtansicht = () => {
+    setUnit(null); setSections([]); setActivePos(null); setKaufTeil(null);
+    setHitUnits([]); setHitNumber(null);
+  };
+
+  /** Hauptgruppe unter der Gesamtansicht angetippt: eigene Zeichnung → öffnen,
+      sonst ihre Baugruppen links in der Suche zeigen. */
+  const gruppeWaehlen = (n: YqNode) => {
+    if (hatZeichnung(n)) { oeffneTreffer(n); return; }
+    setTreeSearch(n.name || n.code || "");
+    // Auf dem Handy steht die Liste über der Zeichnung — dorthin scrollen.
+    suchfeld.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  };
 
   return (
     <div>
@@ -895,14 +938,19 @@ export function OemCatalog({
           )}
           <div className="flex-1 min-h-0">
             {unit ? (
-              <Drawing unit={unit} activePos={activePos} onPick={pickPos} />
+              <Drawing unit={unit} activePos={activePos} onPick={pickPos} onGesamt={zurGesamtansicht} />
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center px-8 text-muted-foreground gap-2">
-                <Layers className="w-10 h-10 opacity-25" />
-                <p className="text-sm">
-                  Baugruppe suchen oder links wählen — die Zeichnung erscheint hier.
-                </p>
-              </div>
+              /* Das ganze Auto als Zeichnung — Herstellerzeichnung, wenn der
+                 Katalog sie hergibt, sonst die passende Karosserieform. */
+              <Gesamtansicht
+                vehicle={vehicle}
+                fahrzeugName={fahrzeugTitel}
+                tree={tree}
+                filterState={filterState}
+                gruppen={treeNodes}
+                onGruppe={gruppeWaehlen}
+                onOeffnen={(u, name) => openUnit(u, name)}
+              />
             )}
           </div>
         </section>
