@@ -110,10 +110,10 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Wie Lieferando, aber für Lack & Teile: bestellt, gepackt, gebracht. Nicht-Mitglieder erreichen uns bis 17:30 Uhr.",
       },
       {
-        label: "Notfallbeschaffung in ~3 h",
+        label: "Teile-Notfallbeschaffung",
         accent: "emergency",
         badge: "NEU",
-        info: "Mitten im Auftrag fehlt ein Teil oder das Lackmaterial ist leer? Wir beschaffen es und liefern im Raum Wuppertal (ca. 30 km) innerhalb von etwa 3 Stunden — auch wenn wir es selbst erst besorgen müssen. In Level 1 mit Eilzuschlag von 29 € pro Einsatz, Mo–Sa während der Öffnungszeiten.",
+        info: "Mitten im Auftrag fehlt ein Teil oder das Lackmaterial ist leer? Wir beschaffen es und liefern im Raum Wuppertal (ca. 30 km) so schnell wie möglich — auch wenn wir es selbst erst besorgen müssen. In Level 1 mit Eilzuschlag von 29 € pro Einsatz, Mo–Sa während der Öffnungszeiten.",
       },
       {
         label: "Fahrzeugaufbereitung zum Mitgliedspreis (−10 %)",
@@ -175,10 +175,10 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Wie Lieferando, aber für Lack & Teile: bestellt, gepackt, gebracht. Nicht-Mitglieder erreichen uns bis 17:30 Uhr.",
       },
       {
-        label: "Notfallbeschaffung in ~2 h · 2× / Monat ohne Zuschlag",
+        label: "Teile-Notfallbeschaffung · 2× / Monat ohne Zuschlag",
         accent: "emergency",
         badge: "NEU",
-        info: "Teil oder Lackmaterial fehlt akut? Wir beschaffen und liefern im Raum Wuppertal innerhalb von etwa 2 Stunden. Zweimal pro Monat ohne Eilzuschlag, danach nur 15 € pro Einsatz. Mo–Sa bis 20:00 Uhr erreichbar.",
+        info: "Teil oder Lackmaterial fehlt akut? Wir beschaffen und liefern im Raum Wuppertal so schnell wie möglich. Zweimal pro Monat ohne Eilzuschlag, danach nur 15 € pro Einsatz. Mo–Sa bis 20:00 Uhr erreichbar.",
       },
       {
         label: "Aufbereitung inklusive: 8 Fahrzeuge / Monat (48 h)",
@@ -243,10 +243,10 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
         info: "Im Raum Wuppertal liefern wir bis 21:00 Uhr — Montag bis Samstag, sonntags nicht. Level-3-Bestellungen werden dabei zuerst gefahren. Nicht-Mitglieder erreichen uns bis 17:30 Uhr.",
       },
       {
-        label: "Notfallbeschaffung in ~1 h · unbegrenzt, ohne Zuschlag",
+        label: "Teile-Notfallbeschaffung · unbegrenzt, ohne Zuschlag",
         accent: "emergency",
         badge: "NEU",
-        info: "Teil oder Lackmaterial fehlt akut? Wir beschaffen und liefern im Raum Wuppertal innerhalb von etwa 1 Stunde — unbegrenzt oft und ohne Eilzuschlag, 7 Tage die Woche, auch sonntags.",
+        info: "Teil oder Lackmaterial fehlt akut? Wir beschaffen und liefern im Raum Wuppertal mit Vorrang — unbegrenzt oft und ohne Eilzuschlag, 7 Tage die Woche, auch sonntags.",
       },
       {
         label: "Alex-Notfallnummer — 24/7, auch sonntags",

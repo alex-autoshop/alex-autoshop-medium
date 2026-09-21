@@ -21,7 +21,17 @@
 //   GOCARDLESS_ENVIRONMENT       "sandbox" | "live"   (Default: sandbox)
 //   SUPABASE_SERVICE_ROLE_KEY    für die Mitgliedsstufe
 //   PUBLIC_BASE_URL              z.B. https://alex-autoshop.de
+//   ADMIN_PIN                    für den Ladenverkauf (siehe unten)
+//
+// LADENVERKAUF ("theke"): Alex bestellt im Laden für den Kunden vor ihm.
+//   Dann darf der Browser die Preisstufe DES KUNDEN mitschicken — aber nur,
+//   wenn api/_admin.js bestätigt, dass Alex selbst am Rechner sitzt
+//   (Admin-Sitzung + PIN). Ohne das wird "theke" abgelehnt, nicht ignoriert.
+//   Der Kunde zahlt per QR-Code am eigenen Handy; method="status" sagt Alex,
+//   ob die Zahlung durch ist.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { adminPruefen } from "./_admin.js";
 
 const BASE = () => (process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de").replace(/\/+$/, "");
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co";
@@ -37,6 +47,7 @@ const MAX_SUMME = 25000; // Notbremse: darüber wird nicht online bezahlt
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "content-type, authorization",
+  // x-admin-pin bewusst NICHT erlaubt: fremde Seiten sollen ihn nicht senden können.
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -97,18 +108,28 @@ async function preisHolen(articleNumber, brand, origin) {
 }
 
 // ── Stripe: Einmalzahlung ────────────────────────────────────────────────────
-async function stripeSession({ positionen, summe, email, fahrzeug, vin }) {
+async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke }) {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return { fallback: true };
 
   const form = new URLSearchParams();
   form.set("mode", "payment");
   if (email) form.set("customer_email", email);
-  form.set("success_url", `${BASE()}/teileboerse?zahlung=ok&session_id={CHECKOUT_SESSION_ID}`);
-  form.set("cancel_url", `${BASE()}/teileboerse?zahlung=abbruch`);
-  form.set("billing_address_collection", "required");
-  form.set("shipping_address_collection[allowed_countries][0]", "DE");
-  form.set("shipping_address_collection[allowed_countries][1]", "AT");
+  if (theke) {
+    // Kunde steht im Laden und nimmt das Teil mit bzw. holt es ab:
+    // keine Lieferadresse, und der QR-Code verfällt nach 30 Minuten
+    // (Stripe verlangt mindestens 30 — 31 mit Puffer).
+    form.set("success_url", `${BASE()}/teileboerse?zahlung=ok&theke=1`);
+    form.set("cancel_url", `${BASE()}/teileboerse?zahlung=abbruch&theke=1`);
+    form.set("billing_address_collection", "auto");
+    form.set("expires_at", String(Math.floor(Date.now() / 1000) + 31 * 60));
+  } else {
+    form.set("success_url", `${BASE()}/teileboerse?zahlung=ok&session_id={CHECKOUT_SESSION_ID}`);
+    form.set("cancel_url", `${BASE()}/teileboerse?zahlung=abbruch`);
+    form.set("billing_address_collection", "required");
+    form.set("shipping_address_collection[allowed_countries][0]", "DE");
+    form.set("shipping_address_collection[allowed_countries][1]", "AT");
+  }
 
   positionen.forEach((pos, i) => {
     form.set(`line_items[${i}][quantity]`, String(pos.quantity));
@@ -122,7 +143,12 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin }) {
   });
 
   // Kompakte Metadaten — Stripe erlaubt 500 Zeichen pro Wert.
-  form.set("metadata[typ]", "teile");
+  form.set("metadata[typ]", theke ? "theke" : "teile");
+  if (theke) {
+    form.set("metadata[kunde]", String(theke.kunde || "").slice(0, 120));
+    form.set("metadata[stufe]", String(theke.stufe || 0));
+    form.set("metadata[verkauft_von]", String(theke.von || "").slice(0, 120));
+  }
   form.set("metadata[fahrzeug]", String(fahrzeug || "").slice(0, 200));
   form.set("metadata[vin]", String(vin || "").slice(0, 40));
   form.set("metadata[summe]", summe.toFixed(2));
@@ -138,7 +164,25 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin }) {
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(`Stripe ${res.status}: ${JSON.stringify(data?.error || data).slice(0, 300)}`);
-  return { url: data.url };
+  return { url: data.url, sessionId: data.id };
+}
+
+// ── Ladenverkauf: ist die QR-Zahlung durch? ──────────────────────────────────
+async function stripeStatus(sessionId) {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return { fallback: true };
+  const id = String(sessionId || "");
+  if (!/^cs_[A-Za-z0-9_]+$/.test(id)) return { error: "Ungültige Sitzung." };
+  const r = await fetch(`https://api.stripe.com/v1/checkout/sessions/${id}`, {
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  const d = await r.json().catch(() => null);
+  if (!r.ok) return { error: `Stripe ${r.status}` };
+  return {
+    bezahlt: d?.payment_status === "paid",
+    status: d?.status || "",
+    betrag: Number(d?.amount_total || 0) / 100,
+  };
 }
 
 // ── GoCardless: einmalige SEPA-Zahlung ───────────────────────────────────────
@@ -202,8 +246,39 @@ export default async function handler(req, res) {
   }
   if (req.method !== "POST") return send(res, 405, { error: "Method not allowed" });
 
-  const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
-  const { items, method, email: emailAusFormular, vehicleLabel, vin } = body;
+  let body;
+  try {
+    body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+  } catch {
+    return send(res, 400, { error: "Ungültige Anfrage." });
+  }
+  if (!body || typeof body !== "object") return send(res, 400, { error: "Ungültige Anfrage." });
+  const { items, method, email: emailAusFormular, vehicleLabel, vin, theke: thekeRoh, sessionId } = body;
+
+  // ── Ladenverkauf: nur Alex. Geprüft wird VOR allem anderen. ─────────────────
+  let theke = null;
+  if (thekeRoh || method === "status") {
+    const zugang = await adminPruefen(req);
+    if (!zugang.ok) return send(res, zugang.status, { error: zugang.error, pinFalsch: !!zugang.pinFalsch });
+    if (method === "status") {
+      try {
+        const st = await stripeStatus(sessionId);
+        if (st.fallback) return send(res, 200, { fallback: true });
+        if (st.error) return send(res, 400, { error: st.error });
+        return send(res, 200, st);
+      } catch (err) {
+        return send(res, 500, { error: String(err?.message || err).slice(0, 200) });
+      }
+    }
+    const stufe = Math.floor(Number(thekeRoh?.stufe));
+    theke = {
+      stufe: stufe >= 1 && stufe <= 3 ? stufe : 0,
+      kunde: String(thekeRoh?.kunde || "").trim().slice(0, 120),
+      email: String(thekeRoh?.email || "").trim().slice(0, 200),
+      von: zugang.email,
+    };
+    if (method !== "stripe") return send(res, 400, { error: "Im Laden geht nur die Kartenzahlung per QR-Code." });
+  }
 
   if (!Array.isArray(items) || items.length === 0) return send(res, 400, { error: "Warenkorb ist leer." });
   if (items.length > MAX_POSITIONEN) return send(res, 400, { error: "Zu viele Positionen." });
@@ -212,8 +287,17 @@ export default async function handler(req, res) {
   const origin = BASE();
 
   try {
-    const { level, email: emailAusKonto } = await stufeErmitteln(req.headers.authorization);
-    const email = emailAusKonto || String(emailAusFormular || "").trim();
+    let level;
+    let email;
+    if (theke) {
+      // Preisstufe und E-Mail DES KUNDEN — nicht die von Alex' Konto.
+      level = theke.stufe;
+      email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(theke.email) ? theke.email : "";
+    } else {
+      const konto = await stufeErmitteln(req.headers.authorization);
+      level = konto.level;
+      email = konto.email || String(emailAusFormular || "").trim();
+    }
     const pct = STUFEN[level] || 0;
 
     // Preise parallel neu auflösen — der Client-Preis wird bewusst ignoriert.
@@ -252,7 +336,7 @@ export default async function handler(req, res) {
       return send(res, 409, { error: "Der Betrag ist zu hoch für die Online-Zahlung — bitte ruf uns an." });
     }
 
-    const arg = { positionen, summe, email, fahrzeug: vehicleLabel, vin };
+    const arg = { positionen, summe, email, fahrzeug: vehicleLabel, vin, theke };
     const ergebnis = method === "stripe" ? await stripeSession(arg) : await gocardlessFlow(arg);
 
     if (ergebnis.fallback) {
@@ -262,6 +346,7 @@ export default async function handler(req, res) {
 
     return send(res, 200, {
       url: ergebnis.url,
+      ...(theke ? { sessionId: ergebnis.sessionId } : {}),
       summe,
       level,
       rabattProzent: pct,

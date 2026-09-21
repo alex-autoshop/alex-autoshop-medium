@@ -5,11 +5,17 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Car, X, Plus, Minus, Trash2, ShoppingCart, MessageCircle, Package, Phone, CreditCard, Landmark, Loader2 } from "lucide-react";
+import { Car, X, Plus, Minus, Trash2, ShoppingCart, MessageCircle, Package, Phone, CreditCard, Landmark, Loader2, Store, QrCode, Printer } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { formatSpecValue, memberPrice, MEMBER_LEVELS, eur, type MemberLevelId } from "@/components/TeileportalPricing";
+import { icPriceLookup } from "@/lib/intercarsGateway";
+import { adminPreiseHolen, type EkPreis, type AdminFehler } from "@/lib/adminZugang";
+import {
+  ThekenLeiste, MargenZeile, MargenSumme, Margenrechner, QrZahlung, Abholschein,
+  thekeGemerkt, thekeMerken,
+} from "@/components/Theke";
 
 // ─── TYPEN ──────────────────────────────────────────────────
 
@@ -217,8 +223,19 @@ export function PartDetailModal({ article, vehicleLabel, onClose, onAddToCart, b
 
 // ─── WARENKORB-DRAWER + FLOATING BUTTON ─────────────────────
 
-export function PartsCartButton({ count, onClick }: { count: number; onClick: () => void }) {
-  if (count === 0) return null;
+export function PartsCartButton({ count, onClick, admin = false }: { count: number; onClick: () => void; admin?: boolean }) {
+  if (count === 0 && !admin) return null;
+  if (count === 0) {
+    // Nur Alex: Theke und Margenrechner auch ohne Teile im Korb erreichbar.
+    return createPortal(
+      <button onClick={onClick}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-night text-gold-bright font-bold shadow-xl hover:scale-105 transition-transform">
+        <Store className="w-5 h-5" />
+        <span className="text-sm">Theke</span>
+      </button>,
+      document.body
+    );
+  }
   // Portal in <body>: `position: fixed` bricht sonst innerhalb von
   // Framer-Motion-Transform-Containern (Button hing halb außerhalb des Bildschirms).
   return createPortal(
@@ -232,15 +249,62 @@ export function PartsCartButton({ count, onClick }: { count: number; onClick: ()
   );
 }
 
-export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin, level = "none" }: {
+export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin, level = "none", istAdmin = false, onLevel }: {
   open: boolean;
   onClose: () => void;
   cart: ReturnType<typeof usePartsCart>;
   vehicleLabel: string;
   vehicleVin?: string;
   level?: MemberLevelId;
+  /** Nur Alex: Ladenverkauf, alle Preisstufen, Marge. Bequemlichkeit — geprüft wird serverseitig. */
+  istAdmin?: boolean;
+  /** Preisstufe ändern (im Laden: die des Kunden). */
+  onLevel?: (l: MemberLevelId) => void;
 }) {
   const { items, setQty, clear, allPriced } = cart;
+
+  // ── Ladenverkauf (nur Alex) ───────────────────────────────────────────────
+  const [thekeAn, setThekeAn] = useState<boolean>(() => thekeGemerkt());
+  const theke = istAdmin && thekeAn;
+  const [kunde, setKunde] = useState("");
+  const [kundenMail, setKundenMail] = useState("");
+  const [margeAn, setMargeAn] = useState(false);
+  const [ekJeKey, setEkJeKey] = useState<Record<string, EkPreis | null>>({});
+  const [ekFehler, setEkFehler] = useState<AdminFehler | null>(null);
+  const [aufschlag, setAufschlag] = useState(2);
+  const [pinRunde, setPinRunde] = useState(0);
+  const [qrOffen, setQrOffen] = useState(false);
+  const [schein, setSchein] = useState<null | { zahlart: string }>(null);
+  const [bezahltSumme, setBezahltSumme] = useState<number | null>(null);
+
+  // Drawer zu → Marge wieder verbergen. Der nächste Kunde soll sie nicht sehen.
+  useEffect(() => { if (!open) setMargeAn(false); }, [open]);
+
+  const korbSchluessel = items.map((i) => i.key).join("|");
+  useEffect(() => {
+    if (!open || !theke || !margeAn) return;
+    let lebt = true;
+    setEkFehler(null);
+    (async () => {
+      // SKU je Position auf DEMSELBEN Weg wie die Preisanzeige (inkl.
+      // baugleicher Ersatzmarke) — sonst passt die Marge nicht zum Preis.
+      const skuJeKey: Record<string, string> = {};
+      await Promise.all(items.filter((i) => i.price != null).map(async (i) => {
+        const live = await icPriceLookup(i.articleNumber, i.name).catch(() => null);
+        if (live?.icSku) skuJeKey[i.key] = live.icSku;
+      }));
+      const res = await adminPreiseHolen(Object.values(skuJeKey));
+      if (!lebt) return;
+      if ("fehler" in res) { setEkFehler(res.fehler); return; }
+      setAufschlag(res.aufschlag);
+      const jeSku = new Map(res.preise.map((p) => [p.sku, p]));
+      const neu: Record<string, EkPreis | null> = {};
+      for (const i of items) neu[i.key] = skuJeKey[i.key] ? jeSku.get(skuJeKey[i.key]) ?? null : null;
+      setEkJeKey(neu);
+    })();
+    return () => { lebt = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, theke, margeAn, korbSchluessel, pinRunde]);
 
   // ── Mitgliedspreis auch im Warenkorb ──────────────────────────────────────
   // Der Korb speichert absichtlich den LISTENPREIS. Der Mitgliedsrabatt wird
@@ -310,6 +374,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
   };
 
   return createPortal(
+    <>
     <AnimatePresence>
       {open && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/50" onClick={onClose}>
@@ -317,11 +382,51 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
             onClick={(e) => e.stopPropagation()}
             className="absolute right-0 top-0 h-full w-full max-w-md bg-card border-l border-border flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-border">
-              <h2 className="font-bold flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-primary" /> Teile-Warenkorb</h2>
-              <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary" aria-label="Schließen"><X className="w-5 h-5" /></button>
+              <h2 className="font-bold flex items-center gap-2">
+                {theke ? <Store className="w-5 h-5 text-primary" /> : <ShoppingCart className="w-5 h-5 text-primary" />}
+                {theke ? "Theke" : "Teile-Warenkorb"}
+              </h2>
+              <div className="flex items-center gap-1">
+                {istAdmin && (
+                  <button
+                    onClick={() => { const n = !thekeAn; setThekeAn(n); thekeMerken(n); if (!n) setMargeAn(false); }}
+                    aria-pressed={theke}
+                    title="Ladenverkauf: für den Kunden vor dir bestellen"
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold border transition-colors",
+                      theke ? "bg-night text-gold-bright border-night" : "border-border text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Store className="w-3.5 h-3.5" /> Laden
+                  </button>
+                )}
+                <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary" aria-label="Schließen"><X className="w-5 h-5" /></button>
+              </div>
             </div>
             {vehicleLabel && <div className="px-4 py-2 bg-primary/10 border-b border-primary/20 text-xs font-semibold text-primary truncate">📋 {vehicleLabel}</div>}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {theke && (
+                <>
+                  <ThekenLeiste
+                    level={level}
+                    onLevel={(l) => onLevel?.(l)}
+                    kunde={kunde}
+                    setKunde={setKunde}
+                    kundenMail={kundenMail}
+                    setKundenMail={setKundenMail}
+                    margeAn={margeAn}
+                    setMargeAn={setMargeAn}
+                    fehler={ekFehler}
+                    onPinNeu={() => { setEkFehler(null); setPinRunde((r) => r + 1); }}
+                  />
+                  {margeAn && !ekFehler && (
+                    <Margenrechner
+                      aufschlag={aufschlag}
+                      vorschlagEk={Object.values(ekJeKey).find((e) => e && e.ekBrutto > 0)?.ekBrutto}
+                    />
+                  )}
+                </>
+              )}
               {items.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">Noch keine Teile im Warenkorb.</p>}
               {items.map((i) => (
                 <div key={i.key} className="flex gap-3 rounded-xl border border-border p-3">
@@ -351,9 +456,18 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                         ) : "auf Anfrage"}
                       </span>
                     </div>
+                    {theke && margeAn && !ekFehler && i.price != null && (
+                      <MargenZeile ek={ekJeKey[i.key]} vkStueck={stueckPreis(i.price)} menge={i.quantity} />
+                    )}
                   </div>
                 </div>
               ))}
+              {theke && margeAn && !ekFehler && mitPreis.length > 0 && (
+                <MargenSumme
+                  level={level}
+                  positionen={mitPreis.map((i) => ({ listenpreis: i.price as number, menge: i.quantity, ek: ekJeKey[i.key] }))}
+                />
+              )}
             </div>
             {items.length > 0 && (
               <div className="p-4 border-t border-border space-y-3">
@@ -363,12 +477,33 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                 </div>
                 {lvl && ersparnis > 0 && (
                   <div className="flex justify-between text-xs">
-                    <span className="text-primary font-semibold">{lvl.name} (−{lvl.pct} %)</span>
-                    <span className="text-primary font-semibold">du sparst {eur(ersparnis)}</span>
+                    <span className="text-primary font-semibold">{theke ? "Kunde " : ""}{lvl.name} (−{lvl.pct} %)</span>
+                    <span className="text-primary font-semibold">{theke ? "spart" : "du sparst"} {eur(ersparnis)}</span>
                   </div>
                 )}
-                {!allPriced && <p className="text-xs text-muted-foreground">Endpreise & Verfügbarkeit bestätigen wir sofort nach der Anfrage — meist ist das Teil am selben Tag da.</p>}
-                {subtotal > 0 && (
+                {theke && (
+                  <>
+                    {bezahltSumme != null && (
+                      <p className="text-xs font-semibold text-emerald-700">✓ Per Karte bezahlt: {eur(bezahltSumme)}</p>
+                    )}
+                    {subtotal > 0 && (
+                      <button onClick={() => { setMargeAn(false); setQrOffen(true); }} className="btn-primary w-full gap-2">
+                        <QrCode className="w-4 h-4" /> Kunde zahlt am Handy (QR)
+                      </button>
+                    )}
+                    <button
+                      onClick={() => { setMargeAn(false); setSchein({ zahlart: bezahltSumme != null ? `per Karte bezahlt (${eur(bezahltSumme)})` : "an der Kasse" }); }}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-secondary"
+                    >
+                      <Printer className="w-4 h-4" /> Abholschein drucken
+                    </button>
+                    <p className="text-[10.5px] text-muted-foreground leading-snug">
+                      Bar oder EC? Wie immer über deine Kasse — der Abholschein ist kein Kassenbeleg.
+                    </p>
+                  </>
+                )}
+                {!allPriced && !theke && <p className="text-xs text-muted-foreground">Endpreise & Verfügbarkeit bestätigen wir sofort nach der Anfrage — meist ist das Teil am selben Tag da.</p>}
+                {subtotal > 0 && !theke && (
                   <>
                     <button onClick={() => bezahlen("stripe")} disabled={zahlt !== ""}
                       className="btn-primary w-full gap-2 disabled:opacity-60">
@@ -393,22 +528,48 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                     </div>
                   </>
                 )}
-                <a href={whatsappLink(orderText)} target="_blank" rel="noopener noreferrer"
+                {!theke && <a href={whatsappLink(orderText)} target="_blank" rel="noopener noreferrer"
                    className={subtotal > 0
                      ? "w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-secondary"
                      : "btn-primary w-full gap-2"}>
                   <MessageCircle className="w-4 h-4" /> Bestellanfrage senden
-                </a>
+                </a>}
                 <div className="flex justify-between items-center">
                   <a href={`tel:${SHOP_INFO.phone}`} className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"><Phone className="w-3 h-3" /> {SHOP_INFO.phone}</a>
-                  <button onClick={clear} className="text-xs text-muted-foreground hover:text-destructive">Leeren</button>
+                  <button onClick={() => { clear(); setKunde(""); setKundenMail(""); setBezahltSumme(null); setEkJeKey({}); }} className="text-xs text-muted-foreground hover:text-destructive">Leeren</button>
                 </div>
               </div>
             )}
           </motion.aside>
         </motion.div>
       )}
-    </AnimatePresence>,
+    </AnimatePresence>
+    {/* Außerhalb des Hintergrunds: Klicks im QR-Fenster oder auf dem Abholschein
+        dürfen den Warenkorb nicht schließen (Portale geben Klicks im
+        React-Baum weiter). */}
+    {qrOffen && theke && (
+      <QrZahlung
+        artikel={items.filter((i) => i.price != null).map((i) => ({ articleNumber: i.articleNumber, brand: i.brand, name: i.name, quantity: i.quantity }))}
+        level={level}
+        kunde={kunde}
+        kundenMail={kundenMail}
+        vehicleLabel={vehicleLabel}
+        vin={vehicleVin}
+        onClose={() => setQrOffen(false)}
+        onBezahlt={(s) => setBezahltSumme(s)}
+      />
+    )}
+    {schein && theke && (
+      <Abholschein
+        positionen={items.map((i) => ({ name: i.name, brand: i.brand, articleNumber: i.articleNumber, quantity: i.quantity, einzel: i.price != null ? stueckPreis(i.price) : undefined }))}
+        kunde={kunde}
+        vehicleLabel={vehicleLabel}
+        vin={vehicleVin}
+        zahlart={schein.zahlart}
+        onClose={() => setSchein(null)}
+      />
+    )}
+    </>,
     document.body
   );
 }

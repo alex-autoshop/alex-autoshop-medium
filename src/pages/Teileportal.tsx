@@ -23,6 +23,7 @@ import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip, 
 import { useAuth } from "@/context/AuthContext";
 import { OemExplosionView } from "@/components/OemExplosionView";
 import { OemCatalog } from "@/components/OemCatalog";
+import { TeileboerseReiter, ProBereich, CampusBereich, type Stufe, type Reiter } from "@/components/TeilefinderPro";
 import { OemDrawingBar } from "@/components/OemDrawingBar";
 import { OemPartDrawing } from "@/components/OemPartDrawing";
 import { yqIdentify, type YqIdent } from "@/lib/yqVehicle";
@@ -426,8 +427,12 @@ export default function Teileportal() {
     : profile?.membership_level === 2 ? "L2"
     : profile?.membership_level === 1 ? "L1"
     : "none";
-  // Angezeigter Level darf nie höher als der echte Account-Level sein
+  /** Nur Anzeige-Bequemlichkeit — was zählt (EK, Kundenstufe an der Kasse), prüft der Server. */
+  const istAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
+  // Angezeigter Level darf nie höher als der echte Account-Level sein —
+  // außer für Alex: im Laden stellt er die Stufe DES KUNDEN ein (L1–L3).
   const effectiveMemberLevel: MemberLevelId = (() => {
+    if (istAdmin) return memberLevel;
     const order: MemberLevelId[] = ["none", "L1", "L2", "L3"];
     const actualIdx = order.indexOf(actualLevel);
     const chosenIdx = order.indexOf(memberLevel);
@@ -436,6 +441,28 @@ export default function Teileportal() {
   const [detailArticle, setDetailArticle] = useState<DetailArticle | null>(null);
   /** Teil, mit dem der Teilefinder geöffnet wurde — er springt direkt dorthin. */
   const [startTeil, setStartTeil] = useState<{ name: string; articleNumber?: string; oeNumbers?: string[] } | null>(null);
+  /** Auf welchem Reiter der Teilefinder steht — Teilebörse und Katalog teilen sich den Stand. */
+  const [stufe, setStufe] = useState<Stufe>('finder');
+
+  /**
+   * Der Wechsel zwischen den vier Reitern — von überall derselbe Weg.
+   * Aftermarket-Teile führt dorthin zurück, wo die Teile stehen; alles andere
+   * öffnet den Teilefinder auf der gewünschten Stufe. Wer nicht zahlt, landet
+   * auf Pro trotzdem — dort steht, was er davon hätte.
+   */
+  /** Warenkorb als Angebotszeilen — der Pro-Bereich rechnet daraus den KVA. */
+  const kvaPositionen = cart.items.map((i) => ({
+    name: i.name, brand: i.brand, articleNumber: i.articleNumber,
+    quantity: i.quantity, price: i.price,
+  }));
+
+  const gehZuReiter = (r: Reiter) => {
+    if (r === 'aftermarket') { setPhase(vehicle ? 'categories' : 'search'); return; }
+    if (r === 'campus' && !istAdmin) return;
+    if (r === 'finder') setStartTeil(null);
+    setStufe(r);
+    setPhase('oem');
+  };
   const [heroTab, setHeroTab] = useState<HeroTab>('search');
 
   const activateGarageVehicle = (g: GarageVehicle) => {
@@ -471,7 +498,7 @@ export default function Teileportal() {
     }
   };
 
-  const addArticleToCart = (a: { name: string; brand: string; articleNumber: string; imageUrl?: string; price?: number }) => {
+  const addArticleToCart = (a: { name: string; brand: string; articleNumber: string; imageUrl?: string; price?: number; oeNumbers?: string[] }) => {
     if (!user) {
       setAuthModal(a);
       return;
@@ -1096,7 +1123,7 @@ export default function Teileportal() {
                            trotzdem geht — den Weg dorthin musste der Kunde selbst
                            finden. Jetzt ist er ein Klick. */
                         <button
-                          onClick={() => setPhase('oem')}
+                          onClick={() => gehZuReiter('finder')}
                           style={{ backgroundColor: '#D4A017' }}
                           className="mt-3 w-full rounded-lg px-3 py-2.5 flex items-center gap-2.5 text-left text-black hover:brightness-95 transition-all shadow-sm"
                         >
@@ -1119,7 +1146,7 @@ export default function Teileportal() {
                   die rendern hier nicht zuverlässig — es blieb nur das Icon-Quadrat
                   sichtbar und der Button "erschien" erst beim Hovern. */}
               <button
-                onClick={() => setPhase('oem')}
+                onClick={() => gehZuReiter('finder')}
                 style={{ backgroundColor: '#FFFBEB', borderColor: '#D4A017' }}
                 className="w-full rounded-2xl border-2 p-5 sm:p-6 flex items-center gap-4 text-left transition-all group shadow-sm hover:shadow-md"
               >
@@ -1228,7 +1255,7 @@ export default function Teileportal() {
                       Teilebörse, also genau dort, wo man sie noch nicht braucht. */}
                   {(yqIdent || vehicleVin) && (
                     <button
-                      onClick={() => setPhase('oem')}
+                      onClick={() => gehZuReiter('finder')}
                       style={{ backgroundColor: '#FFFBEB', borderColor: '#D4A017' }}
                       className="shrink-0 hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-black px-2.5 py-1 rounded border">
                       <Layers className="w-3.5 h-3.5" /> Teilefinder
@@ -1269,16 +1296,15 @@ export default function Teileportal() {
                   Suchen
                 </button>
               </form>
-              {/* Tabs */}
-              <div className="flex gap-0 mb-6 border-b border-border">
-                <button className="px-4 py-2.5 text-sm font-bold border-b-2 border-primary text-primary -mb-px">AFTERMARKET-TEILE</button>
-                <button
-                  onClick={() => setPhase('oem')}
-                  className="px-4 py-2.5 text-sm font-bold text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-2 -mb-px border-b-2 border-transparent hover:border-primary/40">
-                  ORIGINAL-KATALOG (OEM)
-                  <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[10px] font-bold">PREVIEW</span>
-                </button>
-              </div>
+              {/* Reiter: Aftermarket-Teile · Teilefinder · Teilefinder Pro · Campus */}
+              <TeileboerseReiter
+                variant="tabs"
+                className="mb-6"
+                aktiv="aftermarket"
+                onWechsel={gehZuReiter}
+                istMitglied={actualLevel !== 'none'}
+                istAdmin={istAdmin}
+              />
               {/* Kategorien */}
               <div className="md:columns-2 xl:columns-3 gap-3">
                 {CATEGORIES.map((cat, i) => {
@@ -1368,8 +1394,8 @@ export default function Teileportal() {
                       /* Das angeklickte Teil wandert mit in den Teilefinder — der
                          springt damit direkt auf die richtige Zeichnung, statt
                          die Bezeichnung nochmal abzufragen. */
-                      onOpen={() => { setStartTeil({ name, articleNumber, oeNumbers }); setPhase('oem'); }}
-                      onVin={(v) => { setVehicleVin(v); setStartTeil({ name, articleNumber, oeNumbers }); setPhase('oem'); }}
+                      onOpen={() => { setStartTeil({ name, articleNumber, oeNumbers }); setStufe('finder'); setPhase('oem'); }}
+                      onVin={(v) => { setVehicleVin(v); setStartTeil({ name, articleNumber, oeNumbers }); setStufe('finder'); setPhase('oem'); }}
                     />
                   )}
                   oemDrawingSlot={(oe, name) => (
@@ -1379,7 +1405,7 @@ export default function Teileportal() {
                       vehicleToken={yqIdent?.token}
                       oeNumbers={oe}
                       partName={name}
-                      onOpenCatalog={() => setPhase('oem')}
+                      onOpenCatalog={() => gehZuReiter('finder')}
                     />
                   )}
                   left={
@@ -1401,7 +1427,7 @@ export default function Teileportal() {
                         <span className="text-muted-foreground font-normal text-sm ml-2">({totalCount > articles.length ? totalCount : articles.length})</span>
                       </span>
                       <div className="flex items-center gap-3">
-                        {actualLevel !== "none" && (
+                        {(actualLevel !== "none" || istAdmin) && (
                           <MembershipSelect level={effectiveMemberLevel} onChange={setMemberLevel} />
                         )}
                         {selectedBrands.size > 0 && <span className="text-sm text-muted-foreground">{filtered.length} gefiltert</span>}
@@ -1555,18 +1581,17 @@ export default function Teileportal() {
               onBack={() => setPhase(vehicle ? 'categories' : 'search')}
               level={effectiveMemberLevel}
               istMitglied={actualLevel !== 'none'}
-              istAdmin={!!user?.email && ADMIN_EMAILS.includes(user.email)}
+              istAdmin={istAdmin}
               startTeil={startTeil}
-              kvaPositionen={cart.items.map((i) => ({
-                name: i.name, brand: i.brand, articleNumber: i.articleNumber,
-                quantity: i.quantity, price: i.price,
-              }))}
+              stufe={stufe}
+              onStufe={setStufe}
+              kvaPositionen={kvaPositionen}
               /* Aus der Zeichnung wird das ERSATZTEIL gekauft — mit Preis, Bild und
                  Lieferzeit, genau wie aus der Trefferliste. Früher landete hier die
                  nackte Originalnummer als Marke "OE" im Korb, ohne Preis. */
               onAddArticle={(a, qty) => { for (let i = 0; i < qty; i++) addArticleToCart(a as Article); }}
             />
-          ) : (
+          ) : stufe === 'finder' ? (
             /* Ohne FIN bleibt die Baugruppen-Übersicht aus dem Teilekatalog. */
             <OemExplosionView
               vehicle={vehicle}
@@ -1574,6 +1599,37 @@ export default function Teileportal() {
               vehicleVin={vehicleVin}
               onBack={() => setPhase(vehicle ? 'categories' : 'search')}
             />
+          ) : (
+            /* Pro und Campus hängen nicht an der FIN — sie sind auch ohne
+               Fahrzeug erreichbar, sonst führt der Reiter ins Leere. */
+            <div>
+              <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-20">
+                <button
+                  onClick={() => setPhase(vehicle ? 'categories' : 'search')}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors shrink-0">
+                  <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">Teileportal</span>
+                </button>
+                <div className="ml-auto shrink-0">
+                  <TeileboerseReiter
+                    aktiv={stufe}
+                    onWechsel={gehZuReiter}
+                    istMitglied={actualLevel !== 'none'}
+                    istAdmin={istAdmin}
+                  />
+                </div>
+              </div>
+              <div className="h-[calc(100vh-108px)]">
+                {stufe === 'pro' ? (
+                  <ProBereich
+                    istMitglied={actualLevel !== 'none'}
+                    vin=""
+                    fahrzeug={vehicleLabel || ''}
+                    level={effectiveMemberLevel}
+                    positionen={kvaPositionen}
+                  />
+                ) : istAdmin ? <CampusBereich /> : null}
+              </div>
+            </div>
           )
         )}
 
@@ -1582,8 +1638,9 @@ export default function Teileportal() {
 
       <PartDetailModal article={detailArticle} vehicleLabel={vehicleLabel} onClose={() => setDetailArticle(null)}
         onAddToCart={(a) => addArticleToCart(a)} brandLogo={detailArticle ? getBrandLogo(detailArticle.brand) : undefined} />
-      <PartsCartButton count={cart.count} onClick={() => setCartOpen(true)} />
-      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin} level={effectiveMemberLevel} />
+      <PartsCartButton count={cart.count} onClick={() => setCartOpen(true)} admin={istAdmin} />
+      <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin}
+        level={effectiveMemberLevel} istAdmin={istAdmin} onLevel={setMemberLevel} />
 
       {/* ── VIN-Variantenauswahl ─────────────────────────────────── */}
       {/* ── Auth-Modal: Anmelden / Registrieren / Als Gast bestellen ── */}

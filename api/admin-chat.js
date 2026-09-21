@@ -18,6 +18,8 @@
  */
 export const config = { runtime: 'nodejs', maxDuration: 15 };
 
+import { adminPruefen } from './_admin.js';
+
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://zasbdvtsxgimcezotlsi.supabase.co';
 const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ADMIN_PIN = process.env.ADMIN_PIN;
@@ -53,11 +55,11 @@ export default async function handler(req, res) {
       hinweis: 'In Vercel fehlen ADMIN_PIN und/oder SUPABASE_SERVICE_ROLE_KEY. Danach neu deployen.',
     });
   }
-  // Zeitkonstanter Vergleich waere hier Theater: die PIN ist kurz und der
-  // Endpunkt nicht ratbar oft aufrufbar. Wichtiger ist, dass sie NUR hier
-  // liegt und nicht im Browser.
-  if ((req.headers['x-admin-pin'] || '') !== ADMIN_PIN) {
-    return send(res, 401, { error: 'Falsche PIN.' });
+  // Admin-Sitzung + PIN (api/_admin.js). Der PIN allein ließ sich hier
+  // ohne Konto durchprobieren (Prüfung 21.09.2026).
+  const zugang = await adminPruefen(req);
+  if (!zugang.ok) {
+    return send(res, zugang.pinFalsch ? 401 : zugang.status, { error: zugang.pinFalsch ? 'Falsche PIN.' : zugang.error });
   }
 
   const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);

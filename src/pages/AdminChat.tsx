@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 import { Send, Loader2, CheckCircle, ChevronLeft, Lock, MessageCircle } from "lucide-react";
 
 interface Session { id: string; visitor_name: string | null; last_msg_at: string; status: string }
@@ -19,9 +20,15 @@ const PIN_KEY = "aa-admin-auth";
  */
 async function adminRuf(pin: string, was: string, params?: Record<string, string>, body?: unknown) {
   const qs = new URLSearchParams({ was, ...(params || {}) });
+  // Server verlangt Admin-Sitzung UND PIN.
+  const token = (await supabase?.auth.getSession())?.data.session?.access_token;
   const r = await fetch(`/api/admin-chat?${qs}`, {
     method: body ? "POST" : "GET",
-    headers: { "x-admin-pin": pin, ...(body ? { "Content-Type": "application/json" } : {}) },
+    headers: {
+      "x-admin-pin": pin,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
     body: body ? JSON.stringify(body) : undefined,
   });
   const j = await r.json().catch(() => null);

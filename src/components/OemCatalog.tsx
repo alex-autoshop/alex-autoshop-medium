@@ -15,7 +15,7 @@ import { oeNummernAusTeil } from "@/lib/oeAftermarket";
 import { OemAftermarket, type KaufTeil } from "@/components/OemAftermarket";
 import { type WorkArticle } from "@/components/TeileWorkspace";
 import { type MemberLevelId } from "@/components/TeileportalPricing";
-import { TeilefinderStufen, ProBereich, CampusBereich, type Stufe, type KvaPosition } from "@/components/TeilefinderPro";
+import { TeileboerseReiter, ProBereich, CampusBereich, type Stufe, type KvaPosition } from "@/components/TeilefinderPro";
 
 /**
  * Explosionszeichnungen im Werkstatt-Stil (Vorbild Partslink24):
@@ -237,6 +237,8 @@ export function OemCatalog({
   istAdmin = false,
   kvaPositionen = [],
   startTeil,
+  stufe: stufeVonAussen,
+  onStufe,
 }: {
   vin?: string;
   /** Marke des Fahrzeugs — nur noch Notnagel, falls kein vorabFahrzeug vorliegt. */
@@ -265,6 +267,12 @@ export function OemCatalog({
    * Bezeichnung nochmal abzufragen.
    */
   startTeil?: { name: string; articleNumber?: string; oeNumbers?: string[] } | null;
+  /**
+   * Reiter, auf dem der Finder steht. Wird er von aussen gesetzt, teilt sich
+   * der Katalog das Band mit der Teilebörse — sonst führt er es selbst.
+   */
+  stufe?: Stufe;
+  onStufe?: (s: Stufe) => void;
 }) {
   const [step, setStep] = useState<Step>("vehicle");
   const [busy, setBusy] = useState(false);
@@ -291,7 +299,9 @@ export function OemCatalog({
   const [hitNumber, setHitNumber] = useState<string | null>(null);
   /** Teil aus der Zeichnung, zu dem rechts die kaufbaren Ersatzteile stehen. */
   const [kaufTeil, setKaufTeil] = useState<KaufTeil | null>(null);
-  const [stufe, setStufe] = useState<Stufe>("finder");
+  const [stufeIntern, setStufeIntern] = useState<Stufe>("finder");
+  const stufe = stufeVonAussen ?? stufeIntern;
+  const setStufe = onStufe ?? setStufeIntern;
   const suchfeld = useRef<HTMLInputElement>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -628,7 +638,12 @@ export function OemCatalog({
       ))}
       {busy && stufe === "finder" && <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />}
       <div className="ml-auto shrink-0">
-        <TeilefinderStufen stufe={stufe} setStufe={setStufe} istMitglied={istMitglied} istAdmin={istAdmin} />
+        <TeileboerseReiter
+          aktiv={stufe}
+          onWechsel={(r) => (r === "aftermarket" ? onBack() : setStufe(r))}
+          istMitglied={istMitglied}
+          istAdmin={istAdmin}
+        />
       </div>
     </div>
   );

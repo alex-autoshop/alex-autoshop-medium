@@ -5,7 +5,8 @@
  * Firmendaten und Bestell-Kennzahlen — die Daten liegen verstreut in
  * `auth.users.user_metadata` und in der Tabelle `orders`.
  *
- * Zugriff NUR mit PIN: Header `x-admin-pin` muss `ADMIN_PIN` entsprechen.
+ * Zugriff NUR mit Admin-Sitzung UND PIN (api/_admin.js) — Header
+ * Authorization (Supabase-Token) und `x-admin-pin` (= `ADMIN_PIN`).
  * Ohne gesetzte ADMIN_PIN antwortet der Endpunkt gar nicht — sonst könnte
  * jeder die Kundenliste abrufen (das Repo ist öffentlich).
  *
@@ -16,6 +17,8 @@
  */
 
 export const config = { runtime: 'nodejs', maxDuration: 30 };
+
+import { adminPruefen } from './_admin.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://zasbdvtsxgimcezotlsi.supabase.co';
 const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -42,8 +45,11 @@ export default async function handler(req, res) {
       hinweis: 'Vercel → Settings → Environment Variables → ADMIN_PIN anlegen, dann neu deployen.',
     });
   }
-  if ((req.headers['x-admin-pin'] || '') !== ADMIN_PIN) {
-    return send(res, 401, { error: 'Falscher PIN' });
+  // PIN allein reicht nicht mehr: sonst ließe er sich hier ohne Konto
+  // durchprobieren (Prüfung 21.09.2026). Jetzt Admin-Sitzung + PIN.
+  const zugang = await adminPruefen(req);
+  if (!zugang.ok) {
+    return send(res, zugang.pinFalsch ? 401 : zugang.status, { error: zugang.pinFalsch ? 'Falscher PIN' : zugang.error });
   }
   if (!SVC) {
     return send(res, 500, { error: 'SUPABASE_SERVICE_ROLE_KEY fehlt in den Umgebungsvariablen.' });

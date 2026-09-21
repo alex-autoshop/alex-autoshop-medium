@@ -22,49 +22,95 @@ import { cn } from "@/lib/utils";
 
 export type Stufe = "finder" | "pro" | "campus";
 
-/* ─────────────────────── Reiter im Kopf ─────────────────────── */
+/** Die vier Reiter der Teilebörse: Zubehör plus die drei Finder-Stufen. */
+export type Reiter = "aftermarket" | Stufe;
 
-export function TeilefinderStufen({
-  stufe, setStufe, istMitglied, istAdmin,
+/* ─────────────────────── Reiter der Teilebörse ─────────────────────── */
+
+const REITER: { id: Reiter; lang: string; kurz: string }[] = [
+  { id: "aftermarket", lang: "Aftermarket-Teile", kurz: "Teile" },
+  { id: "finder", lang: "Teilefinder", kurz: "Finder" },
+  { id: "pro", lang: "Teilefinder Pro", kurz: "Pro" },
+  { id: "campus", lang: "Campus", kurz: "Campus" },
+];
+
+/**
+ * EIN Reiter-Band für die ganze Teilebörse — Aftermarket-Teile · Teilefinder ·
+ * Teilefinder Pro · Campus. Zwei Ansichten derselben Sache:
+ *
+ *   "tabs"  breite Übersichtsseite (Unterstrich-Reiter)
+ *   "pill"  enge Kopfzeile im Finder (Segment-Knöpfe)
+ *
+ * Damit ist der Wechsel zwischen Zubehör und Zeichnung überall derselbe Klick
+ * an derselben Stelle. Campus sieht nur Alex, und auch dort durchgestrichen:
+ * die Seite wird aufgebaut, bevor ein Kunde sie zu sehen bekommt.
+ */
+export function TeileboerseReiter({
+  aktiv, onWechsel, istMitglied, istAdmin, variant = "pill", className,
 }: {
-  stufe: Stufe;
-  setStufe: (s: Stufe) => void;
+  aktiv: Reiter;
+  onWechsel: (r: Reiter) => void;
   istMitglied: boolean;
   istAdmin: boolean;
+  variant?: "pill" | "tabs";
+  className?: string;
 }) {
-  const knopf = (id: Stufe, text: React.ReactNode, extra?: React.ReactNode) => (
-    <button
-      key={id}
-      onClick={() => setStufe(id)}
-      aria-pressed={stufe === id}
-      className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold transition-colors whitespace-nowrap",
-        stufe === id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground hover:bg-secondary",
-      )}
-    >
-      {text}
-      {extra}
-    </button>
-  );
+  const tabs = variant === "tabs";
 
   return (
-    <div className="flex items-center gap-0.5 rounded-xl border border-border bg-card p-0.5 shrink-0">
-      {knopf("finder", <><span className="sm:hidden">Finder</span><span className="hidden sm:inline">Teilefinder</span></>)}
-      {knopf("pro", "Pro", !istMitglied && <Lock className="w-3 h-3 opacity-70" />)}
-      {istAdmin && (
-        <button
-          onClick={() => setStufe("campus")}
-          title="Interne Baustelle — für Kunden nicht sichtbar"
-          className={cn(
-            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold transition-colors whitespace-nowrap",
-            stufe === "campus" ? "bg-night text-gold-bright" : "text-muted-foreground/60 hover:text-muted-foreground hover:bg-secondary",
-          )}
-        >
-          <GraduationCap className="w-3.5 h-3.5" />
-          <span className="line-through">Campus</span>
-          <span className="hidden sm:inline text-[9px] font-bold uppercase tracking-wider opacity-70">intern</span>
-        </button>
+    <div
+      className={cn(
+        "flex items-center shrink-0",
+        tabs
+          ? "gap-0 border-b border-border overflow-x-auto"
+          : "gap-0.5 rounded-xl border border-border bg-card p-0.5",
+        className,
       )}
+    >
+      {REITER.map((r) => {
+        if (r.id === "campus" && !istAdmin) return null;
+        const an = aktiv === r.id;
+        const campus = r.id === "campus";
+        const text = (
+          <>
+            {/* In der engen Kopfzeile des Finders stehen daneben noch Fahrzeug und
+                Pfad — die langen Namen erst ab xl, sonst schiebt sich alles raus. */}
+            <span className={tabs ? "sm:hidden" : "xl:hidden"}>{r.kurz}</span>
+            <span className={tabs ? "hidden sm:inline" : "hidden xl:inline"}>{r.lang}</span>
+          </>
+        );
+        return (
+          <button
+            key={r.id}
+            onClick={() => onWechsel(r.id)}
+            aria-pressed={an}
+            title={campus ? "Interne Baustelle — für Kunden nicht sichtbar" : undefined}
+            className={cn(
+              "inline-flex items-center gap-1.5 font-semibold whitespace-nowrap transition-colors",
+              tabs ? "px-3 sm:px-4 py-2.5 text-sm border-b-2 -mb-px" : "px-2.5 py-1 rounded-lg text-[12px]",
+              tabs
+                ? an
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-primary hover:border-primary/40"
+                : an
+                  ? campus
+                    ? "bg-night text-gold-bright"
+                    : "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary",
+              campus && !an && "opacity-70",
+            )}
+          >
+            {campus && <GraduationCap className="w-3.5 h-3.5 shrink-0" />}
+            {campus ? <span className="line-through">{text}</span> : text}
+            {r.id === "pro" && !istMitglied && <Lock className="w-3 h-3 opacity-70 shrink-0" />}
+            {campus && (
+              <span className="hidden sm:inline text-[9px] font-bold uppercase tracking-wider opacity-70">
+                intern
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

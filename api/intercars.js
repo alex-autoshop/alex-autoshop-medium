@@ -4,6 +4,8 @@
 // (Request→Response) wurde nie beantwortet → JEDER Request lief in den 25s-Timeout.
 export const config = { maxDuration: 25 };
 
+import { adminPruefen } from "./_admin.js";
+
 /**
  * Intercars IC API Proxy — Vercel Edge Function
  *
@@ -165,6 +167,11 @@ function artVariantsServer(artNo) {
   return [...new Set(list.filter(Boolean))];
 }
 
+// ── Verkaufspreis aus dem Einkaufspreis ───────────────────────────────────────
+// Zentral, damit Trefferliste und Margenrechner exakt dieselbe Zahl sehen.
+const aufschlagFaktor = () => (Number(process.env.PRICE_MARKUP) > 0 ? Number(process.env.PRICE_MARKUP) : 2.0);
+const aufschlagen = (ek) => Math.ceil(ek * aufschlagFaktor() * 100) / 100;
+
 // ── Parallel in Batches (schont IC Rate-Limits) ──────────────────────────────
 async function inChunks(items, size, fn) {
   const out = [];
@@ -303,8 +310,6 @@ function normalizeProduct(product, quote = null, stockLines = null) {
   // damit der Einkaufspreis jedes Teils — und aus EK und Verkaufspreis liest
   // ein Wettbewerber die Rabattstufe ab. Der Aufschlag passiert jetzt hier,
   // und nur das Ergebnis geht raus.
-  const AUFSCHLAG = Number(process.env.PRICE_MARKUP) > 0 ? Number(process.env.PRICE_MARKUP) : 2.0;
-  const aufschlagen = (ek) => Math.ceil(ek * AUFSCHLAG * 100) / 100;
   // ACHTUNG, unveraendert uebernommen: fehlt der EK, wurde bisher der
   // IC-Listenpreis in dasselbe Feld gelegt und im Browser ebenfalls
   // verdoppelt. Das ergibt fuer eine UVP einen sehr hohen Preis und ist
@@ -427,15 +432,18 @@ export default async function handler(req, res) {
         ok: r.ok, httpStatus: r.status,
         tokenUrl: IC_TOKEN_URL,
         ...credInfo,
-        clientIdPrefix: cId.slice(0, 8) + "…",
-        payerId: process.env.INTERCARS_PAYER_ID || "F00099 (default)",
+        // clientId-Anfang und Kundennummer gehören nicht in eine öffentliche Antwort.
+        payerIdGesetzt: !!process.env.INTERCARS_PAYER_ID,
         branch:  process.env.INTERCARS_BRANCH   || "FA1 (default)",
         hasToken: !!(parsed?.access_token),
         tokenType: parsed?.token_type,
         expiresIn: parsed?.expires_in,
         icError:   parsed?.error,
         icErrorDesc: parsed?.error_description,
-        rawSnippet: text.slice(0, 300),
+        // Früher stand hier text.slice(0, 300) — der Anfang der Token-Antwort,
+        // also ein Stück des Inter-Cars-Zugangstokens, für jeden abrufbar.
+        // Jetzt nur noch, WELCHE Felder zurückkamen.
+        antwortFelder: parsed && typeof parsed === "object" ? Object.keys(parsed) : [],
       });
     } catch(e) {
       clearTimeout(timer);
@@ -464,6 +472,25 @@ export default async function handler(req, res) {
   if (!body || typeof body !== "object") return json({ error: "Invalid JSON" }, 400);
 
   const { action, query, sku, index: productIndex, categoryId, limit = 12, offset = 0, items, orderId, from, to } = body;
+
+  // ── NUR ALEX ────────────────────────────────────────────────────────────────
+  // Bis 21.09.2026 waren diese Aktionen für JEDEN offen, der die Adresse kennt
+  // (das Repo ist öffentlich):
+  //   order         → echte Bestellung bei Inter Cars auf Alex' Konto
+  //   invoices      → seine Inter-Cars-Rechnungen, also der Einkaufspreis
+  //   invoice / delivery → einzelne Rechnung, Lieferstatus
+  //   adminPreise   → Einkaufspreis für den Margenrechner (neu)
+  // Die Teilebörse selbst braucht keine davon — sie sucht nur.
+  // diag ebenfalls: es prüfte nur den PIN — damit ließ sich der PIN ohne Konto
+  // durchprobieren (Prüfung vom 21.09.2026).
+  const NUR_ADMIN = new Set(["order", "invoices", "invoice", "delivery", "adminPreise", "diag"]);
+  if (NUR_ADMIN.has(action)) {
+    const zugang = await adminPruefen(req);
+    if (!zugang.ok) {
+      res.setHeader("Cache-Control", "no-store");
+      return json({ error: zugang.error, pinFalsch: !!zugang.pinFalsch }, zugang.status);
+    }
+  }
 
   // ── DIAGNOSE: wo genau klemmt es? (Credentials → OAuth → Catalog) ──────────
   if (action === "diag") {
@@ -495,7 +522,7 @@ export default async function handler(req, res) {
           const r = await withTimeout(fetch(`${IC_BASE_URL}${path}`, opts), 9000, "probe");
           let txt = (await r.text()).slice(0, 400);
           // Guertel und Hosentraeger: EK-Felder auch hier unkenntlich machen.
-          txt = txt.replace(/("customerPrice(?:Net|Gross)"\s*:\s*)[0-9.]+/g, "$1\"***\"");
+          txt = txt.replace(/("customerPrice(?:Net|Gross)"\s*:\s*)"?[0-9.,]+"?/g, "$1\"***\"");
           return { status: r.status, ms: Date.now() - t, body: txt };
         } catch (e) { return { status: 0, ms: Date.now() - t, body: String(e.message).slice(0, 200) }; }
       };
@@ -579,6 +606,46 @@ export default async function handler(req, res) {
         .filter(Boolean);
 
       return json(normalized);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // ADMIN-PREISE — Einkaufspreis je SKU, NUR für Alex (siehe NUR_ADMIN oben)
+    // Der Browser schickt die SKUs, die er für die Anzeige ohnehin kennt
+    // (icPriceLookup, inkl. baugleicher Ersatzmarke). So passt die Marge exakt
+    // zu dem Preis, der im Warenkorb steht.
+    // ──────────────────────────────────────────────────────────────────────────
+    if (action === "adminPreise") {
+      const liste = [...new Set((Array.isArray(body.skus) ? body.skus : [])
+        .map((x) => String(x || "").replace(/^ic-/, "").trim())
+        .filter(Boolean))].slice(0, 60);
+      if (!liste.length) return json({ error: "Keine SKUs übergeben." }, 400);
+
+      const quotes = await fetchQuotes(liste, token, payerId, recipientId, branch);
+      const zahl = (v) => (Number(v) > 0 ? Math.round(Number(v) * 100) / 100 : 0);
+      const preise = liste.map((s) => {
+        const q = quotes.get(s);
+        const p = q?.price || {};
+        const ekBrutto = zahl(p.customerPriceGross);
+        const ekNetto = zahl(p.customerPriceNet);
+        const listeBrutto = zahl(p.listPriceGross);
+        const listeNetto = zahl(p.listPriceNet);
+        const basis = ekBrutto || listeBrutto;
+        return {
+          sku: s,
+          gefunden: !!q,
+          ekBrutto,
+          ekNetto,
+          listeBrutto,
+          listeNetto,
+          mwst: Number(p.vatPercentage) > 0 ? Number(p.vatPercentage) : 19,
+          // exakt der Verkaufspreis, den normalizeProduct der Liste gibt
+          vk: basis > 0 ? aufschlagen(basis) : 0,
+          // Fehlt der EK, rechnet die Liste mit UVP × Aufschlag — sichtbar machen
+          ohneEk: !ekBrutto && !!listeBrutto,
+        };
+      });
+      res.setHeader("Cache-Control", "no-store");
+      return json({ preise, aufschlag: aufschlagFaktor() });
     }
 
     // ──────────────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import {
   ShoppingBag, TrendingUp, AlertCircle, Phone, Mail, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 /**
  * Interne Mitglieder-Übersicht: Wer hat sich eingeschrieben, wer testet gerade,
@@ -89,7 +90,11 @@ export default function AdminMembers() {
   const load = async (p: string) => {
     setBusy(true); setError(null);
     try {
-      const r = await fetch("/api/admin-members", { headers: { "x-admin-pin": p } });
+      // Server verlangt Admin-Sitzung UND PIN.
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const r = await fetch("/api/admin-members", {
+        headers: { "x-admin-pin": p, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
       const j = await r.json();
       if (!r.ok) { setError(j.hinweis ? `${j.error} — ${j.hinweis}` : j.error || `Fehler ${r.status}`); setData(null); if (r.status === 401) { localStorage.removeItem(PIN_KEY); setPin(null); } return; }
       setData(j);
