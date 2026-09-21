@@ -1640,7 +1640,8 @@ export default function Teileportal() {
         onAddToCart={(a) => addArticleToCart(a)} brandLogo={detailArticle ? getBrandLogo(detailArticle.brand) : undefined} />
       <PartsCartButton count={cart.count} onClick={() => setCartOpen(true)} admin={istAdmin} />
       <PartsCartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} vehicleLabel={vehicleLabel} vehicleVin={vehicleVin}
-        level={effectiveMemberLevel} istAdmin={istAdmin} onLevel={setMemberLevel} />
+        level={effectiveMemberLevel} istAdmin={istAdmin} onLevel={setMemberLevel}
+        angemeldet={!!user} guthaben={Number(profile?.affiliate_credit) || 0} />
 
       {/* ── VIN-Variantenauswahl ─────────────────────────────────── */}
       {/* ── Auth-Modal: Anmelden / Registrieren / Als Gast bestellen ── */}

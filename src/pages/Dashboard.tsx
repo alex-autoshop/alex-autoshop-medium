@@ -638,7 +638,10 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
           <p className={cn("text-4xl font-display font-bold", credit > 0 ? "text-primary" : "text-foreground")}>
             {credit.toFixed(2).replace(".", ",")} €
           </p>
-          <p className="text-xs text-muted-foreground mt-2">Wir verrechnen es mit deiner nächsten Bestellung — sag einfach Bescheid.</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Wird bei deiner nächsten Online-Bestellung in der Teilebörse automatisch verrechnet (im Warenkorb abwählbar).
+            Für Lack oder den Einkauf im Laden: sag einfach Bescheid.
+          </p>
         </div>
         <div className="card-tilt hover:translate-y-0 p-6">
           <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">Empfohlene Kollegen</p>

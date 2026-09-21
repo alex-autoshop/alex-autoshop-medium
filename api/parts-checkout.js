@@ -21,6 +21,14 @@
 //   GOCARDLESS_ENVIRONMENT       "sandbox" | "live"   (wird sonst am Token erkannt)
 //   ZAHLUNG_LIMIT_NEU            Grenze für Neukunden/Gäste in € (Standard 500)
 //   ZAHLUNG_LIMIT_STAMM          Grenze nach 5 bezahlten Bestellungen an 5 Tagen (Standard 5000)
+//
+// EMPFEHLUNGS-GUTHABEN: Hakt der Kunde "Guthaben verrechnen" an, wird es hier
+// RESERVIERT (Supabase: guthaben_reservieren — sofort vom Konto, damit es
+// nicht zweimal eingelöst wird) und als Stripe-Gutschein bzw. kleinerer
+// SEPA-Betrag abgezogen. Mindestens MIN_ZAHLUNG bleibt zu zahlen. Die
+// Webhooks lösen ein (bezahlt) oder geben zurück (abgebrochen/geplatzt).
+// Öffnet der Kunde den Warenkorb wieder (GET mit Anmeldung), werden seine
+// verlassenen Bezahlseiten geschlossen und das Guthaben steht wieder voll da.
 //   SUPABASE_SERVICE_ROLE_KEY    für die Mitgliedsstufe
 //   PUBLIC_BASE_URL              z.B. https://alex-autoshop.de
 //   ADMIN_PIN                    für den Ladenverkauf (siehe unten)
@@ -83,6 +91,157 @@ const gcHost = (token) => {
     : "https://api-sandbox.gocardless.com";
 };
 
+const MIN_ZAHLUNG = 1; // so viel bleibt mindestens zu zahlen (Stripe/GoCardless-Mindestbetrag)
+const rund2 = (x) => Math.round(x * 100) / 100;
+
+/** Supabase-Funktion mit dem Service-Key aufrufen. */
+async function rpc(name, args) {
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!svc) return { ok: false, daten: null };
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      method: "POST",
+      headers: { apikey: svc, Authorization: `Bearer ${svc}`, "Content-Type": "application/json" },
+      body: JSON.stringify(args),
+    });
+    return { ok: r.ok, daten: r.ok ? await r.json().catch(() => null) : null };
+  } catch {
+    return { ok: false, daten: null };
+  }
+}
+
+/**
+ * Offene Guthaben-Reservierungen dieses Kontos klären — beim Öffnen des
+ * Warenkorbs und vor jeder neuen Reservierung. Wer wieder im Warenkorb steht,
+ * hat die alte Bezahlseite verlassen: dann soll sein Guthaben wieder voll da
+ * sein, nicht erst nach Stunden.
+ *
+ * GRUNDREGEL: Zurück aufs Konto geht Guthaben NUR, wenn sicher ist, dass die
+ * alte Bezahlseite nicht mehr bezahlt werden kann (bei Stripe geschlossen bzw.
+ * bei GoCardless abgebrochen — und der Anbieter hat das bestätigt). Sonst
+ * könnte jemand mit Gutschein bezahlen UND das Guthaben behalten.
+ *
+ *   Stripe      bezahlt → einlösen · abgelaufen → zurück · offen → schließen,
+ *               dann zurück · abgeschlossen, aber Lastschrift läuft → warten
+ *   GoCardless  freigegeben → an die Zahlung hängen (Webhook entscheidet)
+ *               abgebrochen → zurück · noch offen → abbrechen, dann zurück
+ *
+ * Schonfrist: Stripe 20 Sekunden (Doppelklick), GoCardless 30 Minuten (die
+ * Bank-Freigabe kann dauern). Reservierungen ohne Bezahlseite gibt
+ * guthaben_aufraeumen nach 15 Minuten zurück (der Kunde hat nie einen Link
+ * bekommen, also kann damit auch niemand bezahlen).
+ */
+const SCHONFRIST_STRIPE = 20 * 1000;
+const SCHONFRIST_GC = 30 * 60 * 1000;
+
+async function offeneKlaeren(userId) {
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!svc || !/^[0-9a-f-]{36}$/i.test(String(userId || ""))) return false;
+  let geaendert = false;
+  const zurueck = async (id) => {
+    const a = await rpc("guthaben_abschliessen", { p_extern: id, p_bezahlt: false });
+    if (a.daten === "freigegeben") geaendert = true;
+  };
+
+  // Reservierungen, zu denen der Kunde nie einen Bezahl-Link bekam
+  const auf = await rpc("guthaben_aufraeumen", { p_user: userId });
+  if (Number(auf.daten) > 0) geaendert = true;
+
+  let liste = [];
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/guthaben_reservierungen?select=extern_id,anbieter,erstellt_am&user_id=eq.${userId}&status=eq.reserviert&extern_id=not.is.null&limit=20`,
+      { headers: { apikey: svc, Authorization: `Bearer ${svc}` } },
+    );
+    if (!r.ok) return geaendert;
+    liste = await r.json();
+  } catch { return geaendert; }
+
+  const jetzt = Date.now();
+  for (const res of Array.isArray(liste) ? liste : []) {
+    const alter = jetzt - Date.parse(res.erstellt_am);
+    const id = String(res.extern_id || "");
+    try {
+      if (res.anbieter === "stripe" && /^cs_[A-Za-z0-9_]+$/.test(id)) {
+        if (!(alter > SCHONFRIST_STRIPE)) continue;
+        const key = stripeKey();
+        if (!key) continue;
+        const sr = await fetch(`https://api.stripe.com/v1/checkout/sessions/${id}`, { headers: { Authorization: `Bearer ${key}` } });
+        const sd = await sr.json().catch(() => null);
+        if (!sr.ok || !sd) continue;
+        if (sd.payment_status === "paid" || sd.payment_status === "no_payment_required") {
+          await rpc("guthaben_abschliessen", { p_extern: id, p_bezahlt: true });
+        } else if (sd.status === "expired") {
+          await zurueck(id);
+        } else if (sd.status === "open") {
+          const er = await fetch(`https://api.stripe.com/v1/checkout/sessions/${id}/expire`, { method: "POST", headers: { Authorization: `Bearer ${key}` } });
+          const ed = await er.json().catch(() => null);
+          // Nur wenn Stripe das Schließen bestätigt — sonst wurde gerade bezahlt.
+          if (er.ok && ed?.status === "expired") await zurueck(id);
+        }
+        // "complete" + unbezahlt: Lastschrift über Stripe läuft noch → Webhook entscheidet.
+      } else if (res.anbieter === "gocardless" && /^BR[A-Z0-9]+$/.test(id)) {
+        if (!(alter > SCHONFRIST_GC)) continue;
+        const token = gcToken();
+        if (!token) continue;
+        const host = gcHost(token);
+        const h = { Authorization: `Bearer ${token}`, "GoCardless-Version": "2015-07-06", Accept: "application/json", "Content-Type": "application/json" };
+        const br = (await (await fetch(`${host}/billing_requests/${id}`, { headers: h })).json().catch(() => null))?.billing_requests;
+        if (!br) continue;
+        if (br.status === "fulfilled") {
+          const pm = br.links?.payment_request_payment;
+          if (pm) await rpc("guthaben_umhaengen", { p_alt: id, p_neu: pm });
+        } else if (br.status === "cancelled") {
+          await zurueck(id);
+        } else if (br.status === "pending") {
+          const cr = await fetch(`${host}/billing_requests/${id}/actions/cancel`, { method: "POST", headers: h, body: JSON.stringify({ data: {} }) });
+          const cd = (await cr.json().catch(() => null))?.billing_requests;
+          if (cr.ok && cd?.status === "cancelled") await zurueck(id);
+        }
+        // ready_to_fulfil / fulfilling: der Kunde hat gerade freigegeben → warten.
+      }
+    } catch { /* nächstes Mal wieder */ }
+  }
+  return geaendert;
+}
+
+/** Bezahlseite schließen, bevor sie jemand benutzt (Stripe) bzw. Anfrage abbrechen (GoCardless). */
+async function bezahlseiteSchliessen(method, id) {
+  try {
+    if (method === "stripe" && /^cs_[A-Za-z0-9_]+$/.test(String(id))) {
+      const r = await fetch(`https://api.stripe.com/v1/checkout/sessions/${id}/expire`, { method: "POST", headers: { Authorization: `Bearer ${stripeKey()}` } });
+      const d = await r.json().catch(() => null);
+      return r.ok && d?.status === "expired";
+    }
+    if (method === "gocardless" && /^BR[A-Z0-9]+$/.test(String(id))) {
+      const token = gcToken();
+      const r = await fetch(`${gcHost(token)}/billing_requests/${id}/actions/cancel`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "GoCardless-Version": "2015-07-06", Accept: "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ data: {} }),
+      });
+      const d = (await r.json().catch(() => null))?.billing_requests;
+      return r.ok && d?.status === "cancelled";
+    }
+  } catch { /* unten: false */ }
+  return false;
+}
+
+/** Aktuelles Empfehlungs-Guthaben des Kontos (nur Server, aus app_metadata). */
+async function guthabenLesen(userId) {
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!svc || !/^[0-9a-f-]{36}$/i.test(String(userId || ""))) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, { headers: { apikey: svc, Authorization: `Bearer ${svc}` } });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const g = Number(d?.app_metadata?.affiliate_credit);
+    return Number.isFinite(g) && g > 0 ? rund2(g) : 0;
+  } catch {
+    return null;
+  }
+}
+
 const tagInBerlin = (iso) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(new Date(iso));
 
 /** An wie vielen verschiedenen Tagen hat dieses Konto schon bezahlt? */
@@ -113,6 +272,7 @@ const CORS = {
 function send(res, status, obj) {
   for (const [k, v] of Object.entries(CORS)) res.setHeader(k, v);
   res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
   res.status(status).send(JSON.stringify(obj));
 }
 
@@ -137,7 +297,11 @@ async function stufeErmitteln(authHeader) {
     const data = await acc.json();
     // NUR app_metadata — user_metadata kann jeder Nutzer selbst beschreiben.
     const level = Number(data?.app_metadata?.membership_level) || 0;
-    return { level: level >= 1 && level <= 3 ? level : 0, email: user.email || data?.email || "", userId: user.id };
+    const g = Number(data?.app_metadata?.affiliate_credit);
+    return {
+      level: level >= 1 && level <= 3 ? level : 0, email: user.email || data?.email || "", userId: user.id,
+      guthaben: Number.isFinite(g) && g > 0 ? rund2(g) : 0,
+    };
   } catch {
     return { level: 0, email: "", userId: "" };
   }
@@ -168,9 +332,28 @@ async function preisHolen(articleNumber, brand, origin) {
 }
 
 // ── Stripe: Einmalzahlung ────────────────────────────────────────────────────
-async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, userId }) {
+async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, userId, guthaben = 0 }) {
   const key = stripeKey();
   if (!key) return { fallback: true };
+
+  // Empfehlungs-Guthaben als einmaliger Gutschein — steht so auf der Bezahlseite
+  let gutschein = "";
+  if (guthaben > 0) {
+    const cr = await fetch("https://api.stripe.com/v1/coupons", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        amount_off: String(Math.round(guthaben * 100)),
+        currency: "eur",
+        duration: "once",
+        max_redemptions: "1",
+        name: "Empfehlungs-Guthaben",
+      }),
+    });
+    const cd = await cr.json().catch(() => null);
+    if (!cr.ok || !cd?.id) throw new Error(`Stripe-Gutschein ${cr.status}: ${JSON.stringify(cd?.error || cd).slice(0, 200)}`);
+    gutschein = cd.id;
+  }
 
   const form = new URLSearchParams();
   form.set("mode", "payment");
@@ -189,7 +372,11 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, u
     form.set("billing_address_collection", "required");
     form.set("shipping_address_collection[allowed_countries][0]", "DE");
     form.set("shipping_address_collection[allowed_countries][1]", "AT");
+    // Mit Guthaben: Bezahlseite läuft nach 60 Minuten ab, dann kommt das
+    // reservierte Guthaben zurück (Webhook checkout.session.expired).
+    if (gutschein) form.set("expires_at", String(Math.floor(Date.now() / 1000) + 60 * 60));
   }
+  if (gutschein) form.set("discounts[0][coupon]", gutschein);
 
   positionen.forEach((pos, i) => {
     form.set(`line_items[${i}][quantity]`, String(pos.quantity));
@@ -214,6 +401,7 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, u
   form.set("metadata[fahrzeug]", String(fahrzeug || "").slice(0, 200));
   form.set("metadata[vin]", String(vin || "").slice(0, 40));
   form.set("metadata[summe]", summe.toFixed(2));
+  if (guthaben > 0) form.set("metadata[guthaben]", guthaben.toFixed(2));
   form.set(
     "metadata[positionen]",
     positionen.map((p) => `${p.quantity}x${p.articleNumber}@${p.einzel.toFixed(2)}`).join("|").slice(0, 480),
@@ -226,7 +414,7 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, u
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(`Stripe ${res.status}: ${JSON.stringify(data?.error || data).slice(0, 300)}`);
-  return { url: data.url, sessionId: data.id };
+  return { url: data.url, sessionId: data.id, externId: data.id };
 }
 
 // ── Ladenverkauf: ist die QR-Zahlung durch? ──────────────────────────────────
@@ -248,7 +436,7 @@ async function stripeStatus(sessionId) {
 }
 
 // ── GoCardless: einmalige SEPA-Zahlung ───────────────────────────────────────
-async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId }) {
+async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId, guthaben = 0 }) {
   const token = gcToken();
   if (!token) return { fallback: true };
   const host = gcHost(token);
@@ -266,8 +454,8 @@ async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId 
       billing_requests: {
         mandate_request: { scheme: "sepa_core", currency: "EUR" },
         payment_request: {
-          description: `Alex Autoshop Teilebestellung${fahrzeug ? ` — ${fahrzeug}` : ""}`.slice(0, 100),
-          amount: Math.round(summe * 100),
+          description: `Alex Autoshop Teilebestellung${fahrzeug ? ` — ${fahrzeug}` : ""}${guthaben > 0 ? ` (Guthaben −${guthaben.toFixed(2).replace(".", ",")} €)` : ""}`.slice(0, 100),
+          amount: Math.round(rund2(summe - guthaben) * 100),
           currency: "EUR",
           scheme: "sepa_core",
         },
@@ -298,7 +486,7 @@ async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId 
   });
   const flow = await flowRes.json().catch(() => null);
   if (!flowRes.ok) throw new Error(`GoCardless Flow ${flowRes.status}: ${JSON.stringify(flow?.error || flow).slice(0, 300)}`);
-  return { url: flow?.billing_request_flows?.authorisation_url };
+  return { url: flow?.billing_request_flows?.authorisation_url, externId: br?.billing_requests?.id };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -308,8 +496,16 @@ export default async function handler(req, res) {
     return res.status(204).end();
   }
   // Welche Zahlarten sind eingerichtet? Nur ja/nein — keine Schlüssel.
+  // Mit Anmeldung zusätzlich: das Guthaben, nachdem verlassene Bezahlseiten
+  // geschlossen wurden — so steht im Warenkorb, was wirklich verrechnet wird.
   if (req.method === "GET") {
-    return send(res, 200, { karte: !!stripeKey(), sepa: !!gcToken() });
+    const zahlarten = { karte: !!stripeKey(), sepa: !!gcToken() };
+    if (!String(req.headers?.authorization || "").startsWith("Bearer ")) return send(res, 200, zahlarten);
+    const konto = await stufeErmitteln(req.headers.authorization);
+    if (!konto.userId) return send(res, 200, zahlarten);
+    const geaendert = await offeneKlaeren(konto.userId);
+    const guthaben = geaendert ? await guthabenLesen(konto.userId) : konto.guthaben;
+    return send(res, 200, guthaben == null ? zahlarten : { ...zahlarten, guthaben });
   }
   if (req.method !== "POST") return send(res, 405, { error: "Method not allowed" });
 
@@ -320,7 +516,7 @@ export default async function handler(req, res) {
     return send(res, 400, { error: "Ungültige Anfrage." });
   }
   if (!body || typeof body !== "object") return send(res, 400, { error: "Ungültige Anfrage." });
-  const { items, method, email: emailAusFormular, vehicleLabel, vin, theke: thekeRoh, sessionId } = body;
+  const { items, method, email: emailAusFormular, vehicleLabel, vin, theke: thekeRoh, sessionId, guthaben: guthabenWunsch } = body;
 
   // ── Ladenverkauf: nur Alex. Geprüft wird VOR allem anderen. ─────────────────
   let theke = null;
@@ -405,12 +601,31 @@ export default async function handler(req, res) {
       return send(res, 409, { error: "Der Betrag ist zu hoch für die Online-Zahlung — bitte ruf uns an." });
     }
 
+    // Empfehlungs-Guthaben reservieren — nur mit Kundenkonto, nie an der
+    // Theke, und nur wenn die gewählte Zahlart eingerichtet ist.
+    let reservierung = null;
+    const anbieterDa = method === "stripe" ? !!stripeKey() : !!gcToken();
+    if (!theke && userId && guthabenWunsch === true && anbieterDa) {
+      // in Cent rechnen — (18,74 − 1) × 100 ergibt sonst 1773,999… → 17,73 €
+      const hoechstens = (Math.round(summe * 100) - MIN_ZAHLUNG * 100) / 100;
+      if (hoechstens > 0) {
+        await offeneKlaeren(userId);
+        const r = await rpc("guthaben_reservieren", { p_user: userId, p_max: hoechstens, p_anbieter: method });
+        const z = Array.isArray(r.daten) ? r.daten[0] : null;
+        if (z?.res_id && Number(z.res_betrag) > 0) reservierung = { id: z.res_id, betrag: rund2(Number(z.res_betrag)) };
+      }
+    }
+    const guthaben = reservierung?.betrag || 0;
+    const zuZahlen = rund2(summe - guthaben);
+    const zurueckgeben = async () => { if (reservierung) await rpc("guthaben_freigeben", { p_id: reservierung.id }); };
+
     // Zahlungsgrenze — nicht an der Theke: dort steht Alex selbst daneben.
     if (!theke) {
       const tage = await bezahlteTage(userId);
       const stamm = tage >= STAMM_AB_TAGEN;
       const grenze = stamm ? LIMIT_STAMM() : LIMIT_NEU();
-      if (summe > grenze) {
+      if (zuZahlen > grenze) {
+        await zurueckgeben();
         const text = stamm
           ? `Online geht es bis ${euro(grenze)}. Diese Bestellung schick uns bitte als Anfrage oder ruf an: 0202 82690.`
           : `Als Neukunde kannst du online bis ${euro(grenze)} bezahlen. Nach ${STAMM_AB_TAGEN} bezahlten Bestellungen an ` +
@@ -424,18 +639,44 @@ export default async function handler(req, res) {
       }
     }
 
-    const arg = { positionen, summe, email, fahrzeug: vehicleLabel, vin, theke, userId };
-    const ergebnis = method === "stripe" ? await stripeSession(arg) : await gocardlessFlow(arg);
+    const arg = { positionen, summe, email, fahrzeug: vehicleLabel, vin, theke, userId, guthaben };
+    let ergebnis;
+    try {
+      ergebnis = method === "stripe" ? await stripeSession(arg) : await gocardlessFlow(arg);
+    } catch (err) {
+      await zurueckgeben();
+      throw err;
+    }
 
     if (ergebnis.fallback) {
+      await zurueckgeben();
       return send(res, 200, { fallback: true, grund: `${method} ist noch nicht konfiguriert.` });
     }
-    if (!ergebnis.url) return send(res, 502, { error: "Keine Zahlungs-URL erhalten." });
+    if (!ergebnis.url) {
+      await zurueckgeben();
+      return send(res, 502, { error: "Keine Zahlungs-URL erhalten." });
+    }
+    if (reservierung) {
+      // Ohne Verknüpfung wüsste später niemand, zu welcher Zahlung das
+      // Guthaben gehört — dann lieber die Bezahlseite gleich wieder schließen.
+      const args = { p_id: reservierung.id, p_extern: ergebnis.externId };
+      let v = ergebnis.externId ? await rpc("guthaben_verknuepfen", args) : { ok: false };
+      if (ergebnis.externId && !(v.ok && v.daten === true)) v = await rpc("guthaben_verknuepfen", args);
+      if (!(v.ok && v.daten === true)) {
+        // Der Bezahl-Link geht NICHT an den Kunden — also kann niemand mit dem
+        // Gutschein bezahlen, und das Guthaben darf sofort zurück.
+        console.error("[guthaben] Verknüpfen fehlgeschlagen — Bezahlseite wird geschlossen");
+        await bezahlseiteSchliessen(method, ergebnis.externId);
+        await zurueckgeben();
+        return send(res, 503, { error: "Das Guthaben konnte gerade nicht verbucht werden — bitte gleich nochmal versuchen." });
+      }
+    }
 
     return send(res, 200, {
       url: ergebnis.url,
       ...(theke ? { sessionId: ergebnis.sessionId } : {}),
-      summe,
+      summe: zuZahlen,
+      guthaben,
       level,
       rabattProzent: pct,
       positionen: positionen.length,

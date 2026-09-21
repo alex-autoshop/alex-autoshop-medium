@@ -16,7 +16,7 @@
 -- schreiben, nie der Nutzer selbst.
 --
 -- Neu seit 22.09.: Empfehlungslinks werden ausgewertet (Abschnitt 5b),
--- Empfehlungs-Guthaben wird gebucht (Abschnitt 5c).
+-- Empfehlungs-Guthaben wird gebucht (5c) und beim Bezahlen eingelöst (5d).
 --
 -- Unten kommt am Ende eine Liste aller Mitglieder — bitte kurz durchsehen.
 -- ===========================================================================
@@ -325,6 +325,204 @@ revoke all on function public.provision_buchen(text, numeric) from public, anon,
 revoke all on function public.guthaben_aendern(uuid, numeric) from public, anon, authenticated;
 grant execute on function public.provision_buchen(text, numeric) to service_role;
 grant execute on function public.guthaben_aendern(uuid, numeric) to service_role;
+
+
+-- 5d) GUTHABEN BEIM BEZAHLEN EINLÖSEN ---------------------------------------
+-- Ablauf: Beim Klick auf "bezahlen" wird das Guthaben RESERVIERT (sofort vom
+-- Konto abgezogen, damit es nicht zweimal eingelöst wird). Kommt die Zahlung
+-- durch → eingelöst. Bricht der Kunde ab, läuft die Bezahlseite ab oder
+-- platzt die Lastschrift → das Guthaben geht zurück aufs Konto.
+create table if not exists public.guthaben_reservierungen (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  betrag      numeric(10,2) not null check (betrag > 0),
+  anbieter    text not null check (anbieter in ('stripe', 'gocardless')),
+  status      text not null default 'reserviert'
+              check (status in ('reserviert', 'eingeloest', 'freigegeben')),
+  extern_id   text unique,          -- Stripe-Bezahlseite bzw. GoCardless-Anfrage/Zahlung
+  erstellt_am timestamptz not null default now(),
+  erledigt_am timestamptz
+);
+create index if not exists guthaben_res_user_idx on public.guthaben_reservierungen (user_id, status);
+alter table public.guthaben_reservierungen enable row level security;
+-- Keine Regel für Kunden: lesen und schreiben nur über den Server.
+
+-- Guthaben aus den Konto-Daten als Zahl (kaputte Werte zählen als 0)
+create or replace function public.guthaben_von(p_meta jsonb)
+returns numeric
+language sql immutable
+as $$
+  select coalesce(case when (p_meta ->> 'affiliate_credit') ~ '^-?[0-9]+(\.[0-9]+)?$'
+                       then (p_meta ->> 'affiliate_credit')::numeric end, 0);
+$$;
+
+-- Guthaben reservieren: höchstens p_max, höchstens was da ist. Gibt die
+-- Reservierung zurück (oder nichts, wenn kein Guthaben da ist).
+create or replace function public.guthaben_reservieren(p_user uuid, p_max numeric, p_anbieter text)
+returns table (res_id uuid, res_betrag numeric)
+language plpgsql security definer set search_path = public, auth
+as $$
+declare
+  v_meta jsonb;
+  v_stand numeric;
+  v_betrag numeric(10,2);
+  v_alt record;
+  v_id uuid;
+begin
+  if p_anbieter not in ('stripe', 'gocardless') or p_max is null or p_max <= 0 then return; end if;
+  -- Konto sperren: zwei gleichzeitige Bezahlvorgänge warten aufeinander
+  select raw_app_meta_data into v_meta from auth.users where id = p_user for update;
+  if not found then return; end if;
+  v_meta := coalesce(v_meta, '{}'::jsonb);
+
+  -- Reservierungen, zu denen nie eine Bezahlseite entstand, zurückgeben
+  for v_alt in
+    select r.id as rid, r.betrag as rbetrag from public.guthaben_reservierungen r
+    where r.user_id = p_user and r.status = 'reserviert' and r.extern_id is null
+      and r.erstellt_am < now() - interval '15 minutes'
+  loop
+    v_meta := v_meta || jsonb_build_object('affiliate_credit', round(public.guthaben_von(v_meta) + v_alt.rbetrag, 2));
+    update public.guthaben_reservierungen set status = 'freigegeben', erledigt_am = now() where id = v_alt.rid;
+  end loop;
+
+  v_stand := greatest(0, public.guthaben_von(v_meta));
+  v_betrag := floor(least(v_stand, p_max) * 100) / 100;
+  if v_betrag <= 0 then
+    update auth.users set raw_app_meta_data = v_meta where id = p_user;
+    return;
+  end if;
+
+  v_meta := v_meta || jsonb_build_object('affiliate_credit', round(v_stand - v_betrag, 2));
+  update auth.users set raw_app_meta_data = v_meta where id = p_user;
+  insert into public.guthaben_reservierungen (user_id, betrag, anbieter)
+  values (p_user, v_betrag, p_anbieter)
+  returning id into v_id;
+
+  res_id := v_id;
+  res_betrag := v_betrag;
+  return next;
+end;
+$$;
+
+-- Reservierung mit der Bezahlseite verknüpfen (Stripe-Session / GoCardless-Anfrage)
+create or replace function public.guthaben_verknuepfen(p_id uuid, p_extern text)
+returns boolean
+language sql security definer set search_path = public
+as $$
+  update public.guthaben_reservierungen set extern_id = p_extern
+  where id = p_id and status = 'reserviert' and extern_id is null
+  returning true;
+$$;
+
+-- GoCardless: nach der Freigabe der Lastschrift heißt die Zahlung anders
+create or replace function public.guthaben_umhaengen(p_alt text, p_neu text)
+returns boolean
+language sql security definer set search_path = public
+as $$
+  update public.guthaben_reservierungen set extern_id = p_neu
+  where extern_id = p_alt and status = 'reserviert'
+  returning true;
+$$;
+
+-- Zahlung durch → eingelöst. Nicht durch → Guthaben zurück aufs Konto.
+-- Mehrfach aufrufbar (Webhooks kommen gern doppelt).
+create or replace function public.guthaben_abschliessen(p_extern text, p_bezahlt boolean)
+returns text
+language plpgsql security definer set search_path = public, auth
+as $$
+declare
+  r public.guthaben_reservierungen%rowtype;
+begin
+  select * into r from public.guthaben_reservierungen where extern_id = p_extern for update;
+  if not found then return 'keine'; end if;
+
+  if p_bezahlt then
+    if r.status = 'reserviert' then
+      update public.guthaben_reservierungen set status = 'eingeloest', erledigt_am = now() where id = r.id;
+      return 'eingeloest';
+    end if;
+    return 'nichts_zu_tun';
+  end if;
+
+  -- nicht bezahlt (auch: Rücklastschrift nach Einlösung)
+  if r.status in ('reserviert', 'eingeloest') then
+    update auth.users
+    set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+        || jsonb_build_object('affiliate_credit', round(public.guthaben_von(raw_app_meta_data) + r.betrag, 2))
+    where id = r.user_id;
+    update public.guthaben_reservierungen set status = 'freigegeben', erledigt_am = now() where id = r.id;
+    return 'freigegeben';
+  end if;
+  return 'nichts_zu_tun';
+end;
+$$;
+
+-- Reservierungen ohne Bezahlseite (Server abgestürzt, bevor der Kunde den
+-- Link bekam) nach 15 Minuten zurückgeben. Läuft beim Öffnen des Warenkorbs.
+-- Sicher, weil der Kunde ohne Verknüpfung nie einen Bezahl-Link erhalten hat.
+create or replace function public.guthaben_aufraeumen(p_user uuid)
+returns numeric
+language plpgsql security definer set search_path = public, auth
+as $$
+declare
+  v_summe numeric := 0;
+  v_alt record;
+begin
+  perform 1 from auth.users where id = p_user for update;
+  if not found then return 0; end if;
+  for v_alt in
+    select r.id as rid, r.betrag as rbetrag from public.guthaben_reservierungen r
+    where r.user_id = p_user and r.status = 'reserviert' and r.extern_id is null
+      and r.erstellt_am < now() - interval '15 minutes'
+    for update
+  loop
+    v_summe := v_summe + v_alt.rbetrag;
+    update public.guthaben_reservierungen set status = 'freigegeben', erledigt_am = now() where id = v_alt.rid;
+  end loop;
+  if v_summe > 0 then
+    update auth.users
+    set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+        || jsonb_build_object('affiliate_credit', round(public.guthaben_von(raw_app_meta_data) + v_summe, 2))
+    where id = p_user;
+  end if;
+  return v_summe;
+end;
+$$;
+
+-- Sofort zurückgeben, wenn die Bezahlseite gar nicht erst entstanden ist
+create or replace function public.guthaben_freigeben(p_id uuid)
+returns text
+language plpgsql security definer set search_path = public, auth
+as $$
+declare
+  r public.guthaben_reservierungen%rowtype;
+begin
+  select * into r from public.guthaben_reservierungen where id = p_id for update;
+  if not found then return 'keine'; end if;
+  if r.status <> 'reserviert' then return 'nichts_zu_tun'; end if;
+  update auth.users
+  set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+      || jsonb_build_object('affiliate_credit', round(public.guthaben_von(raw_app_meta_data) + r.betrag, 2))
+  where id = r.user_id;
+  update public.guthaben_reservierungen set status = 'freigegeben', erledigt_am = now() where id = r.id;
+  return 'freigegeben';
+end;
+$$;
+
+revoke all on function public.guthaben_von(jsonb) from public, anon, authenticated;
+revoke all on function public.guthaben_reservieren(uuid, numeric, text) from public, anon, authenticated;
+revoke all on function public.guthaben_verknuepfen(uuid, text) from public, anon, authenticated;
+revoke all on function public.guthaben_umhaengen(text, text) from public, anon, authenticated;
+revoke all on function public.guthaben_abschliessen(text, boolean) from public, anon, authenticated;
+revoke all on function public.guthaben_freigeben(uuid) from public, anon, authenticated;
+revoke all on function public.guthaben_aufraeumen(uuid) from public, anon, authenticated;
+grant execute on function public.guthaben_von(jsonb) to service_role;
+grant execute on function public.guthaben_reservieren(uuid, numeric, text) to service_role;
+grant execute on function public.guthaben_verknuepfen(uuid, text) to service_role;
+grant execute on function public.guthaben_umhaengen(text, text) to service_role;
+grant execute on function public.guthaben_abschliessen(text, boolean) to service_role;
+grant execute on function public.guthaben_freigeben(uuid) to service_role;
+grant execute on function public.guthaben_aufraeumen(uuid) to service_role;
 
 
 -- 6) ZUM DURCHSEHEN: Mitglieder, Admins und bisheriges Guthaben -----------

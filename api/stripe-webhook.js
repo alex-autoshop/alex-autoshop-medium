@@ -1,7 +1,9 @@
 // Stripe-Webhook — bestätigt Abo-Zahlung → schaltet Mitgliedschaft frei.
 // In Stripe anlegen: Developers → Webhooks → Endpoint
 //   URL:    https://alex-autoshop.de/api/stripe-webhook
-//   Events: checkout.session.completed
+//   Events: checkout.session.completed, checkout.session.expired,
+//           checkout.session.async_payment_succeeded, checkout.session.async_payment_failed
+//   (expired ist wichtig: dann kommt eingesetztes Empfehlungs-Guthaben zurück)
 //   Signing secret → Vercel-Env STRIPE_WEBHOOK_SECRET (whsec_…)
 
 export const config = { runtime: "edge" };
@@ -39,6 +41,17 @@ async function provisionBuchen(externId) {
     body: JSON.stringify({ p_extern_id: externId, p_satz: EMPFEHLUNGS_PROZENT / 100 }),
   }).catch(() => null);
   if (r && !r.ok) console.error("[provision] fehlgeschlagen:", r.status);
+}
+
+// Eingesetztes Empfehlungs-Guthaben: bezahlt → eingelöst, sonst zurück aufs Konto.
+async function guthabenAbschliessen(externId, bezahlt) {
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!svc || !externId) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/rpc/guthaben_abschliessen`, {
+    method: "POST",
+    headers: { apikey: svc, Authorization: `Bearer ${svc}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_extern: externId, p_bezahlt: !!bezahlt }),
+  }).catch(() => {});
 }
 
 async function zahlungStatus(externId, status) {
@@ -107,6 +120,7 @@ export default async function handler(req) {
           ...(bezahlt ? { bezahlt_am: new Date().toISOString() } : {}),
         });
         if (m.typ === "teile" && (bezahlt || fehl)) await provisionBuchen(s.id);
+        if (m.typ === "teile" && (bezahlt || fehl)) await guthabenAbschliessen(s.id, bezahlt);
       }
     }
   }

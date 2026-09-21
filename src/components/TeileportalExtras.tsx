@@ -249,7 +249,7 @@ export function PartsCartButton({ count, onClick, admin = false }: { count: numb
   );
 }
 
-export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin, level = "none", istAdmin = false, onLevel }: {
+export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin, level = "none", istAdmin = false, onLevel, angemeldet = false, guthaben = 0 }: {
   open: boolean;
   onClose: () => void;
   cart: ReturnType<typeof usePartsCart>;
@@ -260,6 +260,10 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
   istAdmin?: boolean;
   /** Preisstufe ändern (im Laden: die des Kunden). */
   onLevel?: (l: MemberLevelId) => void;
+  /** Mit Kundenkonto angemeldet? Nur dann gibt es Empfehlungs-Guthaben. */
+  angemeldet?: boolean;
+  /** Empfehlungs-Guthaben des Kontos (Anzeige — abgezogen wird serverseitig). */
+  guthaben?: number;
 }) {
   const { items, setQty, clear, allPriced } = cart;
 
@@ -282,16 +286,27 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
 
   // Welche Zahlarten sind eingerichtet? Was fehlt, wird gar nicht erst
   // angeboten — statt nach dem Klick "noch nicht freigeschaltet" zu melden.
+  // Angemeldet kommt das Guthaben gleich mit: Der Server schließt dabei
+  // verlassene Bezahlseiten, damit dort reserviertes Guthaben wieder da ist.
   const [zahlarten, setZahlarten] = useState<{ karte: boolean; sepa: boolean } | null>(null);
+  const [guthabenFrisch, setGuthabenFrisch] = useState<number | null>(null);
   useEffect(() => {
-    if (!open || zahlarten) return;
-    fetch("/api/parts-checkout")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d && typeof d.karte === "boolean") setZahlarten({ karte: d.karte, sepa: !!d.sepa }); })
-      .catch(() => { /* unbekannt → Knöpfe zeigen, der Server antwortet mit Hinweis */ });
-  }, [open, zahlarten]);
+    if (!open) return;
+    let lebt = true;
+    (async () => {
+      const token = angemeldet ? (await supabase?.auth.getSession())?.data.session?.access_token : undefined;
+      const r = await fetch("/api/parts-checkout", token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+      const d = r.ok ? await r.json() : null;
+      if (!lebt || !d) return;
+      if (typeof d.karte === "boolean") setZahlarten({ karte: d.karte, sepa: !!d.sepa });
+      if (typeof d.guthaben === "number" && Number.isFinite(d.guthaben)) setGuthabenFrisch(Math.max(0, d.guthaben));
+    })().catch(() => { /* unbekannt → Knöpfe zeigen, der Server antwortet mit Hinweis */ });
+    return () => { lebt = false; };
+  }, [open, angemeldet]);
   const karteDa = zahlarten?.karte ?? true;
   const sepaDa = zahlarten?.sepa ?? true;
+  // Der frische Stand vom Server schlägt den (evtl. alten) aus dem Profil.
+  const guthabenStand = angemeldet ? (guthabenFrisch ?? guthaben) : 0;
 
   const korbSchluessel = items.map((i) => i.key).join("|");
   useEffect(() => {
@@ -334,6 +349,16 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
   const subtotal = mitPreis.reduce((s, i) => s + stueckPreis(i.price as number) * i.quantity, 0);
   const subtotalListe = mitPreis.reduce((s, i) => s + (i.price as number) * i.quantity, 0);
   const ersparnis = Math.round((subtotalListe - subtotal) * 100) / 100;
+
+  // ── Empfehlungs-Guthaben verrechnen (nur Kunde mit Konto, nie an der Theke)
+  // Mindestens 1 € bleibt zu zahlen. Wie viel wirklich abgeht, entscheidet
+  // der Server beim Reservieren — hier steht die Vorschau.
+  const [guthabenNutzen, setGuthabenNutzen] = useState(true);
+  const guthabenDa = !theke && angemeldet && guthabenStand > 0 && subtotal > 1;
+  const anrechnung = guthabenDa && guthabenNutzen
+    ? Math.max(0, Math.min(Math.floor(guthabenStand * 100 + 1e-6) / 100, (Math.round(subtotal * 100) - 100) / 100)) // in Cent, sonst 17,73 statt 17,74
+    : 0;
+  const zuZahlen = Math.round((subtotal - anrechnung) * 100) / 100;
   const orderText = [
     "🛒 BESTELLANFRAGE — Alex Autoshop Teilebörse",
     vehicleLabel ? `Fahrzeug: ${vehicleLabel}` : "",
@@ -364,6 +389,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
           method: methode,
           vehicleLabel,
           vin: vehicleVin,
+          guthaben: anrechnung > 0,
           items: items.map((i) => ({
             articleNumber: i.articleNumber,
             brand: i.brand,
@@ -494,6 +520,25 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                     <span className="text-primary font-semibold">{theke ? "spart" : "du sparst"} {eur(ersparnis)}</span>
                   </div>
                 )}
+                {guthabenDa && (
+                  <>
+                    <label className="flex items-center justify-between gap-2 text-xs cursor-pointer">
+                      <span className="inline-flex items-center gap-2">
+                        <input type="checkbox" checked={guthabenNutzen} onChange={(e) => setGuthabenNutzen(e.target.checked)}
+                          className="accent-primary w-3.5 h-3.5" />
+                        Empfehlungs-Guthaben verrechnen
+                        <span className="text-muted-foreground">({eur(guthabenStand)} da)</span>
+                      </span>
+                      <span className="font-semibold text-primary tabular-nums">{anrechnung > 0 ? `− ${eur(anrechnung)}` : "—"}</span>
+                    </label>
+                    {anrechnung > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="font-semibold">Zu zahlen</span>
+                        <span className="font-bold tabular-nums">{eur(zuZahlen)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
                 {theke && (
                   <>
                     {bezahltSumme != null && (
@@ -528,7 +573,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                         className="btn-primary w-full gap-2 disabled:opacity-60">
                         {zahlt === "stripe"
                           ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
-                          : <><CreditCard className="w-4 h-4" /> {eur(subtotal)} bezahlen</>}
+                          : <><CreditCard className="w-4 h-4" /> {eur(zuZahlen)} bezahlen</>}
                       </button>
                     )}
                     {sepaDa && (
@@ -538,7 +583,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                           : "btn-primary w-full gap-2 disabled:opacity-60"}>
                         {zahlt === "gocardless"
                           ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
-                          : <><Landmark className="w-4 h-4" /> {karteDa ? "Per SEPA-Lastschrift" : `${eur(subtotal)} per SEPA-Lastschrift`}</>}
+                          : <><Landmark className="w-4 h-4" /> {karteDa ? "Per SEPA-Lastschrift" : `${eur(zuZahlen)} per SEPA-Lastschrift`}</>}
                       </button>
                     )}
                     {!allPriced && (

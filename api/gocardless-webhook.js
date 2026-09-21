@@ -44,6 +44,27 @@ async function provisionBuchen(externId) {
   if (r && !r.ok) console.error("[provision] fehlgeschlagen:", r.status);
 }
 
+// Eingesetztes Empfehlungs-Guthaben: bezahlt → eingelöst, sonst zurück aufs Konto.
+async function guthabenAbschliessen(externId, bezahlt) {
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!svc || !externId) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/rpc/guthaben_abschliessen`, {
+    method: "POST",
+    headers: { apikey: svc, Authorization: `Bearer ${svc}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_extern: externId, p_bezahlt: !!bezahlt }),
+  }).catch(() => {});
+}
+
+async function guthabenUmhaengen(alt, neu) {
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!svc || !alt || !neu) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/rpc/guthaben_umhaengen`, {
+    method: "POST",
+    headers: { apikey: svc, Authorization: `Bearer ${svc}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_alt: alt, p_neu: neu }),
+  }).catch(() => {});
+}
+
 async function zahlungStatus(externId, status) {
   const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!svc || !externId) return;
@@ -109,6 +130,8 @@ async function handleBillingRequestFulfilled(billingRequestId) {
 
   // Teile-Bestellung per SEPA: festhalten, bezahlt ist sie erst bei "confirmed".
   if (meta.typ === "teile") {
+    // Reserviertes Guthaben hing an der Anfrage — ab jetzt an der Zahlung
+    if (br.links?.payment_request_payment) await guthabenUmhaengen(br.id, br.links.payment_request_payment);
     await zahlungSpeichern({
       extern_id: br.links?.payment_request_payment || br.id,
       anbieter: "gocardless",
@@ -172,8 +195,12 @@ export default async function handler(req) {
       // Teile-Zahlungen: erst eingezogen zählt sie für die Zahlungsgrenze
       if (ev.resource_type === "payments") {
         const id = ev.links?.payment;
-        if (["confirmed", "paid_out"].includes(ev.action)) { await zahlungStatus(id, "bezahlt"); await provisionBuchen(id); }
-        if (["failed", "cancelled", "charged_back", "late_failure_settled"].includes(ev.action)) { await zahlungStatus(id, "fehlgeschlagen"); await provisionBuchen(id); }
+        if (["confirmed", "paid_out"].includes(ev.action)) { await zahlungStatus(id, "bezahlt"); await provisionBuchen(id); await guthabenAbschliessen(id, true); }
+        if (["failed", "cancelled", "charged_back", "late_failure_settled"].includes(ev.action)) { await zahlungStatus(id, "fehlgeschlagen"); await provisionBuchen(id); await guthabenAbschliessen(id, false); }
+      }
+      // Lastschrift-Anfrage abgebrochen → eingesetztes Guthaben zurück
+      if (ev.resource_type === "billing_requests" && ev.action === "cancelled") {
+        await guthabenAbschliessen(ev.links?.billing_request, false);
       }
     } catch (e) {
       console.error("[gocardless-webhook] event error:", e.message);
