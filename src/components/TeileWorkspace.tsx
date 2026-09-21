@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { PriceBlock, DeliveryBadge, SpecStrip, eur, memberPrice, MEMBER_LEVELS, type MemberLevelId } from "@/components/TeileportalPricing";
 import { usePartImage } from "@/hooks/usePartImage";
+import { useEinbauposition, type Einbauposition } from "@/lib/einbauposition";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,6 +36,22 @@ export interface WorkArticle {
 }
 
 const key = (a: WorkArticle) => String(a.id);
+
+/** Etikett "Vorne" / "Hinten links" — damit niemand die falsche Achse bestellt. */
+export function PositionsEtikett({ pos, gross = false }: { pos: Einbauposition | null; gross?: boolean }) {
+  if (!pos) return null;
+  return (
+    <span
+      title={`Einbauposition: ${pos.lang}`}
+      className={cn(
+        "shrink-0 inline-flex items-center rounded-md font-bold whitespace-nowrap bg-primary/10 text-primary border border-primary/25",
+        gross ? "px-2 py-0.5 text-[12px]" : "px-1.5 py-px text-[11px]"
+      )}
+    >
+      {pos.kurz}
+    </span>
+  );
+}
 
 /* ───────────────────────── Trefferzeile ───────────────────────── */
 
@@ -82,12 +99,28 @@ export function TeileZeile({
   const [menge, setMenge] = useState(1);
   const bild = usePartImage(a.imageUrl, a.articleNumber, a.brand, a.id);
 
+  // Einbauposition erst laden, wenn die Zeile ins Bild kommt — bei 80
+  // Treffern sonst 80 Abfragen auf einmal.
+  const zeile = useRef<HTMLDivElement | null>(null);
+  const [imBild, setImBild] = useState(false);
+  useEffect(() => {
+    if (imBild) return;
+    const el = zeile.current;
+    if (!el || typeof IntersectionObserver === "undefined") { setImBild(true); return; }
+    const io = new IntersectionObserver((e) => {
+      if (e.some((x) => x.isIntersecting)) { setImBild(true); io.disconnect(); }
+    }, { rootMargin: "150px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [imBild]);
+  const position = useEinbauposition(a.id, a.specs, imBild);
+
   // Zwei Masse reichen zum Wiedererkennen. Alles Weitere steht rechts im Panel.
   const daten = (a.specs ?? []).filter((x) => x.name && x.value).slice(0, 3);
 
   return (
     <div
-      ref={innerRef}
+      ref={(el) => { zeile.current = el; innerRef?.(el); }}
       onClick={onSelect}
       role="option"
       aria-selected={active}
@@ -122,8 +155,9 @@ export function TeileZeile({
 
       {/* Text — schrumpft als Block, nie einzeln uebereinander */}
       <div className="min-w-0 flex-1">
-        <p className={cn(kompakt ? "text-[13.5px]" : "text-[15px]", "leading-snug truncate", active ? "font-bold" : "font-semibold")}>
-          {a.name}
+        <p className={cn(kompakt ? "text-[13.5px]" : "text-[15px]", "leading-snug flex items-center gap-2 min-w-0", active ? "font-bold" : "font-semibold")}>
+          <span className="truncate">{a.name}</span>
+          <PositionsEtikett pos={position} />
         </p>
         <p className="mt-0.5 text-[12px] text-muted-foreground truncate">
           <span className="font-semibold uppercase tracking-wide">{a.brand}</span>
@@ -241,6 +275,7 @@ function OfferPanel({
 
   const lvl = MEMBER_LEVELS.find((l) => l.id === level);
   const cheapest = alternatives.find((x) => x.price != null && a.price != null && x.price < a.price);
+  const position = useEinbauposition(a.id, a.specs, true);
 
   return (
     <div className="flex flex-col h-full">
@@ -266,6 +301,11 @@ function OfferPanel({
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-bold uppercase tracking-wider text-primary">{a.brand}</p>
           <p className="font-semibold leading-tight text-sm mt-0.5">{a.name}</p>
+          {position && (
+            <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              Einbau: <PositionsEtikett pos={position} gross />
+            </p>
+          )}
           <button
             onClick={copy}
             className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors"

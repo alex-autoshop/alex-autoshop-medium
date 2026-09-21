@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, Crown, Truck, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apArticleSpecs } from "@/lib/autoparts";
+import { merkmaleLaden, positionZuerst } from "@/lib/einbauposition";
 
 // ─── MITGLIEDSCHAFT ─────────────────────────────────────────
 
@@ -252,14 +252,21 @@ export function SpecStrip({ articleId, specs, auto }: {
   specs?: { name: string; value: string }[];
   auto?: boolean;
 }) {
-  const [loaded, setLoaded] = useState<{ name: string; value: string }[] | null>(
-    specs && specs.length > 0 ? specs : null
-  );
+  const vorab = specs && specs.length > 0 ? positionZuerst(specs).slice(0, 6) : null;
+  const [loaded, setLoaded] = useState<{ name: string; value: string }[] | null>(vorab);
+  // Anderes Teil gewählt → dessen Daten, nicht die des vorigen stehen lassen.
+  const [fuer, setFuer] = useState(String(articleId));
+  if (fuer !== String(articleId)) {
+    setFuer(String(articleId));
+    setLoaded(vorab);
+  }
   useEffect(() => {
     if (loaded || !auto) return;
     let alive = true;
-    apArticleSpecs(articleId)
-      .then((s) => { if (alive && s.length > 0) setLoaded(s.slice(0, 6)); })
+    // Einbauposition (vorne/hinten, links/rechts) zuerst — sie stand sonst als
+    // letztes Merkmal hinter den ersten sechs und fiel weg.
+    merkmaleLaden(articleId)
+      .then((s) => { if (alive && s.length > 0) setLoaded(positionZuerst(s).slice(0, 6)); })
       .catch(() => {});
     return () => { alive = false; };
   }, [articleId, auto, loaded]);

@@ -894,7 +894,7 @@ export async function apArticleSpecs(articleId: string | number): Promise<{ name
     return arr.map((c: any) => ({
       name: String(first(c?.criteriaName, c?.name, c?.specificationName, c?.criteriaDescription) || ''),
       value: String(first(c?.formattedValue, c?.value, c?.criteriaValue, c?.specificationValue, c?.rawValue) ?? ''),
-    })).filter((s) => s.name && s.value).slice(0, 20);
+    })).filter((s) => s.name && s.value).slice(0, 40); // Einbauposition steht oft ganz am Ende
   } catch { return []; }
 }
 
