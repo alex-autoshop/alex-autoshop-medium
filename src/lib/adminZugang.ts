@@ -53,8 +53,10 @@ export interface EkPreis {
   listeBrutto: number;
   listeNetto: number;
   mwst: number;
-  /** Verkaufspreis, den die Liste zeigt (EK × Aufschlag) */
+  /** Verkaufspreis, den die Liste zeigt (EK × Aufschlag dieses Teils) */
   vk: number;
+  /** Aufschlag genau dieses Teils */
+  faktor?: number;
   /** Kein EK von Inter Cars → Liste rechnet mit UVP × Aufschlag */
   ohneEk: boolean;
 }

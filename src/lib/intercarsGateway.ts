@@ -15,7 +15,8 @@ import { apAnalogParts } from "@/lib/autoparts";
  *   price   = fertiger Verkaufspreis vom Server (der Einkaufspreis bleibt dort)
  */
 
-// VK = EK × 2.0 — konsistent mit parseIntercarsArticles in Teileportal.tsx
+// Der Verkaufspreis kommt fertig vom Server (api/intercars.js) — wie er
+// entsteht, gehört nicht in den Browser.
 
 const _cache = new Map<string, { v: unknown; ts: number }>();
 const TTL = 5 * 60 * 1000; // 5 Minuten

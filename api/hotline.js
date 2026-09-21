@@ -62,7 +62,10 @@ export default async function handler(req, res) {
     });
     if (!acc.ok) return send(res, 502, { error: 'Konto konnte nicht geprüft werden.' });
     const data = await acc.json();
-    const level = Number(data?.user_metadata?.membership_level) || 0;
+    // NUR app_metadata: user_metadata kann jeder Nutzer selbst beschreiben —
+    // damit hätte sich jeder Level 3 und diese Nummer geben können.
+    const roh = Number(data?.app_metadata?.membership_level);
+    const level = roh >= 1 && roh <= 3 ? roh : 0;
 
     if (level < 3) {
       return send(res, 403, {

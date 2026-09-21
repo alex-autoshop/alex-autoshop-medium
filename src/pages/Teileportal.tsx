@@ -291,7 +291,7 @@ interface Article {
 type Phase = 'search' | 'categories' | 'articles' | 'oem';
 type SearchMode = 'vin' | 'kba';
 type HeroTab = 'search' | 'vin' | 'kba' | 'vehicle' | 'number';
-// VK = EK × 2.0 → immer unter IC-Listenpreis, Level 3 (-40%) = EK × 1.2 (noch profitabel)
+// Verkaufspreise rechnet ausschließlich der Server (api/intercars.js).
 
 async function postJson(url: string, payload: Record<string, unknown>, ms: number) {
   const ctrl = new AbortController();

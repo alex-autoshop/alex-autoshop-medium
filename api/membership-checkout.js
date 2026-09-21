@@ -24,8 +24,8 @@ const json = (obj, status = 200) =>
 
 // ── Stripe: Checkout Session (subscription) ──────────────────────────────────
 async function createStripeSession({ email, level, modules, price }) {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) return { fallback: true };
+  const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
+  if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
 
   const cents = Math.round(Number(price) * 100);
   const form = new URLSearchParams();
@@ -61,10 +61,11 @@ async function createStripeSession({ email, level, modules, price }) {
 
 // ── GoCardless: Billing Request + Flow (SEPA-Mandat) ─────────────────────────
 async function createGoCardlessFlow({ email, level, modules, price }) {
-  const token = process.env.GOCARDLESS_ACCESS_TOKEN;
-  if (!token) return { fallback: true };
-  const env = (process.env.GOCARDLESS_ENVIRONMENT || "sandbox").toLowerCase();
-  const host = env === "live" ? "https://api.gocardless.com" : "https://api-sandbox.gocardless.com";
+  // Nur ein echter Token zählt (Platzhalter in Vercel → freundlicher Hinweis),
+  // und live/sandbox ergibt sich aus dem Token selbst.
+  const token = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
+  if (!/^(live|sandbox)_[A-Za-z0-9_-]{10,}$/.test(token)) return { fallback: true };
+  const host = token.startsWith("live_") ? "https://api.gocardless.com" : "https://api-sandbox.gocardless.com";
   const headers = {
     Authorization: `Bearer ${token}`,
     "GoCardless-Version": "2015-07-06",

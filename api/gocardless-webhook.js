@@ -11,13 +11,44 @@ export const config = { runtime: "edge" };
 
 import { activateMembership } from "./_activate-membership.js";
 
+// ── Teile-Zahlungen für die Zahlungsgrenze festhalten (nur Server) ──────────
+const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co").replace(/\/+$/, "");
+const istUuid = (v) => /^[0-9a-f-]{36}$/i.test(String(v || ""));
+
+async function zahlungSpeichern(zeile) {
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!svc || !zeile.extern_id) return;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/teile_zahlungen?on_conflict=extern_id`, {
+    method: "POST",
+    headers: {
+      apikey: svc, Authorization: `Bearer ${svc}`, "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=minimal",
+    },
+    body: JSON.stringify(zeile),
+  }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }));
+  if (!r.ok) console.error("[zahlung] speichern fehlgeschlagen:", r.status, (await r.text()).slice(0, 200));
+}
+
+async function zahlungStatus(externId, status) {
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!svc || !externId) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/teile_zahlungen?extern_id=eq.${encodeURIComponent(externId)}`, {
+    method: "PATCH",
+    headers: { apikey: svc, Authorization: `Bearer ${svc}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+    body: JSON.stringify({ status, ...(status === "bezahlt" ? { bezahlt_am: new Date().toISOString() } : {}) }),
+  }).catch(() => {});
+}
+
+const gcToken = () => String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
+// live/sandbox ergibt sich aus dem Token selbst
 const gcHost = () =>
-  (process.env.GOCARDLESS_ENVIRONMENT || "sandbox").toLowerCase() === "live"
+  gcToken().startsWith("live_") ||
+  (!gcToken().startsWith("sandbox_") && (process.env.GOCARDLESS_ENVIRONMENT || "sandbox").toLowerCase() === "live")
     ? "https://api.gocardless.com"
     : "https://api-sandbox.gocardless.com";
 
 const gcHeaders = () => ({
-  Authorization: `Bearer ${process.env.GOCARDLESS_ACCESS_TOKEN}`,
+  Authorization: `Bearer ${gcToken()}`,
   "GoCardless-Version": "2015-07-06",
   "Content-Type": "application/json",
   Accept: "application/json",
@@ -43,6 +74,20 @@ async function handleBillingRequestFulfilled(billingRequestId) {
   const br = (await brRes.json().catch(() => null))?.billing_requests;
   if (!br) return;
   const meta = br.metadata || {};
+
+  // Teile-Bestellung per SEPA: festhalten, bezahlt ist sie erst bei "confirmed".
+  if (meta.typ === "teile") {
+    await zahlungSpeichern({
+      extern_id: br.links?.payment_request_payment || br.id,
+      anbieter: "gocardless",
+      typ: "teile",
+      user_id: istUuid(meta.user_id) ? meta.user_id : null,
+      betrag: Number(br.payment_request?.amount || 0) / 100,
+      status: "offen",
+    });
+    return;
+  }
+
   const mandateId = br.links?.mandate_request_mandate;
   const price = Number(meta.price);
 
@@ -91,7 +136,12 @@ export default async function handler(req) {
       if (ev.resource_type === "billing_requests" && ev.action === "fulfilled") {
         await handleBillingRequestFulfilled(ev.links?.billing_request);
       }
-      // payments "confirmed"/"paid_out" → hier optional Umsatz/Statuspflege
+      // Teile-Zahlungen: erst eingezogen zählt sie für die Zahlungsgrenze
+      if (ev.resource_type === "payments") {
+        const id = ev.links?.payment;
+        if (["confirmed", "paid_out"].includes(ev.action)) await zahlungStatus(id, "bezahlt");
+        if (["failed", "cancelled", "charged_back", "late_failure_settled"].includes(ev.action)) await zahlungStatus(id, "fehlgeschlagen");
+      }
     } catch (e) {
       console.error("[gocardless-webhook] event error:", e.message);
     }

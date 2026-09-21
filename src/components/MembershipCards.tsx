@@ -16,6 +16,7 @@ import type { Feature, FeatureAccent } from "@/data/memberships";
 import { toast } from "sonner";
 import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { cn } from "@/lib/utils";
 
@@ -89,7 +90,7 @@ const ACCENTS: Record<
 type Cursor = { top: number; left: number; visible: boolean; tap: boolean };
 
 function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [modules, setModules] = useState<string[]>(m.defaultModules ?? m.modules);
   const [wantFreePaint, setWantFreePaint] = useState(true);
@@ -253,13 +254,18 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
     }
     setTrialLoading(true);
     try {
-      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-      const { error } = await updateProfile({
-        trial_level:      m.level,
-        trial_expires_at: expiresAt,
-        trial_used:       true,
+      // Nur der Server darf die Teststunde eintragen (app_metadata) —
+      // sonst könnte sich jeder eine endlose "Teststunde" geben.
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const r = await fetch("/api/trial-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ level: m.level }),
       });
-      if (error) throw new Error(error);
+      const d = await r.json().catch(() => null);
+      if (!r.ok) throw new Error(d?.error || `Fehler ${r.status}`);
+      // Neue Werte in die Sitzung holen, damit die Preise sofort umspringen.
+      await supabase?.auth.refreshSession().catch(() => null);
       toast.success(`Level ${m.level} Trial gestartet — 1 Stunde! 🎉`, {
         description: "Du siehst jetzt alle Mitglieder-Preise. Viel Spaß beim Testen!",
       });

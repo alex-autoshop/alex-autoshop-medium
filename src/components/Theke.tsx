@@ -277,7 +277,7 @@ export function Margenrechner({ vorschlagEk, aufschlag = 2 }: { vorschlagEk?: nu
                     const m = marge(p, ekBrutto);
                     return (
                       <tr key={s.id}>
-                        <td className="py-0.5">{s.id === "none" ? `Einzelhandel (×${String(aufschlag).replace(".", ",")})` : s.kurz}</td>
+                        <td className="py-0.5">{s.id === "none" ? `Einzelhandel (Ø ×${aufschlag.toFixed(2).replace(".", ",")})` : s.kurz}</td>
                         <td className="py-0.5 text-right">{eur(p)}</td>
                         <td className="py-0.5 text-right">{eur(m.rohertrag)}</td>
                         <td className={cn("py-0.5 text-right", m.prozent < 10 && "text-red-700")}>{prozentText(m.prozent)}</td>
@@ -287,7 +287,8 @@ export function Margenrechner({ vorschlagEk, aufschlag = 2 }: { vorschlagEk?: nu
                 </tbody>
               </table>
               <p className="text-[10px] text-muted-foreground -mt-1">
-                EK brutto {eur(ekBrutto)} · netto {eur(rund2(netto(ekBrutto)))}
+                EK brutto {eur(ekBrutto)} · netto {eur(rund2(netto(ekBrutto)))} · Richtwert — jedes Teil hat seinen
+                eigenen Aufschlag, die echten Preise stehen oben im Korb.
               </p>
 
               <div className="flex items-center gap-1.5 border-t border-border pt-2">

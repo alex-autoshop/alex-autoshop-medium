@@ -280,6 +280,19 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
   // Drawer zu → Marge wieder verbergen. Der nächste Kunde soll sie nicht sehen.
   useEffect(() => { if (!open) setMargeAn(false); }, [open]);
 
+  // Welche Zahlarten sind eingerichtet? Was fehlt, wird gar nicht erst
+  // angeboten — statt nach dem Klick "noch nicht freigeschaltet" zu melden.
+  const [zahlarten, setZahlarten] = useState<{ karte: boolean; sepa: boolean } | null>(null);
+  useEffect(() => {
+    if (!open || zahlarten) return;
+    fetch("/api/parts-checkout")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && typeof d.karte === "boolean") setZahlarten({ karte: d.karte, sepa: !!d.sepa }); })
+      .catch(() => { /* unbekannt → Knöpfe zeigen, der Server antwortet mit Hinweis */ });
+  }, [open, zahlarten]);
+  const karteDa = zahlarten?.karte ?? true;
+  const sepaDa = zahlarten?.sepa ?? true;
+
   const korbSchluessel = items.map((i) => i.key).join("|");
   useEffect(() => {
     if (!open || !theke || !margeAn) return;
@@ -486,10 +499,15 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                     {bezahltSumme != null && (
                       <p className="text-xs font-semibold text-emerald-700">✓ Per Karte bezahlt: {eur(bezahltSumme)}</p>
                     )}
-                    {subtotal > 0 && (
+                    {subtotal > 0 && karteDa && (
                       <button onClick={() => { setMargeAn(false); setQrOffen(true); }} className="btn-primary w-full gap-2">
                         <QrCode className="w-4 h-4" /> Kunde zahlt am Handy (QR)
                       </button>
+                    )}
+                    {subtotal > 0 && !karteDa && (
+                      <p className="text-[11px] text-muted-foreground">
+                        QR-Zahlung geht, sobald der Stripe-Schlüssel in Vercel steht.
+                      </p>
                     )}
                     <button
                       onClick={() => { setMargeAn(false); setSchein({ zahlart: bezahltSumme != null ? `per Karte bezahlt (${eur(bezahltSumme)})` : "an der Kasse" }); }}
@@ -503,20 +521,26 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                   </>
                 )}
                 {!allPriced && !theke && <p className="text-xs text-muted-foreground">Endpreise & Verfügbarkeit bestätigen wir sofort nach der Anfrage — meist ist das Teil am selben Tag da.</p>}
-                {subtotal > 0 && !theke && (
+                {subtotal > 0 && !theke && (karteDa || sepaDa) && (
                   <>
-                    <button onClick={() => bezahlen("stripe")} disabled={zahlt !== ""}
-                      className="btn-primary w-full gap-2 disabled:opacity-60">
-                      {zahlt === "stripe"
-                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
-                        : <><CreditCard className="w-4 h-4" /> {eur(subtotal)} bezahlen</>}
-                    </button>
-                    <button onClick={() => bezahlen("gocardless")} disabled={zahlt !== ""}
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-secondary disabled:opacity-60">
-                      {zahlt === "gocardless"
-                        ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
-                        : <><Landmark className="w-4 h-4" /> Per SEPA-Lastschrift</>}
-                    </button>
+                    {karteDa && (
+                      <button onClick={() => bezahlen("stripe")} disabled={zahlt !== ""}
+                        className="btn-primary w-full gap-2 disabled:opacity-60">
+                        {zahlt === "stripe"
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
+                          : <><CreditCard className="w-4 h-4" /> {eur(subtotal)} bezahlen</>}
+                      </button>
+                    )}
+                    {sepaDa && (
+                      <button onClick={() => bezahlen("gocardless")} disabled={zahlt !== ""}
+                        className={karteDa
+                          ? "w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-secondary disabled:opacity-60"
+                          : "btn-primary w-full gap-2 disabled:opacity-60"}>
+                        {zahlt === "gocardless"
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
+                          : <><Landmark className="w-4 h-4" /> {karteDa ? "Per SEPA-Lastschrift" : `${eur(subtotal)} per SEPA-Lastschrift`}</>}
+                      </button>
+                    )}
                     {!allPriced && (
                       <p className="text-[11px] text-muted-foreground">
                         Positionen ohne Preis sind nicht dabei — die klären wir über die Anfrage.
@@ -529,7 +553,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                   </>
                 )}
                 {!theke && <a href={whatsappLink(orderText)} target="_blank" rel="noopener noreferrer"
-                   className={subtotal > 0
+                   className={subtotal > 0 && (karteDa || sepaDa)
                      ? "w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-secondary"
                      : "btn-primary w-full gap-2"}>
                   <MessageCircle className="w-4 h-4" /> Bestellanfrage senden

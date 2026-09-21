@@ -83,8 +83,10 @@ export default async function handler(req, res) {
     const now = Date.now();
     const members = users.map((u) => {
       const m = u.user_metadata || {};
+      // Stufe und Teststunde zählen nur aus app_metadata (nicht vom Nutzer änderbar).
+      const a = u.app_metadata || {};
       const st = stats.get(u.id) || { count: 0, sum: 0, last: null };
-      const trialExpires = m.trial_expires_at || null;
+      const trialExpires = a.trial_expires_at || null;
       const trialActive = !!trialExpires && new Date(trialExpires).getTime() > now;
       return {
         id: u.id,
@@ -93,10 +95,12 @@ export default async function handler(req, res) {
         contact: m.contact_name || '',
         phone: m.phone || '',
         address: m.address || '',
-        level: typeof m.membership_level === 'number' ? m.membership_level : 0,
+        level: [1, 2, 3].includes(Number(a.membership_level)) ? Number(a.membership_level) : 0,
+        // Was der Nutzer selbst in sein Profil geschrieben hat — nur zum Vergleich.
+        levelSelbstAngegeben: typeof m.membership_level === 'number' ? m.membership_level : 0,
         modules: m.membership_modules || [],
-        trialUsed: !!m.trial_used,
-        trialLevel: m.trial_level ?? null,
+        trialUsed: !!a.trial_used,
+        trialLevel: a.trial_level ?? null,
         trialExpires,
         trialActive,
         referralCode: m.referral_code || '',

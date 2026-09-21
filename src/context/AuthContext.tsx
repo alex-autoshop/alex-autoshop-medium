@@ -52,18 +52,23 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 
 function readProfile(user: User | null): CompanyProfile {
   const m = (user?.user_metadata ?? {}) as CompanyProfile;
+  // Stufe und Teststunde NUR aus app_metadata: die kann kein Nutzer selbst
+  // ändern. user_metadata schon — dort hätte sich jeder Level 3 eintragen
+  // können (siehe supabase/migrations/20260921_…).
+  const a = (user?.app_metadata ?? {}) as Record<string, unknown>;
+  const stufe = Number(a.membership_level);
   return {
     company_name: m.company_name ?? "",
     contact_name: m.contact_name ?? "",
     phone: m.phone ?? "",
     address: m.address ?? "",
-    membership_level: typeof m.membership_level === "number" ? m.membership_level : 0,
+    membership_level: stufe >= 1 && stufe <= 3 ? stufe : 0,
     membership_modules: Array.isArray(m.membership_modules) ? m.membership_modules : ["Autoteile", "Lackfarben", "Lackmaterial"],
     vehicles: Array.isArray(m.vehicles) ? m.vehicles : [],
     // Trial
-    trial_level: typeof m.trial_level === "number" ? m.trial_level : undefined,
-    trial_expires_at: m.trial_expires_at,
-    trial_used: m.trial_used ?? false,
+    trial_level: typeof a.trial_level === "number" ? a.trial_level : undefined,
+    trial_expires_at: typeof a.trial_expires_at === "string" ? a.trial_expires_at : undefined,
+    trial_used: a.trial_used === true,
     // Affiliate
     referral_code: m.referral_code,
     affiliate_credit: typeof m.affiliate_credit === "number" ? m.affiliate_credit : 0,
@@ -91,6 +96,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setUser(data.session?.user ?? null);
       setLoading(false);
+      // Die gespeicherte Sitzung kann eine alte Stufe enthalten (z.B. direkt
+      // nach der Freischaltung). Einmal frisch vom Server holen.
+      if (data.session) {
+        supabase!.auth.getUser().then(({ data: frisch }) => { if (frisch.user) setUser(frisch.user); }).catch(() => {});
+      }
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);

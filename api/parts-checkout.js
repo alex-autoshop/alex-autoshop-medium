@@ -18,7 +18,9 @@
 // Vercel-Env-Vars:
 //   STRIPE_SECRET_KEY            sk_test_… / sk_live_…
 //   GOCARDLESS_ACCESS_TOKEN      sandbox_… / live_…
-//   GOCARDLESS_ENVIRONMENT       "sandbox" | "live"   (Default: sandbox)
+//   GOCARDLESS_ENVIRONMENT       "sandbox" | "live"   (wird sonst am Token erkannt)
+//   ZAHLUNG_LIMIT_NEU            Grenze für Neukunden/Gäste in € (Standard 500)
+//   ZAHLUNG_LIMIT_STAMM          Grenze nach 5 bezahlten Bestellungen an 5 Tagen (Standard 5000)
 //   SUPABASE_SERVICE_ROLE_KEY    für die Mitgliedsstufe
 //   PUBLIC_BASE_URL              z.B. https://alex-autoshop.de
 //   ADMIN_PIN                    für den Ladenverkauf (siehe unten)
@@ -42,13 +44,70 @@ const mitgliedspreis = (grund, pct) => Math.ceil(grund * (1 - pct / 100) * 100) 
 
 const MAX_POSITIONEN = 50;
 const MAX_MENGE = 99;
-const MAX_SUMME = 25000; // Notbremse: darüber wird nicht online bezahlt
+const MAX_SUMME = 25000; // absolute Notbremse (gilt auch an der Theke)
+
+// ── Zahlungsgrenze: erst Vertrauen, dann höhere Beträge ─────────────────────
+// Neukunden und Gäste zahlen online nur bis LIMIT_NEU. Nach 5 bezahlten
+// Bestellungen an 5 verschiedenen Tagen gilt LIMIT_STAMM. Grundlage ist die
+// Tabelle teile_zahlungen, die nur die Zahlungs-Webhooks beschreiben.
+const zahlEnv = (name, standard) => {
+  const v = Number(process.env[name]);
+  return Number.isFinite(v) && v > 0 ? v : standard;
+};
+const LIMIT_NEU = () => zahlEnv("ZAHLUNG_LIMIT_NEU", 500);
+const LIMIT_STAMM = () => zahlEnv("ZAHLUNG_LIMIT_STAMM", 5000);
+const STAMM_AB_TAGEN = 5;
+
+const euro = (x) =>
+  new Intl.NumberFormat("de-DE", {
+    style: "currency", currency: "EUR", maximumFractionDigits: Number.isInteger(x) ? 0 : 2,
+  }).format(x);
+
+// Nur echte Schlüssel zählen. Ein Platzhalter wie "no value" in Vercel soll
+// den freundlichen Hinweis zeigen, nicht einen Stripe-Fehler.
+const stripeKey = () => {
+  const k = String(process.env.STRIPE_SECRET_KEY || "").trim();
+  return /^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(k) ? k : "";
+};
+const gcToken = () => {
+  const t = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
+  return /^(live|sandbox)_[A-Za-z0-9_-]{10,}$/.test(t) ? t : "";
+};
+// Live oder Test ergibt sich aus dem Token selbst — eine vergessene
+// GOCARDLESS_ENVIRONMENT-Variable kann so nichts mehr kaputt machen.
+const gcHost = (token) => {
+  if (token.startsWith("live_")) return "https://api.gocardless.com";
+  if (token.startsWith("sandbox_")) return "https://api-sandbox.gocardless.com";
+  return (process.env.GOCARDLESS_ENVIRONMENT || "sandbox").toLowerCase() === "live"
+    ? "https://api.gocardless.com"
+    : "https://api-sandbox.gocardless.com";
+};
+
+const tagInBerlin = (iso) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(new Date(iso));
+
+/** An wie vielen verschiedenen Tagen hat dieses Konto schon bezahlt? */
+async function bezahlteTage(userId) {
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!svc || !/^[0-9a-f-]{36}$/i.test(String(userId || ""))) return 0;
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/teile_zahlungen?select=bezahlt_am,erstellt_am&user_id=eq.${userId}&status=eq.bezahlt&limit=500`,
+      { headers: { apikey: svc, Authorization: `Bearer ${svc}` } },
+    );
+    if (!r.ok) return 0; // Tabelle fehlt noch → wie Neukunde behandeln
+    const zeilen = await r.json();
+    if (!Array.isArray(zeilen)) return 0;
+    return new Set(zeilen.map((z) => tagInBerlin(z.bezahlt_am || z.erstellt_am))).size;
+  } catch {
+    return 0;
+  }
+}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "content-type, authorization",
   // x-admin-pin bewusst NICHT erlaubt: fremde Seiten sollen ihn nicht senden können.
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 function send(res, status, obj) {
@@ -62,24 +121,25 @@ async function stufeErmitteln(authHeader) {
   const token = (authHeader || "").startsWith("Bearer ") ? authHeader.slice(7) : "";
   const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
   // Gäste dürfen kaufen — dann eben ohne Rabatt.
-  if (!token || !svc) return { level: 0, email: "" };
+  if (!token || !svc) return { level: 0, email: "", userId: "" };
   try {
     const me = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: { apikey: svc, Authorization: `Bearer ${token}` },
     });
-    if (!me.ok) return { level: 0, email: "" };
+    if (!me.ok) return { level: 0, email: "", userId: "" };
     const user = await me.json();
-    if (!user?.id) return { level: 0, email: "" };
+    if (!user?.id) return { level: 0, email: "", userId: "" };
 
     const acc = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${user.id}`, {
       headers: { apikey: svc, Authorization: `Bearer ${svc}` },
     });
-    if (!acc.ok) return { level: 0, email: user.email || "" };
+    if (!acc.ok) return { level: 0, email: user.email || "", userId: user.id };
     const data = await acc.json();
-    const level = Number(data?.user_metadata?.membership_level) || 0;
-    return { level: level >= 1 && level <= 3 ? level : 0, email: user.email || data?.email || "" };
+    // NUR app_metadata — user_metadata kann jeder Nutzer selbst beschreiben.
+    const level = Number(data?.app_metadata?.membership_level) || 0;
+    return { level: level >= 1 && level <= 3 ? level : 0, email: user.email || data?.email || "", userId: user.id };
   } catch {
-    return { level: 0, email: "" };
+    return { level: 0, email: "", userId: "" };
   }
 }
 
@@ -108,8 +168,8 @@ async function preisHolen(articleNumber, brand, origin) {
 }
 
 // ── Stripe: Einmalzahlung ────────────────────────────────────────────────────
-async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke }) {
-  const key = process.env.STRIPE_SECRET_KEY;
+async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, userId }) {
+  const key = stripeKey();
   if (!key) return { fallback: true };
 
   const form = new URLSearchParams();
@@ -144,6 +204,8 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke })
 
   // Kompakte Metadaten — Stripe erlaubt 500 Zeichen pro Wert.
   form.set("metadata[typ]", theke ? "theke" : "teile");
+  // Für die Zahlungsgrenze: der Webhook ordnet die Zahlung diesem Konto zu.
+  if (userId) form.set("metadata[user_id]", String(userId));
   if (theke) {
     form.set("metadata[kunde]", String(theke.kunde || "").slice(0, 120));
     form.set("metadata[stufe]", String(theke.stufe || 0));
@@ -169,7 +231,7 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke })
 
 // ── Ladenverkauf: ist die QR-Zahlung durch? ──────────────────────────────────
 async function stripeStatus(sessionId) {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = stripeKey();
   if (!key) return { fallback: true };
   const id = String(sessionId || "");
   if (!/^cs_[A-Za-z0-9_]+$/.test(id)) return { error: "Ungültige Sitzung." };
@@ -186,11 +248,10 @@ async function stripeStatus(sessionId) {
 }
 
 // ── GoCardless: einmalige SEPA-Zahlung ───────────────────────────────────────
-async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin }) {
-  const token = process.env.GOCARDLESS_ACCESS_TOKEN;
+async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId }) {
+  const token = gcToken();
   if (!token) return { fallback: true };
-  const env = (process.env.GOCARDLESS_ENVIRONMENT || "sandbox").toLowerCase();
-  const host = env === "live" ? "https://api.gocardless.com" : "https://api-sandbox.gocardless.com";
+  const host = gcHost(token);
   const headers = {
     Authorization: `Bearer ${token}`,
     "GoCardless-Version": "2015-07-06",
@@ -212,8 +273,10 @@ async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin }) {
         },
         metadata: {
           typ: "teile",
-          vin: String(vin || "").slice(0, 40),
-          positionen: positionen.map((p) => `${p.quantity}x${p.articleNumber}`).join("|").slice(0, 490),
+          // GoCardless erlaubt höchstens 3 Metadaten-Felder.
+          user_id: String(userId || ""),
+          positionen: [vin ? `FIN ${String(vin).slice(0, 20)}` : "", ...positionen.map((p) => `${p.quantity}x${p.articleNumber}`)]
+            .filter(Boolean).join("|").slice(0, 490),
         },
       },
     }),
@@ -243,6 +306,10 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     for (const [k, v] of Object.entries(CORS)) res.setHeader(k, v);
     return res.status(204).end();
+  }
+  // Welche Zahlarten sind eingerichtet? Nur ja/nein — keine Schlüssel.
+  if (req.method === "GET") {
+    return send(res, 200, { karte: !!stripeKey(), sepa: !!gcToken() });
   }
   if (req.method !== "POST") return send(res, 405, { error: "Method not allowed" });
 
@@ -289,6 +356,7 @@ export default async function handler(req, res) {
   try {
     let level;
     let email;
+    let userId = "";
     if (theke) {
       // Preisstufe und E-Mail DES KUNDEN — nicht die von Alex' Konto.
       level = theke.stufe;
@@ -297,6 +365,7 @@ export default async function handler(req, res) {
       const konto = await stufeErmitteln(req.headers.authorization);
       level = konto.level;
       email = konto.email || String(emailAusFormular || "").trim();
+      userId = konto.userId || "";
     }
     const pct = STUFEN[level] || 0;
 
@@ -336,7 +405,26 @@ export default async function handler(req, res) {
       return send(res, 409, { error: "Der Betrag ist zu hoch für die Online-Zahlung — bitte ruf uns an." });
     }
 
-    const arg = { positionen, summe, email, fahrzeug: vehicleLabel, vin, theke };
+    // Zahlungsgrenze — nicht an der Theke: dort steht Alex selbst daneben.
+    if (!theke) {
+      const tage = await bezahlteTage(userId);
+      const stamm = tage >= STAMM_AB_TAGEN;
+      const grenze = stamm ? LIMIT_STAMM() : LIMIT_NEU();
+      if (summe > grenze) {
+        const text = stamm
+          ? `Online geht es bis ${euro(grenze)}. Diese Bestellung schick uns bitte als Anfrage oder ruf an: 0202 82690.`
+          : `Als Neukunde kannst du online bis ${euro(grenze)} bezahlen. Nach ${STAMM_AB_TAGEN} bezahlten Bestellungen an ` +
+            `${STAMM_AB_TAGEN} verschiedenen Tagen geht es bis ${euro(LIMIT_STAMM())}` +
+            (userId ? ` (bisher: ${tage} von ${STAMM_AB_TAGEN})` : " — dafür bitte mit Kundenkonto bestellen") +
+            `. Diese Bestellung schick uns bitte als Anfrage oder ruf an: 0202 82690.`;
+        return send(res, 409, {
+          error: text,
+          grenze: { betrag: grenze, tage, noetig: STAMM_AB_TAGEN, stammBetrag: LIMIT_STAMM() },
+        });
+      }
+    }
+
+    const arg = { positionen, summe, email, fahrzeug: vehicleLabel, vin, theke, userId };
     const ergebnis = method === "stripe" ? await stripeSession(arg) : await gocardlessFlow(arg);
 
     if (ergebnis.fallback) {

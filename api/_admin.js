@@ -5,6 +5,7 @@
 //
 // Zwei Schlüssel, BEIDE Pflicht:
 //   1. gültige Supabase-Sitzung eines Admin-Kontos   (Header Authorization)
+//      — Mail in der Liste UND app_metadata.rolle = "admin"
 //   2. der Admin-PIN                                  (Header x-admin-pin)
 //
 // Warum beides: Das Repo ist öffentlich — die Admin-Mails stehen im Code.
@@ -82,6 +83,12 @@ export async function adminPruefen(req) {
   const bestaetigt = !!user?.email_confirmed_at;
   if (!user?.id || !mail || !bestaetigt || !ADMIN_EMAILS.includes(mail)) {
     return { ok: false, status: 403, error: "Kein Admin-Zugang." };
+  }
+  // Rolle aus app_metadata — die kann kein Nutzer selbst setzen, nur die
+  // SQL-Datei supabase/migrations/20260921_… (einmal im SQL-Editor ausführen).
+  // Damit reicht ein nachgemachtes Konto mit Alex' Mail-Adresse nicht mehr.
+  if (user?.app_metadata?.rolle !== "admin") {
+    return { ok: false, status: 403, error: "Admin-Rolle fehlt — bitte die SQL-Datei in Supabase ausführen." };
   }
 
   if (!gleich(kopf(req, "x-admin-pin"), soll)) {
