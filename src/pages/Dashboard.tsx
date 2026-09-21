@@ -41,6 +41,7 @@ import Teileportal from "@/pages/Teileportal";
 import { useProducts } from "@/hooks/useProducts";
 import { useAuth, type Vehicle } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { EMPFEHLUNGS_PROZENT, provisionFuer } from "../../shared/empfehlung.js";
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useCartStore } from "@/stores/cartStore";
 import { getOrders, type Order } from "@/lib/orders";
@@ -623,7 +624,7 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
         <div>
           <h2 className="text-xl font-display font-bold text-white mb-1">Empfehle Kollegen — verdiene mit</h2>
           <p className="text-white/55 text-sm leading-relaxed">
-            Du verdienst <strong className="text-primary">20% vom Einkaufsumsatz</strong> jedes Kunden, den du über deinen persönlichen Link zu Alex Autoshop bringst —
+            Du verdienst <strong className="text-primary">{EMPFEHLUNGS_PROZENT}&nbsp;% vom Einkaufsumsatz</strong> jedes Kunden, den du über deinen persönlichen Link zu Alex Autoshop bringst —
             egal ob Lackierer, Karosseriebetrieb, Aufbereiter, KFZ-Werkstatt, Händler oder Hobby-Bastler.
             Alles automatisch — du musst nichts tun außer deinen Link teilen.
           </p>
@@ -637,7 +638,7 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
           <p className={cn("text-4xl font-display font-bold", credit > 0 ? "text-primary" : "text-foreground")}>
             {credit.toFixed(2).replace(".", ",")} €
           </p>
-          <p className="text-xs text-muted-foreground mt-2">Wird bei deiner nächsten Bestellung automatisch angerechnet</p>
+          <p className="text-xs text-muted-foreground mt-2">Wir verrechnen es mit deiner nächsten Bestellung — sag einfach Bescheid.</p>
         </div>
         <div className="card-tilt hover:translate-y-0 p-6">
           <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">Empfohlene Kollegen</p>
@@ -681,8 +682,8 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
             {
               step: "3",
               icon: <TrendingUp className="w-4 h-4 text-primary" />,
-              title: "Du verdienst 20% — dauerhaft",
-              desc: "Von jedem Euro, den dein Kollege bei Alex Autoshop einkauft, bekommst du 20% als Guthaben auf dein Konto. Unbegrenzt, ohne Limit.",
+              title: `Du verdienst ${EMPFEHLUNGS_PROZENT}\u00a0% — dauerhaft`,
+              desc: `Von jedem Euro, den dein Kollege bei Alex Autoshop einkauft, bekommst du ${EMPFEHLUNGS_PROZENT}\u00a0% als Guthaben auf dein Konto. Unbegrenzt, ohne Limit.`,
             },
           ].map(({ step, icon, title, desc }) => (
             <div key={step} className="flex gap-4">
@@ -714,12 +715,10 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
               </tr>
             </thead>
             <tbody>
-              {[
-                { spend: "500 €", earn: "100 €" },
-                { spend: "1.500 €", earn: "300 €" },
-                { spend: "3.000 €", earn: "600 €" },
-                { spend: "5.000 €", earn: "1.000 €" },
-              ].map(({ spend, earn }, i) => (
+              {[500, 1500, 3000, 5000].map((betrag) => ({
+                spend: `${betrag.toLocaleString("de-DE")} €`,
+                earn: `${provisionFuer(betrag).toLocaleString("de-DE")} €`,
+              })).map(({ spend, earn }, i) => (
                 <tr key={spend} className={cn("border-b border-border last:border-0", i % 2 === 0 ? "bg-background" : "bg-secondary/20")}>
                   <td className="px-4 py-3 font-medium">{spend}</td>
                   <td className="px-4 py-3 text-right font-bold text-primary">+{earn}</td>
@@ -738,7 +737,7 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
         <div className="rounded-xl border border-primary/20 bg-primary/5 px-5 py-4">
           <p className="text-sm text-muted-foreground">
             Du wurdest von einem Kollegen empfohlen (Code: <span className="font-mono text-foreground">{profile.referred_by}</span>).
-            Dein Kollege verdient 20% von deinen Einkäufen.
+            Dein Kollege verdient {EMPFEHLUNGS_PROZENT}&nbsp;% von deinen Einkäufen.
           </p>
         </div>
       )}

@@ -27,7 +27,7 @@ export interface CompanyProfile {
   trial_used?: boolean;        // Ob Trial jemals gestartet wurde (einmalig)
   // Affiliate
   referral_code?: string;      // Eindeutiger Referral-Code des Users
-  affiliate_credit?: number;   // Gesamtes Guthaben in € (20% vom Umsatz der Empfohlenen)
+  affiliate_credit?: number;   // Guthaben in € (Anteil vom Umsatz der Empfohlenen, Satz: shared/empfehlung.js)
   referred_by?: string;        // Referral-Code des Users, der diesen User empfohlen hat
   // Zahlung / Express-Kauf
   iban?: string;               // IBAN für SEPA-Lastschrift / Express-Kauf

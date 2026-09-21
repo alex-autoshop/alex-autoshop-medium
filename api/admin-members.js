@@ -55,6 +55,30 @@ export default async function handler(req, res) {
     return send(res, 500, { error: 'SUPABASE_SERVICE_ROLE_KEY fehlt in den Umgebungsvariablen.' });
   }
 
+  // ── Empfehlungs-Guthaben von Hand ändern ───────────────────────────────────
+  // Laden- und Shop-Einkäufe gutschreiben (+), eingelöstes Guthaben abziehen (−).
+  // Nie unter 0 — das rechnet die Supabase-Funktion guthaben_aendern.
+  if (req.method === 'POST') {
+    let body = req.body;
+    if (typeof body === 'string') { try { body = JSON.parse(body || '{}'); } catch { body = {}; } }
+    const ziel = String(body?.userId || '');
+    const betrag = Math.round(Number(body?.betrag) * 100) / 100;
+    if (body?.aktion !== 'guthaben' || !/^[0-9a-f-]{36}$/i.test(ziel) || !betrag || Math.abs(betrag) > 10000) {
+      return send(res, 400, { error: 'Ungültige Angaben.' });
+    }
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/guthaben_aendern`, {
+        method: 'POST',
+        headers: { apikey: SVC, Authorization: `Bearer ${SVC}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ziel, betrag }),
+      });
+      if (!r.ok) return send(res, 502, { error: 'Guthaben konnte nicht geändert werden — SQL-Datei in Supabase ausgeführt?' });
+      return send(res, 200, { guthaben: Number(await r.json()) || 0 });
+    } catch (e) {
+      return send(res, 500, { error: String(e?.message || e).slice(0, 200) });
+    }
+  }
+
   try {
     // 1) Alle Konten (Admin-API, seitenweise)
     const users = [];

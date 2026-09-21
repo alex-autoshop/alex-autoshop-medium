@@ -21,6 +21,7 @@ export const config = { runtime: 'edge' };
 
 import { mitgliedsbeitrag, MODULE } from '../shared/mitgliedspreise.js';
 import { internPruefen } from './_intern.js';
+import { EMPFEHLUNGS_PROZENT } from '../shared/empfehlung.js';
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
 const REF_OK = /^[A-Z0-9]{6,8}$/;
@@ -440,7 +441,7 @@ function buildAffiliateEmail({ email, level, memberNo, referralCode }) {
   <tr><td style="background:linear-gradient(135deg,#0e1008 0%,#111108 50%,${B.night} 100%);padding:44px 40px 36px;text-align:center;border-bottom:2px solid ${B.gold};">
     <p style="color:${B.gold};font-size:10px;letter-spacing:3.5px;text-transform:uppercase;margin:0 0 12px;font-family:${B.fontBody};">Exklusiv für Mitglieder</p>
     <h1 style="color:#ffffff;font-size:32px;font-weight:900;margin:0 0 10px;letter-spacing:-1.5px;font-family:${B.fontHead};">Empfehle Kollegen.<br>Verdiene mit jedem Euro den sie ausgeben.</h1>
-    <p style="color:${B.textMuted};font-size:15px;margin:0;font-family:${B.fontBody};">20% vom Einkaufsumsatz deiner empfohlenen Lackier-Freunde — direkt auf dein Guthaben.</p>
+    <p style="color:${B.textMuted};font-size:15px;margin:0;font-family:${B.fontBody};">${EMPFEHLUNGS_PROZENT} % vom Einkaufsumsatz deiner empfohlenen Lackier-Freunde — direkt auf dein Guthaben.</p>
   </td></tr>
 
   <!-- REFERRAL-LINK -->
@@ -462,7 +463,7 @@ function buildAffiliateEmail({ email, level, memberNo, referralCode }) {
       ${[
         { step: '1', title: 'Link teilen', desc: 'Schick deinen Link an Kollegen, Bekannte aus der Branche oder poste ihn in deinen Gruppen.' },
         { step: '2', title: 'Kollege wird Mitglied', desc: 'Dein Kollege meldet sich über deinen Link an und wird Alex Autoshop Mitglied.' },
-        { step: '3', title: 'Du verdienst 20%', desc: 'Von jedem Euro, den dein Kollege bei uns einkauft, bekommst du 20% als Guthaben gutgeschrieben — automatisch, dauerhaft.' },
+        { step: '3', title: `Du verdienst ${EMPFEHLUNGS_PROZENT} %`, desc: `Von jedem Euro, den dein Kollege bei uns einkauft, bekommst du ${EMPFEHLUNGS_PROZENT} % als Guthaben gutgeschrieben — dauerhaft.` },
       ].map(({ step, title, desc }) => `
       <tr>
         <td style="vertical-align:top;padding:0 16px 20px 0;width:44px;">
@@ -738,7 +739,7 @@ export default async function handler(req) {
       from:         FROM_EMAIL,
       reply_to:     REPLY_TO,
       to:           [email],
-      subject:      '💸 Dein Referral-Link — verdiene 20% vom Umsatz deiner Kollegen',
+      subject:      `💸 Dein Referral-Link — verdiene ${EMPFEHLUNGS_PROZENT} % vom Umsatz deiner Kollegen`,
       html:         buildAffiliateEmail({ email, level, memberNo, referralCode }),
       scheduled_at: affiliateAt,
     }),

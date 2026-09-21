@@ -15,7 +15,8 @@
 -- "app_metadata". Die kann ausschließlich der Server bzw. dieser Editor
 -- schreiben, nie der Nutzer selbst.
 --
--- Neu seit 22.09.: Empfehlungslinks werden ausgewertet (Abschnitt 5b).
+-- Neu seit 22.09.: Empfehlungslinks werden ausgewertet (Abschnitt 5b),
+-- Empfehlungs-Guthaben wird gebucht (Abschnitt 5c).
 --
 -- Unten kommt am Ende eine Liste aller Mitglieder — bitte kurz durchsehen.
 -- ===========================================================================
@@ -241,6 +242,89 @@ $$;
 
 revoke all on function public.meine_empfehlungen() from public, anon;
 grant execute on function public.meine_empfehlungen() to authenticated;
+
+
+-- 5c) EMPFEHLUNGS-GUTHABEN BUCHEN ------------------------------------------
+-- Bezahlt ein geworbener Kunde online in der Teilebörse, bekommt sein Werber
+-- automatisch einen Anteil als Guthaben (Satz: shared/empfehlung.js).
+-- Jede Zahlung wird höchstens EINMAL gutgeschrieben — Webhooks können
+-- mehrfach kommen. Platzt eine Lastschrift, wird die Gutschrift abgezogen.
+alter table public.teile_zahlungen add column if not exists provision numeric(10,2);
+alter table public.teile_zahlungen add column if not exists provision_werber uuid;
+alter table public.teile_zahlungen add column if not exists provision_storniert boolean not null default false;
+
+create or replace function public.provision_buchen(p_extern_id text, p_satz numeric)
+returns text
+language plpgsql security definer set search_path = public, auth
+as $$
+declare
+  z public.teile_zahlungen%rowtype;
+  w_id uuid;
+  v_provision numeric(10,2);
+begin
+  if p_satz is null or p_satz < 0 or p_satz > 0.3 then return 'satz_ungueltig'; end if;
+  select * into z from public.teile_zahlungen where extern_id = p_extern_id for update;
+  if not found then return 'keine_zahlung'; end if;
+
+  if z.status = 'bezahlt' and z.provision is null then
+    select (raw_app_meta_data ->> 'referred_by_id')::uuid into w_id
+    from auth.users where id = z.user_id and (raw_app_meta_data ->> 'referred_by_id') ~ '^[0-9a-f-]{36}$';
+    if w_id is null or w_id = z.user_id then
+      update public.teile_zahlungen set provision = 0 where id = z.id;
+      return 'kein_werber';
+    end if;
+    v_provision := round(z.betrag * p_satz, 2);
+    update auth.users
+    set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object(
+      'affiliate_credit',
+      round(coalesce(case when (raw_app_meta_data ->> 'affiliate_credit') ~ '^-?[0-9]+(\.[0-9]+)?$'
+                          then (raw_app_meta_data ->> 'affiliate_credit')::numeric end, 0) + v_provision, 2))
+    where id = w_id;
+    update public.teile_zahlungen set provision = v_provision, provision_werber = w_id where id = z.id;
+    return 'gutgeschrieben';
+  end if;
+
+  if z.status = 'fehlgeschlagen' and coalesce(z.provision, 0) > 0 and not z.provision_storniert then
+    update auth.users
+    set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object(
+      'affiliate_credit',
+      greatest(0, round(coalesce(case when (raw_app_meta_data ->> 'affiliate_credit') ~ '^-?[0-9]+(\.[0-9]+)?$'
+                                      then (raw_app_meta_data ->> 'affiliate_credit')::numeric end, 0) - z.provision, 2)))
+    where id = z.provision_werber;
+    update public.teile_zahlungen set provision_storniert = true where id = z.id;
+    return 'storniert';
+  end if;
+
+  return 'nichts_zu_tun';
+end;
+$$;
+
+-- Guthaben von Hand ändern (Admin-Liste: Laden-/Shop-Einkäufe gutschreiben,
+-- eingelöstes Guthaben abziehen). Nie unter 0. Gibt den neuen Stand zurück.
+create or replace function public.guthaben_aendern(ziel uuid, betrag numeric)
+returns numeric
+language plpgsql security definer set search_path = public, auth
+as $$
+declare
+  neu numeric(10,2);
+begin
+  if betrag is null or abs(betrag) > 10000 then raise exception 'Betrag ungültig'; end if;
+  update auth.users
+  set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object(
+    'affiliate_credit',
+    greatest(0, round(coalesce(case when (raw_app_meta_data ->> 'affiliate_credit') ~ '^-?[0-9]+(\.[0-9]+)?$'
+                                    then (raw_app_meta_data ->> 'affiliate_credit')::numeric end, 0) + betrag, 2)))
+  where id = ziel
+  returning (raw_app_meta_data ->> 'affiliate_credit')::numeric into neu;
+  if neu is null then raise exception 'Konto nicht gefunden'; end if;
+  return neu;
+end;
+$$;
+
+revoke all on function public.provision_buchen(text, numeric) from public, anon, authenticated;
+revoke all on function public.guthaben_aendern(uuid, numeric) from public, anon, authenticated;
+grant execute on function public.provision_buchen(text, numeric) to service_role;
+grant execute on function public.guthaben_aendern(uuid, numeric) to service_role;
 
 
 -- 6) ZUM DURCHSEHEN: Mitglieder, Admins und bisheriges Guthaben -----------

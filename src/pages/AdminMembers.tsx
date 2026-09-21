@@ -106,6 +106,27 @@ export default function AdminMembers() {
 
   useEffect(() => { if (pin) load(pin); }, [pin]);
 
+  // Empfehlungs-Guthaben ändern: "+12,50" gutschreiben, "-20" abziehen
+  const [guthabenText, setGuthabenText] = useState<Record<string, string>>({});
+  const [guthabenBusy, setGuthabenBusy] = useState<string | null>(null);
+  const guthabenAendern = async (m: Member) => {
+    const betrag = Number(String(guthabenText[m.id] || "").replace(/\s|€/g, "").replace(",", "."));
+    if (!pin || !Number.isFinite(betrag) || betrag === 0) return;
+    setGuthabenBusy(m.id);
+    try {
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const r = await fetch("/api/admin-members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-pin": pin, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ aktion: "guthaben", userId: m.id, betrag }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setError(j.error || `Fehler ${r.status}`); return; }
+      setData((d) => d && { ...d, members: d.members.map((x) => (x.id === m.id ? { ...x, affiliateCredit: Number(j.guthaben) || 0 } : x)) });
+      setGuthabenText((t) => ({ ...t, [m.id]: "" }));
+    } finally { setGuthabenBusy(null); }
+  };
+
   const list = useMemo(() => {
     if (!data) return [];
     const s = q.trim().toLowerCase();
@@ -253,7 +274,22 @@ export default function AdminMembers() {
                     <p className="text-muted-foreground">letzte: {datum(m.lastOrder)}</p>
                     <p className="text-muted-foreground">Code: {m.referralCode || "—"}{m.referredBy ? ` · geworben von ${m.referredBy}` : ""}</p>
                     {!!m.geworben && <p className="text-muted-foreground">hat {m.geworben} Kollegen geworben</p>}
-                    {m.affiliateCredit > 0 && <p className="text-primary font-semibold">Guthaben {eur(m.affiliateCredit)}</p>}
+                    <p className={cn("font-semibold", m.affiliateCredit > 0 ? "text-primary" : "text-muted-foreground")}>Guthaben {eur(m.affiliateCredit)}</p>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <input
+                        value={guthabenText[m.id] ?? ""}
+                        onChange={(e) => setGuthabenText((t) => ({ ...t, [m.id]: e.target.value }))}
+                        onKeyDown={(e) => e.key === "Enter" && guthabenAendern(m)}
+                        placeholder="+10 oder -5"
+                        aria-label={`Guthaben von ${m.email} ändern`}
+                        inputMode="decimal"
+                        className="w-24 rounded-lg border border-border bg-background px-2 py-1 text-xs"
+                      />
+                      <button onClick={() => guthabenAendern(m)} disabled={guthabenBusy === m.id}
+                        className="rounded-lg border border-border px-2 py-1 text-xs font-semibold hover:bg-secondary disabled:opacity-50">
+                        {guthabenBusy === m.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Guthaben ändern"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

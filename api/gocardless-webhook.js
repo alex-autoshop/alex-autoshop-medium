@@ -10,6 +10,7 @@
 export const config = { runtime: "edge" };
 
 import { activateMembership } from "./_activate-membership.js";
+import { EMPFEHLUNGS_PROZENT } from "../shared/empfehlung.js";
 
 // ── Teile-Zahlungen für die Zahlungsgrenze festhalten (nur Server) ──────────
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co").replace(/\/+$/, "");
@@ -27,6 +28,20 @@ async function zahlungSpeichern(zeile) {
     body: JSON.stringify(zeile),
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }));
   if (!r.ok) console.error("[zahlung] speichern fehlgeschlagen:", r.status, (await r.text()).slice(0, 200));
+}
+
+// Empfehlungs-Guthaben: bezahlt ein geworbener Kunde, bekommt sein Werber
+// automatisch seinen Anteil. Einmal je Zahlung (SQL prüft das), bei einer
+// geplatzten Zahlung wird die Gutschrift wieder abgezogen.
+async function provisionBuchen(externId) {
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!svc || !externId) return;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/provision_buchen`, {
+    method: "POST",
+    headers: { apikey: svc, Authorization: `Bearer ${svc}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_extern_id: externId, p_satz: EMPFEHLUNGS_PROZENT / 100 }),
+  }).catch(() => null);
+  if (r && !r.ok) console.error("[provision] fehlgeschlagen:", r.status);
 }
 
 async function zahlungStatus(externId, status) {
@@ -157,8 +172,8 @@ export default async function handler(req) {
       // Teile-Zahlungen: erst eingezogen zählt sie für die Zahlungsgrenze
       if (ev.resource_type === "payments") {
         const id = ev.links?.payment;
-        if (["confirmed", "paid_out"].includes(ev.action)) await zahlungStatus(id, "bezahlt");
-        if (["failed", "cancelled", "charged_back", "late_failure_settled"].includes(ev.action)) await zahlungStatus(id, "fehlgeschlagen");
+        if (["confirmed", "paid_out"].includes(ev.action)) { await zahlungStatus(id, "bezahlt"); await provisionBuchen(id); }
+        if (["failed", "cancelled", "charged_back", "late_failure_settled"].includes(ev.action)) { await zahlungStatus(id, "fehlgeschlagen"); await provisionBuchen(id); }
       }
     } catch (e) {
       console.error("[gocardless-webhook] event error:", e.message);
