@@ -70,9 +70,11 @@ function readProfile(user: User | null): CompanyProfile {
     trial_expires_at: typeof a.trial_expires_at === "string" ? a.trial_expires_at : undefined,
     trial_used: a.trial_used === true,
     // Affiliate
-    referral_code: m.referral_code,
-    affiliate_credit: typeof m.affiliate_credit === "number" ? m.affiliate_credit : 0,
-    referred_by: m.referred_by,
+    // Empfehlungen ebenfalls nur aus app_metadata: Guthaben und "geworben von"
+    // darf kein Nutzer selbst eintragen.
+    referral_code: typeof a.referral_code === "string" ? a.referral_code : undefined,
+    affiliate_credit: Number(a.affiliate_credit) > 0 ? Number(a.affiliate_credit) : 0,
+    referred_by: typeof a.referred_by === "string" ? a.referred_by : undefined,
     // Zahlung / Express-Kauf
     iban: m.iban,
     bic: m.bic,

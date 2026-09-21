@@ -6,6 +6,9 @@
 -- dass die alte Website damit weiterläuft — nichts geht kaputt, wenn der
 -- Upload erst ein paar Minuten später kommt.
 --
+-- Mehrfach ausführen ist ausdrücklich in Ordnung (z.B. wenn eine neuere
+-- Fassung dieser Datei kommt): alles prüft vorher, ob es schon da ist.
+--
 -- WARUM: Die Mitgliedsstufe stand in "user_metadata". Die darf jeder Nutzer
 -- selbst ändern (eine Zeile in der Browser-Konsole) — und hatte dann Level 3:
 -- 40 % Rabatt und Alex' private Handynummer. Ab jetzt zählt nur noch
@@ -41,6 +44,29 @@ update auth.users
 set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"trial_used": true}'::jsonb
 where (raw_user_meta_data ->> 'trial_used') = 'true'
   and (raw_app_meta_data ->> 'trial_used') is null;
+
+
+-- 2b) EMPFEHLUNGEN: Code und "geworben von" übernehmen, Guthaben NICHT --------
+-- Das Guthaben hat die Website nie selbst gutgeschrieben — ein Betrag über
+-- 0 € kam also von Hand (von dir) oder vom Nutzer selbst. Darum startet es
+-- in app_metadata bei 0; die Liste am Ende zeigt die bisherigen Beträge,
+-- und wer zu Recht Guthaben hat, bekommt es mit einer Zeile zurück.
+update auth.users
+set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
+    || case
+         when (raw_user_meta_data ->> 'referral_code') is not null
+          and (raw_app_meta_data ->> 'referral_code') is null
+         then jsonb_build_object('referral_code', raw_user_meta_data ->> 'referral_code')
+         else '{}'::jsonb
+       end
+    || case
+         when (raw_user_meta_data ->> 'referred_by') is not null
+          and (raw_app_meta_data ->> 'referred_by') is null
+         then jsonb_build_object('referred_by', raw_user_meta_data ->> 'referred_by')
+         else '{}'::jsonb
+       end
+where (raw_user_meta_data ->> 'referral_code') is not null
+   or (raw_user_meta_data ->> 'referred_by') is not null;
 
 
 -- 3) ANFRAGEN: Nutzer dürfen ihre Anfrage nicht selbst "annehmen" ------------
@@ -135,7 +161,7 @@ create policy "zahlungen lesen eigene" on public.teile_zahlungen
   for select using (auth.uid() = user_id);
 
 
--- 6) ZUM DURCHSEHEN: alle Mitglieder mit Stufe ------------------------------
+-- 6) ZUM DURCHSEHEN: Mitglieder, Admins und bisheriges Guthaben -----------
 -- "ueber_anfrage = false" heißt: diese Stufe wurde NICHT über das Postfach
 -- freigeschaltet. Das kann ein Mitglied sein, das du von Hand eingetragen
 -- hast — oder jemand, der sich die Stufe selbst gegeben hat. Kennst du ein
@@ -143,18 +169,31 @@ create policy "zahlungen lesen eigene" on public.teile_zahlungen
 --
 --   update auth.users set raw_app_meta_data = raw_app_meta_data || '{"membership_level": 0}'::jsonb
 --   where email = 'name@beispiel.de';
+--
+-- "guthaben_bisher" = Betrag, der bisher im Profil stand (und dort von jedem
+-- selbst änderbar war). Hat jemand das Guthaben zu Recht, so zurückgeben:
+--
+--   update auth.users set raw_app_meta_data = raw_app_meta_data || '{"affiliate_credit": 25}'::jsonb
+--   where email = 'name@beispiel.de';
 select
   u.email,
-  (u.raw_app_meta_data ->> 'membership_level')::int as stufe,
+  case when (u.raw_app_meta_data ->> 'membership_level') ~ '^[1-3]$'
+       then (u.raw_app_meta_data ->> 'membership_level')::int end as stufe,
   exists (
     select 1 from public.membership_requests m
     where m.user_id = u.id and m.status = 'accepted'
+      and (u.raw_app_meta_data ->> 'membership_level') ~ '^[1-3]$'
       and m.level = (u.raw_app_meta_data ->> 'membership_level')::int
   ) as ueber_anfrage,
+  case when (u.raw_user_meta_data ->> 'affiliate_credit') ~ '^[0-9]+(\.[0-9]+)?$'
+        and (u.raw_user_meta_data ->> 'affiliate_credit')::numeric > 0
+       then (u.raw_user_meta_data ->> 'affiliate_credit')::numeric end as guthaben_bisher,
   (u.raw_app_meta_data ->> 'rolle') as rolle,
   u.created_at::date as angelegt,
   u.last_sign_in_at::date as zuletzt_da
 from auth.users u
 where (u.raw_app_meta_data ->> 'membership_level') ~ '^[1-3]$'
    or (u.raw_app_meta_data ->> 'rolle') = 'admin'
-order by ueber_anfrage, stufe desc, u.created_at desc;
+   or ((u.raw_user_meta_data ->> 'affiliate_credit') ~ '^[0-9]+(\.[0-9]+)?$'
+       and (u.raw_user_meta_data ->> 'affiliate_credit')::numeric > 0)
+order by ueber_anfrage, stufe desc nulls last, u.created_at desc;

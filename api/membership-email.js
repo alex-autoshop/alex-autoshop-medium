@@ -501,6 +501,10 @@ export default async function handler(req) {
             modules,
             member_no:    memberNo,
             role:         'member',
+          },
+          // Empfehlungscode und Guthaben dorthin, wo der Nutzer sie NICHT
+          // selbst ändern kann (user_metadata ist vom Browser aus beschreibbar).
+          app_metadata: {
             referral_code: referralCode,
             affiliate_credit: 0,
           },

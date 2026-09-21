@@ -103,9 +103,10 @@ export default async function handler(req, res) {
         trialLevel: a.trial_level ?? null,
         trialExpires,
         trialActive,
-        referralCode: m.referral_code || '',
-        referredBy: m.referred_by || '',
-        affiliateCredit: Number(m.affiliate_credit) || 0,
+        // Empfehlungsdaten nur aus app_metadata (vom Nutzer nicht änderbar)
+        referralCode: a.referral_code || '',
+        referredBy: a.referred_by || '',
+        affiliateCredit: Number(a.affiliate_credit) || 0,
         sepa: !!m.sepa_mandate_accepted,
         createdAt: u.created_at,
         lastSignIn: u.last_sign_in_at || null,
