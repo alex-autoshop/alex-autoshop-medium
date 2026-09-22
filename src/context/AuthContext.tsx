@@ -47,6 +47,12 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (profile: CompanyProfile) => Promise<{ error?: string }>;
+  /** Passwort vergessen: schickt den Link zum Zurücksetzen per E-Mail. */
+  resetPassword: (email: string) => Promise<{ error?: string }>;
+  /** Neues Passwort setzen — nach dem Klick auf den Link aus der E-Mail. */
+  updatePassword: (password: string) => Promise<{ error?: string }>;
+  /** true, solange der Besucher über einen Passwort-Link hereingekommen ist. */
+  recovery: boolean;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -89,6 +95,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  // Klick auf "Passwort vergessen"-Link: Supabase meldet PASSWORD_RECOVERY.
+  // Zusätzlich steht es in der Adresse (#type=recovery) — falls die Meldung
+  // kommt, bevor irgendwer zuhört.
+  const [recovery, setRecovery] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return /type=recovery/.test(window.location.hash) || /neues-passwort/.test(window.location.search);
+  });
 
   useEffect(() => {
     if (!supabase) {
@@ -105,9 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase!.auth.getUser().then(({ data: frisch }) => { if (frisch.user) setUser(frisch.user); }).catch(() => {});
       }
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -163,6 +177,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase?.auth.signOut();
   };
 
+  /**
+   * Passwort vergessen. Supabase schickt die E-Mail; der Link führt zurück auf
+   * /konto, wo das neue Passwort gesetzt wird. Wichtig: Es wird NIE verraten,
+   * ob es zu der Adresse ein Konto gibt — sonst könnte man Kundenadressen
+   * abklopfen. Supabase antwortet deshalb auch bei Unbekannten mit "ok".
+   */
+  const resetPassword: AuthState["resetPassword"] = async (email) => {
+    if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
+    const ziel = `${window.location.origin}/konto?neues-passwort=1`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: ziel });
+    return error ? { error: error.message } : {};
+  };
+
+  /** Neues Passwort setzen — geht nur mit gültigem Link aus der E-Mail. */
+  const updatePassword: AuthState["updatePassword"] = async (password) => {
+    if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
+    const { data, error } = await supabase.auth.updateUser({ password });
+    if (error) return { error: error.message };
+    if (data.user) setUser(data.user);
+    setRecovery(false);
+    return {};
+  };
+
   const updateProfile: AuthState["updateProfile"] = async (profile) => {
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const { data, error } = await supabase.auth.updateUser({ data: profile });
@@ -183,6 +220,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         updateProfile,
+        resetPassword,
+        updatePassword,
+        recovery,
       }}
     >
       {children}
