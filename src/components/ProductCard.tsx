@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Minus, Plus, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
@@ -13,6 +13,27 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
   const addItem = useCartStore((s) => s.addItem);
   const [qty, setQty] = useState(1);
   const [showPrices, setShowPrices] = useState(false);
+
+  /**
+   * Mengenwähler und "Hinzufügen" nebeneinander brauchen zusammen rund 270 px.
+   * Wie breit die Karte wirklich ist, hängt von der Seite ab (Shop: 5 Spalten,
+   * Startseite enger). Fester Breakpoint reicht deshalb nicht — bei schmalen
+   * Karten wurde der Knopf am Kartenrand abgeschnitten. Jetzt misst die Karte
+   * sich selbst: zu eng → Knopf kommt unter den Mengenwähler.
+   */
+  const reihe = useRef<HTMLDivElement | null>(null);
+  const [breite, setBreite] = useState(999);
+  useEffect(() => {
+    const el = reihe.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const beobachter = new ResizeObserver(([e]) => setBreite(e.contentRect.width));
+    beobachter.observe(el);
+    return () => beobachter.disconnect();
+  }, []);
+  /** Ab hier passt nebeneinander nur noch ohne Symbol und mit schmalem Zähler. */
+  const knapp = breite < 272;
+  /** Und ab hier gar nicht mehr — dann steht der Knopf unter dem Zähler. */
+  const eng = breite < 200;
 
   const node = product.node;
   const img = node.images?.edges?.[0]?.node?.url || PRODUCT_IMAGES[node.handle] || "";
@@ -104,18 +125,22 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
         {/* Menge + Hinzufügen */}
         <div className="mt-auto pt-1">
           {firstVariant?.availableForSale && !multiple ? (
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-              <div className="flex items-center justify-between border border-border rounded-lg shrink-0 lg:w-fit">
-                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-9 h-9 flex items-center justify-center hover:bg-secondary rounded-l-lg" aria-label="weniger">
+            <div ref={reihe} className={cn("flex gap-2", eng ? "flex-col" : "flex-row items-center")}>
+              <div className={cn("flex items-center border border-border rounded-lg shrink-0", eng ? "justify-between" : "w-fit")}>
+                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className={cn("h-9 flex items-center justify-center hover:bg-secondary rounded-l-lg", knapp && !eng ? "w-8" : "w-9")} aria-label="weniger">
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="w-8 text-center text-sm font-semibold">{qty}</span>
-                <button onClick={() => setQty((q) => q + 1)} className="w-9 h-9 flex items-center justify-center hover:bg-secondary rounded-r-lg" aria-label="mehr">
+                <span className={cn("text-center text-sm font-semibold", knapp && !eng ? "w-6" : "w-8")}>{qty}</span>
+                <button onClick={() => setQty((q) => q + 1)} className={cn("h-9 flex items-center justify-center hover:bg-secondary rounded-r-lg", knapp && !eng ? "w-8" : "w-9")} aria-label="mehr">
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <button onClick={add} className="btn-primary w-full lg:flex-1 text-sm min-h-[40px] whitespace-nowrap">
-                <ShoppingCart className="w-4 h-4 shrink-0" /> Hinzufügen
+              {/* Schmaler Innenabstand und min-w-0: der Knopf darf schrumpfen,
+                  statt aus der Karte zu laufen. Auf engen Karten fällt das
+                  Einkaufswagen-Symbol weg — die Beschriftung zählt mehr. */}
+              <button onClick={add} className={cn("btn-primary text-sm min-h-[40px] gap-1.5 min-w-0", knapp && !eng ? "px-2.5" : "px-3", eng ? "w-full" : "flex-1")}>
+                {(!knapp || eng) && <ShoppingCart className="w-4 h-4 shrink-0" />}
+                <span className="truncate">Hinzufügen</span>
               </button>
             </div>
           ) : (
