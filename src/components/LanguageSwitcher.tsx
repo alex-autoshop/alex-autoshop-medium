@@ -120,11 +120,11 @@ export function LanguageSwitcher({ tone = "dark" }: { tone?: "dark" | "light" })
           setOpen((v) => !v);
         }}
         className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 min-h-[44px] text-sm font-medium transition-colors ${triggerClass}`}
-        aria-label="Sprache wählen"
+        aria-label={`Sprache wählen — aktuell ${activeLang.label}`}
+        title={`Sprache: ${activeLang.label}`}
       >
         <Globe className="w-5 h-5" />
-        <span className="hidden sm:inline">{activeLang.flag}</span>
-        <span className="text-[11px] font-bold uppercase">{active === "zh-CN" ? "ZH" : active}</span>
+        <span className="text-base leading-none">{activeLang.flag}</span>
       </button>
 
       {open && (

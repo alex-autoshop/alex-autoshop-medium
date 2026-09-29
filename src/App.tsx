@@ -7,7 +7,6 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { MaterialPlannerWidget } from "@/components/MaterialPlannerWidget";
 import { CookieConsent } from "@/components/CookieConsent";
 
 const Home = lazy(() => import("@/pages/Home"));
@@ -94,7 +93,9 @@ export default function App() {
                   </Routes>
                 </main>
                 <Footer />
-                <MaterialPlannerWidget />
+                {/* Materialplaner-Fenster vorerst abgehaengt — das Symbol oben ist raus.
+                    Die Komponente liegt weiter unter components/MaterialPlannerWidget.tsx,
+                    im Dashboard bleibt der Reiter Materialplaner. Zurueckholen ist eine Zeile. */}
                 {/* Live-Chat vorerst abgehaengt — die Ecke bleibt leer.
                     Die Komponente liegt weiter unter components/LiveChatWidget.tsx
                     und die Admin-Seite unter /admin/chat: zurueckholen ist eine

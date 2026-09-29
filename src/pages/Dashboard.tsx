@@ -49,7 +49,7 @@ import { formatPrice } from "@/lib/shopify";
 import { MEMBERSHIP_LEVELS, moduleDiscounts, MEMBERSHIP_MODULE_KEYS, type MembershipModule } from "@/data/memberships";
 import { allCategories } from "@/lib/categories";
 import { whatsappLink } from "@/data/shopInfo";
-import { requestMembership, sendMessage } from "@/lib/inbox";
+import { requestMembership, sendMessage, ADMIN_EMAILS } from "@/lib/inbox";
 import { MembershipCards } from "@/components/MembershipCards";
 import { cn } from "@/lib/utils";
 import { HotlineCard } from "@/components/HotlineCard";
@@ -71,7 +71,12 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
 export default function Dashboard() {
   const { user, profile } = useAuth();
   const [params] = useSearchParams();
-  const initialTab = (params.get("tab") as Tab) || "overview";
+  // Nachrichten sind fuer Mitglieder abgeschaltet — nur das Admin-Konto
+  // sieht den Reiter, damit Mitgliedschafts-Anfragen weiter ankommen.
+  const istAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
+  const sichtbareTabs = TABS.filter((t) => t.id !== "inbox" || istAdmin);
+  const gewuenschterTab = (params.get("tab") as Tab) || "overview";
+  const initialTab = sichtbareTabs.some((t) => t.id === gewuenschterTab) ? gewuenschterTab : "overview";
   const [tab, setTab] = useState<Tab>(initialTab);
 
   const level = profile.membership_level ?? 0;
@@ -125,7 +130,7 @@ export default function Dashboard() {
 
       {/* Tab-Leiste */}
       <div className="flex gap-2 overflow-x-auto pb-3 mb-8 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
-        {TABS.map((t) => {
+        {sichtbareTabs.map((t) => {
           const isAffiliate = t.id === "affiliate";
           const isActive = tab === t.id;
           return (
@@ -162,7 +167,7 @@ export default function Dashboard() {
           <Teileportal />
         </div>
       )}
-      {tab === "inbox" && <Inbox />}
+      {tab === "inbox" && istAdmin && <Inbox />}
       {tab === "planner" && (
         <div className="max-w-2xl">
           <h2 className="text-2xl mb-2">Materialplaner</h2>

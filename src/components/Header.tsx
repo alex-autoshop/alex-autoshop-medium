@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut, Bell, ClipboardList } from "lucide-react";
+import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut } from "lucide-react";
 import { useCartStore } from "@/stores/cartStore";
 import { CartDrawer } from "@/components/CartDrawer";
-import { usePlannerStore } from "@/stores/plannerStore";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
-import { useUnread } from "@/hooks/useUnread";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +16,7 @@ const NAV: Array<{ to: string; label: string; href?: string; beta?: boolean }> =
   { to: "/laden", label: "Laden & Kontakt" },
 ];
 
-const NAV_BASE = "px-2 py-3 rounded-lg font-medium transition-colors min-h-[48px] flex items-center whitespace-nowrap shrink-0";
+const NAV_BASE = "px-3 py-3 rounded-lg font-medium transition-colors min-h-[48px] flex items-center whitespace-nowrap shrink-0";
 
 const BetaBadge = ({ className = "" }: { className?: string }) => (
   <span
@@ -39,10 +37,7 @@ export function Header() {
   const closeCart = useCartStore((s) => s.closeCart);
   const itemCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const { user, signOut } = useAuth();
-  const unread = useUnread();
   const navigate = useNavigate();
-  const togglePlanner = usePlannerStore((s) => s.togglePlanner);
-  const plannerCount = usePlannerStore((s) => s.items.filter((i) => !i.done).length);
 
   const handleLogout = async () => {
     await signOut();
@@ -59,7 +54,7 @@ export function Header() {
             <img src="/images/logo-cropped.png" alt="Alex Autoshop" className="h-11 sm:h-14 w-auto" />
           </Link>
 
-          <nav className="hidden xl:flex items-center">
+          <nav className="hidden xl:flex items-center gap-0.5">
             {NAV.map((item) =>
               item.href ? (
                 <a
@@ -91,15 +86,13 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-1 shrink-0">
-            {!user && (
-              <a
-                href={`tel:${SHOP_INFO.phoneIntl}`}
-                className="hidden 2xl:flex items-center gap-2 text-sm font-semibold text-white/75 hover:text-gold-bright transition-colors px-3 min-h-[48px] whitespace-nowrap"
-              >
-                <Phone className="w-4 h-4" />
-                {SHOP_INFO.phone}
-              </a>
-            )}
+            <a
+              href={`tel:${SHOP_INFO.phoneIntl}`}
+              className="hidden 2xl:flex items-center gap-2 text-sm font-semibold text-white/75 hover:text-gold-bright transition-colors px-3 min-h-[48px] whitespace-nowrap"
+            >
+              <Phone className="w-4 h-4" />
+              {SHOP_INFO.phone}
+            </a>
             {user ? (
               <div className="hidden xl:flex items-center gap-1">
                 <NavLink
@@ -129,37 +122,7 @@ export function Header() {
               </Link>
             )}
 
-            {user && (
-              <Link
-                to="/dashboard?tab=inbox"
-                className="relative flex items-center justify-center w-12 h-12 rounded-lg text-white hover:bg-white/10 transition-colors"
-                aria-label="Nachrichten"
-                title="Nachrichten"
-              >
-                <Bell className="w-6 h-6" />
-                {unread > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-gold-bright text-night text-xs font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center">
-                    {unread > 9 ? "9+" : unread}
-                  </span>
-                )}
-              </Link>
-            )}
-
             <LanguageSwitcher tone="dark" />
-
-            <button
-              onClick={togglePlanner}
-              className="relative flex items-center justify-center w-12 h-12 rounded-lg text-white hover:bg-white/10 transition-colors"
-              aria-label="Materialplaner öffnen"
-              title="Materialplaner"
-            >
-              <ClipboardList className="w-6 h-6" />
-              {plannerCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-gold-bright text-night text-xs font-bold rounded-full min-w-[20px] h-5 px-1 flex items-center justify-center">
-                  {plannerCount > 9 ? "9+" : plannerCount}
-                </span>
-              )}
-            </button>
 
             <button
               onClick={openCart}
