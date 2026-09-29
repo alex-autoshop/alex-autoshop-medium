@@ -12,6 +12,7 @@ const PRODUKTE = [
 
 const SERVICE = [
   { label: "Teilebörse", to: "/teileboerse" },
+  { label: "Fahrzeugmarkt", to: "/fahrzeugmarkt" },
   { label: "Materialplaner", to: "/dashboard" },
   { label: "Mitgliedschaften", to: "/mitgliedschaft" },
   { label: "Über uns", to: "/laden" },

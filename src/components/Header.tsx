@@ -10,18 +10,15 @@ import { useUnread } from "@/hooks/useUnread";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
-// Karo Fahrzeugmarkt — eigenständige App auf GitHub Pages
-const FAHRZEUGMARKT_URL = "https://alex-autoshop.github.io/fahrzeugmarkt/";
-
 const NAV: Array<{ to: string; label: string; href?: string; beta?: boolean }> = [
   { to: "/shop", label: "Shop" },
   { to: "/teileboerse", label: "Teilebörse", beta: true },
-  // Fahrzeugmarkt bewusst ausgeblendet (in Arbeit) — Seite bleibt unter /fahrzeugmarkt erreichbar
   { to: "/mitgliedschaft", label: "Mitgliedschaft" },
+  { to: "/fahrzeugmarkt", label: "Fahrzeugmarkt" },
   { to: "/laden", label: "Laden & Kontakt" },
 ];
 
-const NAV_BASE = "px-3 py-3 rounded-lg font-medium transition-colors min-h-[48px] flex items-center whitespace-nowrap shrink-0";
+const NAV_BASE = "px-2 py-3 rounded-lg font-medium transition-colors min-h-[48px] flex items-center whitespace-nowrap shrink-0";
 
 const BetaBadge = ({ className = "" }: { className?: string }) => (
   <span
@@ -62,7 +59,7 @@ export function Header() {
             <img src="/images/logo-cropped.png" alt="Alex Autoshop" className="h-11 sm:h-14 w-auto" />
           </Link>
 
-          <nav className="hidden xl:flex items-center gap-0.5">
+          <nav className="hidden xl:flex items-center">
             {NAV.map((item) =>
               item.href ? (
                 <a
@@ -94,13 +91,15 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-1 shrink-0">
-            <a
-              href={`tel:${SHOP_INFO.phoneIntl}`}
-              className="hidden 2xl:flex items-center gap-2 text-sm font-semibold text-white/75 hover:text-gold-bright transition-colors px-3 min-h-[48px] whitespace-nowrap"
-            >
-              <Phone className="w-4 h-4" />
-              {SHOP_INFO.phone}
-            </a>
+            {!user && (
+              <a
+                href={`tel:${SHOP_INFO.phoneIntl}`}
+                className="hidden 2xl:flex items-center gap-2 text-sm font-semibold text-white/75 hover:text-gold-bright transition-colors px-3 min-h-[48px] whitespace-nowrap"
+              >
+                <Phone className="w-4 h-4" />
+                {SHOP_INFO.phone}
+              </a>
+            )}
             {user ? (
               <div className="hidden xl:flex items-center gap-1">
                 <NavLink
