@@ -8,6 +8,7 @@ import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { fahrzeugNachSlug, tuevAbgelaufen, FAHRZEUGE } from "@/data/fahrzeuge";
 import { FahrzeugKarte, euro, km } from "@/components/FahrzeugBestand";
+import { FahrzeugbNav } from "@/components/FahrzeugbNav";
 
 function Kachel({ icon: Icon, label, wert }: { icon: typeof Gauge; label: string; wert: string }) {
   return (
@@ -42,7 +43,7 @@ export default function FahrzeugDetail() {
         <p className="text-muted-foreground mb-6">
           Vielleicht ist es schon verkauft. Schau dir den aktuellen Bestand an.
         </p>
-        <Link to="/fahrzeugmarkt" className="btn-primary">Zum Fahrzeugmarkt</Link>
+        <Link to="/fahrzeugboerse" className="btn-primary">Zum Fahrzeugmarkt</Link>
       </div>
     );
   }
@@ -60,8 +61,10 @@ export default function FahrzeugDetail() {
         description={`${f.titel}, EZ ${f.erstzulassung}, ${km(f.km)}, ${f.kraftstoff}, ${f.getriebe}${f.ps ? `, ${f.ps} PS` : ""}. ${euro(f.preis)} Verhandlungsbasis — Alex Autoshop Wuppertal.`}
       />
 
+      <FahrzeugbNav />
+
       <div className="container pt-6">
-        <Link to="/fahrzeugmarkt#bestand" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary min-h-[44px]">
+        <Link to="/fahrzeugboerse#bestand" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary min-h-[44px]">
           <ArrowLeft className="w-4 h-4" /> Alle Fahrzeuge
         </Link>
       </div>

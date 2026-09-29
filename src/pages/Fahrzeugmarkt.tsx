@@ -18,9 +18,8 @@ import { Link } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { FahrzeugBestand } from "@/components/FahrzeugBestand";
+import { FahrzeugbNav } from "@/components/FahrzeugbNav";
 import { FAHRZEUGE } from "@/data/fahrzeuge";
-
-const MARKET_APP = "https://alex-autoshop.github.io/alex-autoshop";
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -52,9 +51,11 @@ export default function Fahrzeugmarkt() {
   return (
     <div>
       <Seo
-        title="Fahrzeugmarkt – Autos kaufen, verkaufen & mieten"
-        description="Der Fahrzeugmarkt von Alex Autoshop für Wuppertal & Region: kostenlos inserieren, verifizierte Käufer, Direktkontakt. Kaufen, verkaufen, mieten und vermieten."
+        title="Fahrzeugbörse Wuppertal – Autos kaufen, mieten & finanzieren"
+        description="Die Fahrzeugbörse von Alex Autoshop in Wuppertal: Gebrauchtwagen aus eigenem Bestand, Fahrzeuge mieten und vermieten, Finanzierung. Alles an einer Adresse."
       />
+
+      <FahrzeugbNav />
 
       {/* Hero — Ausstellungshalle im Hintergrund, darüber ein dunkler Schleier,
           damit die Schrift lesbar bleibt (Kontrast geht vor Bildwirkung). */}
@@ -77,14 +78,14 @@ export default function Fahrzeugmarkt() {
         <div className="container py-20 sm:py-28 relative text-center max-w-3xl mx-auto">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <span className="inline-flex items-center gap-2 text-gold-accent font-semibold uppercase tracking-wide text-sm mb-5">
-              <Car className="w-4 h-4" /> Alex Autoshop · Fahrzeugmarkt
+              <Car className="w-4 h-4" /> Alex Autoshop · Fahrzeugbörse
             </span>
             <h1 className="text-4xl sm:text-6xl leading-[1.05] mb-6">
               Sicherer Kauf. <span className="text-gold-accent">Schnellerer Verkauf.</span>
             </h1>
             <p className="text-white/65 text-lg leading-relaxed mb-8">
-              Der Fahrzeugmarkt für Wuppertal & die Region. Kostenlos inserieren,
-              verifizierte Käufer, Direktkontakt — ohne teure Plattform-Gebühren.
+              Autos kaufen, mieten, vermieten und finanzieren — an einer Adresse in
+              Wuppertal. Kurze Wege, ein Ansprechpartner, und die Werkstatt steht daneben.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <a href="#bestand" className="btn-gold-bright text-lg px-8">
@@ -119,7 +120,7 @@ export default function Fahrzeugmarkt() {
       {/* USPs */}
       <section className="container py-14 sm:py-20">
         <motion.div {...fadeUp} className="mb-8">
-          <h2 className="text-2xl sm:text-3xl">Warum der Alex Fahrzeugmarkt?</h2>
+          <h2 className="text-2xl sm:text-3xl">Warum die Alex Fahrzeugbörse?</h2>
         </motion.div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {USP.map((item, i) => (
@@ -180,8 +181,8 @@ export default function Fahrzeugmarkt() {
             </div>
           </div>
           <div className="flex flex-col gap-3 w-full md:w-56 shrink-0">
-            <a href={MARKET_APP} target="_blank" rel="noopener noreferrer" className="btn-primary">
-              <Car className="w-5 h-5" /> Fahrzeugmarkt öffnen
+            <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn-primary">
+              <Phone className="w-5 h-5" /> Fahrzeug anbieten
             </a>
             <Link to="/mitgliedschaft" className="btn-outline">Mitglied werden →</Link>
           </div>
@@ -241,12 +242,10 @@ export default function Fahrzeugmarkt() {
             </div>
           </div>
           <div className="flex flex-col gap-3 w-full md:w-52 shrink-0">
-            <a href={MARKET_APP} target="_blank" rel="noopener noreferrer" className="btn-primary">
+            <Link to="/vermieten" className="btn-primary">
               <Key className="w-5 h-5" /> Fahrzeug vermieten
-            </a>
-            <a href={MARKET_APP} target="_blank" rel="noopener noreferrer" className="btn-outline">
-              Fahrzeug mieten →
-            </a>
+            </Link>
+            <Link to="/mieten" className="btn-outline">Fahrzeug mieten →</Link>
           </div>
         </motion.div>
       </section>
@@ -255,12 +254,12 @@ export default function Fahrzeugmarkt() {
       <section className="container pb-16">
         <div className="section-dark rounded-3xl p-8 sm:p-12 text-center max-w-3xl mx-auto">
           <h2 className="text-2xl sm:text-4xl mb-3 leading-tight">
-            Kaufen. Verkaufen. <span className="text-gold-accent">Mieten. Vermieten.</span>
+            Kaufen. Mieten. <span className="text-gold-accent">Vermieten. Finanzieren.</span>
           </h2>
-          <p className="text-white/65 mb-8">Alles auf einem Marktplatz. Kostenlos. Sofort.</p>
+          <p className="text-white/65 mb-8">Alles an einer Adresse in Wuppertal — mit der Werkstatt nebenan.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href={MARKET_APP} target="_blank" rel="noopener noreferrer" className="btn-gold-bright text-lg px-8">
-              <Car className="w-5 h-5" /> Zum Fahrzeugmarkt <ExternalLink className="w-4 h-4 opacity-60" />
+            <a href="#bestand" className="btn-gold-bright text-lg px-8">
+              <Car className="w-5 h-5" /> Zum Fahrzeugbestand
             </a>
             <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn bg-white/10 text-white hover:bg-white/20 text-lg px-8">
               <Phone className="w-5 h-5" /> {SHOP_INFO.phone}

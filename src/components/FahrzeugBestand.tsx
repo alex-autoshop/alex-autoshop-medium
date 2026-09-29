@@ -30,7 +30,7 @@ function Merkmal({ icon: Icon, children }: { icon: typeof Gauge; children: React
 export function FahrzeugKarte({ f }: { f: Fahrzeug }) {
   const tuevWeg = tuevAbgelaufen(f.tuev);
   return (
-    <Link to={`/fahrzeugmarkt/${f.slug}`} className="card-tilt overflow-hidden flex flex-col group">
+    <Link to={`/fahrzeugboerse/${f.slug}`} className="card-tilt overflow-hidden flex flex-col group">
       <div className="relative bg-night">
         <img
           src={f.bild}
@@ -105,6 +105,7 @@ export function FahrzeugBestand() {
         f.preis <= grenze
     );
     const sortiert = [...gefiltert];
+    if (sortierung === "neu") sortiert.sort((a, b) => b.preis - a.preis);
     if (sortierung === "preis-auf") sortiert.sort((a, b) => a.preis - b.preis);
     if (sortierung === "preis-ab") sortiert.sort((a, b) => b.preis - a.preis);
     if (sortierung === "km-auf") sortiert.sort((a, b) => a.km - b.km);

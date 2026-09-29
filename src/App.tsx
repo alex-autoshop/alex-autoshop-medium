@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate, useParams } from "react-router-dom";
 import { empfehlungMerken } from "@/lib/empfehlung";
 import { Toaster } from "sonner";
 import { MotionConfig } from "framer-motion";
@@ -17,6 +17,9 @@ const Teileportal = lazy(() => import("@/pages/Teileportal"));
 const AdminMembers = lazy(() => import("@/pages/AdminMembers"));
 const Fahrzeugmarkt = lazy(() => import("@/pages/Fahrzeugmarkt"));
 const FahrzeugDetail = lazy(() => import("@/pages/FahrzeugDetail"));
+const Mieten = lazy(() => import("@/pages/Mieten"));
+const Vermieten = lazy(() => import("@/pages/Vermieten"));
+const Finanzierung = lazy(() => import("@/pages/Finanzierung"));
 const Laden = lazy(() => import("@/pages/Laden"));
 const Konto = lazy(() => import("@/pages/Konto"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -50,6 +53,12 @@ const PageFallback = () => (
   </div>
 );
 
+/** /fahrzeugmarkt/<auto> leitet auf die neue Adresse um — alte Links bleiben gueltig. */
+function AltesFahrzeug() {
+  const { slug } = useParams();
+  return <Navigate to={`/fahrzeugboerse/${slug ?? ""}`} replace />;
+}
+
 export default function App() {
   return (
     <MotionConfig reducedMotion="user">
@@ -74,8 +83,14 @@ export default function App() {
                     <Route path="/produkt/:handle" element={<ProductDetail />} />
                     <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />
                     <Route path="/teileboerse" element={<Teileportal />} />
-                    <Route path="/fahrzeugmarkt" element={<Fahrzeugmarkt />} />
-                    <Route path="/fahrzeugmarkt/:slug" element={<FahrzeugDetail />} />
+                    <Route path="/fahrzeugboerse" element={<Fahrzeugmarkt />} />
+                    <Route path="/fahrzeugboerse/:slug" element={<FahrzeugDetail />} />
+                    <Route path="/mieten" element={<Mieten />} />
+                    <Route path="/vermieten" element={<Vermieten />} />
+                    <Route path="/finanzierung" element={<Finanzierung />} />
+                    {/* alte Adressen bleiben gueltig */}
+                    <Route path="/fahrzeugmarkt" element={<Navigate to="/fahrzeugboerse" replace />} />
+                    <Route path="/fahrzeugmarkt/:slug" element={<AltesFahrzeug />} />
                     <Route path="/laden" element={<Laden />} />
                     <Route path="/konto" element={<Konto />} />
                     <Route

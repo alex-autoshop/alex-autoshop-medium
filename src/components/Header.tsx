@@ -12,7 +12,7 @@ const NAV: Array<{ to: string; label: string; href?: string; beta?: boolean }> =
   { to: "/shop", label: "Shop" },
   { to: "/teileboerse", label: "Teilebörse", beta: true },
   { to: "/mitgliedschaft", label: "Mitgliedschaft" },
-  { to: "/fahrzeugmarkt", label: "Fahrzeugmarkt" },
+  { to: "/fahrzeugboerse", label: "Fahrzeugbörse" },
   { to: "/laden", label: "Laden & Kontakt" },
 ];
 
