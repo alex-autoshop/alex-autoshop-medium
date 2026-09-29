@@ -56,11 +56,23 @@ export default function Fahrzeugmarkt() {
         description="Der Fahrzeugmarkt von Alex Autoshop für Wuppertal & Region: kostenlos inserieren, verifizierte Käufer, Direktkontakt. Kaufen, verkaufen, mieten und vermieten."
       />
 
-      {/* Hero */}
+      {/* Hero — Ausstellungshalle im Hintergrund, darüber ein dunkler Schleier,
+          damit die Schrift lesbar bleibt (Kontrast geht vor Bildwirkung). */}
       <section className="section-dark relative overflow-hidden">
+        <picture aria-hidden="true">
+          <source media="(min-width: 640px)" srcSet="/images/fahrzeugmarkt-hero.jpg" />
+          <img
+            src="/images/fahrzeugmarkt-hero-handy.jpg"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="eager"
+            fetchPriority="high"
+          />
+        </picture>
+        <div className="absolute inset-0 bg-gradient-to-b from-night/85 via-night/78 to-night pointer-events-none" aria-hidden="true" />
         <div
-          className="absolute inset-0 opacity-[0.08] pointer-events-none"
-          style={{ backgroundImage: "radial-gradient(circle at 50% 20%, #f1eb5b 0%, transparent 50%)" }}
+          className="absolute inset-0 opacity-[0.10] pointer-events-none"
+          style={{ backgroundImage: "radial-gradient(circle at 50% 20%, #f1eb5b 0%, transparent 55%)" }}
         />
         <div className="container py-20 sm:py-28 relative text-center max-w-3xl mx-auto">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
@@ -78,7 +90,10 @@ export default function Fahrzeugmarkt() {
               <a href="#bestand" className="btn-gold-bright text-lg px-8">
                 <Car className="w-5 h-5" /> {FAHRZEUGE.length} Fahrzeuge ansehen <ArrowRight className="w-5 h-5" />
               </a>
-              <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn bg-white/10 text-white hover:bg-white/20 text-lg px-8">
+              <a
+                href={`tel:${SHOP_INFO.phoneIntl}`}
+                className="btn bg-night/55 border border-white/25 backdrop-blur-sm text-white hover:bg-night/75 text-lg px-8"
+              >
                 <Phone className="w-5 h-5" /> {SHOP_INFO.phone}
               </a>
             </div>
