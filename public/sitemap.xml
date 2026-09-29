@@ -7,6 +7,7 @@
   <url><loc>https://alex-autoshop.de/mieten</loc><priority>0.8</priority></url>
   <url><loc>https://alex-autoshop.de/vermieten</loc><priority>0.8</priority></url>
   <url><loc>https://alex-autoshop.de/finanzierung</loc><priority>0.8</priority></url>
+  <url><loc>https://alex-autoshop.de/kreditvermittlung</loc><priority>0.8</priority></url>
   <url><loc>https://alex-autoshop.de/mitgliedschaft</loc><priority>0.9</priority></url>
   <url><loc>https://alex-autoshop.de/laden</loc><priority>0.8</priority></url>
   <url><loc>https://alex-autoshop.de/shop/wunschfarben</loc><priority>0.7</priority></url>
@@ -53,4 +54,21 @@
   <url><loc>https://alex-autoshop.de/fahrzeugboerse/dacia-sandero-1-2</loc><priority>0.7</priority></url>
   <url><loc>https://alex-autoshop.de/fahrzeugboerse/fiat-panda-1-2</loc><priority>0.7</priority></url>
   <url><loc>https://alex-autoshop.de/fahrzeugboerse/opel-tigra-1-6-cabrio</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/audi-a5-cabriolet-3-0-tdi</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/bmw-118i-cabrio</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/vw-golf-6-1-4-5-tuerer</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/nissan-micra-automatik</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/mercedes-ml-280-cdi</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/ford-kuga-2-0-tdci</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/citroen-c1-1-2-vti</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/skoda-yeti-active-plus</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/vw-golf-3-1-6</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/mercedes-c200-automatik</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/audi-a6-2-7-tdi-avant</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/toyota-camry-3-0</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/mazda-cx-7-2-2</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/vw-golf-5-1-9-tdi</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/mercedes-b180-cdi</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/volvo-v40-2-0</loc><priority>0.7</priority></url>
+  <url><loc>https://alex-autoshop.de/fahrzeugboerse/peugeot-206-1-1</loc><priority>0.7</priority></url>
 </urlset>

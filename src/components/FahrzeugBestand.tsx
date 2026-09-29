@@ -5,7 +5,7 @@ import { FAHRZEUGE, MARKEN, tuevAbgelaufen, type Fahrzeug } from "@/data/fahrzeu
 import { cn } from "@/lib/utils";
 
 export const euro = (n: number) => n.toLocaleString("de-DE") + " €";
-export const km = (n: number) => n.toLocaleString("de-DE") + " km";
+export const km = (n: number) => (n > 0 ? n.toLocaleString("de-DE") + " km" : "km auf Anfrage");
 
 type Sortierung = "neu" | "preis-auf" | "preis-ab" | "km-auf";
 
@@ -55,7 +55,7 @@ export function FahrzeugKarte({ f }: { f: Fahrzeug }) {
         </p>
 
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4">
-          <Merkmal icon={Gauge}>{km(f.km)}</Merkmal>
+          {f.km > 0 && <Merkmal icon={Gauge}>{km(f.km)}</Merkmal>}
           <Merkmal icon={Calendar}>EZ {f.erstzulassung}</Merkmal>
           <Merkmal icon={Fuel}>{f.kraftstoff}</Merkmal>
           <Merkmal icon={Cog}>{f.getriebe === "Automatik" ? "Automatik" : "Schaltung"}</Merkmal>
@@ -66,6 +66,7 @@ export function FahrzeugKarte({ f }: { f: Fahrzeug }) {
           <div>
             <p className="text-2xl font-display font-bold text-primary leading-none">{euro(f.preis)}</p>
             <p className="text-[11px] text-muted-foreground mt-1">
+              {f.festpreis && <span className="font-semibold text-foreground">Festpreis · </span>}
               {tuevWeg ? (
                 <span className="inline-flex items-center gap-1 text-destructive font-semibold">
                   <AlertTriangle className="w-3 h-3" /> TÜV abgelaufen

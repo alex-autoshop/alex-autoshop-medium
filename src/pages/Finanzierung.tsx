@@ -28,13 +28,13 @@ export default function Finanzierung() {
   return (
     <div>
       <Seo
-        title="Autofinanzierung & Leasing in Wuppertal | Alex Autoshop"
+        title="Kfz-Finanzierung in Wuppertal – Auto finanzieren | Alex Autoshop"
         description="Fahrzeugfinanzierung über Alex Autoshop in Wuppertal: für Fahrzeuge aus unserem Bestand und von außerhalb, für Privat und Gewerbe. Erlaubnis nach § 34c GewO."
       />
       <FahrzeugbNav />
       <BereichsHero
         augenbraue="Alex Autoshop · Fahrzeugbörse"
-        titel="Finanzierung."
+        titel="Kfz-Finanzierung."
         akzent="Ohne Bankdeutsch."
         text="Du sagst uns, welches Auto und welche Rate — wir holen die Angebote ein und legen sie dir auf den Tisch. Für Fahrzeuge aus unserem Bestand genauso wie für eines, das du woanders gefunden hast."
       >
@@ -75,9 +75,14 @@ export default function Finanzierung() {
               Liquidität für Material und Löhne fehlt. Als Mitglied bekommst du Fahrzeug, Teile und
               Lack aus einer Hand.
             </p>
-            <Link to="/mitgliedschaft" className="text-primary font-semibold text-sm hover:underline">
-              Mitgliedschaft ansehen →
-            </Link>
+            <div className="flex flex-col gap-1.5">
+              <Link to="/kreditvermittlung" className="text-primary font-semibold text-sm hover:underline">
+                Zur Kreditvermittlung für Gewerbe →
+              </Link>
+              <Link to="/mitgliedschaft" className="text-primary font-semibold text-sm hover:underline">
+                Mitgliedschaft ansehen →
+              </Link>
+            </div>
           </motion.div>
         </div>
       </section>

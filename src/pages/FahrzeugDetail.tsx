@@ -58,7 +58,7 @@ export default function FahrzeugDetail() {
     <div>
       <Seo
         title={`${f.titel} – ${euro(f.preis)} | Alex Autoshop Wuppertal`}
-        description={`${f.titel}, EZ ${f.erstzulassung}, ${km(f.km)}, ${f.kraftstoff}, ${f.getriebe}${f.ps ? `, ${f.ps} PS` : ""}. ${euro(f.preis)} Verhandlungsbasis — Alex Autoshop Wuppertal.`}
+        description={`${f.titel}, EZ ${f.erstzulassung}, ${km(f.km)}, ${f.kraftstoff}, ${f.getriebe}${f.ps ? `, ${f.ps} PS` : ""}. ${euro(f.preis)}${f.festpreis ? " Festpreis" : " Verhandlungsbasis"} — Alex Autoshop Wuppertal.`}
       />
 
       <FahrzeugbNav />
@@ -77,7 +77,7 @@ export default function FahrzeugDetail() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6">
-            <Kachel icon={Gauge} label="Kilometer" wert={km(f.km)} />
+            {f.km > 0 && <Kachel icon={Gauge} label="Kilometer" wert={km(f.km)} />}
             <Kachel icon={Calendar} label="Erstzulassung" wert={f.erstzulassung} />
             <Kachel icon={Cog} label="Getriebe" wert={f.getriebe} />
             <Kachel icon={Fuel} label="Kraftstoff" wert={f.kraftstoff} />
@@ -143,11 +143,11 @@ export default function FahrzeugDetail() {
           <div className="card-tilt hover:translate-y-0 p-6">
             <h1 className="text-2xl sm:text-3xl leading-tight mb-1">{f.titel}</h1>
             <p className="text-sm text-muted-foreground mb-5">
-              {f.bauart} · EZ {f.erstzulassung} · {km(f.km)}
+              {f.bauart} · EZ {f.erstzulassung}{f.km > 0 ? ` · ${km(f.km)}` : ""}
             </p>
 
             <p className="text-4xl font-display font-bold text-primary leading-none">{euro(f.preis)}</p>
-            <p className="text-sm text-muted-foreground mt-1 mb-5">Verhandlungsbasis</p>
+            <p className="text-sm text-muted-foreground mt-1 mb-5">{f.festpreis ? "Festpreis" : "Verhandlungsbasis"}</p>
 
             {tuevWeg && (
               <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2.5 mb-5 text-sm">
