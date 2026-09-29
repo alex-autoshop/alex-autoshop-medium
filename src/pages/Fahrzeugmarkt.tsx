@@ -199,9 +199,12 @@ export default function Fahrzeugmarkt() {
             Mieten statt kaufen. <span className="text-primary">Flexibel, sofort, günstig.</span>
           </h2>
           <p className="text-muted-foreground max-w-xl">
-            Vom Sportwagen fürs Wochenende bis zum Transporter für den Umzug — private und
-            gewerbliche Vermieter, direkt buchbar.
+            Vom Cabrio fürs Wochenende bis zum Transporter für den Umzug — versichert,
+            gewartet und übergeben bei uns in Wuppertal.
           </p>
+          <Link to="/mieten" className="btn-primary mt-6">
+            <Key className="w-5 h-5" /> Fahrzeug mieten
+          </Link>
         </motion.div>
 
         <div className="grid sm:grid-cols-3 gap-5 mb-8">
@@ -228,12 +231,12 @@ export default function Fahrzeugmarkt() {
             </h3>
             <div className="grid sm:grid-cols-2 gap-3">
               {[
-                "Kostenlos inserieren",
-                "Eigene Preise bestimmen",
-                "Mieter werden verifiziert",
-                "Direktkontakt mit Mietern",
-                "Flexible Mietdauer",
-                "Keine Provision",
+                "Wir kümmern uns um die Mieter",
+                "Versichert als Selbstfahrervermietfahrzeug",
+                "Wartung in unserer eigenen Werkstatt",
+                "Übergabe und Rücknahme mit Protokoll",
+                "Du bestimmst, wann dein Auto verfügbar ist",
+                "Abrechnung nach Miettagen",
               ].map((f) => (
                 <div key={f} className="flex items-center gap-2.5 text-sm">
                   <CheckCircle className="w-4 h-4 text-primary shrink-0" /> {f}
@@ -245,7 +248,9 @@ export default function Fahrzeugmarkt() {
             <Link to="/vermieten" className="btn-primary">
               <Key className="w-5 h-5" /> Fahrzeug vermieten
             </Link>
-            <Link to="/mieten" className="btn-outline">Fahrzeug mieten →</Link>
+            <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn-outline">
+              <Phone className="w-5 h-5" /> {SHOP_INFO.phone}
+            </a>
           </div>
         </motion.div>
       </section>

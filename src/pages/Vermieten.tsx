@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
 import { Phone, MessageCircle, CheckCircle, ShieldCheck, Wrench, Euro, Users, AlertTriangle } from "lucide-react";
-import { Link } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { FahrzeugbNav, BereichsHero } from "@/components/FahrzeugbNav";
@@ -41,7 +40,7 @@ export default function Vermieten() {
           </a>
           <a href={whatsappLink(anfrage)} target="_blank" rel="noopener noreferrer"
             className="btn bg-night/55 border border-white/25 backdrop-blur-sm text-white hover:bg-night/75 text-lg px-8">
-            <MessageCircle className="w-5 h-5" /> Fahrzeug anbieten
+            <MessageCircle className="w-5 h-5" /> Fahrzeug vermieten
           </a>
         </div>
       </BereichsHero>
@@ -123,9 +122,8 @@ export default function Vermieten() {
               <Phone className="w-5 h-5" /> {SHOP_INFO.phone}
             </a>
             <a href={whatsappLink(anfrage)} target="_blank" rel="noopener noreferrer" className="btn-outline">
-              <MessageCircle className="w-5 h-5" /> Fahrzeug anbieten
+              <MessageCircle className="w-5 h-5" /> Fahrzeug vermieten
             </a>
-            <Link to="/mieten" className="btn-outline">Fahrzeug mieten →</Link>
           </div>
         </motion.div>
       </section>
