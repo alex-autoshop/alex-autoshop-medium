@@ -12,11 +12,6 @@ const PRODUKTE = [
 
 const SERVICE = [
   { label: "Teilebörse", to: "/teileboerse" },
-  { label: "Fahrzeugbörse", to: "/fahrzeugboerse" },
-  { label: "Auto mieten", to: "/mieten" },
-  { label: "Auto vermieten", to: "/vermieten" },
-  { label: "Kfz-Finanzierung", to: "/finanzierung" },
-  { label: "Kreditvermittlung", to: "/kreditvermittlung" },
   { label: "Materialplaner", to: "/dashboard" },
   { label: "Mitgliedschaften", to: "/mitgliedschaft" },
   { label: "Über uns", to: "/laden" },

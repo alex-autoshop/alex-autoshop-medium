@@ -5,14 +5,20 @@ import { useCartStore } from "@/stores/cartStore";
 import { CartDrawer } from "@/components/CartDrawer";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
+import { ADMIN_EMAILS } from "@/lib/inbox";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
-const NAV: Array<{ to: string; label: string; href?: string; beta?: boolean }> = [
+type NavPunkt = { to: string; label: string; href?: string; beta?: boolean };
+
+// Die Fahrzeugbörse ist noch nicht öffentlich — sie taucht nur im Menü des
+// Admin-Kontos auf. Zum Freischalten: Eintrag nach NAV verschieben.
+const NAV_ADMIN: NavPunkt[] = [{ to: "/fahrzeugboerse", label: "Fahrzeugbörse" }];
+
+const NAV: NavPunkt[] = [
   { to: "/shop", label: "Shop" },
   { to: "/teileboerse", label: "Teilebörse", beta: true },
   { to: "/mitgliedschaft", label: "Mitgliedschaft" },
-  { to: "/fahrzeugboerse", label: "Fahrzeugbörse" },
   { to: "/laden", label: "Laden & Kontakt" },
 ];
 
@@ -37,6 +43,8 @@ export function Header() {
   const closeCart = useCartStore((s) => s.closeCart);
   const itemCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const { user, signOut } = useAuth();
+  const istAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
+  const navPunkte = istAdmin ? [...NAV.slice(0, 3), ...NAV_ADMIN, ...NAV.slice(3)] : NAV;
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -55,7 +63,7 @@ export function Header() {
           </Link>
 
           <nav className="hidden xl:flex items-center gap-0.5">
-            {NAV.map((item) =>
+            {navPunkte.map((item) =>
               item.href ? (
                 <a
                   key={item.to}
@@ -149,7 +157,7 @@ export function Header() {
         {mobileOpen && (
           <nav className="xl:hidden border-t border-white/10 bg-night animate-fade-up">
             <div className="container py-3 flex flex-col gap-1">
-              {NAV.map((item) => {
+              {navPunkte.map((item) => {
                 const mBase = "px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center";
                 return item.href ? (
                   <a

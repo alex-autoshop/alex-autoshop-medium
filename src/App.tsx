@@ -7,6 +7,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { NurAdmin } from "@/components/NurAdmin";
 import { CookieConsent } from "@/components/CookieConsent";
 
 const Home = lazy(() => import("@/pages/Home"));
@@ -84,12 +85,12 @@ export default function App() {
                     <Route path="/produkt/:handle" element={<ProductDetail />} />
                     <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />
                     <Route path="/teileboerse" element={<Teileportal />} />
-                    <Route path="/fahrzeugboerse" element={<Fahrzeugmarkt />} />
-                    <Route path="/fahrzeugboerse/:slug" element={<FahrzeugDetail />} />
-                    <Route path="/mieten" element={<Mieten />} />
-                    <Route path="/vermieten" element={<Vermieten />} />
-                    <Route path="/finanzierung" element={<Finanzierung />} />
-                    <Route path="/kreditvermittlung" element={<Kreditvermittlung />} />
+                    <Route path="/fahrzeugboerse" element={<NurAdmin><Fahrzeugmarkt /></NurAdmin>} />
+                    <Route path="/fahrzeugboerse/:slug" element={<NurAdmin><FahrzeugDetail /></NurAdmin>} />
+                    <Route path="/mieten" element={<NurAdmin><Mieten /></NurAdmin>} />
+                    <Route path="/vermieten" element={<NurAdmin><Vermieten /></NurAdmin>} />
+                    <Route path="/finanzierung" element={<NurAdmin><Finanzierung /></NurAdmin>} />
+                    <Route path="/kreditvermittlung" element={<NurAdmin><Kreditvermittlung /></NurAdmin>} />
                     {/* alte Adressen bleiben gueltig */}
                     <Route path="/fahrzeugmarkt" element={<Navigate to="/fahrzeugboerse" replace />} />
                     <Route path="/fahrzeugmarkt/:slug" element={<AltesFahrzeug />} />

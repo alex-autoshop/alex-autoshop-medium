@@ -5,6 +5,8 @@ interface SeoProps {
   description?: string;
   image?: string;
   jsonLd?: object;
+  /** Seite aus dem Suchmaschinen-Index halten */
+  noindex?: boolean;
 }
 
 const SITE_URL = "https://www.alex-autoshop.de";
@@ -32,7 +34,7 @@ function setLink(rel: string, href: string, extra?: Record<string, string>) {
   if (extra) Object.entries(extra).forEach(([k, v]) => el!.setAttribute(k, v));
 }
 
-export function Seo({ title, description, image, jsonLd }: SeoProps) {
+export function Seo({ title, description, image, jsonLd, noindex }: SeoProps) {
   useEffect(() => {
     const fullTitle = `${title} | ${SITE_NAME}`;
     const img = image || DEFAULT_IMAGE;
@@ -40,6 +42,9 @@ export function Seo({ title, description, image, jsonLd }: SeoProps) {
 
     // Title
     document.title = fullTitle;
+
+    // Nicht oeffentliche Seiten aus dem Index halten
+    setMeta("name", "robots", noindex ? "noindex, nofollow" : "index, follow");
 
     // Canonical (immer www)
     setLink("canonical", url);
@@ -80,7 +85,7 @@ export function Seo({ title, description, image, jsonLd }: SeoProps) {
     return () => {
       script?.remove();
     };
-  }, [title, description, image, jsonLd]);
+  }, [title, description, image, jsonLd, noindex]);
 
   return null;
 }
