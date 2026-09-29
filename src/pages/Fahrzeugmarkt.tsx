@@ -17,6 +17,8 @@ import {
 import { Link } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
+import { FahrzeugBestand } from "@/components/FahrzeugBestand";
+import { FAHRZEUGE } from "@/data/fahrzeuge";
 
 const MARKET_APP = "https://alex-autoshop.github.io/alex-autoshop";
 
@@ -73,16 +75,16 @@ export default function Fahrzeugmarkt() {
               verifizierte Käufer, Direktkontakt — ohne teure Plattform-Gebühren.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <a href={MARKET_APP} target="_blank" rel="noopener noreferrer" className="btn-gold-bright text-lg px-8">
-                <Car className="w-5 h-5" /> Kostenlos inserieren <ExternalLink className="w-4 h-4 opacity-60" />
+              <a href="#bestand" className="btn-gold-bright text-lg px-8">
+                <Car className="w-5 h-5" /> {FAHRZEUGE.length} Fahrzeuge ansehen <ArrowRight className="w-5 h-5" />
               </a>
-              <a href={MARKET_APP} target="_blank" rel="noopener noreferrer" className="btn bg-white/10 text-white hover:bg-white/20 text-lg px-8">
-                Alle Fahrzeuge ansehen <ArrowRight className="w-5 h-5" />
+              <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn bg-white/10 text-white hover:bg-white/20 text-lg px-8">
+                <Phone className="w-5 h-5" /> {SHOP_INFO.phone}
               </a>
             </div>
             <div className="flex items-center justify-center gap-10 mt-10">
               {[
-                { value: "100%", label: "Kostenlos" },
+                { value: String(FAHRZEUGE.length), label: "Fahrzeuge vor Ort" },
                 { value: "24h", label: "Ø Reaktionszeit" },
                 { value: "Lokal", label: "Wuppertal & Region" },
               ].map((s) => (
@@ -95,6 +97,9 @@ export default function Fahrzeugmarkt() {
           </motion.div>
         </div>
       </section>
+
+      {/* Unser Bestand */}
+      <FahrzeugBestand />
 
       {/* USPs */}
       <section className="container py-14 sm:py-20">

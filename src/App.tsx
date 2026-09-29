@@ -16,6 +16,7 @@ const Mitgliedschaft = lazy(() => import("@/pages/Mitgliedschaft"));
 const Teileportal = lazy(() => import("@/pages/Teileportal"));
 const AdminMembers = lazy(() => import("@/pages/AdminMembers"));
 const Fahrzeugmarkt = lazy(() => import("@/pages/Fahrzeugmarkt"));
+const FahrzeugDetail = lazy(() => import("@/pages/FahrzeugDetail"));
 const Laden = lazy(() => import("@/pages/Laden"));
 const Konto = lazy(() => import("@/pages/Konto"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -74,6 +75,7 @@ export default function App() {
                     <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />
                     <Route path="/teileboerse" element={<Teileportal />} />
                     <Route path="/fahrzeugmarkt" element={<Fahrzeugmarkt />} />
+                    <Route path="/fahrzeugmarkt/:slug" element={<FahrzeugDetail />} />
                     <Route path="/laden" element={<Laden />} />
                     <Route path="/konto" element={<Konto />} />
                     <Route
