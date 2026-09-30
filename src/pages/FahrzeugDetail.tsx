@@ -7,7 +7,7 @@ import {
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { fahrzeugNachSlug, tuevAbgelaufen, FAHRZEUGE } from "@/data/fahrzeuge";
-import { FahrzeugKarte, euro, km } from "@/components/FahrzeugBestand";
+import { FahrzeugKarte, euro, km, preisText } from "@/components/FahrzeugBestand";
 import { FahrzeugbNav } from "@/components/FahrzeugbNav";
 
 function Kachel({ icon: Icon, label, wert }: { icon: typeof Gauge; label: string; wert: string }) {
@@ -49,7 +49,7 @@ export default function FahrzeugDetail() {
   }
 
   const tuevWeg = tuevAbgelaufen(f.tuev);
-  const anfrage = `Hallo, ich interessiere mich für den ${f.titel} (${euro(f.preis)}) aus Ihrem Fahrzeugmarkt. Ist er noch verfügbar?`;
+  const anfrage = `Hallo, ich interessiere mich für den ${f.titel} (${preisText(f)}) aus Ihrer Fahrzeugbörse. Ist er noch verfügbar?`;
   const aehnlich = FAHRZEUGE.filter((a) => a.slug !== f.slug)
     .sort((a, b) => Math.abs(a.preis - f.preis) - Math.abs(b.preis - f.preis))
     .slice(0, 3);
@@ -57,8 +57,8 @@ export default function FahrzeugDetail() {
   return (
     <div>
       <Seo
-        title={`${f.titel} – ${euro(f.preis)} | Alex Autoshop Wuppertal`}
-        description={`${f.titel}, EZ ${f.erstzulassung}, ${km(f.km)}, ${f.kraftstoff}, ${f.getriebe}${f.ps ? `, ${f.ps} PS` : ""}. ${euro(f.preis)}${f.festpreis ? " Festpreis" : " Verhandlungsbasis"} — Alex Autoshop Wuppertal.`}
+        title={`${f.titel} – ${preisText(f)} | Alex Autoshop Wuppertal`}
+        description={`${f.titel}, EZ ${f.erstzulassung}, ${km(f.km)}, ${f.kraftstoff}, ${f.getriebe}${f.ps ? `, ${f.ps} PS` : ""}. ${preisText(f)}${f.festpreis ? " Festpreis" : ""} — Alex Autoshop Wuppertal.`}
       />
 
       <FahrzeugbNav />
@@ -146,8 +146,8 @@ export default function FahrzeugDetail() {
               {f.bauart} · EZ {f.erstzulassung}{f.km > 0 ? ` · ${km(f.km)}` : ""}
             </p>
 
-            <p className="text-4xl font-display font-bold text-primary leading-none">{euro(f.preis)}</p>
-            <p className="text-sm text-muted-foreground mt-1 mb-5">{f.festpreis ? "Festpreis" : "Verhandlungsbasis"}</p>
+            <p className="text-3xl sm:text-4xl font-display font-bold text-primary leading-tight">{preisText(f)}</p>
+            <p className="text-sm text-muted-foreground mt-1 mb-5">{f.festpreis ? "Festpreis" : "Genauer Preis auf Anfrage — ruf kurz an."}</p>
 
             {tuevWeg && (
               <div className="flex items-start gap-2 rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2.5 mb-5 text-sm">

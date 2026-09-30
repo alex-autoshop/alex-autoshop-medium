@@ -1,10 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Gauge, Calendar, Fuel, Cog, Users, ArrowRight, SlidersHorizontal, AlertTriangle, ChevronDown } from "lucide-react";
-import { FAHRZEUGE, MARKEN, tuevAbgelaufen, type Fahrzeug } from "@/data/fahrzeuge";
+import { FAHRZEUGE, MARKEN, tuevAbgelaufen, preisSpanne, type Fahrzeug } from "@/data/fahrzeuge";
 import { cn } from "@/lib/utils";
 
 export const euro = (n: number) => n.toLocaleString("de-DE") + " €";
+/** Preisangabe nach außen: Spanne statt genauem Preis (Festpreis bleibt exakt). */
+export function preisText(f: Fahrzeug): string {
+  const s = preisSpanne(f);
+  return s ? `${s.von.toLocaleString("de-DE")} – ${euro(s.bis)}` : euro(f.preis);
+}
+
 export const km = (n: number) => (n > 0 ? n.toLocaleString("de-DE") + " km" : "km auf Anfrage");
 
 type Sortierung = "neu" | "preis-auf" | "preis-ab" | "km-auf";
@@ -64,7 +70,7 @@ export function FahrzeugKarte({ f }: { f: Fahrzeug }) {
 
         <div className="mt-auto flex items-end justify-between gap-3 pt-3 border-t border-border">
           <div>
-            <p className="text-2xl font-display font-bold text-primary leading-none">{euro(f.preis)}</p>
+            <p className="text-xl font-display font-bold text-primary leading-none whitespace-nowrap">{preisText(f)}</p>
             <p className="text-[11px] text-muted-foreground mt-1">
               {f.festpreis && <span className="font-semibold text-foreground">Festpreis · </span>}
               {tuevWeg ? (
@@ -94,7 +100,11 @@ export function FahrzeugBestand() {
   // Am Handy sind die Autos wichtiger als die Filter — die klappen dort erst auf Tippen auf.
   const [filterOffen, setFilterOffen] = useState(false);
 
-  const hoechsterPreis = useMemo(() => Math.max(...FAHRZEUGE.map((f) => f.preis)), []);
+  // auf volle 500 aufgerundet — sonst steht am Regler der genaue Preis des teuersten Autos
+  const hoechsterPreis = useMemo(
+    () => Math.ceil(Math.max(...FAHRZEUGE.map((f) => f.preis)) * 1.06 / 500) * 500,
+    []
+  );
   const grenze = maxPreis || hoechsterPreis;
 
   const liste = useMemo(() => {

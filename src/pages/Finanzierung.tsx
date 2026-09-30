@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { FahrzeugbNav, BereichsHero } from "@/components/FahrzeugbNav";
-import { FAHRZEUGE } from "@/data/fahrzeuge";
+import { FAHRZEUGE, preisSpanne } from "@/data/fahrzeuge";
 
 const auf = { initial: { opacity: 0, y: 18 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: "-60px" } };
 
@@ -24,7 +24,7 @@ const UNTERLAGEN = [
 
 export default function Finanzierung() {
   const anfrage = "Hallo, ich interessiere mich für eine Finanzierung. Fahrzeug: ... , gewünschte Rate: ...";
-  const guenstigstes = Math.min(...FAHRZEUGE.map((f) => f.preis));
+  const guenstigstes = Math.min(...FAHRZEUGE.map((f) => preisSpanne(f)?.von ?? f.preis));
   return (
     <div>
       <Seo

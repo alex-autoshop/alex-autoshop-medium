@@ -732,6 +732,32 @@ export function tuevAbgelaufen(tuev: string, jetzt = new Date()): boolean {
   return d !== null && d < jetzt;
 }
 
+/**
+ * Preiskommunikation: nach außen zeigen wir eine Spanne statt des genauen
+ * Preises — der echte Preis liegt immer darin. Die Breite der Spanne ist je
+ * Fahrzeug unterschiedlich, aber NICHT bei jedem Seitenaufruf neu gewürfelt:
+ * sie wird aus dem Namen des Fahrzeugs abgeleitet und bleibt damit stabil.
+ * (Ein Preis, der sich beim Neuladen ändert, wäre für Kunden unseriös und
+ * für dich im Verkaufsgespräch nicht haltbar.)
+ * Festpreis-Fahrzeuge behalten ihren genauen Preis.
+ */
+function streuwert(text: string): number {
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+export function preisSpanne(f: Fahrzeug): { von: number; bis: number } | null {
+  if (f.festpreis) return null;
+  const h = streuwert(f.slug);
+  const runter = 3 + (h % 4);          // 3–6 % unter dem echten Preis
+  const hoch = 3 + ((h >> 4) % 4);     // 3–6 % darüber
+  const stufe = f.preis >= 10000 ? 500 : f.preis >= 5000 ? 250 : 100;
+  const von = Math.floor((f.preis * (1 - runter / 100)) / stufe) * stufe;
+  const bis = Math.ceil((f.preis * (1 + hoch / 100)) / stufe) * stufe;
+  return { von, bis: Math.max(bis, von + stufe) };
+}
+
 export function fahrzeugNachSlug(slug?: string): Fahrzeug | undefined {
   return FAHRZEUGE.find((f) => f.slug === slug);
 }
