@@ -1,13 +1,16 @@
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, Phone, MessageCircle, MapPin, CheckCircle, AlertTriangle,
+  ArrowLeft, Phone, MessageCircle, MapPin, CheckCircle, AlertTriangle, Heart,
   Gauge, Calendar, Fuel, Cog, Zap, Leaf, ShieldCheck, Car,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { fahrzeugNachSlug, tuevAbgelaufen, FAHRZEUGE } from "@/data/fahrzeuge";
-import { FahrzeugKarte, euro, km, preisText } from "@/components/FahrzeugBestand";
+import { FahrzeugKarte } from "@/components/FahrzeugKarte";
+import { euro, km, preisText } from "@/lib/fahrzeugFilter";
+import { useMerkliste } from "@/hooks/useMerkliste";
+import { cn } from "@/lib/utils";
 import { FahrzeugbNav } from "@/components/FahrzeugbNav";
 
 function Kachel({ icon: Icon, label, wert }: { icon: typeof Gauge; label: string; wert: string }) {
@@ -34,6 +37,7 @@ function Zeile({ label, wert }: { label: string; wert?: string | number }) {
 export default function FahrzeugDetail() {
   const { slug } = useParams();
   const f = fahrzeugNachSlug(slug);
+  const { gemerkt, umschalten } = useMerkliste();
 
   if (!f) {
     return (
@@ -163,6 +167,15 @@ export default function FahrzeugDetail() {
               <a href={whatsappLink(anfrage)} target="_blank" rel="noopener noreferrer" className="btn-outline w-full">
                 <MessageCircle className="w-5 h-5" /> Per WhatsApp anfragen
               </a>
+              <button
+                type="button"
+                onClick={() => umschalten(f.slug)}
+                aria-pressed={gemerkt(f.slug)}
+                className={cn("btn-outline w-full", gemerkt(f.slug) && "border-primary text-primary")}
+              >
+                <Heart className={cn("w-5 h-5", gemerkt(f.slug) && "fill-primary")} />
+                {gemerkt(f.slug) ? "Gemerkt" : "Fahrzeug merken"}
+              </button>
             </div>
 
             <div className="mt-6 pt-5 border-t border-border space-y-2 text-sm text-muted-foreground">
@@ -186,12 +199,38 @@ export default function FahrzeugDetail() {
         </motion.aside>
       </div>
 
+      {/* Am Handy immer erreichbar: Preis und Anruf */}
+      <div className="lg:hidden sticky bottom-0 z-30 bg-card/95 backdrop-blur-md border-t border-border">
+        <div className="container py-3 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-lg font-display font-bold text-primary leading-none whitespace-nowrap">{preisText(f)}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{f.titel}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => umschalten(f.slug)}
+            aria-label={gemerkt(f.slug) ? "Nicht mehr merken" : "Fahrzeug merken"}
+            className={cn(
+              "w-12 h-12 shrink-0 rounded-lg border flex items-center justify-center transition-colors",
+              gemerkt(f.slug) ? "border-primary text-primary bg-primary/10" : "border-border text-muted-foreground"
+            )}
+          >
+            <Heart className={cn("w-5 h-5", gemerkt(f.slug) && "fill-primary")} />
+          </button>
+          <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn-primary shrink-0 px-5">
+            <Phone className="w-5 h-5" /> Anrufen
+          </a>
+        </div>
+      </div>
+
       {aehnlich.length > 0 && (
         <section className="bg-secondary/60 py-14">
           <div className="container">
             <h2 className="text-2xl mb-6">Ähnliche Fahrzeuge</h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {aehnlich.map((a) => <FahrzeugKarte key={a.slug} f={a} />)}
+              {aehnlich.map((a) => (
+                <FahrzeugKarte key={a.slug} f={a} gemerkt={gemerkt(a.slug)} aufMerken={umschalten} />
+              ))}
             </div>
           </div>
         </section>

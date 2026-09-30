@@ -22,6 +22,7 @@ const Mieten = lazy(() => import("@/pages/Mieten"));
 const Vermieten = lazy(() => import("@/pages/Vermieten"));
 const Finanzierung = lazy(() => import("@/pages/Finanzierung"));
 const Kreditvermittlung = lazy(() => import("@/pages/Kreditvermittlung"));
+const Merkliste = lazy(() => import("@/pages/Merkliste"));
 const Laden = lazy(() => import("@/pages/Laden"));
 const Konto = lazy(() => import("@/pages/Konto"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -91,6 +92,7 @@ export default function App() {
                     <Route path="/vermieten" element={<NurAdmin><Vermieten /></NurAdmin>} />
                     <Route path="/finanzierung" element={<NurAdmin><Finanzierung /></NurAdmin>} />
                     <Route path="/kreditvermittlung" element={<NurAdmin><Kreditvermittlung /></NurAdmin>} />
+                    <Route path="/merkliste" element={<NurAdmin><Merkliste /></NurAdmin>} />
                     {/* alte Adressen bleiben gueltig */}
                     <Route path="/fahrzeugmarkt" element={<Navigate to="/fahrzeugboerse" replace />} />
                     <Route path="/fahrzeugmarkt/:slug" element={<AltesFahrzeug />} />

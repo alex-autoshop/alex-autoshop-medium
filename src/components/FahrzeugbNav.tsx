@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { Car, Key, HandCoins, Banknote, Landmark } from "lucide-react";
+import { useMerkliste } from "@/hooks/useMerkliste";
+import { Car, Key, HandCoins, Banknote, Landmark, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Unter-Navigation der Fahrzeugbörse — auf allen vier Bereichsseiten gleich. */
@@ -12,6 +13,7 @@ export const BEREICHE = [
 ];
 
 export function FahrzeugbNav() {
+  const { liste } = useMerkliste();
   return (
     <nav
       aria-label="Fahrzeugbörse"
@@ -33,6 +35,34 @@ export function FahrzeugbNav() {
             <b.icon className="w-4 h-4" /> {b.label}
           </NavLink>
         ))}
+
+        {/* Merkliste ganz rechts — der Zähler zeigt, dass etwas drin liegt */}
+        <NavLink
+          to="/merkliste"
+          className={({ isActive }) =>
+            cn(
+              "ml-auto shrink-0 inline-flex items-center gap-2 px-4 min-h-[44px] rounded-lg text-sm font-semibold transition-colors whitespace-nowrap",
+              isActive ? "bg-gold-bright text-night" : "text-white/70 hover:text-white hover:bg-white/10"
+            )
+          }
+        >
+          {({ isActive }) => (
+            <>
+              <Heart className={cn("w-4 h-4", liste.length > 0 && !isActive && "fill-gold-bright text-gold-bright")} />
+              <span className="hidden sm:inline">Merkliste</span>
+              {liste.length > 0 && (
+                <span
+                  className={cn(
+                    "rounded-full text-[11px] font-bold tabular-nums min-w-[20px] h-5 px-1 inline-flex items-center justify-center",
+                    isActive ? "bg-night/15 text-night" : "bg-gold-bright text-night"
+                  )}
+                >
+                  {liste.length}
+                </span>
+              )}
+            </>
+          )}
+        </NavLink>
       </div>
     </nav>
   );
