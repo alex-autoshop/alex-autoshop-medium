@@ -89,11 +89,12 @@ export interface Filter {
   /** 0 = egal, sonst höchster Kilometerstand */
   maxKm: number;
   nurGemerkt: boolean;
+  nurMietbar: boolean;
 }
 
 export const LEERER_FILTER: Filter = {
   kategorien: [], marken: [], kraftstoffe: [], getriebe: [], merkmale: [],
-  maxPreis: 0, minSitze: 0, maxKm: 0, nurGemerkt: false,
+  maxPreis: 0, minSitze: 0, maxKm: 0, nurGemerkt: false, nurMietbar: false,
 };
 
 export type Sortierung = "empfohlen" | "preis-auf" | "preis-ab" | "km-auf" | "ez-ab";
@@ -116,6 +117,7 @@ function ezWert(f: Fahrzeug): number {
 export function filtern(alle: Fahrzeug[], f: Filter, gemerkt: string[]): Fahrzeug[] {
   return alle.filter((v) => {
     if (f.nurGemerkt && !gemerkt.includes(v.slug)) return false;
+    if (f.nurMietbar && !v.mietbar) return false;
     if (f.kategorien.length && !f.kategorien.includes(kategorieVon(v))) return false;
     if (f.marken.length && !f.marken.includes(v.marke)) return false;
     if (f.kraftstoffe.length && !f.kraftstoffe.includes(v.kraftstoff)) return false;
@@ -146,7 +148,7 @@ export function filterAktiv(f: Filter): boolean {
   return (
     f.kategorien.length > 0 || f.marken.length > 0 || f.kraftstoffe.length > 0 ||
     f.getriebe.length > 0 || f.merkmale.length > 0 ||
-    f.maxPreis > 0 || f.minSitze > 0 || f.maxKm > 0 || f.nurGemerkt
+    f.maxPreis > 0 || f.minSitze > 0 || f.maxKm > 0 || f.nurGemerkt || f.nurMietbar
   );
 }
 
@@ -154,6 +156,9 @@ export function filterAktiv(f: Filter): boolean {
 
 export const KATEGORIEN = [...new Set(FAHRZEUGE.map(kategorieVon))]
   .sort((a, b) => a.localeCompare(b, "de")) as Kategorie[];
+
+/** Gibt es überhaupt Mietfahrzeuge? Sonst blenden wir den Filter aus. */
+export const GIBT_MIETFAHRZEUGE = FAHRZEUGE.some((f) => f.mietbar);
 
 export const HOECHSTER_PREIS = Math.ceil(Math.max(...FAHRZEUGE.map((f) => f.preis)) * 1.06 / 500) * 500;
 

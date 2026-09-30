@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, Phone, MessageCircle, MapPin, CheckCircle, AlertTriangle, Heart,
+  ArrowLeft, Phone, MessageCircle, MapPin, CheckCircle, AlertTriangle, Heart, Key,
   Gauge, Calendar, Fuel, Cog, Zap, Leaf, ShieldCheck, Car,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
@@ -187,6 +187,19 @@ export default function FahrzeugDetail() {
                 <p key={h.days} className="pl-6">{h.days}: {h.time}</p>
               ))}
             </div>
+
+            {f.mietbar && (
+              <Link
+                to="/mieten"
+                className="mt-5 flex items-start gap-2.5 rounded-lg bg-primary/5 border border-primary/30 px-3 py-2.5 text-sm hover:bg-primary/10 transition-colors"
+              >
+                <Key className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                <span>
+                  Dieses Fahrzeug kannst du auch <strong className="text-primary">mieten</strong> —
+                  frag nach Tagespreis und Verfügbarkeit.
+                </span>
+              </Link>
+            )}
 
             <div className="mt-5 grid grid-cols-2 gap-2 text-xs">
               {["Probefahrt möglich", "Inzahlungnahme möglich", "Fairer Preis", "Gepflegtes Fahrzeug"].map((v) => (

@@ -28,6 +28,7 @@ function Abzeichen({ text, ton = "hell" }: { text: string; ton?: "hell" | "gold"
 /** Die drei wichtigsten Verkaufsargumente — mehr würde die Karte zumüllen. */
 function abzeichenFuer(f: Fahrzeug): { text: string; ton?: "hell" | "gold" }[] {
   const a: { text: string; ton?: "hell" | "gold" }[] = [];
+  if (f.mietbar) a.push({ text: "Auch mietbar", ton: "gold" });
   if (f.ersteHand) a.push({ text: "1. Hand", ton: "gold" });
   if (/neu/i.test(f.tuev)) a.push({ text: "TÜV neu", ton: "gold" });
   else if (tuevLang(f)) a.push({ text: "TÜV lange" });

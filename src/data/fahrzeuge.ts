@@ -32,6 +32,12 @@ export interface Fahrzeug {
   tuev: string;
   /** true = kein Verhandeln */
   festpreis?: boolean;
+  /**
+   * true = dieses Fahrzeug steht auch zur Miete.
+   * Solange kein Fahrzeug so markiert ist, blendet der Filter "Mieten" sich
+   * selbst aus — es soll niemand auf einen Filter klicken, der nichts findet.
+   */
+  mietbar?: boolean;
   garantieMonate?: number;
   ersteHand?: boolean;
   bauart: string;

@@ -1,7 +1,7 @@
-import { X, RotateCcw } from "lucide-react";
+import { X, RotateCcw, Key } from "lucide-react";
 import { KarosserieSymbol } from "@/components/KarosserieSymbol";
 import {
-  KATEGORIEN, HOECHSTER_PREIS, MERKMAL_LABEL, anzahlJeKategorie, filtern,
+  KATEGORIEN, HOECHSTER_PREIS, GIBT_MIETFAHRZEUGE, MERKMAL_LABEL, anzahlJeKategorie, filtern,
   type Filter, type Merkmal, type Fahrzeug,
 } from "@/lib/fahrzeugFilter";
 import { euro } from "@/lib/fahrzeugFilter";
@@ -103,6 +103,18 @@ export function FahrzeugFilter({
           })}
         </div>
       </Block>
+
+      {GIBT_MIETFAHRZEUGE && (
+        <Block titel="Mieten">
+          <Chip
+            aktiv={filter.nurMietbar}
+            anzahl={alle.filter((f) => f.mietbar).length}
+            onClick={() => setFilter({ ...filter, nurMietbar: !filter.nurMietbar })}
+          >
+            <Key className="w-4 h-4" /> Zum Anmieten verfügbar
+          </Chip>
+        </Block>
+      )}
 
       <Block titel="Preis">
         <label className="block">
@@ -216,6 +228,7 @@ export function AktiveFilter({
   if (filter.maxKm) eintraege.push({ text: `bis ${(filter.maxKm / 1000).toLocaleString("de-DE")} tkm`, weg: () => setFilter({ ...filter, maxKm: 0 }) });
   if (filter.minSitze) eintraege.push({ text: `ab ${filter.minSitze} Sitze`, weg: () => setFilter({ ...filter, minSitze: 0 }) });
   if (filter.nurGemerkt) eintraege.push({ text: "nur Gemerkte", weg: () => setFilter({ ...filter, nurGemerkt: false }) });
+  if (filter.nurMietbar) eintraege.push({ text: "zum Anmieten", weg: () => setFilter({ ...filter, nurMietbar: false }) });
 
   if (eintraege.length === 0) return null;
 
