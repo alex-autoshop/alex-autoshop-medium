@@ -258,7 +258,7 @@ export default function Foerdermittel() {
     <div>
       <Seo
         title="Fördermittelberatung & Finanzierung für Betriebe – Wuppertal"
-        description="Fördermittelberatung für Werkstätten, Autohäuser, Lackier- und Karosseriebetriebe: Zuschüsse, Förderkredite, Beteiligungskapital und Bürgschaften. Kostenloser Förder-Check, Beratung über unseren Partnerberater."
+        description="Fördermittelberatung für Werkstätten, Autohäuser, Lackier- und Karosseriebetriebe: Zuschüsse, Förderkredite, Beteiligungskapital und Bürgschaften. Kostenloser Förder-Check. Vermittlung mit Erlaubnis nach § 34c GewO."
         noindex
       />
       <FahrzeugbNav />
@@ -284,7 +284,7 @@ export default function Foerdermittel() {
         <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/70">
           {[
             "Über 2.000 Förderprogramme",
-            "Beratung über gelisteten Fachberater",
+            "Erlaubnis nach § 34c GewO",
             "Deutschlandweit",
             "Auf Wunsch mit Umsetzung",
           ].map((t) => (
@@ -302,14 +302,14 @@ export default function Foerdermittel() {
             <Handshake className="w-4 h-4" /> Wer hier berät
           </span>
           <p className="text-[15px] leading-relaxed">
-            Die Fördermittelberatung läuft bei Alex Autoshop <strong>über unseren Partnerberater</strong> —
-            einen gelisteten Fördermittel- und Finanzierungsberater, mit dem wir seit Jahren zusammenarbeiten.
-            Wir nehmen dein Vorhaben auf, bringen es ins Erstgespräch und bleiben als Ansprechpartner dabei.
-            Die Antragsberatung selbst macht der Fachberater.
+            Alex Autoshop hat die <strong>Erlaubnis nach § 34c Gewerbeordnung</strong> und darf Darlehen
+            und Fördermittel vermitteln. Du sprichst also direkt mit uns, nicht mit einer Hotline, die
+            dich weiterreicht.
           </p>
           <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-            Heißt für dich: ein Ansprechpartner, den du kennst, und dahinter jemand, der die Programme
-            den ganzen Tag macht. Du brauchst dich nicht zweimal zu erklären.
+            Die Anträge selbst arbeiten wir zusammen mit einem Fachberater aus, der nichts anderes macht
+            als Förderprogramme. Für dich bleibt es trotzdem ein Ansprechpartner — du musst dich nicht
+            zweimal erklären.
           </p>
         </motion.div>
       </section>
@@ -621,8 +621,8 @@ export default function Foerdermittel() {
         </motion.div>
 
         <p className="text-xs text-muted-foreground leading-relaxed mt-8 max-w-3xl">
-          Hinweis: Die Fördermittelberatung erfolgt über unseren Partnerberater. Alex Autoshop vermittelt
-          Darlehen mit Erlaubnis nach § 34c Gewerbeordnung. Diese Seite ist keine Rechts-, Steuer- oder
+          Hinweis: Alex Autoshop vermittelt Darlehen und Fördermittel mit Erlaubnis nach § 34c
+          Gewerbeordnung. Diese Seite ist keine Rechts-, Steuer- oder
           Anlageberatung. Über die Bewilligung von Fördermitteln entscheidet allein die jeweilige
           Förderstelle. Angaben zu Quoten, Fristen und Programmen können sich ändern — maßgeblich sind
           immer die aktuellen Programmrichtlinien.

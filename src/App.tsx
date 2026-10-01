@@ -36,10 +36,29 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const AdminChat = lazy(() => import("@/pages/AdminChat"));
 
 function ScrollToTop() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+    if (!hash) {
+      window.scrollTo(0, 0);
+      return;
+    }
+    // Links wie /vermieten#gewerblich: das Ziel steht erst im DOM, wenn die
+    // per lazy() geladene Seite gerendert ist — deshalb ein paar Frames warten.
+    let versuche = 0;
+    let id = 0;
+    const suchen = () => {
+      const ziel = document.getElementById(decodeURIComponent(hash.slice(1)));
+      if (ziel) {
+        ziel.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else if (versuche++ < 40) {
+        id = window.setTimeout(suchen, 50);
+      } else {
+        window.scrollTo(0, 0);
+      }
+    };
+    suchen();
+    return () => window.clearTimeout(id);
+  }, [pathname, hash]);
   return null;
 }
 

@@ -442,7 +442,7 @@ export const FAHRZEUGE: Fahrzeug[] = [
     slug: "fiat-doblo-1-3-diesel",
     marke: "Fiat", modell: "Doblo", variante: "1.3 Diesel",
     titel: "Fiat Doblo 1.3 Diesel",
-    preis: 2690, km: 211411, erstzulassung: "09/2006",
+    preis: 2290, km: 211411, erstzulassung: "09/2006",
     kraftstoff: "Diesel", getriebe: "Schaltgetriebe",
     kw: 78, ps: 106, hubraum: 1248, tueren: 5, sitze: 5,
     plakette: "Euro 4 · 4 (Grün)", tuev: "auf Anfrage", bauart: "Hochdachkombi",
@@ -880,6 +880,58 @@ export const FAHRZEUGE: Fahrzeug[] = [
     beschreibung: "Nissan Micra Cabrio mit 110 PS und elektrischem Klappdach. Offen fahren für unter 2.000 € — günstiger kommt man kaum an ein Cabrio.",
     bild: "/fahrzeuge/nissan-micra-cabrio-2004.jpg",
   },
+  {
+    slug: "renault-trafic-2-0-dci",
+    marke: "Renault", modell: "Trafic", variante: "2.0 dCi L1H1",
+    titel: "Renault Trafic 2.0 dCi L1H1",
+    preis: 2690, km: 245854, erstzulassung: "06/2005",
+    kraftstoff: "Diesel", getriebe: "Schaltgetriebe",
+    kw: 66, ps: 90, hubraum: 1995, zylinder: 4, tueren: 4, sitze: 3,
+    plakette: "Euro 4 · 4 (Grün)", tuev: "auf Anfrage", bauart: "Transporter",
+    ausstattung: ["Klimaanlage","Zentralverriegelung","Elektrische Fensterheber","Radio / CD","ABS","Airbag","Anhängelast gebremst 2.000 kg","Tankinhalt 80 l","Rundumleuchte auf dem Dach"],
+    zustand: ["Gebrauchsspuren dem Alter entsprechend","2 Fahrzeughalter","Unfallschaden: keiner bekannt"],
+    beschreibung: "Renault Trafic L1H1 als Kastenwagen mit drei Sitzplätzen und 2,0 dCi. Kurzer Radstand, niedriges Dach — passt noch in die meisten Tiefgaragen und zieht gebremst bis 2 Tonnen. Arbeitsfahrzeug mit entsprechender Laufleistung, technisch in Ordnung.",
+    bild: "/fahrzeuge/renault-trafic-2-0-dci.jpg",
+  },
+  {
+    slug: "mercedes-e-320-cdi",
+    marke: "Mercedes-Benz", modell: "E 320 CDI", variante: "Limousine Automatik",
+    titel: "Mercedes-Benz E 320 CDI Limousine",
+    preis: 3690, km: 355078, erstzulassung: "04/2006",
+    kraftstoff: "Diesel", getriebe: "Automatik",
+    kw: 165, ps: 224, hubraum: 2987, zylinder: 6, tueren: 4, sitze: 5,
+    plakette: "Euro 4 · 4 (Grün)", tuev: "auf Anfrage", bauart: "Limousine",
+    ausstattung: ["Allradantrieb (4MATIC)","Navigation","Klimaautomatik","Elektrische Fensterheber","ESP","ABS","Anhängelast gebremst 2.000 kg","Tankinhalt 65 l"],
+    zustand: ["Hohe Laufleistung, technisch gepflegt","2 Fahrzeughalter","Unfallschaden: keiner bekannt"],
+    beschreibung: "E 320 CDI mit dem V6-Diesel, 224 PS, Automatik und Allrad. Das ist die Langstreckenversion der E-Klasse — die Kilometer stehen drauf, weil genau dafür gebaut. Wer viel fährt, fährt sie günstiger als jeden Kleinwagen.",
+    bild: "/fahrzeuge/mercedes-e-320-cdi.jpg",
+  },
+  {
+    slug: "bmw-320i-touring",
+    marke: "BMW", modell: "320i", variante: "Touring 2.0",
+    titel: "BMW 320i Touring 2.0",
+    preis: 4990, km: 257989, erstzulassung: "03/2011",
+    kraftstoff: "Benzin", getriebe: "Schaltgetriebe",
+    kw: 125, ps: 170, hubraum: 1995, zylinder: 4, tueren: 5, sitze: 5,
+    plakette: "Euro 5 · 4 (Grün)", tuev: "auf Anfrage", bauart: "Kombi",
+    ausstattung: ["Klimaanlage","Tempomat","Einparkhilfe hinten (PDC)","Sitzheizung","Radio / CD","Bluetooth","ABS","Anhängelast gebremst 1.600 kg","Tankinhalt 61 l"],
+    zustand: ["Gebrauchsspuren dem Alter entsprechend","3 Fahrzeughalter","Unfallschaden: keiner bekannt"],
+    beschreibung: "320i Touring mit 170 PS Benziner — kein Diesel, also kein Thema mit Partikelfilter und Fahrverboten. Euro 5, Sitzheizung, Tempomat und PDC hinten. Der Kombi für alle, die Platz wollen, ohne auf Hinterradantrieb zu verzichten.",
+    bild: "/fahrzeuge/bmw-320i-touring.jpg",
+  },
+  {
+    slug: "mini-cooper-1-6",
+    marke: "MINI", modell: "Cooper", variante: "1.6 Benzin",
+    titel: "MINI Cooper 1.6",
+    preis: 2490, km: 248818, erstzulassung: "09/2005",
+    kraftstoff: "Benzin", getriebe: "Schaltgetriebe",
+    kw: 85, ps: 116, hubraum: 1598, zylinder: 4, tueren: 3, sitze: 4,
+    plakette: "Euro 4 · 4 (Grün)", tuev: "auf Anfrage", bauart: "Kleinwagen",
+    ausstattung: ["Klimaanlage","Zentralverriegelung","Elektrische Fensterheber","Radio / CD","ABS","Airbag","Tankinhalt 40 l"],
+    zustand: ["Gebrauchsspuren dem Alter entsprechend","2 Fahrzeughalter","Unfallschaden: keiner bekannt"],
+    beschreibung: "MINI Cooper in British Racing Green mit weißem Dach und Dachstreifen. 116 PS, Schaltgetriebe, Klimaanlage. Fährt sich wie ein Go-Kart und sieht nach mehr aus, als er kostet.",
+    bild: "/fahrzeuge/mini-cooper-1-6.jpg",
+  },
 ];
 
 /** "06/2027" → Date am Monatsende; "neu" o. ä. → null */
@@ -924,4 +976,6 @@ export function fahrzeugNachSlug(slug?: string): Fahrzeug | undefined {
   return FAHRZEUGE.find((f) => f.slug === slug);
 }
 
-export const MARKEN = [...new Set(FAHRZEUGE.map((f) => f.marke))].sort();
+export const MARKEN = [...new Set(FAHRZEUGE.map((f) => f.marke))].sort((a, b) =>
+  a.localeCompare(b, "de", { sensitivity: "base" })
+);

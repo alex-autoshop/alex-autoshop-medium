@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Phone, MessageCircle, MapPin, CheckCircle, ShieldCheck, Car, Truck, Package, Sparkles, HandCoins, ArrowRight } from "lucide-react";
+import { Phone, MessageCircle, MapPin, CheckCircle, ShieldCheck, Car, Truck, Package, Sparkles, HandCoins, ArrowRight, Store, Info } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { FahrzeugbNav, BereichsHero } from "@/components/FahrzeugbNav";
@@ -47,11 +47,27 @@ export default function Mieten() {
         </div>
       </BereichsHero>
 
-      {/* Zwei Wege: mieten oder das eigene Auto vermieten lassen */}
+      {/* Ehrlicher Stand: der Mietbestand ist noch leer */}
       <section className="container pt-10 sm:pt-14">
-        <div className="grid sm:grid-cols-2 gap-5">
-          <div className="card-tilt hover:translate-y-0 p-6 border-primary/40 bg-primary/5">
-            <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center mb-4">
+        <div className="card-tilt hover:translate-y-0 p-5 sm:p-6 border-primary/40 bg-primary/5 flex items-start gap-3.5">
+          <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+          <div>
+            <h2 className="text-lg mb-1.5">Im Moment steht noch kein Mietfahrzeug bereit</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Die Mietbörse ist aufgebaut, der Bestand füllt sich gerade. Sobald ein Fahrzeug zur Miete
+              freigegeben ist, erscheint es hier und in der Fahrzeugbörse automatisch — bis dahin lohnt
+              ein Anruf, wir sagen dir ehrlich, ab wann etwas da ist. Und wer selbst ein Fahrzeug stehen
+              hat: genau das ist der schnellste Weg, die Börse zu füllen.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Drei Wege: mieten, eigenes Auto abgeben, oder selbst vermieten */}
+      <section className="container pt-6 sm:pt-8">
+        <div className="grid sm:grid-cols-3 gap-5">
+          <div className="card-tilt hover:translate-y-0 p-6">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
               <Car className="w-6 h-6 text-primary" />
             </div>
             <h2 className="text-xl mb-2">Ich will ein Auto mieten</h2>
@@ -74,6 +90,18 @@ export default function Mieten() {
               So läuft das Vermieten <ArrowRight className="w-4 h-4" />
             </span>
           </Link>
+          <Link to="/vermieten#gewerblich" className="card-tilt p-6 block">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+              <Store className="w-6 h-6 text-primary" />
+            </div>
+            <h2 className="text-xl mb-2">Ich vermiete selbst</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              Du hast ein Vermietungsgeschäft? Trag dich ein und stell deine Fahrzeuge in die Mietbörse.
+            </p>
+            <span className="inline-flex items-center gap-1.5 text-primary font-semibold text-sm">
+              Als Vermieter eintragen <ArrowRight className="w-4 h-4" />
+            </span>
+          </Link>
         </div>
       </section>
 
@@ -91,8 +119,9 @@ export default function Mieten() {
           ))}
         </div>
         <p className="text-sm text-muted-foreground mt-6">
-          Welche Fahrzeuge gerade frei sind, wechselt täglich — deshalb steht hier keine Liste, sondern
-          eine Telefonnummer. Ein Anruf, und du weißt in zwei Minuten, was verfügbar ist und was es kostet.
+          Das sind die Klassen, die wir aufbauen. Welche Fahrzeuge davon frei sind, wechselt — deshalb
+          steht hier keine feste Liste, sondern eine Telefonnummer. Ein Anruf, und du weißt in zwei
+          Minuten, was verfügbar ist und was es kostet.
         </p>
       </section>
 

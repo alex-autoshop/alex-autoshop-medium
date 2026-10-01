@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Phone, MessageCircle, CheckCircle, ShieldCheck, Wrench, Euro, Users, AlertTriangle } from "lucide-react";
+import { Phone, MessageCircle, CheckCircle, ShieldCheck, Wrench, Euro, Users, AlertTriangle, Store, FileCheck } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { FahrzeugbNav, BereichsHero } from "@/components/FahrzeugbNav";
@@ -126,6 +126,85 @@ export default function Vermieten() {
             </a>
           </div>
         </motion.div>
+      </section>
+
+      {/* Gewerbliche Vermieter: eigene Flotte in die Mietboerse stellen */}
+      <section id="gewerblich" className="bg-secondary/60 py-14 sm:py-20 scroll-mt-40">
+        <div className="container">
+          <motion.div {...auf} className="max-w-2xl mb-10">
+            <span className="inline-flex items-center gap-2 text-primary font-semibold text-sm mb-3">
+              <Store className="w-4 h-4" /> Für Vermietungsgeschäfte
+            </span>
+            <h2 className="text-2xl sm:text-3xl mb-3">Du vermietest selbst? Stell deine Fahrzeuge rein.</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Wer ein eigenes Vermietungsgeschäft hat, muss sein Fahrzeug nicht abgeben. Du trägst dich
+              als Vermieter ein und deine Fahrzeuge erscheinen mit deinen Konditionen in der Mietbörse.
+              Die Vermietung bleibt dein Geschäft — wir bringen die Anfragen.
+            </p>
+          </motion.div>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            <motion.div {...auf} className="card-tilt hover:translate-y-0 p-7">
+              <span className="inline-flex items-center gap-2 text-primary font-semibold text-sm mb-4">
+                <FileCheck className="w-4 h-4" /> Was du mitbringst
+              </span>
+              <h3 className="text-xl mb-4">Voraussetzungen</h3>
+              <div className="space-y-2.5">
+                {[
+                  "Gewerbeanmeldung oder Handelsregisterauszug",
+                  "Versicherung für Selbstfahrervermietfahrzeuge für jedes Fahrzeug",
+                  "Gültige HU für jedes eingestellte Fahrzeug",
+                  "Fahrzeugschein und Nachweis, dass du über das Fahrzeug verfügen darfst",
+                  "Ein Ansprechpartner, der bei Anfragen auch rangeht",
+                ].map((v) => (
+                  <div key={v} className="flex items-start gap-2.5 text-sm leading-relaxed">
+                    <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" /> {v}
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground mt-5 leading-relaxed">
+                Ohne die Versicherung für Selbstfahrervermietfahrzeuge geht ein Fahrzeug nicht online.
+                Das ist keine Schikane — ohne sie zahlt im Schadensfall niemand, und am Ende stehst du da.
+              </p>
+            </motion.div>
+
+            <motion.div {...auf} transition={{ delay: 0.08 }} className="card-tilt hover:translate-y-0 p-7 flex flex-col">
+              <span className="inline-flex items-center gap-2 text-primary font-semibold text-sm mb-4">
+                <Store className="w-4 h-4" /> So kommst du rein
+              </span>
+              <h3 className="text-xl mb-4">In vier Schritten gelistet</h3>
+              <ol className="space-y-4">
+                {[
+                  ["Melden", "Ruf an oder schreib uns, mit wie vielen Fahrzeugen du einsteigen willst."],
+                  ["Nachweise schicken", "Gewerbe, Versicherung, Fahrzeugpapiere. Einmal, nicht pro Fahrzeug."],
+                  ["Fahrzeuge aufnehmen", "Fotos, Daten und deine Preise — oder du schickst sie uns, wir setzen sie ein."],
+                  ["Online", "Deine Fahrzeuge stehen in der Mietbörse, Anfragen kommen direkt zu dir."],
+                ].map(([t, x], i) => (
+                  <li key={t} className="flex gap-3.5">
+                    <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary font-display font-bold text-sm flex items-center justify-center shrink-0">
+                      {i + 1}
+                    </span>
+                    <span>
+                      <span className="block font-bold">{t}</span>
+                      <span className="block text-sm text-muted-foreground leading-relaxed mt-0.5">{x}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <div className="flex flex-col sm:flex-row gap-3 mt-auto pt-7">
+                <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn-primary flex-1">
+                  <Phone className="w-5 h-5" /> {SHOP_INFO.phone}
+                </a>
+                <a
+                  href={whatsappLink("Hallo, ich habe ein Vermietungsgeschäft und möchte meine Fahrzeuge in die Mietbörse stellen. Betrieb: ... , Anzahl Fahrzeuge: ...")}
+                  target="_blank" rel="noopener noreferrer" className="btn-outline flex-1"
+                >
+                  <MessageCircle className="w-5 h-5" /> Als Vermieter eintragen
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </section>
     </div>
   );
