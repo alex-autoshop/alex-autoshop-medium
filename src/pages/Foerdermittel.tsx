@@ -5,9 +5,10 @@ import {
   Phone, MessageCircle, ArrowRight, ChevronDown, CheckCircle, Lock,
   FileSearch, Layers, ClipboardCheck, Lightbulb, Cpu, Handshake,
   Building2, MonitorSmartphone, Leaf, BadgeEuro, Banknote, PiggyBank,
-  ShieldCheck, Globe, MapPin, Factory, Rocket, TrendingUp, HelpCircle,
+  ShieldCheck, Globe, MapPin, Factory, Rocket, TrendingUp, HelpCircle, Zap, Gauge,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
+import { FinanzierungsAnfrage } from "@/components/FinanzierungsAnfrage";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { FahrzeugbNav, BereichsHero } from "@/components/FahrzeugbNav";
 import { cn } from "@/lib/utils";
@@ -213,6 +214,40 @@ const FOERDERARTEN = [
   },
 ];
 
+const SCHNELLWEGE = [
+  {
+    icon: Zap,
+    titel: "Schnell und überschaubar",
+    summe: "ab 1.000 €",
+    dauer: "oft in zwei bis drei Werktagen auf dem Konto",
+    text: "Für den Betrag, der kurzfristig fehlt: ein Fahrzeug für den Hof, eine Reparatur, eine Rechnung, die vorfinanziert werden muss.",
+    punkte: [
+      "Anfrage online, keine Papierberge",
+      "Kontoumsätze statt Businessplan",
+      "Entscheidung meist am selben oder nächsten Werktag",
+    ],
+  },
+  {
+    icon: Gauge,
+    titel: "Größere Summen für laufende Betriebe",
+    summe: "ab ca. 250.000 € Jahresumsatz",
+    dauer: "in der Regel rund zwei Wochen bis zur Auszahlung",
+    text: "Wenn der Betrieb Zahlen vorlegen kann, wird die Spanne deutlich größer. Dafür der vollständige Weg mit Unterlagen und Prüfung.",
+    punkte: [
+      "Vollständige Prüfung mit Jahresabschluss und BWA",
+      "Auszahlung auf das Geschäftskonto des Betriebs",
+      "Kombinierbar mit einem Förderprogramm",
+    ],
+  },
+];
+
+const KLARTEXT = [
+  ["Keine Zinsen, sondern eine Faktorrate", "Du erfährst vor der Unterschrift genau eine Zahl: was du insgesamt zurückzahlst. Keine Zinsgleitklausel, keine Überraschung im dritten Jahr."],
+  ["Rückzahlung läuft anteilig mit", "Statt starrer Rate wird ein fester Anteil vom Umsatz abgeführt. Starke Monate tilgen schneller, schwache Monate drücken weniger."],
+  ["Nur für Gewerbe", "Unternehmen, Selbstständige und Freiberufler. Für Privatpersonen gibt es dieses Produkt nicht."],
+  ["Keine Zusage im Voraus", "Über Angebot, Summe und Konditionen entscheidet der Finanzierungspartner nach Prüfung — nicht wir. Wer dir vorher eine Zusage gibt, verkauft dir etwas."],
+];
+
 const UMSETZUNG = [
   "Antragsunterlagen und Vorhabenkonzept erstellen",
   "Kommunikation mit Förderstelle, Bürgschaftsbank und Hausbank",
@@ -286,7 +321,7 @@ export default function Foerdermittel() {
             "Über 2.000 Förderprogramme",
             "Erlaubnis nach § 34c GewO",
             "Deutschlandweit",
-            "Auf Wunsch mit Umsetzung",
+            "Schnellfinanzierung ohne Förderprogramm",
           ].map((t) => (
             <li key={t} className="inline-flex items-center gap-1.5">
               <CheckCircle className="w-4 h-4 text-gold-accent shrink-0" /> {t}
@@ -489,6 +524,63 @@ export default function Foerdermittel() {
             </motion.div>
           ))}
         </div>
+      </section>
+
+      {/* Schnellfinanzierung — anderes Produkt als Foerdermittel, klar getrennt */}
+      <section id="schnellfinanzierung" className="container py-14 sm:py-20 scroll-mt-40">
+        <motion.div {...auf} className="max-w-2xl mb-10">
+          <p className="text-primary font-semibold uppercase tracking-wide text-sm mb-2">Ohne Förderprogramm</p>
+          <h2 className="text-2xl sm:text-3xl mb-3">Wenn es schneller gehen muss</h2>
+          <p className="text-muted-foreground leading-relaxed">
+            Fördermittel sind das günstigste Geld, das es gibt — aber sie brauchen Vorlauf. Antrag vor
+            Vorhabenbeginn, dann Wochen bis zum Bescheid. Wenn das Geld vorher da sein muss, gibt es einen
+            zweiten Weg: eine Finanzierung über unseren Finanzierungspartner, die sich am Umsatz deines
+            Betriebs orientiert statt an Sicherheiten.
+          </p>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-2 gap-5 mb-10">
+          {SCHNELLWEGE.map((w, i) => (
+            <motion.div key={w.titel} {...auf} transition={{ delay: i * 0.07 }} className="card-tilt hover:translate-y-0 p-7">
+              <div className="flex items-start gap-4 mb-4">
+                <span className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <w.icon className="w-6 h-6 text-primary" />
+                </span>
+                <div>
+                  <h3 className="text-lg leading-snug">{w.titel}</h3>
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wide mt-1">{w.summe}</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">{w.text}</p>
+              <p className="text-sm font-semibold mb-4">{w.dauer}</p>
+              <div className="space-y-2">
+                {w.punkte.map((pk) => (
+                  <div key={pk} className="flex items-start gap-2.5 text-sm leading-relaxed">
+                    <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" /> {pk}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <motion.div {...auf} className="grid sm:grid-cols-2 gap-x-8 gap-y-6 mb-12 max-w-4xl">
+          {KLARTEXT.map(([t, x]) => (
+            <div key={t}>
+              <h3 className="text-base mb-1.5">{t}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{x}</p>
+            </div>
+          ))}
+        </motion.div>
+
+        <motion.div {...auf} className="max-w-3xl">
+          <FinanzierungsAnfrage />
+        </motion.div>
+
+        <p className="text-sm text-muted-foreground leading-relaxed mt-6 max-w-3xl">
+          Zeitangaben sind Erfahrungswerte und keine Zusage: wie schnell es geht, hängt davon ab, wie
+          vollständig deine Unterlagen sind und wie schnell die Bank die Kontoumsätze freigibt.
+        </p>
       </section>
 
       {/* Umsetzung */}
