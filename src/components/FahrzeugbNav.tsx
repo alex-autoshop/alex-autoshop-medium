@@ -1,15 +1,13 @@
 import { NavLink } from "react-router-dom";
 import { useMerkliste } from "@/hooks/useMerkliste";
-import { Car, Key, HandCoins, Banknote, Landmark, Heart } from "lucide-react";
+import { Car, Key, Landmark, Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Unter-Navigation der Fahrzeugbörse — auf allen vier Bereichsseiten gleich. */
 export const BEREICHE = [
   { to: "/fahrzeugboerse", label: "Fahrzeuge", icon: Car, ende: true },
-  { to: "/mieten", label: "Mieten", icon: Key, ende: false },
-  { to: "/vermieten", label: "Vermieten", icon: HandCoins, ende: false },
-  { to: "/finanzierung", label: "Kfz-Finanzierung", icon: Banknote, ende: false },
-  { to: "/kreditvermittlung", label: "Kreditvermittlung", icon: Landmark, ende: false },
+  { to: "/mieten", label: "Mietbörse", icon: Key, ende: false },
+  { to: "/kreditvermittlung", label: "Business-Kredit", icon: Landmark, ende: false },
 ];
 
 export function FahrzeugbNav() {

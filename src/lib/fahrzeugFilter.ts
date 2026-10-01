@@ -27,6 +27,7 @@ const BAUART_ZU_KATEGORIE: Record<string, Kategorie> = {
   "Coupé / Sportback": "Coupé",
   "Van": "Van & Transporter",
   "Hochdachkombi": "Van & Transporter",
+  "Transporter": "Van & Transporter",
 };
 
 export function kategorieVon(f: Fahrzeug): Kategorie {

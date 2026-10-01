@@ -39,21 +39,21 @@ export default function Kreditvermittlung() {
   return (
     <div>
       <Seo
-        title="Kreditvermittlung für Gewerbe & Händler – Wuppertal | Alex Autoshop"
-        description="Finanzierungsanfragen für Autohändler, Werkstätten und Gewerbetreibende: Fahrzeugkauf, Händlerbestand, Betriebsmittel. Ausschließlich für gewerbliche Kunden. Erlaubnis nach § 34c GewO."
+        title="Business-Kredit für Händler & Gewerbe – Wuppertal | Alex Autoshop"
+        description="Kredit- und Finanzierungsanfragen für Autohändler, Werkstätten und Gewerbetreibende: Fahrzeugkauf, Händlerbestand, Betriebsmittel. Ausschließlich für gewerbliche Kunden. Erlaubnis nach § 34c GewO."
       />
       <FahrzeugbNav />
       <BereichsHero
         augenbraue="Alex Autoshop · Fahrzeugbörse"
-        titel="Kreditvermittlung."
+        titel="Business-Kredit."
         akzent="Nur für Gewerbe."
-        text="Für Autohändler, Werkstätten, Unternehmen und Selbstständige. Wir nehmen deine Anfrage auf und gehen damit zu den Finanzierungspartnern — für Fahrzeugkauf, Händlerbestand oder Betriebsmittel."
+        text="Für Autohändler, Werkstätten, Unternehmen und Selbstständige. Ein Weg für beides — das Fahrzeug für den Betrieb und das Geld, das dahinter steht. Wir nehmen deine Anfrage auf und gehen damit zu den Finanzierungspartnern."
       >
         <div className="inline-flex items-start gap-2 rounded-xl bg-night/60 border border-gold-bright/30 px-4 py-3 text-left max-w-md">
           <Lock className="w-4 h-4 text-gold-accent shrink-0 mt-0.5" />
           <p className="text-sm text-white/80">
             Dieser Bereich richtet sich <strong className="text-white">ausschließlich an gewerbliche Kunden</strong>.
-            Privatkunden können ihn nicht nutzen — für private Fahrzeugkäufe gibt es die{" "}
+            Privatkunden können ihn nicht nutzen — für den privaten Autokauf gibt es die{" "}
             <Link to="/finanzierung" className="text-gold-accent underline underline-offset-2">Kfz-Finanzierung</Link>.
           </p>
         </div>

@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { Phone, MessageCircle, MapPin, CheckCircle, ShieldCheck, Car, Truck, Package, Sparkles } from "lucide-react";
+import { Phone, MessageCircle, MapPin, CheckCircle, ShieldCheck, Car, Truck, Package, Sparkles, HandCoins, ArrowRight } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { FahrzeugbNav, BereichsHero } from "@/components/FahrzeugbNav";
+import { Link } from "react-router-dom";
 
 const auf = { initial: { opacity: 0, y: 18 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: "-60px" } };
 
@@ -25,15 +26,15 @@ export default function Mieten() {
   return (
     <div>
       <Seo
-        title="Auto mieten in Wuppertal – Kleinwagen, Kombi, Transporter | Alex Autoshop"
+        title="Mietbörse Wuppertal – Auto mieten und vermieten | Alex Autoshop"
         description="Fahrzeug mieten in Wuppertal: Kleinwagen, Kombi, Van und Transporter. Versichert als Selbstfahrervermietfahrzeug, Übergabe direkt beim Händler. Preise auf Anfrage."
       />
       <FahrzeugbNav />
       <BereichsHero
         augenbraue="Alex Autoshop · Fahrzeugbörse"
-        titel="Auto mieten."
-        akzent="Ohne Theater."
-        text="Vom Kleinwagen bis zum Transporter — Übergabe bei uns in Wuppertal, ohne Warteschlange am Flughafenschalter und ohne Kleingedrucktes, das erst beim Zurückgeben auffällt."
+        titel="Mietbörse."
+        akzent="Mieten und vermieten."
+        text="Vom Kleinwagen bis zum Transporter — Übergabe bei uns in Wuppertal, ohne Warteschlange am Schalter und ohne Kleingedrucktes, das erst beim Zurückgeben auffällt. Und wenn dein eigenes Auto nur herumsteht: wir vermieten es für dich."
       >
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn-gold-bright text-lg px-8">
@@ -46,7 +47,37 @@ export default function Mieten() {
         </div>
       </BereichsHero>
 
-      <section className="container py-14 sm:py-20">
+      {/* Zwei Wege: mieten oder das eigene Auto vermieten lassen */}
+      <section className="container pt-10 sm:pt-14">
+        <div className="grid sm:grid-cols-2 gap-5">
+          <div className="card-tilt hover:translate-y-0 p-6 border-primary/40 bg-primary/5">
+            <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center mb-4">
+              <Car className="w-6 h-6 text-primary" />
+            </div>
+            <h2 className="text-xl mb-2">Ich will ein Auto mieten</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              Kleinwagen, Kombi, Transporter oder etwas Besonderes — für einen Tag oder für Wochen.
+            </p>
+            <a href="#klassen" className="inline-flex items-center gap-1.5 text-primary font-semibold text-sm hover:underline">
+              Fahrzeugklassen ansehen <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+          <Link to="/vermieten" className="card-tilt p-6 block">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
+              <HandCoins className="w-6 h-6 text-primary" />
+            </div>
+            <h2 className="text-xl mb-2">Mein Auto soll Geld verdienen</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              Du gibst dein Fahrzeug bei uns ab, wir kümmern uns um Mieter, Versicherung und Übergabe.
+            </p>
+            <span className="inline-flex items-center gap-1.5 text-primary font-semibold text-sm">
+              So läuft das Vermieten <ArrowRight className="w-4 h-4" />
+            </span>
+          </Link>
+        </div>
+      </section>
+
+      <section id="klassen" className="container py-14 sm:py-20 scroll-mt-40">
         <motion.h2 {...auf} className="text-2xl sm:text-3xl mb-8">Was du bei uns mieten kannst</motion.h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {KLASSEN.map((k, i) => (

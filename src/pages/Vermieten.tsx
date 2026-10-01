@@ -24,7 +24,7 @@ export default function Vermieten() {
   return (
     <div>
       <Seo
-        title="Auto vermieten lassen – Wuppertal | Alex Autoshop Fahrzeugbörse"
+        title="Auto vermieten lassen – Mietbörse Wuppertal | Alex Autoshop"
         description="Dein Auto steht nur herum? Wir vermieten es für dich: versichert als Selbstfahrervermietfahrzeug, geprüfte Mieter, Übergabe und Werkstatt bei uns in Wuppertal."
       />
       <FahrzeugbNav />
