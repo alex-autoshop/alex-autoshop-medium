@@ -39,13 +39,13 @@ export default function Kreditvermittlung() {
   return (
     <div>
       <Seo
-        title="Business-Kredit für Händler & Gewerbe – Wuppertal | Alex Autoshop"
+        title="Gewerbliche Kreditvermittlung für Händler & Betriebe – Wuppertal"
         description="Kredit- und Finanzierungsanfragen für Autohändler, Werkstätten und Gewerbetreibende: Fahrzeugkauf, Händlerbestand, Betriebsmittel. Ausschließlich für gewerbliche Kunden. Erlaubnis nach § 34c GewO."
       />
       <FahrzeugbNav />
       <BereichsHero
         augenbraue="Alex Autoshop · Fahrzeugbörse"
-        titel="Business-Kredit."
+        titel="Kreditvermittlung."
         akzent="Nur für Gewerbe."
         text="Für Autohändler, Werkstätten, Unternehmen und Selbstständige. Ein Weg für beides — das Fahrzeug für den Betrieb und das Geld, das dahinter steht. Wir nehmen deine Anfrage auf und gehen damit zu den Finanzierungspartnern."
       >

@@ -8,5 +8,6 @@ Disallow: /mieten
 Disallow: /vermieten
 Disallow: /finanzierung
 Disallow: /kreditvermittlung
+Disallow: /foerdermittel
 
 Sitemap: https://alex-autoshop.de/sitemap.xml

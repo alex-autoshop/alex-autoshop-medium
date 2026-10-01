@@ -77,7 +77,7 @@ export default function Finanzierung() {
             </p>
             <div className="flex flex-col gap-1.5">
               <Link to="/kreditvermittlung" className="text-primary font-semibold text-sm hover:underline">
-                Zum Business-Kredit für Gewerbe →
+                Zur gewerblichen Kreditvermittlung →
               </Link>
               <Link to="/mitgliedschaft" className="text-primary font-semibold text-sm hover:underline">
                 Mitgliedschaft ansehen →
