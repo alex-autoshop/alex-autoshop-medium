@@ -40,7 +40,7 @@ export default function Kreditvermittlung() {
     <div>
       <Seo
         title="Gewerbliche Kreditvermittlung für Händler & Betriebe – Wuppertal"
-        description="Kredit- und Finanzierungsanfragen für Autohändler, Werkstätten und Gewerbetreibende: Fahrzeugkauf, Händlerbestand, Betriebsmittel. Ausschließlich für gewerbliche Kunden. Erlaubnis nach § 34c GewO."
+        description="Kredit- und Finanzierungsanfragen für Autohändler, Werkstätten und Gewerbetreibende: Fahrzeugkauf, Händlerbestand, Betriebsmittel. Ausschließlich für gewerbliche Kunden."
       />
       <FahrzeugbNav />
       <BereichsHero
@@ -160,8 +160,8 @@ export default function Kreditvermittlung() {
 
           <p className="text-sm text-muted-foreground mt-auto pt-6 leading-relaxed">
             Den gewerblichen Status prüfen wir anhand deiner Unterlagen, bevor eine Anfrage
-            weitergegeben wird. Vermittlung von Darlehen mit Erlaubnis nach § 34c Gewerbeordnung.
-            Zinssätze und Raten nennen wir erst, wenn ein Angebot vorliegt — vorher wäre jede Zahl geraten.
+            weitergegeben wird. Zinssätze und Raten nennen wir erst, wenn ein Angebot vorliegt —
+            vorher wäre jede Zahl geraten.
           </p>
         </motion.div>
       </section>

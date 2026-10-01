@@ -29,7 +29,7 @@ export default function Finanzierung() {
     <div>
       <Seo
         title="Kfz-Finanzierung in Wuppertal – Auto finanzieren | Alex Autoshop"
-        description="Fahrzeugfinanzierung über Alex Autoshop in Wuppertal: für Fahrzeuge aus unserem Bestand und von außerhalb, für Privat und Gewerbe. Erlaubnis nach § 34c GewO."
+        description="Fahrzeugfinanzierung über Alex Autoshop in Wuppertal: für Fahrzeuge aus unserem Bestand und von außerhalb, für Privat und Gewerbe. Anfrage unverbindlich, Angebote zum Vergleich."
       />
       <FahrzeugbNav />
       <BereichsHero
@@ -134,8 +134,8 @@ export default function Finanzierung() {
             am Ende für dich teurer als gedacht. Du bekommst eine konkrete Zahl, sobald wir
             angefragt haben, und vorher unterschreibst du nichts.
           </p>
-          <p className="text-sm text-muted-foreground mb-6">
-            Vermittlung von Darlehen mit Erlaubnis nach § 34c Gewerbeordnung.
+          <p className="text-xs text-muted-foreground/80 mb-6">
+            Angaben zu unserer Vermittlungstätigkeit stehen im Impressum.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 mt-auto">
             <a href={`tel:${SHOP_INFO.phoneIntl}`} className="btn-primary flex-1">
