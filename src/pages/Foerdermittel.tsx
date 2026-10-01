@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { FinanzierungsAnfrage } from "@/components/FinanzierungsAnfrage";
+import { UmsatzRechner } from "@/components/UmsatzRechner";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { FahrzeugbNav, BereichsHero } from "@/components/FahrzeugbNav";
 import { cn } from "@/lib/utils";
@@ -242,8 +243,6 @@ const SCHNELLWEGE = [
 ];
 
 const KLARTEXT = [
-  ["Keine Zinsen, sondern eine Faktorrate", "Du erfährst vor der Unterschrift genau eine Zahl: was du insgesamt zurückzahlst. Keine Zinsgleitklausel, keine Überraschung im dritten Jahr."],
-  ["Rückzahlung läuft anteilig mit", "Statt starrer Rate wird ein fester Anteil vom Umsatz abgeführt. Starke Monate tilgen schneller, schwache Monate drücken weniger."],
   ["Nur für Gewerbe", "Unternehmen, Selbstständige und Freiberufler. Für Privatpersonen gibt es dieses Produkt nicht."],
   ["Keine Zusage im Voraus", "Über Angebot, Summe und Konditionen entscheidet der Finanzierungspartner nach Prüfung — nicht wir. Wer dir vorher eine Zusage gibt, verkauft dir etwas."],
 ];
@@ -538,6 +537,11 @@ export default function Foerdermittel() {
           </p>
         </motion.div>
 
+        {/* Rechner — gibt eine Hausnummer, bevor jemand ein Formular ausfüllt */}
+        <div className="mb-14">
+          <UmsatzRechner />
+        </div>
+
         <div className="grid lg:grid-cols-2 gap-5 mb-10">
           {SCHNELLWEGE.map((w, i) => (
             <motion.div key={w.titel} {...auf} transition={{ delay: i * 0.07 }} className="card-tilt hover:translate-y-0 p-7">
@@ -572,7 +576,7 @@ export default function Foerdermittel() {
           ))}
         </motion.div>
 
-        <motion.div {...auf} className="max-w-3xl">
+        <motion.div {...auf} id="schnellfinanzierung-formular" className="max-w-3xl scroll-mt-40">
           <FinanzierungsAnfrage />
         </motion.div>
 
