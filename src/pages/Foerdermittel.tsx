@@ -622,7 +622,9 @@ export default function Foerdermittel() {
 
         <p className="text-xs text-muted-foreground leading-relaxed mt-8 max-w-3xl">
           Hinweis: Alex Autoshop vermittelt Darlehen und Fördermittel mit Erlaubnis nach § 34c
-          Gewerbeordnung. Diese Seite ist keine Rechts-, Steuer- oder
+          Gewerbeordnung, erteilt durch die Stadt Wuppertal (Einzelheiten im{" "}
+          <Link to="/impressum" className="underline underline-offset-2 hover:text-foreground">Impressum</Link>).
+          Diese Seite ist keine Rechts-, Steuer- oder
           Anlageberatung. Über die Bewilligung von Fördermitteln entscheidet allein die jeweilige
           Förderstelle. Angaben zu Quoten, Fristen und Programmen können sich ändern — maßgeblich sind
           immer die aktuellen Programmrichtlinien.

@@ -24,6 +24,27 @@ const Impressum = () => (
       <p>Gewerbebetrieb im Bereich Handel mit Autoteilen, Autolack und Lackierbedarf</p>
       <p>Keine Eintragung im Handelsregister erforderlich</p>
 
+      <p><strong>Erlaubnis nach § 34c Gewerbeordnung</strong></p>
+      <p>
+        Für die Vermittlung von Darlehen und Fördermitteln liegt eine Erlaubnis nach
+        § 34c Abs. 1 Gewerbeordnung (GewO) vor.
+      </p>
+      <p>
+        Berufsbezeichnung: Darlehensvermittler — verliehen in der Bundesrepublik Deutschland
+      </p>
+      <p>
+        Erteilende und zuständige Aufsichtsbehörde:<br />
+        Stadt Wuppertal, 42275 Wuppertal<br />
+        <a href="https://www.wuppertal.de" target="_blank" rel="noopener noreferrer">www.wuppertal.de</a>
+      </p>
+      <p>
+        Maßgebliche berufsrechtliche Regelungen: § 34c Gewerbeordnung (GewO) sowie die
+        Makler- und Bauträgerverordnung (MaBV), einsehbar unter{" "}
+        <a href="https://www.gesetze-im-internet.de" target="_blank" rel="noopener noreferrer">
+          www.gesetze-im-internet.de
+        </a>.
+      </p>
+
       <hr />
 
       <h2>Haftung für Inhalte</h2>
