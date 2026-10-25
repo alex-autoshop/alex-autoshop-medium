@@ -291,8 +291,7 @@ function ResultCard({
       )}
     >
       <div className="flex items-center justify-between mb-1">
-        <p className="font-bold">{m.name}</p>
-        <span className="text-xs font-semibold text-primary">{rate}%</span>
+        <p className="font-bold">{rate}% Rabatt</p>
       </div>
       <p className="text-[11px] text-muted-foreground mb-2">
         {price} € Beitrag / Monat

@@ -255,7 +255,7 @@ export const MEMBERSHIP_LEVELS: MembershipLevel[] = [
       {
         label: "Alex-Notfallnummer — 24/7, auch sonntags",
         accent: "hotline",
-        badge: "NUR LEVEL 3",
+        badge: "NUR BEI 40 %",
         info: "Die direkte Handynummer von Alex persönlich. Anruf oder WhatsApp, rund um die Uhr, 7 Tage die Woche — auch sonntags und an Feiertagen. Kein Ticket, keine Warteschleife, kein Mitarbeiter dazwischen. Diese Nummer bekommst du ausschließlich als Level-3-Mitglied.",
       },
       {

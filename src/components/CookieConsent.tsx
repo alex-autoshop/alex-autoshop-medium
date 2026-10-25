@@ -28,7 +28,9 @@ export function CookieConsent() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[60] p-3 sm:p-4">
+    // z-[300]: muss ÜBER dem Login-Overlay der geschuetzten Seiten (z-[200])
+    // liegen, sonst kann ein Erstbesucher die Cookie-Auswahl nicht treffen.
+    <div className="fixed inset-x-0 bottom-0 z-[300] p-3 sm:p-4">
       <div className="mx-auto max-w-3xl bg-card border border-border rounded-2xl shadow-2xl p-5 sm:p-6 animate-fade-up">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">

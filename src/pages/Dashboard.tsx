@@ -54,10 +54,11 @@ import { MembershipCards } from "@/components/MembershipCards";
 import { cn } from "@/lib/utils";
 import { HotlineCard } from "@/components/HotlineCard";
 
-type Tab = "overview" | "shop" | "teileboerse" | "inbox" | "planner" | "orders" | "affiliate" | "profile" | "settings";
+type Tab = "overview" | "membership" | "shop" | "teileboerse" | "inbox" | "planner" | "orders" | "affiliate" | "profile" | "settings";
 
 const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
+  { id: "membership", label: "Mitgliedschaft", icon: BadgePercent },
   { id: "shop", label: "B2B Shop", icon: ShoppingBag },
   { id: "teileboerse", label: "Teilebörse", icon: Car },
   { id: "inbox", label: "Nachrichten", icon: InboxIcon },
@@ -160,7 +161,8 @@ export default function Dashboard() {
         })}
       </div>
 
-      {tab === "overview" && <Overview level={level} profile={profile} trialActive={trialActive} effectiveLevel={effectiveLevel} />}
+      {tab === "overview" && <Overview level={level} profile={profile} trialActive={trialActive} effectiveLevel={effectiveLevel} onTab={setTab} />}
+      {tab === "membership" && <MitgliedschaftTab level={level} profile={profile} />}
       {tab === "shop" && <DashboardShop level={effectiveLevel} profile={profile} trialActive={trialActive} userId={user?.id} />}
       {tab === "teileboerse" && (
         <div className="-mt-4">
@@ -186,16 +188,16 @@ export default function Dashboard() {
   );
 }
 
-function Overview({ level, profile, trialActive, effectiveLevel }: {
+function Overview({ level, profile, trialActive, effectiveLevel, onTab }: {
   level: number;
   profile: import("@/context/AuthContext").CompanyProfile;
   trialActive: boolean;
   effectiveLevel: number;
+  onTab: (t: Tab) => void;
 }) {
   const levelInfo = MEMBERSHIP_LEVELS.find((m) => m.level === level);
   const effectiveLevelInfo = MEMBERSHIP_LEVELS.find((m) => m.level === effectiveLevel);
   const pct = levelInfo?.discountPercent ?? 0;
-  const [showChange, setShowChange] = useState(false);
 
   return (
     <div className="space-y-5">
@@ -205,7 +207,7 @@ function Overview({ level, profile, trialActive, effectiveLevel }: {
           <Clock className="w-5 h-5 text-primary shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm">
-              Level {profile.trial_level} Trial aktiv
+              Trial aktiv
               {effectiveLevelInfo && <span className="text-primary ml-1">· {effectiveLevelInfo.discountPercent}% Rabatt</span>}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -220,12 +222,12 @@ function Overview({ level, profile, trialActive, effectiveLevel }: {
       <div className="grid sm:grid-cols-3 gap-5">
         <div className="card-tilt hover:translate-y-0 p-6 sm:col-span-1">
           <BadgePercent className="w-9 h-9 text-primary mb-3" />
-          <p className="text-sm text-muted-foreground">Deine Stufe</p>
+          <p className="text-sm text-muted-foreground">Deine Mitgliedschaft</p>
           <p className="text-2xl font-display font-bold">
-            {level > 0 ? `Level ${level}` : "Kein Mitglied"}
+            {level > 0 ? `${pct}% Rabatt` : "Kein Mitglied"}
           </p>
           <p className="text-sm text-primary font-semibold">
-            {pct > 0 ? `${pct}% Rabatt` : "Kein Rabatt"}
+            {level > 0 ? "auf deine gebuchten Module" : "du zahlst Normalpreis"}
           </p>
         </div>
         <div className="card-tilt hover:translate-y-0 p-6 sm:col-span-2 flex flex-col justify-center">
@@ -243,13 +245,44 @@ function Overview({ level, profile, trialActive, effectiveLevel }: {
       {/* Notfallnummer — nur für bezahlte Level-3-Mitglieder (kein Trial) */}
       {level === 3 && <HotlineCard />}
 
-      {/* Mitgliedschaft verwalten / wechseln */}
+      {/* Mitgliedschaft liegt jetzt im eigenen Tab */}
+      <button
+        type="button"
+        onClick={() => onTab("membership")}
+        className="card-tilt hover:translate-y-0 p-6 text-left w-full flex items-center gap-4 hover:border-primary transition-colors"
+      >
+        <BadgePercent className="w-9 h-9 text-primary shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-lg font-display font-bold">Mitgliedschaft</span>
+          <span className="block text-sm text-muted-foreground mt-0.5">
+            {level > 0
+              ? "Rabatt ändern, Module zu- oder abwählen."
+              : "Rabatt und Preis ansehen — Module einzeln zubuchbar."}
+          </span>
+        </span>
+        <span className="text-primary font-semibold text-sm shrink-0">Öffnen →</span>
+      </button>
+    </div>
+  );
+}
+
+/** Eigener Dashboard-Tab: Stufe waehlen, wechseln, Module sehen.
+ *  Die oeffentliche Seite /mitgliedschaft ist nur noch fuer angemeldete
+ *  Kunden lesbar — hier drin ist sie fuer Mitglieder immer erreichbar. */
+function MitgliedschaftTab({ level, profile }: {
+  level: number;
+  profile: import("@/context/AuthContext").CompanyProfile;
+}) {
+  const pct = MEMBERSHIP_LEVELS.find((m) => m.level === level)?.discountPercent ?? 0;
+  const [showChange, setShowChange] = useState(false);
+  return (
+    <div className="space-y-6">
       <div className="card-tilt hover:translate-y-0 p-6">
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <div>
             <h2 className="text-lg">Mitgliedschaft</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Wähle oder wechsle deine Stufe — Module einzeln zubuchbar.
+              Rabatt wählen oder ändern — Module einzeln zubuchbar.
             </p>
           </div>
           {level > 0 && (
@@ -258,7 +291,7 @@ function Overview({ level, profile, trialActive, effectiveLevel }: {
               onClick={() => setShowChange((v) => !v)}
               className="btn-outline text-sm"
             >
-              {showChange ? "Schließen" : "Stufe wechseln"}
+              {showChange ? "Schließen" : "Rabatt ändern"}
             </button>
           )}
         </div>
@@ -268,8 +301,8 @@ function Overview({ level, profile, trialActive, effectiveLevel }: {
           <div className="mb-5 rounded-xl border border-amber-400/40 bg-amber-400/8 px-4 py-3 text-sm space-y-1">
             <p className="font-semibold text-amber-600 dark:text-amber-400">⚠️ Hinweis vor dem Wechsel</p>
             <p className="text-muted-foreground">
-              Du bist aktuell auf <strong>Level {level}</strong>. Ein Downgrade bedeutet:
-              weniger Rabatt, geringere Gratis-Farbe-Menge und ggf. Verlust von Vorteilen wie Cashback oder Kundenvermittlung.
+              Du hast aktuell <strong>{pct}% Rabatt</strong>. Gehst du runter, bekommst du
+              weniger Rabatt, weniger Gratis-Farbe und verlierst ggf. Vorteile wie Cashback oder Kundenvermittlung.
             </p>
             <p className="text-muted-foreground">
               Änderungen werden <strong>manuell durch Alex Autoshop bestätigt</strong> und gelten ab dem nächsten Abrechnungsmonat.

@@ -17,19 +17,19 @@ const FAQ = [
   },
   {
     q: "Kann ich monatlich kündigen?",
-    a: "Ja, alle Stufen sind monatlich kündbar. Keine Mindestlaufzeit, kein Risiko.",
+    a: "Ja, die Mitgliedschaft ist monatlich kündbar. Keine Mindestlaufzeit, kein Risiko.",
   },
   {
     q: "Gilt der Rabatt auf alles?",
     a: "Der Rabatt gilt auf das gesamte Lager-Sortiment. Bei Sonderbestellungen und Teilen sprechen wir individuelle Konditionen ab.",
   },
   {
-    q: "Kann ich die Stufe wechseln?",
+    q: "Kann ich den Rabatt später ändern?",
     a: "Jederzeit zum Monatswechsel — hoch oder runter, je nachdem wie viel dein Betrieb gerade braucht.",
   },
   {
-    q: "Für wen lohnt sich welche Stufe?",
-    a: "Faustregel: Level 1 lohnt sich ab ca. 330 € Material-Einkauf pro Monat, die höheren Stufen ab ca. 900 € — je mehr du einkaufst, desto stärker zieht Level 3. Am genausten siehst du es im Rechner oben.",
+    q: "Für wen lohnt sich welcher Rabatt?",
+    a: "Faustregel: 15 % lohnen sich ab ca. 330 € Material-Einkauf pro Monat, 28 % ab ca. 900 € — je mehr du einkaufst, desto stärker ziehen 40 %. Am genausten siehst du es im Rechner oben.",
   },
 ];
 

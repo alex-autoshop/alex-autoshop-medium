@@ -5,9 +5,22 @@ import { useAuth } from "@/context/AuthContext";
 export function ProtectedRoute({
   children,
   preview,
+  titel = "Teilebörse",
+  unschaerfe = 7,
+  text = (
+    <>
+      Melde dich an, um Autoteile zu suchen,<br />
+      Preise zu vergleichen und zu bestellen.
+    </>
+  ),
 }: {
   children: React.ReactNode;
   preview?: boolean;
+  /** Überschrift im Login-Fenster — je Seite anders */
+  titel?: string;
+  /** Stärke der Unschärfe in px. Höher, wenn große Zahlen zu lesen wären. */
+  unschaerfe?: number;
+  text?: React.ReactNode;
 }) {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -27,7 +40,7 @@ export function ProtectedRoute({
           {/* Seiteninhalt — weichgezeichnet, nicht anklickbar */}
           <div
             className="pointer-events-none select-none"
-            style={{ filter: "blur(7px)", opacity: 0.45 }}
+            style={{ filter: `blur(${unschaerfe}px)`, opacity: 0.45 }}
             aria-hidden="true"
           >
             {children}
@@ -49,11 +62,8 @@ export function ProtectedRoute({
                   alt="Alex Autoshop"
                   className="h-10 mx-auto mb-5"
                 />
-                <h2 className="text-2xl font-bold text-white mb-1.5">Teilebörse</h2>
-                <p className="text-sm text-white/50 leading-snug">
-                  Melde dich an, um Autoteile zu suchen,<br />
-                  Preise zu vergleichen und zu bestellen.
-                </p>
+                <h2 className="text-2xl font-bold text-white mb-1.5">{titel}</h2>
+                <p className="text-sm text-white/50 leading-snug">{text}</p>
               </div>
 
               <div className="px-7 pb-7 flex flex-col gap-3">

@@ -22,17 +22,90 @@ import { mitgliedsbeitrag } from "../../shared/mitgliedspreise.js";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { cn } from "@/lib/utils";
 
+/** Kurztext an der Rabattwahl — die lange Zeile steht in der Karte. */
+const RABATT_KURZ: Record<number, string> = {
+  1: "Einstieg",
+  2: "Für aktive Werkstätten",
+  3: "Höchstrabatt",
+};
+
+/**
+ * EINE Mitgliedschaft. Der Kunde wählt darin, wie viel Rabatt er haben will —
+ * 15, 28 oder 40 Prozent. Technisch bleiben das die Stufen 1 bis 3: Supabase,
+ * Kasse und Server rechnen unverändert damit, nur nach außen gibt es keine
+ * drei Pakete mehr, sondern eine Mitgliedschaft mit einem Regler.
+ */
 export function MembershipCards({ compact = false }: { compact?: boolean }) {
+  const { profile } = useAuth();
+  // Mitglieder starten auf ihrer eigenen Stufe, alle anderen auf der empfohlenen
+  const start =
+    MEMBERSHIP_LEVELS.find((l) => l.level === profile.membership_level) ??
+    MEMBERSHIP_LEVELS.find((l) => l.highlight) ??
+    MEMBERSHIP_LEVELS[0];
+  const [stufe, setStufe] = useState<number>(start.level);
+  const gewaehlt = MEMBERSHIP_LEVELS.find((l) => l.level === stufe) ?? start;
+
   return (
     <div>
-      <p className="text-center text-sm font-semibold mb-10 sm:mb-12 text-muted-foreground">
+      <p className="text-center text-sm font-semibold mb-8 text-muted-foreground">
         🇩🇪 <span className="text-foreground">Deutschlandweit</span> — jeder kann Mitglied werden,
         Werkstatt wie privat. Wir liefern direkt zu dir.
       </p>
-      <div className="grid lg:grid-cols-3 gap-8 lg:gap-7 items-start">
-        {MEMBERSHIP_LEVELS.map((m) => (
-          <Card key={m.level} m={m} compact={compact} />
-        ))}
+
+      {/* Rabatt wählen — das ist die eigentliche Entscheidung */}
+      <div className="max-w-3xl mx-auto mb-8">
+        <p className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+          Wie viel Rabatt willst du?
+        </p>
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3" role="group" aria-label="Rabatt wählen">
+          {MEMBERSHIP_LEVELS.map((l) => {
+            const aktiv = l.level === stufe;
+            return (
+              <button
+                key={l.level}
+                type="button"
+                onClick={() => setStufe(l.level)}
+                aria-pressed={aktiv}
+                className={cn(
+                  "relative rounded-2xl border-2 px-2 py-4 sm:px-4 sm:py-5 text-center transition-all duration-200 min-h-[92px]",
+                  aktiv
+                    ? "border-primary bg-primary/10 shadow-sm"
+                    : "border-border bg-card hover:border-primary/50 hover:bg-primary/5"
+                )}
+              >
+                {l.badge && (
+                  <span
+                    className={cn(
+                      "absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap",
+                      l.highlight ? "bg-primary text-primary-foreground" : "bg-night text-gold-bright"
+                    )}
+                  >
+                    {l.badge}
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    "block font-display font-bold leading-none text-2xl sm:text-3xl",
+                    aktiv ? "text-primary" : "text-foreground"
+                  )}
+                >
+                  {l.discountPercent}%
+                </span>
+                <span className="block text-[11px] sm:text-xs text-muted-foreground mt-1.5 leading-snug">
+                  {RABATT_KURZ[l.level] ?? ""}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-center text-xs text-muted-foreground mt-3">
+          Mehr Rabatt heißt höherer Beitrag — und ab 28 % kommt die Fahrzeugaufbereitung dazu.
+          Umstellen kannst du jederzeit.
+        </p>
+      </div>
+
+      <div className="max-w-xl mx-auto">
+        <Card m={gewaehlt} compact={compact} />
       </div>
     </div>
   );
@@ -44,11 +117,13 @@ export function MembershipCards({ compact = false }: { compact?: boolean }) {
  * Ein Geister-Cursor tippt die Module von unten nach oben ab, der Preis fällt
  * live mit, danach wird die ursprüngliche Auswahl wiederhergestellt.
  * -------------------------------------------------------------------------*/
-const DEMO_FIRST_SLOT = 650;   // ms bis zum ersten Modul
-const DEMO_SLOT = 900;         // ms pro Modul
-const DEMO_TAP = 420;          // Tipp-Zeitpunkt innerhalb eines Slots
-const DEMO_HOLD_BASE = 1250;   // Basis-Zustand kurz stehen lassen
-const DEMO_RESTORE_STEP = 170; // Stagger beim Wiederherstellen
+const DEMO_FIRST_SLOT = 550;   // ms bis zum ersten Modul
+const DEMO_SLOT = 720;         // ms pro Modul
+const DEMO_TAP = 360;          // Tipp-Zeitpunkt innerhalb eines Slots
+const DEMO_HOLD_BASE = 1000;   // Basis-Zustand kurz stehen lassen
+const DEMO_RESTORE_STEP = 150; // Stagger beim Wiederherstellen
+const DEMO_ENDE = 600;         // Nachlauf, bevor die echte Auswahl wieder greift
+// Gesamtlauf bei drei Modulen: 4,76 s (vorher 5,76 s)
 
 /* ---------------------------------------------------------------------------
  * Hervorgehobene Leistungen: Notfallbeschaffung, Aufbereitung und — exklusiv
@@ -181,7 +256,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       });
       at(restoreAt + i * DEMO_RESTORE_STEP + 280, () => setFlash(null));
     });
-    at(restoreAt + start.length * DEMO_RESTORE_STEP + 650, () => {
+    at(restoreAt + start.length * DEMO_RESTORE_STEP + DEMO_ENDE, () => {
       demoRef.current = false;
       setDemoModules(null);
       setCursor(null);
@@ -195,7 +270,9 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
     const el = listRef.current;
     if (!el || typeof window === "undefined" || !("IntersectionObserver" in window)) return;
     // Pro Seite einmal pro Sitzung (Startseite + /mitgliedschaft je einmal)
-    const key = `aa:modDemo:${m.level}:${window.location.pathname}`;
+    // Ohne Stufe im Schluessel: beim Wechsel der Rabattwahl soll die Demo
+    // nicht jedes Mal von vorne starten.
+    const key = `aa:modDemo:${window.location.pathname}`;
     try {
       if (sessionStorage.getItem(key)) return;
     } catch {
@@ -404,22 +481,16 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       onClickCapture={cancelDemo}
       className={cn(
         "card-tilt hover:translate-y-0 p-6 flex flex-col relative",
-        m.highlight && "border-primary ring-2 ring-primary/40 lg:scale-[1.03]"
+        "border-primary/60 ring-1 ring-primary/25"
       )}
     >
-      {m.badge && (
-        <span
-          className={cn(
-            "absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-3 py-1 rounded-full",
-            m.highlight ? "bg-primary text-primary-foreground" : "bg-night text-gold-bright"
-          )}
-        >
-          {m.badge}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="text-xl">Mitgliedschaft</h3>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 text-primary font-bold text-sm px-3 py-1">
+          {m.discountPercent}% Rabatt
         </span>
-      )}
-
-      <h3 className="text-xl">{m.name}</h3>
-      <p className="text-sm text-muted-foreground mt-1 min-h-[2.5rem]">{m.tagline}</p>
+      </div>
+      <p className="text-sm text-muted-foreground mt-1">{m.tagline}</p>
 
       <p className="mt-4">
         {originalPrice && (
