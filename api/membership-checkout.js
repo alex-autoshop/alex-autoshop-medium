@@ -16,7 +16,8 @@
 
 export const config = { runtime: "edge" };
 
-import { mitgliedsbeitrag } from "../shared/mitgliedspreise.js";
+import { mitgliedsbeitrag, rabattName } from "../shared/mitgliedspreise.js";
+import { produktAboBeitrag } from "../shared/produktabo.js";
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
 const REF_OK = /^[A-Z0-9]{6,8}$/;
@@ -33,7 +34,7 @@ const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", ...CORS } });
 
 // ── Stripe: Checkout Session (subscription) ──────────────────────────────────
-async function createStripeSession({ email, level, modules, price, paket, ref }) {
+async function createStripeSession({ email, level, modules, price, paket, ref, titel }) {
   const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
   if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
 
@@ -47,7 +48,7 @@ async function createStripeSession({ email, level, modules, price, paket, ref })
   form.set("line_items[0][price_data][currency]", "eur");
   form.set("line_items[0][price_data][recurring][interval]", "month");
   form.set("line_items[0][price_data][unit_amount]", String(cents));
-  form.set("line_items[0][price_data][product_data][name]", `Alex Autoshop Mitgliedschaft Level ${level}`);
+  form.set("line_items[0][price_data][product_data][name]", titel || `Alex Autoshop Mitgliedschaft — ${rabattName(level)}`);
   form.set("line_items[0][price_data][product_data][description]", `Module: ${(modules || []).join(", ") || "Basis"}`);
   // Metadaten für den Webhook (Aktivierung + Shopify-Bestellung)
   form.set("metadata[email]", email);
@@ -72,7 +73,7 @@ async function createStripeSession({ email, level, modules, price, paket, ref })
 }
 
 // ── GoCardless: Billing Request + Flow (SEPA-Mandat) ─────────────────────────
-async function createGoCardlessFlow({ email, level, modules, price, paket, ref }) {
+async function createGoCardlessFlow({ email, level, modules, price, paket, ref, titel }) {
   // Nur ein echter Token zählt (Platzhalter in Vercel → freundlicher Hinweis),
   // und live/sandbox ergibt sich aus dem Token selbst.
   const token = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
@@ -131,10 +132,39 @@ export default async function handler(req) {
 
   let body;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
-  const { email: emailRoh, level, modules = [], price, method, freePaint, aufbereitung, ref: refRoh } = body || {};
+  const { email: emailRoh, level, modules = [], price, method, freePaint, aufbereitung, ref: refRoh,
+          aboTyp, rabatt, produkte = [] } = body || {};
   const email = String(emailRoh || "").trim().toLowerCase();
   if (!EMAIL_OK.test(email)) return json({ error: "Bitte eine gültige E-Mail-Adresse angeben." }, 400);
   if (!["stripe", "gocardless"].includes(method)) return json({ error: "method muss stripe|gocardless sein" }, 400);
+
+  // ── Produkt-Abo: eigener Weg. Die Dienstleistungs-Mitgliedschaft unten bleibt unberührt. ──
+  if (aboTyp === "produkt") {
+    const anzahl = Array.isArray(produkte) ? produkte.length : 0;
+    const a = produktAboBeitrag({ rabatt, anzahl });
+    if (!a) return json({ error: "Unbekannte Rabattstufe oder leere Produktliste." }, 400);
+    // Der Browser-Preis dient nur zum Abgleich — gerechnet wird hier.
+    if (price !== undefined && Number(price) !== a.preis) {
+      return json({ error: "Der Preis hat sich gerade geändert — bitte die Seite neu laden.", preis: a.preis }, 409);
+    }
+    const aboArg = {
+      email,
+      level: a.rabatt,
+      modules: [`${a.anzahl} Produkte`],
+      price: a.preis,
+      paket: [`P${a.rabatt}`, String(a.anzahl), String(a.preis)].join("|"),
+      ref: refAus(refRoh),
+      titel: `Alex Autoshop Produkt-Abo — ${a.anzahl} Produkte, ${a.rabatt} % Rabatt`,
+    };
+    try {
+      const r = method === "stripe" ? await createStripeSession(aboArg) : await createGoCardlessFlow(aboArg);
+      if (r.fallback) return json({ fallback: true, reason: `${method} noch nicht konfiguriert` });
+      if (!r.url) return json({ error: "Keine Checkout-URL erhalten" }, 502);
+      return json({ url: r.url });
+    } catch (err) {
+      return json({ error: String(err.message).slice(0, 300) }, 500);
+    }
+  }
 
   // Beitrag hier rechnen — der Browser-Preis dient nur zum Abgleich.
   const b = mitgliedsbeitrag({ level, modules, freePaint, aufbereitung });

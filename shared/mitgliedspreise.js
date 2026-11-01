@@ -11,10 +11,19 @@
 // damit die Datei im Browser und auf dem Server gleich funktioniert.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Beschriftung einer Stufe nach aussen. Es gibt nur EINE Mitgliedschaft,
+ *  unterschieden wird ueber den gewaehlten Rabatt. */
+export function rabattName(level) {
+  const p = MITGLIEDSPREISE[Math.floor(Number(level))];
+  return p ? `${p.rabatt} % Rabatt` : "Mitgliedschaft";
+}
+
 export const MODULE = ["Autoteile", "Lackfarben", "Lackmaterial"];
 
 export const MITGLIEDSPREISE = {
   1: {
+    // Rabatt, den der Kunde mit dieser Stufe waehlt — Seite UND Mails lesen ihn hier
+    rabatt: 15,
     basePrice: 19,
     // Teilebörse wiegt am schwersten · dann Lackfarben · dann Lackmaterial
     modulePrices: { Autoteile: 12, Lackfarben: 10, Lackmaterial: 8 },
@@ -24,12 +33,16 @@ export const MITGLIEDSPREISE = {
     detailingPrice: 0,
   },
   2: {
+    // Rabatt, den der Kunde mit dieser Stufe waehlt — Seite UND Mails lesen ihn hier
+    rabatt: 28,
     basePrice: 39,
     modulePrices: { Autoteile: 59, Lackfarben: 45, Lackmaterial: 37 },
     freePaintValue: 15,
     detailingPrice: 99,
   },
   3: {
+    // Rabatt, den der Kunde mit dieser Stufe waehlt — Seite UND Mails lesen ihn hier
+    rabatt: 40,
     basePrice: 69,
     modulePrices: { Autoteile: 105, Lackfarben: 79, Lackmaterial: 65 },
     freePaintValue: 25,

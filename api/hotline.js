@@ -69,7 +69,7 @@ export default async function handler(req, res) {
 
     if (level < 3) {
       return send(res, 403, {
-        error: 'Die Notfallnummer ist Level-3-Mitgliedern vorbehalten.',
+        error: 'Die Notfallnummer ist Mitgliedern mit 40 % Rabatt vorbehalten.',
         level,
       });
     }

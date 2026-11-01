@@ -11,6 +11,7 @@ export const config = { runtime: "edge" };
 
 import { activateMembership } from "./_activate-membership.js";
 import { EMPFEHLUNGS_PROZENT } from "../shared/empfehlung.js";
+import { rabattName } from "../shared/mitgliedspreise.js";
 
 // ── Teile-Zahlungen für die Zahlungsgrenze festhalten (nur Server) ──────────
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co").replace(/\/+$/, "");
@@ -158,7 +159,7 @@ async function handleBillingRequestFulfilled(billingRequestId) {
             amount: Math.round(price * 100),
             currency: "EUR",
             interval_unit: "monthly",
-            name: `Alex Autoshop Mitgliedschaft Level ${paket.level}`,
+            name: `Alex Autoshop Mitgliedschaft — ${rabattName(paket.level)}`,
             links: { mandate: mandateId },
             metadata: meta,
           },

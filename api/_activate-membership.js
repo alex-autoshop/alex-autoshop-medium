@@ -6,6 +6,7 @@
 
 import { createShopifyOrder } from "./_shopify-order.js";
 import { internSignatur } from "./_intern.js";
+import { rabattName } from "../shared/mitgliedspreise.js";
 
 const BASE = () => process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de";
 
@@ -45,10 +46,10 @@ export async function activateMembership(meta) {
   try {
     const order = await createShopifyOrder({
       email,
-      title: `Alex Autoshop Mitgliedschaft Level ${level}`,
+      title: `Alex Autoshop Mitgliedschaft — ${rabattName(level)}`,
       amount: price,
       tags: ["mitgliedschaft", `level-${level}`, provider],
-      note: `Mitgliedschaft Level ${level} · Module: ${modules.join(", ") || "Basis"} · Zahlung: ${provider}${meta.providerId ? " · " + meta.providerId : ""}`,
+      note: `Mitgliedschaft ${rabattName(level)} · Module: ${modules.join(", ") || "Basis"} · Zahlung: ${provider}${meta.providerId ? " · " + meta.providerId : ""}`,
       paid: true,
     });
     results.shopifyOrder = order?.name || null;

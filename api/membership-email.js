@@ -39,9 +39,11 @@ const SHOP_URL         = `${SITE_URL}/shop`;
 const AFFILIATE_URL    = `${SITE_URL}/dashboard?tab=affiliate`;
 
 const LEVEL_INFO = {
-  1: { name: 'Level 1',  tagline: 'Für Aufbereiter & kleine Werkstätten', discount: 15, welcome: 50,  cashback: '7 %',   cashbackMin: 500  },
-  2: { name: 'Level 2',  tagline: 'Der Bestseller für aktive Werkstätten', discount: 28, welcome: 250, cashback: '8,5 %', cashbackMin: 1200 },
-  3: { name: 'Level 3',  tagline: 'Höchstrabatt & VIP-Service',            discount: 40, welcome: 500, cashback: '12,5 %',cashbackMin: 2500 },
+  // Es gibt EINE Mitgliedschaft. Unterschieden wird ueber den gewaehlten
+  // Rabatt — deshalb heisst die Stufe nach aussen nach ihrem Prozentsatz.
+  1: { name: '15 % Rabatt', tagline: 'Einstieg — für Aufbereiter & kleine Werkstätten', discount: 15, welcome: 50,  cashback: '7 %',   cashbackMin: 500  },
+  2: { name: '28 % Rabatt', tagline: 'Für aktive Werkstätten',                          discount: 28, welcome: 250, cashback: '8,5 %', cashbackMin: 1200 },
+  3: { name: '40 % Rabatt', tagline: 'Höchstrabatt & VIP-Service',                      discount: 40, welcome: 500, cashback: '12,5 %',cashbackMin: 2500 },
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -170,7 +172,7 @@ const emailFooter = `
 
 // ─── EMAIL 1: Onboarding (Magic Link → Dashboard) ─────────────────────────────
 function buildOnboardingEmail({ email, password, level, modules, price, memberNo, invoiceNo, invoiceDate, dueDateStr, magicLink }) {
-  const info    = LEVEL_INFO[level] ?? { name: `Level ${level}`, tagline: '', discount: 0, welcome: 0 };
+  const info    = LEVEL_INFO[level] ?? { name: 'Mitgliedschaft', tagline: '', discount: 0, welcome: 0 };
   const modList = (modules && modules.length) ? modules.join(', ') : 'Basis (kein Modul)';
   const isBasis = !modules || modules.length === 0;
   const { net, tax } = calcNet(price);
@@ -191,7 +193,7 @@ function buildOnboardingEmail({ email, password, level, modules, price, memberNo
   return `<!DOCTYPE html>
 <html lang="de">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Willkommen bei Alex Autoshop — ${info.name}</title>
+<title>Willkommen bei Alex Autoshop — Mitgliedschaft mit ${info.name}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -255,7 +257,7 @@ function buildOnboardingEmail({ email, password, level, modules, price, memberNo
     <h2 style="color:#fff;font-size:16px;font-weight:800;margin:0 0 16px;letter-spacing:-0.3px;font-family:${B.fontHead};">Deine Mitgliedschaft</h2>
     <table width="100%" cellpadding="0" cellspacing="0" style="border-radius:10px;overflow:hidden;border:1px solid ${B.border};">
       <tr style="background:${B.surfaceAlt};">
-        <td style="color:${B.textDim};font-size:12px;padding:12px 16px;font-family:${B.fontBody};">Paket</td>
+        <td style="color:${B.textDim};font-size:12px;padding:12px 16px;font-family:${B.fontBody};">Mitgliedschaft</td>
         <td style="color:#fff;font-size:13px;font-weight:600;text-align:right;padding:12px 16px;font-family:${B.fontBody};">${info.name} — ${info.tagline}</td>
       </tr>
       <tr style="background:${B.night};border-top:1px solid ${B.border};">
@@ -369,7 +371,7 @@ function buildOnboardingEmail({ email, password, level, modules, price, memberNo
           </tr>
           <tr style="border-top:1px solid ${B.borderSub};">
             <td style="padding:12px 10px;vertical-align:top;">
-              <p style="color:#fff;font-size:13px;font-weight:600;margin:0 0 3px;font-family:${B.fontBody};">Mitgliedschaft ${info.name} — Monatsbeitrag</p>
+              <p style="color:#fff;font-size:13px;font-weight:600;margin:0 0 3px;font-family:${B.fontBody};">Mitgliedschaft mit ${info.name} — Monatsbeitrag</p>
               <p style="color:${B.textDim};font-size:11px;margin:0;font-family:${B.fontBody};">Module: ${modList} · Nr.: ${memberNo}</p>
             </td>
             <td style="color:${B.textMuted};font-size:13px;padding:12px 10px;text-align:center;vertical-align:top;font-family:${B.fontBody};">1 Monat</td>
@@ -418,7 +420,7 @@ function buildOnboardingEmail({ email, password, level, modules, price, memberNo
 
 // ─── EMAIL 2: Affiliate Upsell (10 Minuten später) ────────────────────────────
 function buildAffiliateEmail({ email, level, memberNo, referralCode }) {
-  const info        = LEVEL_INFO[level] ?? { name: `Level ${level}`, discount: 0 };
+  const info        = LEVEL_INFO[level] ?? { name: 'Mitgliedschaft', discount: 0 };
   const referralLink = `${SITE_URL}/mitgliedschaft?ref=${referralCode}`;
   const B           = BRAND;
 
@@ -695,7 +697,7 @@ export default async function handler(req) {
       from:     FROM_EMAIL,
       reply_to: REPLY_TO,
       to:       [email],
-      subject:  `🔑 Willkommen bei Alex Autoshop — ${LEVEL_INFO[level]?.name ?? `Level ${level}`} — Klick zum Einloggen`,
+      subject:  `🔑 Willkommen bei Alex Autoshop — ${LEVEL_INFO[level]?.name ?? 'Mitgliedschaft'} — Klick zum Einloggen`,
       html:     buildOnboardingEmail({ email, password: tempPassword, level, modules, price, memberNo, invoiceNo, invoiceDate, dueDateStr, magicLink }),
     }),
   });
@@ -707,7 +709,7 @@ export default async function handler(req) {
       <p style="color:#f1eb5b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:3px;margin:0 0 16px;">🔔 Neuer Mitgliedschaftsantrag</p>
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr><td style="color:#888;font-size:13px;padding:8px 0;border-bottom:1px solid #1a1a1a;">E-Mail</td><td style="color:#fff;font-size:13px;font-weight:600;text-align:right;padding:8px 0;border-bottom:1px solid #1a1a1a;">${email}</td></tr>
-        <tr><td style="color:#888;font-size:13px;padding:8px 0;border-bottom:1px solid #1a1a1a;">Paket</td><td style="color:#f1eb5b;font-size:13px;font-weight:700;text-align:right;padding:8px 0;border-bottom:1px solid #1a1a1a;">${LEVEL_INFO[level]?.name ?? `Level ${level}`} — ${price},00 €/Mo</td></tr>
+        <tr><td style="color:#888;font-size:13px;padding:8px 0;border-bottom:1px solid #1a1a1a;">Mitgliedschaft</td><td style="color:#f1eb5b;font-size:13px;font-weight:700;text-align:right;padding:8px 0;border-bottom:1px solid #1a1a1a;">${LEVEL_INFO[level]?.name ?? 'Mitgliedschaft'} — ${price},00 €/Mo</td></tr>
         <tr><td style="color:#888;font-size:13px;padding:8px 0;border-bottom:1px solid #1a1a1a;">Module</td><td style="color:#fff;font-size:13px;text-align:right;padding:8px 0;border-bottom:1px solid #1a1a1a;">${modules.length ? modules.join(', ') : 'Basis'}</td></tr>
         <tr><td style="color:#888;font-size:13px;padding:8px 0;border-bottom:1px solid #1a1a1a;">Mitgliedsnr.</td><td style="color:#fff;font-size:12px;font-family:monospace;text-align:right;padding:8px 0;border-bottom:1px solid #1a1a1a;">${memberNo}</td></tr>
         <tr><td style="color:#888;font-size:13px;padding:8px 0;">Rechnung</td><td style="color:#fff;font-size:12px;font-family:monospace;text-align:right;padding:8px 0;">${invoiceNo}</td></tr>
@@ -725,7 +727,7 @@ export default async function handler(req) {
     body: JSON.stringify({
       from:    'Alex Autoshop System <mitgliedschaft@alex-autoshop.de>',
       to:      ['alexanderharitopoulos@gmail.com'],
-      subject: `🔔 Neues Mitglied: ${email} — ${LEVEL_INFO[level]?.name ?? `Level ${level}`} (${price}€/Mo)`,
+      subject: `🔔 Neues Mitglied: ${email} — ${LEVEL_INFO[level]?.name ?? 'Mitgliedschaft'} (${price}€/Mo)`,
       html:    adminHtml,
     }),
   }).catch(e => console.error('Admin notification failed (non-fatal):', e?.message));

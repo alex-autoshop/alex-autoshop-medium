@@ -3,7 +3,11 @@
 
 export declare const MODULE: string[];
 
+export declare function rabattName(level: number | string): string;
+
 export interface Preisstufe {
+  /** Rabatt in Prozent, den diese Stufe gewaehrt */
+  rabatt: number;
   basePrice: number;
   modulePrices: Record<string, number>;
   freePaintValue: number;

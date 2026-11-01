@@ -3,8 +3,27 @@ import { Phone, MessageCircle, ChevronDown } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { MembershipCards } from "@/components/MembershipCards";
 import { MembershipCalculator } from "@/components/MembershipCalculator";
+import { ProduktAbo } from "@/components/ProduktAbo";
+import { Wrench, PackageSearch } from "lucide-react";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
+
+type AboArt = "dienstleistung" | "produkt";
+
+const ABOS: { id: AboArt; titel: string; text: string; icon: typeof Wrench }[] = [
+  {
+    id: "dienstleistung",
+    titel: "Dienstleistungs-Mitgliedschaft",
+    text: "Rabatt auf das ganze Sortiment, dazu Lieferung, Gratis-Farbe, Farbfehlerschutz und Aufbereitung.",
+    icon: Wrench,
+  },
+  {
+    id: "produkt",
+    titel: "Produkt-Abo",
+    text: "Nur Shop, keine Dienstleistungen: du zahlst pro Produkt und bekommst genau darauf deinen Rabatt.",
+    icon: PackageSearch,
+  },
+];
 
 const FAQ = [
   {
@@ -34,6 +53,7 @@ const FAQ = [
 ];
 
 export default function Mitgliedschaft() {
+  const [abo, setAbo] = useState<AboArt>("dienstleistung");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   return (
@@ -69,14 +89,53 @@ export default function Mitgliedschaft() {
         </div>
       </section>
 
+      {/* ── Zwei Mitgliedschaften zur Auswahl ───────────────────────────── */}
       <section className="container py-12 sm:py-16 -mt-8">
-        <MembershipCards />
+        <div className="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto mb-10" role="tablist" aria-label="Mitgliedschaft wählen">
+          {ABOS.map((a) => {
+            const aktiv = abo === a.id;
+            return (
+              <button
+                key={a.id}
+                type="button"
+                role="tab"
+                aria-selected={aktiv}
+                onClick={() => setAbo(a.id)}
+                className={cn(
+                  "rounded-2xl border-2 p-5 sm:p-6 text-left transition-all duration-200",
+                  aktiv
+                    ? "border-primary bg-primary/10 shadow-sm"
+                    : "border-border bg-card hover:border-primary/50 hover:bg-primary/5"
+                )}
+              >
+                <span className={cn(
+                  "w-11 h-11 rounded-xl flex items-center justify-center mb-3",
+                  aktiv ? "bg-primary/20" : "bg-primary/10"
+                )}>
+                  <a.icon className="w-5 h-5 text-primary" />
+                </span>
+                <span className="block font-display font-bold text-lg leading-snug">{a.titel}</span>
+                <span className="block text-sm text-muted-foreground mt-1 leading-relaxed">{a.text}</span>
+                <span className={cn(
+                  "inline-block text-xs font-semibold mt-3",
+                  aktiv ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {aktiv ? "ausgewählt" : "auswählen"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {abo === "dienstleistung" ? <MembershipCards /> : <ProduktAbo />}
       </section>
 
-      {/* Spar-Rechner */}
-      <section className="container pb-12 sm:pb-16">
-        <MembershipCalculator />
-      </section>
+      {/* Spar-Rechner — gehört zur Dienstleistungs-Mitgliedschaft */}
+      {abo === "dienstleistung" && (
+        <section className="container pb-12 sm:pb-16">
+          <MembershipCalculator />
+        </section>
+      )}
 
       {/* FAQ */}
       <section className="container pb-12 sm:pb-16">

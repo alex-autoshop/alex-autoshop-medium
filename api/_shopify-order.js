@@ -43,7 +43,7 @@ mutation OrderCreate($order: OrderCreateOrderInput!) {
  * Legt eine bezahlte Shopify-Bestellung mit einem freien Positions-Artikel an.
  * @param {Object} p
  * @param {string}  p.email        Kunden-E-Mail
- * @param {string}  p.title        Positionsname, z.B. "Alex Autoshop Mitgliedschaft Level 2"
+ * @param {string}  p.title        Positionsname, z.B. "Alex Autoshop Mitgliedschaft — 28 % Rabatt"
  * @param {number}  p.amount       Bruttobetrag in EUR (z.B. 165)
  * @param {number} [p.quantity=1]
  * @param {string[]} [p.tags]      z.B. ["mitgliedschaft","level-2","stripe"]
