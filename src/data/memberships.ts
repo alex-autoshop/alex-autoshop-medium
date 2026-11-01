@@ -21,7 +21,7 @@ export interface MembershipLevel {
   originalPrice?: number;
   discountPercent: number;
   basePrice: number;         // Preis wenn 0 Module aktiv
-  baseDiscountPercent: number; // Rabatt wenn 0 Module aktiv (10/20/30%)
+  baseDiscountPercent: number; // Rabatt wenn 0 Module aktiv (10/15/20%)
   tagline: string;
   modules: string[];
   defaultModules?: string[];
