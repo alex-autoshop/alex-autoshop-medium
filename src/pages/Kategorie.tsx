@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ChevronRight, PackageOpen, ArrowRight } from "lucide-react";
+import { ChevronRight, PackageOpen, ArrowRight, X } from "lucide-react";
+import { brandOf, brandRank } from "@/lib/marken";
 import { Seo } from "@/components/Seo";
 import { ProductGrid } from "@/components/ProductGrid";
 import { useCollectionProducts } from "@/hooks/useCollectionProducts";
@@ -56,7 +58,27 @@ export default function Kategorie() {
   const sort: CollectionSort = COLLECTION_SORTS.some((s) => s.value === sortParam) ? sortParam! : "empfohlen";
 
   const treffer = findCategory(handle);
-  const { products, isLoading, error, notFound, hasNextPage, loadMore } = useCollectionProducts(handle, sort);
+  const { products, isLoading, error, notFound, hasNextPage } = useCollectionProducts(handle, sort);
+
+  // Markenfilter: ?marke=Mipa,FRIZ — Marke kommt aus Titel/Handle (siehe @/lib/marken)
+  const gewaehlteMarken = useMemo(
+    () => (params.get("marke") ?? "").split(",").map((m) => m.trim()).filter(Boolean),
+    [params]
+  );
+  const marken = useMemo(() => {
+    const zaehler = new Map<string, { name: string; anzahl: number; rang: number }>();
+    for (const p of products) {
+      const name = brandOf(p);
+      const e = zaehler.get(name);
+      if (e) e.anzahl++;
+      else zaehler.set(name, { name, anzahl: 1, rang: name === "Sonstige" ? 9999 : brandRank(p) });
+    }
+    return [...zaehler.values()].sort((a, b) => a.rang - b.rang || a.name.localeCompare(b.name, "de"));
+  }, [products]);
+  const sichtbar = useMemo(
+    () => (gewaehlteMarken.length ? products.filter((p) => gewaehlteMarken.includes(brandOf(p))) : products),
+    [products, gewaehlteMarken]
+  );
 
   if (!treffer) {
     return (
@@ -78,6 +100,15 @@ export default function Kategorie() {
   const main = treffer.main;
   const sub = treffer.type === "sub" ? treffer.sub : null;
   const titel = sub ? sub.label : main.label;
+
+  const setMarken = (liste: string[]) => {
+    const next = new URLSearchParams(params);
+    if (liste.length) next.set("marke", liste.join(","));
+    else next.delete("marke");
+    setParams(next, { replace: true });
+  };
+  const toggleMarke = (m: string) =>
+    setMarken(gewaehlteMarken.includes(m) ? gewaehlteMarken.filter((x) => x !== m) : [...gewaehlteMarken, m]);
 
   const setSort = (v: CollectionSort) => {
     const next = new URLSearchParams(params);
@@ -125,10 +156,50 @@ export default function Kategorie() {
         </div>
       )}
 
+      {/* Markenfilter */}
+      {marken.length > 1 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Nach Marke filtern">
+          <span className="text-sm font-semibold mr-1">Marke:</span>
+          {marken.map((m) => {
+            const aktiv = gewaehlteMarken.includes(m.name);
+            return (
+              <button
+                key={m.name}
+                type="button"
+                onClick={() => toggleMarke(m.name)}
+                aria-pressed={aktiv}
+                className={cn(
+                  "inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg border text-sm transition-colors",
+                  aktiv
+                    ? "bg-night text-white border-night"
+                    : "bg-card border-border hover:border-primary/60"
+                )}
+              >
+                {m.name}
+                <span className={cn("text-xs tabular-nums", aktiv ? "text-white/70" : "text-muted-foreground")}>{m.anzahl}</span>
+              </button>
+            );
+          })}
+          {gewaehlteMarken.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setMarken([])}
+              className="inline-flex items-center gap-1 min-h-[36px] px-2 text-sm font-semibold text-primary hover:underline"
+            >
+              <X className="w-4 h-4" /> Marken zurücksetzen
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Ergebnisleiste mit Sortierung */}
       <div className="flex flex-wrap items-center gap-3 mb-4 py-2.5 px-4 rounded-xl border border-border bg-card">
         <p className="text-sm font-semibold">
-          {isLoading && products.length === 0 ? "lädt …" : `${products.length}${hasNextPage ? "+" : ""} Produkte`}
+          {isLoading && products.length === 0
+            ? "lädt …"
+            : gewaehlteMarken.length
+              ? `${sichtbar.length} von ${products.length}${hasNextPage ? "+" : ""} Produkten`
+              : `${products.length}${hasNextPage ? "+" : ""} Produkte`}
         </p>
         <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
           <span className="hidden sm:inline">Sortiert nach:</span>
@@ -154,8 +225,13 @@ export default function Kategorie() {
           titel="Hier ist gerade noch nichts"
           text={<>In dieser Kategorie sind aktuell keine Produkte. Schau in eine andere Kategorie oder frag uns direkt: <a href={`tel:${SHOP_INFO.phoneIntl}`} className="text-primary underline">{SHOP_INFO.phone}</a>.</>}
         />
+      ) : !isLoading && gewaehlteMarken.length > 0 && sichtbar.length === 0 ? (
+        <Hinweis
+          titel="Keine Produkte dieser Marke hier"
+          text={<>In dieser Kategorie gibt es keine Produkte von {gewaehlteMarken.join(", ")}. <button type="button" onClick={() => setMarken([])} className="text-primary underline">Filter zurücksetzen</button></>}
+        />
       ) : (
-        <ProductGrid products={products} isLoading={isLoading} hasNextPage={hasNextPage} onLoadMore={loadMore} />
+        <ProductGrid products={sichtbar} isLoading={isLoading && products.length === 0} />
       )}
     </div>
   );

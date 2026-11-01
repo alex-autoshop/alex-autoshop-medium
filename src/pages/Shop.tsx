@@ -21,6 +21,7 @@ import {
   legacyCategoryRedirect,
   navCategories,
 } from "@/lib/categories";
+import { brandOf, brandRank } from "@/lib/marken";
 import {
   ShopFilters, ActiveFilterChips, EMPTY_FILTERS, productPrice, productAvailable,
   type ShopFilterState,
@@ -111,64 +112,8 @@ const isFrizProduct = (handle: string) =>
   handle.startsWith("hochglanz-antihologramm-politur") ||
   handle.startsWith("schleifpaste-perfect-heavy-cut");
 
-// ── Sortierung nach Marken ────────────────────────────────────────────────────
-// Shopify `vendor` ist bei uns nur der Lieferant ("Alex Autoshop"/"Beaven") —
-// die echte Marke steht im Titel. Daher Erkennung über Titel + Handle.
-//
-// Reihenfolge im Shop: Wunschfarben → Mipa → Eigenmarken (FRIZ, Master) → Rest.
-// Jede Marke bildet einen zusammenhängenden Block.
-// Anker (^) bei mehrdeutigen Marken: "DRYING MASTER" (Mikrofasertuch) darf NICHT
-// als Marke Master gelten, "Master Black Carbon Spachtel" schon.
-const BRAND_ORDER: Array<{ brand: string; match: RegExp }> = [
-  { brand: "Mipa",          match: /\bmipa\b/i },
-  // Eigenmarken direkt danach (beste Marge)
-  { brand: "FRIZ",          match: /\bfriz\b/i },
-  { brand: "Master",        match: /^master[\s-]/i },
-  // Danach die Hauptmarken
-  { brand: "Standox",       match: /\bstandox\b/i },
-  { brand: "Glasurit",      match: /\bglasurit\b/i },
-  { brand: "Spies Hecker",  match: /\bspies[\s-]?hecker\b/i },
-  { brand: "Sikkens",       match: /\bsikkens\b/i },
-  { brand: "3M",            match: /\b3m\b/i },
-  { brand: "Mirka",         match: /\bmirka\b/i },
-  { brand: "Indasa",        match: /\bindasa\b/i },
-  { brand: "Koch-Chemie",   match: /\bkoch[\s-]?chemie\b/i },
-  { brand: "SATA",          match: /\bsata\b/i },
-  { brand: "DeVilbiss",     match: /\bdevilbiss\b/i },
-  { brand: "Rupes",         match: /\brupes\b/i },
-  { brand: "Colad",         match: /\bcolad\b/i },
-  { brand: "Sonax",         match: /\bsonax\b/i },
-  { brand: "Dr. Wack",      match: /^(dr\.?\s?wack|a1)[\s-]/i },
-  { brand: "Liqui Moly",    match: /\bliqui[\s-]?moly\b/i },
-  { brand: "Castrol",       match: /\bcastrol\b/i },
-  { brand: "FanFaro",       match: /\bfanfaro\b/i },
-  { brand: "Novol",         match: /\bnovol\b/i },
-  { brand: "Troton",        match: /\btroton\b/i },
-  { brand: "U-POL",         match: /\bu-?pol\b/i },
-  { brand: "APP",           match: /^app[\s-]/i },
-  { brand: "AVO",           match: /^avo[\s-]/i },
-  { brand: "Petec",         match: /\bpetec\b/i },
-  { brand: "Tesa",          match: /\btesa\b/i },
-  { brand: "Kovax",         match: /\bkovax\b/i },
-  { brand: "Beaven",        match: /\bbeaven\b/i },
-];
-
-/** Titel und Handle EINZELN prüfen — sonst greifen die ^-Anker nicht
- *  (zusammengeklebt stünde der Handle nie am Stringanfang). */
-function matchesBrand(re: RegExp, node: { title?: string; handle: string }): boolean {
-  return re.test(node.title || "") || re.test(node.handle.replace(/-/g, " "));
-}
-
-/** Klartext-Marke für die Filterleiste — "Sonstige", wenn nichts greift. */
-export function brandOf(p: { node: { title?: string; handle: string } }): string {
-  return BRAND_ORDER.find((b) => matchesBrand(b.match, p.node))?.brand ?? "Sonstige";
-}
-
-/** Index der Marke in BRAND_ORDER; unbekannte Marken landen hinten. */
-function brandRank(p: { node: { title?: string; handle: string } }): number {
-  const i = BRAND_ORDER.findIndex((b) => matchesBrand(b.match, p.node));
-  return i === -1 ? BRAND_ORDER.length : i;
-}
+// Markenerkennung (Titel/Handle/vendor) liegt in @/lib/marken.
+export { brandOf };
 
 /** Wunschfarben = konfigurierbare Lacke (Shopify product_type "Autolack").
  *  Fallback über Handle, falls productType am Produkt fehlt. */
