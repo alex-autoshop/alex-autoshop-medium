@@ -120,3 +120,113 @@ export function aboGesamt(liste) {
   }
   return { rabatt, einzelAnzahl, mengenAnzahl: mengen.length, beitrag, ersparnisMengen: ersparnis };
 }
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gebinde-Rechner
+//
+// Ein Lackierer denkt nicht in Gebinden, sondern in Litern pro Monat. Er sagt
+// "ich brauche 7 Liter" — welche Dosen das sind, ist unser Problem, nicht
+// seines. Diese Funktionen rechnen den Bedarf in die GÜNSTIGSTE Kombination
+// der real verfügbaren Gebinde um.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** "50ml" · "500 ml" · "1 Liter" · "1.5 Liter" · "2,5 L" → Liter, sonst null. */
+export function literAus(bezeichnung) {
+  const t = String(bezeichnung || "").toLowerCase().replace(",", ".");
+  const m = t.match(/([\d.]+)\s*(ml|l\b|liter)/);
+  if (!m) return null;
+  const zahl = parseFloat(m[1]);
+  if (!Number.isFinite(zahl) || zahl <= 0) return null;
+  return m[2] === "ml" ? zahl / 1000 : zahl;
+}
+
+/**
+ * Günstigste Kombination von Gebinden, die den Monatsbedarf deckt.
+ *
+ * @param {Array<{label:string, liter:number, preis:number}>} gebinde
+ * @param {number} bedarfLiter
+ * @returns {{ teile: Array<{label:string, liter:number, preis:number, anzahl:number}>,
+ *             liter:number, preis:number } | null}
+ */
+export function guenstigsteKombi(gebinde, bedarfLiter) {
+  const brauchbar = (gebinde || []).filter(
+    (g) => Number.isFinite(g.liter) && g.liter > 0 && Number.isFinite(g.preis) && g.preis > 0
+  );
+  if (!brauchbar.length) return null;
+
+  // In 50-ml-Schritten rechnen — feiner braucht es niemand, und es hält die
+  // Tabelle klein genug, um sie bei jedem Tastendruck neu zu füllen.
+  const SCHRITT = 0.05;
+  const ziel = Math.ceil(Number(bedarfLiter) / SCHRITT);
+  if (!Number.isFinite(ziel) || ziel <= 0) return null;
+  if (ziel > 20000) return null;                 // > 1000 Liter: bitte anrufen
+
+  const kosten = new Array(ziel + 1).fill(Infinity);
+  const woher = new Array(ziel + 1).fill(-1);
+  kosten[0] = 0;
+
+  for (let i = 1; i <= ziel; i++) {
+    for (let g = 0; g < brauchbar.length; g++) {
+      const schritte = Math.round(brauchbar[g].liter / SCHRITT);
+      if (schritte <= 0) continue;
+      // Ein größeres Gebinde darf über das Ziel hinausschießen — es zählt,
+      // was am Ende am wenigsten kostet.
+      const vorher = Math.max(0, i - schritte);
+      const neu = kosten[vorher] + brauchbar[g].preis;
+      if (neu < kosten[i]) { kosten[i] = neu; woher[i] = g; }
+    }
+  }
+  if (!Number.isFinite(kosten[ziel])) return null;
+
+  const zaehler = new Map();
+  let i = ziel;
+  while (i > 0 && woher[i] >= 0) {
+    const g = brauchbar[woher[i]];
+    zaehler.set(g.label, (zaehler.get(g.label) || 0) + 1);
+    i = Math.max(0, i - Math.round(g.liter / SCHRITT));
+  }
+
+  const teile = [...zaehler.entries()].map(([label, anzahl]) => {
+    const g = brauchbar.find((x) => x.label === label);
+    return { label, liter: g.liter, preis: g.preis, anzahl };
+  }).sort((a, b) => b.liter - a.liter);
+
+  const liter = Math.round(teile.reduce((s, t) => s + t.liter * t.anzahl, 0) * 1000) / 1000;
+  const preis = Math.round(teile.reduce((s, t) => s + t.preis * t.anzahl, 0) * 100) / 100;
+  return { teile, liter, preis };
+}
+
+/**
+ * Monatsbedarf auf zwei Marken aufteilen und beide Hälften günstigst einkaufen.
+ *
+ * @param {{ bedarfLiter:number, anteilB:number,
+ *           gebindeA:Array, gebindeB:Array, rabatt:number }} wahl
+ *   anteilB = Anteil der zweiten Marke in Prozent (0 = nur A, 100 = nur B)
+ */
+export function mischBedarf(wahl) {
+  const bedarf = Number(wahl && wahl.bedarfLiter);
+  const anteilB = Math.min(100, Math.max(0, Number(wahl && wahl.anteilB) || 0));
+  const rabatt = Math.floor(Number(wahl && wahl.rabatt));
+  if (!Number.isFinite(bedarf) || bedarf <= 0) return null;
+  if (PRODUKT_ABO_PREISE[rabatt] === undefined) return null;
+
+  const literB = Math.round(bedarf * (anteilB / 100) * 1000) / 1000;
+  const literA = Math.round((bedarf - literB) * 1000) / 1000;
+
+  const teilA = literA > 0 ? guenstigsteKombi(wahl.gebindeA, literA) : { teile: [], liter: 0, preis: 0 };
+  const teilB = literB > 0 ? guenstigsteKombi(wahl.gebindeB, literB) : { teile: [], liter: 0, preis: 0 };
+  if (!teilA || !teilB) return null;
+
+  const cent = (n) => Math.round(n * 100) / 100;
+  const normal = cent(teilA.preis + teilB.preis);
+  if (normal <= 0) return null;
+  const mitglied = cent(normal * (1 - rabatt / 100));
+  const ersparnis = cent(normal - mitglied);
+  const beitrag = cent(Math.max(MENGE_MINDESTBEITRAG, ersparnis * ANTEIL_AN_ERSPARNIS));
+  return {
+    literA, literB, teilA, teilB,
+    literGesamt: cent(teilA.liter + teilB.liter),
+    normal, mitglied, ersparnis, beitrag,
+  };
+}

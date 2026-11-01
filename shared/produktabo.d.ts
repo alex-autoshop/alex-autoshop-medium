@@ -44,3 +44,26 @@ export declare function aboGesamt(liste: {
   einzelAnzahl: number;
   mengen: Array<{ einzelpreis: number; menge: number }>;
 }): { rabatt: number; einzelAnzahl: number; mengenAnzahl: number; beitrag: number; ersparnisMengen: number } | null;
+
+export declare function literAus(bezeichnung: string): number | null;
+
+export interface GebindeTeil { label: string; liter: number; preis: number; anzahl: number }
+export interface Kombi { teile: GebindeTeil[]; liter: number; preis: number }
+
+export declare function guenstigsteKombi(
+  gebinde: Array<{ label: string; liter: number; preis: number }>,
+  bedarfLiter: number
+): Kombi | null;
+
+export declare function mischBedarf(wahl: {
+  bedarfLiter: number;
+  anteilB: number;
+  gebindeA: Array<{ label: string; liter: number; preis: number }>;
+  gebindeB: Array<{ label: string; liter: number; preis: number }>;
+  rabatt: number;
+}): {
+  literA: number; literB: number;
+  teilA: Kombi; teilB: Kombi;
+  literGesamt: number;
+  normal: number; mitglied: number; ersparnis: number; beitrag: number;
+} | null;
