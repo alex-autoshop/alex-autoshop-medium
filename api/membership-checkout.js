@@ -16,7 +16,7 @@
 
 export const config = { runtime: "edge" };
 
-import { mitgliedsbeitrag, rabattName } from "../shared/mitgliedspreise.js";
+import { mitgliedsbeitrag, rabattName, DIENSTLEISTUNG_BUCHBAR } from "../shared/mitgliedspreise.js";
 import { produktAboBeitrag } from "../shared/produktabo.js";
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
@@ -164,6 +164,12 @@ export default async function handler(req) {
     } catch (err) {
       return json({ error: String(err.message).slice(0, 300) }, 500);
     }
+  }
+
+  // Die Dienstleistungs-Mitgliedschaft wird gerade nicht angeboten. Bestehende
+  // Mitglieder sind davon nicht betroffen — nur Neubuchungen sind zu.
+  if (!DIENSTLEISTUNG_BUCHBAR) {
+    return json({ error: "Diese Mitgliedschaft wird gerade nicht angeboten. Ruf uns an: 0202 82690." }, 400);
   }
 
   // Beitrag hier rechnen — der Browser-Preis dient nur zum Abgleich.

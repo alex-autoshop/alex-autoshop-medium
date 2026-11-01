@@ -51,6 +51,7 @@ import { allCategories } from "@/lib/categories";
 import { whatsappLink } from "@/data/shopInfo";
 import { requestMembership, sendMessage, ADMIN_EMAILS } from "@/lib/inbox";
 import { MembershipCards } from "@/components/MembershipCards";
+import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
 import { cn } from "@/lib/utils";
 import { HotlineCard } from "@/components/HotlineCard";
 
@@ -282,10 +283,12 @@ function MitgliedschaftTab({ level, profile }: {
           <div>
             <h2 className="text-lg">Mitgliedschaft</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Rabatt wählen oder ändern — Module einzeln zubuchbar.
+              {DIENSTLEISTUNG_BUCHBAR
+                ? "Rabatt wählen oder ändern — Module einzeln zubuchbar."
+                : "Deine laufende Mitgliedschaft. Änderungen nehmen wir telefonisch auf."}
             </p>
           </div>
-          {level > 0 && (
+          {level > 0 && DIENSTLEISTUNG_BUCHBAR && (
             <button
               type="button"
               onClick={() => setShowChange((v) => !v)}
@@ -293,6 +296,11 @@ function MitgliedschaftTab({ level, profile }: {
             >
               {showChange ? "Schließen" : "Rabatt ändern"}
             </button>
+          )}
+          {level > 0 && !DIENSTLEISTUNG_BUCHBAR && (
+            <a href="tel:+4920282690" className="btn-outline text-sm">
+              Ändern? Ruf an: 0202 82690
+            </a>
           )}
         </div>
 
@@ -311,9 +319,22 @@ function MitgliedschaftTab({ level, profile }: {
           </div>
         )}
 
-        {/* Mitgliedschaftskarten — immer sichtbar wenn kein Level, sonst nur beim Wechsel */}
-        {(level === 0 || showChange) && (
+        {/* Mitgliedschaftskarten — immer sichtbar wenn kein Level, sonst nur beim Wechsel.
+            Solange die Dienstleistungs-Mitgliedschaft nicht angeboten wird, zeigen wir
+            Nicht-Mitgliedern stattdessen das Produkt-Abo. */}
+        {DIENSTLEISTUNG_BUCHBAR && (level === 0 || showChange) && (
           <MembershipCards />
+        )}
+
+        {!DIENSTLEISTUNG_BUCHBAR && level === 0 && (
+          <div className="rounded-xl border border-primary/40 bg-primary/5 p-5">
+            <p className="font-semibold mb-1">Aktuell gibt es das Produkt-Abo</p>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              Du suchst dir die Produkte aus, die du regelmäßig brauchst, und bekommst genau
+              darauf deinen Rabatt — ab 0,50 € pro Produkt und Monat.
+            </p>
+            <Link to="/mitgliedschaft" className="btn-primary text-sm">Produkt-Abo ansehen →</Link>
+          </div>
         )}
 
         {/* Aktuelle Module anzeigen wenn kein Wechsel aktiv */}

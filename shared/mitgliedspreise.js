@@ -18,6 +18,18 @@ export function rabattName(level) {
   return p ? `${p.rabatt} % Rabatt` : "Mitgliedschaft";
 }
 
+/**
+ * Wird die Dienstleistungs-Mitgliedschaft gerade angeboten?
+ *
+ * false = sie verschwindet aus dem Angebot auf /mitgliedschaft, und der Server
+ * nimmt keine NEUE Buchung mehr an. Bestehende Mitglieder behalten alles:
+ * Stufe, Rabatt, Module und ihre Verwaltung im Dashboard laufen unveraendert
+ * weiter — deshalb wird hier nichts geloescht, nur abgeschaltet.
+ *
+ * Wieder anbieten: auf true setzen. Mehr ist nicht noetig.
+ */
+export const DIENSTLEISTUNG_BUCHBAR = false;
+
 export const MODULE = ["Autoteile", "Lackfarben", "Lackmaterial"];
 
 export const MITGLIEDSPREISE = {

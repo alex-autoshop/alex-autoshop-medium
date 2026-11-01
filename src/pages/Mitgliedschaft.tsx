@@ -4,6 +4,7 @@ import { Seo } from "@/components/Seo";
 import { MembershipCards } from "@/components/MembershipCards";
 import { MembershipCalculator } from "@/components/MembershipCalculator";
 import { ProduktAbo } from "@/components/ProduktAbo";
+import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
 import { Wrench, PackageSearch } from "lucide-react";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
@@ -53,7 +54,7 @@ const FAQ = [
 ];
 
 export default function Mitgliedschaft() {
-  const [abo, setAbo] = useState<AboArt>("dienstleistung");
+  const [abo, setAbo] = useState<AboArt>(DIENSTLEISTUNG_BUCHBAR ? "dienstleistung" : "produkt");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   return (
@@ -91,7 +92,10 @@ export default function Mitgliedschaft() {
 
       {/* ── Zwei Mitgliedschaften zur Auswahl ───────────────────────────── */}
       <section className="container py-12 sm:py-16 -mt-8">
-        <div className="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto mb-10" role="tablist" aria-label="Mitgliedschaft wählen">
+        <div className={cn(
+          "grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto mb-10",
+          !DIENSTLEISTUNG_BUCHBAR && "hidden"
+        )} role="tablist" aria-label="Mitgliedschaft wählen">
           {ABOS.map((a) => {
             const aktiv = abo === a.id;
             return (
@@ -127,11 +131,11 @@ export default function Mitgliedschaft() {
           })}
         </div>
 
-        {abo === "dienstleistung" ? <MembershipCards /> : <ProduktAbo />}
+        {DIENSTLEISTUNG_BUCHBAR && abo === "dienstleistung" ? <MembershipCards /> : <ProduktAbo />}
       </section>
 
       {/* Spar-Rechner — gehört zur Dienstleistungs-Mitgliedschaft */}
-      {abo === "dienstleistung" && (
+      {DIENSTLEISTUNG_BUCHBAR && abo === "dienstleistung" && (
         <section className="container pb-12 sm:pb-16">
           <MembershipCalculator />
         </section>

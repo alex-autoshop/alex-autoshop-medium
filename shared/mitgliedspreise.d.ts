@@ -1,6 +1,8 @@
 // Typen für shared/mitgliedspreise.js (die Datei selbst ist reines JavaScript,
 // damit auch die Server-Funktionen in api/ sie ohne Umweg laden können).
 
+export declare const DIENSTLEISTUNG_BUCHBAR: boolean;
+
 export declare const MODULE: string[];
 
 export declare function rabattName(level: number | string): string;
