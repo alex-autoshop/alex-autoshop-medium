@@ -98,60 +98,86 @@ export async function storefrontApiRequest(query: string, variables: Record<stri
   return data;
 }
 
+const PRODUCT_CARD_FIELDS = `
+  id
+  title
+  description
+  descriptionHtml
+  handle
+  vendor
+  tags
+  productType
+  priceRange {
+    minVariantPrice {
+      amount
+      currencyCode
+    }
+  }
+  images(first: 5) {
+    edges {
+      node {
+        url
+        altText
+      }
+    }
+  }
+  variants(first: 10) {
+    edges {
+      node {
+        id
+        title
+        sku
+        price {
+          amount
+          currencyCode
+        }
+        availableForSale
+        selectedOptions {
+          name
+          value
+        }
+      }
+    }
+  }
+  options {
+    name
+    values
+  }
+`;
+
 export const STOREFRONT_PRODUCTS_QUERY = `
   query GetProducts($first: Int!, $after: String, $query: String) {
     products(first: $first, after: $after, query: $query) {
       edges {
         node {
-          id
-          title
-          description
-          descriptionHtml
-          handle
-          vendor
-          tags
-          productType
-          priceRange {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          images(first: 5) {
-            edges {
-              node {
-                url
-                altText
-              }
-            }
-          }
-          variants(first: 10) {
-            edges {
-              node {
-                id
-                title
-                sku
-                price {
-                  amount
-                  currencyCode
-                }
-                availableForSale
-                selectedOptions {
-                  name
-                  value
-                }
-              }
-            }
-          }
-          options {
-            name
-            values
-          }
+          ${PRODUCT_CARD_FIELDS}
         }
       }
       pageInfo {
         hasNextPage
         endCursor
+      }
+    }
+  }
+`;
+
+/** Artikel einer Smart-Collection. Liefert null, solange die Collection nicht
+ *  im Headless-/Storefront-Kanal veröffentlicht ist. */
+export const STOREFRONT_COLLECTION_PRODUCTS_QUERY = `
+  query CollectionProducts($handle: String!, $first: Int!, $after: String) {
+    collection(handle: $handle) {
+      handle
+      title
+      products(first: $first, after: $after) {
+        edges {
+          node {
+            ${PRODUCT_CARD_FIELDS}
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
       }
     }
   }

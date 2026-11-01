@@ -7,6 +7,7 @@ import { MembershipCards } from "@/components/MembershipCards";
 import { ProductGrid } from "@/components/ProductGrid";
 import { useProducts } from "@/hooks/useProducts";
 import { collections } from "@/lib/categories";
+import { cn } from "@/lib/utils";
 import { SHOP_INFO } from "@/data/shopInfo";
 
 const fadeUp = {
@@ -105,12 +106,15 @@ export default function Home() {
           {collections.map((col, i) => (
             <motion.div key={col.slug} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.05 }}>
               <Link to={`/shop/${col.slug}`} className="card-tilt overflow-hidden group block">
-                <div className="aspect-[4/3] overflow-hidden bg-secondary">
+                <div className={cn("aspect-[4/3] overflow-hidden", col.contain ? "bg-white" : "bg-secondary")}>
                   <img
                     src={col.image}
                     alt={col.label}
                     loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className={cn(
+                      "w-full h-full group-hover:scale-105 transition-transform duration-300",
+                      col.contain ? "object-contain p-3" : "object-cover"
+                    )}
                   />
                 </div>
                 <div className="p-4 flex items-center justify-between gap-2">

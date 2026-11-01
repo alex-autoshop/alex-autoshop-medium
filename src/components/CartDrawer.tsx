@@ -156,7 +156,8 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   // Versandlogik
   const FREE_THRESHOLD = 150;
   const DHL_RATE = 5.9;
-  const isMember = user && (profile.membership_level === "level1" || profile.membership_level === "level2" || profile.membership_level === "level3");
+  const membershipKey = profile.membership_level as unknown as string | number | undefined;
+  const isMember = !!user && (membershipKey === "level1" || membershipKey === "level2" || membershipKey === "level3");
   const shippingCost = isMember ? 0 : total >= FREE_THRESHOLD ? 0 : DHL_RATE;
   const remainingForFree = Math.max(0, FREE_THRESHOLD - total);
   const freeProgress = Math.min(100, (total / FREE_THRESHOLD) * 100);
