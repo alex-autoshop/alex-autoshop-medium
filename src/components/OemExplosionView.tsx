@@ -648,6 +648,7 @@ function ArticleRow({
     (vehicleLabel ? `Fahrzeug: ${vehicleLabel}\n` : '') +
     `Baugruppe: ${groupName}`
   );
+  const price = (article as { price?: number | string }).price;
 
   return (
     <div className="flex items-start gap-3 px-4 py-3 hover:bg-secondary/20 transition-colors group">
@@ -671,9 +672,9 @@ function ArticleRow({
               <span className="text-[10px] font-mono text-muted-foreground">{article.articleNumber}</span>
             </div>
           </div>
-          {article.price && (
+          {price != null && price !== "" && (
             <span className="text-sm font-black text-foreground shrink-0">
-              {typeof article.price === 'number' ? `${article.price.toFixed(2)} €` : article.price}
+              {typeof price === "number" ? `${price.toFixed(2)} €` : price}
             </span>
           )}
         </div>

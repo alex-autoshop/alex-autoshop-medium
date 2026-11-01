@@ -1,102 +1,203 @@
-export interface Category {
-  slug: string;
+/**
+ * Shop-Navigation = das Shopify-Menü „Menü“ (6 Hauptkategorien + Unterkategorien).
+ *
+ * Die Storefront-API kann dieses Menü heute nicht lesen
+ * (`unauthenticated_read_content` fehlt am Token) und die neuen Smart-Collections
+ * sind nicht im Headless-Kanal veröffentlicht (`collection(handle:)` = null).
+ * Deshalb steht der Baum hier. Jede `query` ist exakt die Regel der Collection
+ * (Tag „Kategorie: …“ bzw. Produkttyp) und liefert dieselben Artikel.
+ *
+ * `useProducts` fragt zusätzlich `collection(handle:)` an. Sobald die Collections
+ * im Headless-Kanal liegen, gewinnt die Collection — Regeländerungen in Shopify
+ * kommen dann ohne Code-Änderung an.
+ */
+
+export interface ShopLink {
   label: string;
-  query: string;
-  description: string;
+  /** Kollektions-Handle, zugleich Pfad /shop/:slug */
+  slug?: string;
+  /** Storefront-Suche, Abbild der Smart-Collection-Regel. */
+  query?: string;
+  /** Direkter Pfad, wenn es keine Kollektion ist (Produktseite). */
+  to?: string;
   image?: string;
-  children?: Category[];
+  /** Produktfoto auf hellem Grund: in der Kachel vollständig zeigen. */
+  contain?: boolean;
+  children?: ShopLink[];
 }
 
-// Main nav categories matching original shop
-export const navCategories: Array<{
-  label: string;
-  slug?: string;
-  query?: string;
-  children?: Array<{ label: string; slug: string; query: string }>;
-}> = [
+export const navCategories: ShopLink[] = [
   {
     label: "Farbe bestellen",
     children: [
-      { label: "Wunschfarbe erstellen", slug: "wunschfarben", query: "product_type:Autolack" },
-      { label: "Individuelle Spraydose", slug: "spraydosen", query: "title:Spraydose" },
-      { label: "Individueller Lackstift", slug: "lackstifte", query: "title:Lackstift" },
+      { label: "Wunschfarbe bestellen", to: "/produkt/farben-mix" },
+      { label: "Spraydose bestellen", to: "/produkt/individuelle-spraydose-erstellen" },
     ],
   },
   {
-    label: "Lackierprodukte",
+    label: "Lackierbedarf",
+    slug: "lackierbedarf-alle",
+    query: 'tag:"Kategorie: Lackierbedarf"',
+    image: "/images/collection-lackierprodukte.webp",
     children: [
-      { label: "Klarlacke", slug: "klarlacke", query: "tag:Klarlack" },
-      { label: "Grundierungen & Füller", slug: "grundierungen", query: "tag:Grundierung OR tag:Grundierfüller OR tag:'2K Grundierfüller' OR tag:Acrylfiller OR tag:Haftprimer" },
-      { label: "Härter", slug: "haerter", query: "tag:Härter" },
-      { label: "Verdünnungen", slug: "verduennungen", query: "tag:Verdünnung" },
-      { label: "Spachtel", slug: "spachtel", query: "tag:Spachtel OR tag:Spritzspachtel OR tag:Spritzfüller" },
-      { label: "Schleifmaterial", slug: "schleifmaterial", query: "tag:Schleifpads OR tag:schleifscheibe OR tag:schleifscheiben OR title:Schleifschwamm OR title:Schleifvlies" },
-      { label: "Abdeckmaterial", slug: "abdeckmaterial", query: "title:Abdeckband OR title:'Green Tape' OR title:Foam-Tape" },
+      { label: "Grundierung & Füller", slug: "grundierung-fueller", query: 'product_type:"Grundierung & Füller"' },
+      { label: "Spachtel", slug: "spachtel", query: 'product_type:"Spachtel"' },
+      { label: "Schleifmittel", slug: "schleifmittel-produkte", query: 'product_type:"Schleifmittel"' },
+      { label: "Abdecken", slug: "abdecken-produkte", query: 'product_type:"Abdecken"' },
+      { label: "Klarlack", slug: "klarlack-produkte", query: 'product_type:"Klarlack"' },
+      { label: "Härter", slug: "haerter", query: 'product_type:"Härter"' },
+      { label: "Verdünnung & Zusätze", slug: "verduennung-zusaetze", query: 'product_type:"Verdünnung & Zusätze"' },
+      { label: "Wunschfarbe & Lackstift", slug: "wunschfarbe-lackstift", query: 'product_type:"Wunschfarbe & Lackstift"' },
     ],
   },
   {
-    label: "Öle & Flüssigkeiten",
+    label: "Karosserie & Reparatur",
+    slug: "karosserie-reparatur",
+    query: 'tag:"Kategorie: Karosserie & Reparatur"',
+    image: "/images/collection-karosserie.webp",
     children: [
-      { label: "Motoröl", slug: "motoroel", query: "tag:Motoröl" },
-      // Ölfilter nach MANN-Bauart getrennt (Tags in Shopify gesetzt):
-      // HU… = Filtereinsatz metallfrei · W/WP… = Anschraubfilter · H…KIT = Hydraulik
-      { label: "Ölfilter (alle)", slug: "oelfilter", query: "tag:Ölfilter" },
-      { label: "Ölfilter – Einsatz", slug: "oelfilter-einsatz", query: "tag:Filtereinsatz" },
-      { label: "Ölfilter – Anschraub", slug: "oelfilter-anschraub", query: "tag:Anschraubfilter" },
-      { label: "Hydraulikfilter", slug: "hydraulikfilter", query: "tag:Hydraulikfilter" },
-      { label: "Bremsenreiniger", slug: "bremsenreiniger", query: "title:Bremsenreiniger" },
-      { label: "Silikonentferner", slug: "silikonentferner", query: "title:Silikonentferner" },
+      { label: "Dichten & Kleben", slug: "dichten-kleben-produkte", query: 'product_type:"Dichten & Kleben"' },
+      { label: "Steinschlag- & Rostschutz", slug: "steinschlag-rostschutz", query: 'product_type:"Steinschlag- & Rostschutz"' },
+      { label: "Spezial- & Effektlacke", slug: "spezial-effektlacke", query: 'product_type:"Spezial- & Effektlacke"' },
     ],
   },
   {
-    label: "Karosserie & Reparaturmaterial",
+    label: "Autopflege & Detailing",
+    slug: "autopflege-detailing",
+    query: 'tag:"Kategorie: Autopflege & Detailing"',
+    image: "/images/collection-autopflege.webp",
+    contain: true,
     children: [
-      { label: "Steinschlagschutz", slug: "steinschlagschutz", query: "tag:Steinschlagschutz OR tag:Strukturlack OR title:'Bumper Paint'" },
-      { label: "Dichtmasse & Kleber", slug: "dichtmasse", query: "tag:Dichtmasse OR tag:Karosseriekleber" },
-      { label: "Hohlraumversiegelung", slug: "versiegelung", query: "tag:Versieglung OR title:Hohlraumversiegelung" },
-      { label: "Auspuff-Reparatur", slug: "auspuff", query: "tag:Auspuff OR tag:Auspufflack" },
+      { label: "Mikrofasertücher", slug: "mikrofasertuecher", query: 'product_type:"Mikrofasertücher"' },
+      { label: "Schwämme", slug: "schwaemme", query: 'product_type:"Schwämme"' },
+      { label: "Bürsten & Pinsel", slug: "buersten-pinsel", query: 'product_type:"Bürsten & Pinsel"' },
+      { label: "Waschzubehör", slug: "waschzubehoer", query: 'product_type:"Waschzubehör"' },
+      { label: "Trocknen & Leder", slug: "trocknen-leder", query: 'product_type:"Trocknen & Leder"' },
+      { label: "Poliermaschinen & Pads", slug: "poliermaschinen-pads", query: 'product_type:"Poliermaschinen & Pads"' },
+      { label: "Politur & Schleifpaste", slug: "politur-schleifpaste", query: 'product_type:"Politur & Schleifpaste"' },
+      { label: "Pflegemittel & Versiegelung", slug: "pflegemittel-versiegelung", query: 'product_type:"Pflegemittel & Versiegelung"' },
     ],
   },
   {
-    label: "Pflege & Aufbereitung",
+    label: "Öle, Flüssigkeiten & Filter",
+    slug: "oele-fluessigkeiten-filter",
+    query: 'tag:"Kategorie: Öle"',
+    image: "/images/collection-oele.webp",
     children: [
-      { label: "Alle Pflegeprodukte", slug: "pflegeprodukte", query: "tag:Autopflege OR tag:Politur OR title:Polish OR title:Wax OR title:Shampoo OR title:Scheibenreiniger OR title:Polierpads" },
-      { label: "Waschen & Schwämme", slug: "waschen-schwaemme", query: "title:Schwamm OR title:Eimer OR title:Waschhandschuh OR title:Shampoo OR title:Insektennetz OR title:Chenille" },
-      { label: "Bürsten & Felgenreinigung", slug: "buersten", query: "title:Bürste OR title:Burste OR title:Pinsel OR title:Felgen" },
-      { label: "Mikrofaser & Tücher", slug: "mikrofaser-tuecher", query: "title:Mikrofaser OR title:Microfein OR title:Micro OR title:Poliertuch OR title:Tuch OR title:Wischtücher" },
-      { label: "Polieren & Politur", slug: "polieren-politur", query: "tag:Politur OR title:Polish OR title:Wax OR title:Polier OR title:Pad OR title:Polierteller OR title:Schleifpaste OR title:Politur" },
-      { label: "Scheiben, Trocknen & Antibeschlag", slug: "scheiben-trocknen", query: "title:Wasserabzieher OR title:Scheibenreiniger OR title:Antibeschlag OR title:Fensterleder OR title:Ledertuch OR title:PVA OR title:Scheibe OR title:Trocken" },
-      { label: "Innenraum, Duft & Winter", slug: "innenraum-winter", query: "title:Duft OR title:Lufterfrischer OR title:Cockpit OR title:Interieur OR title:Teppich OR title:Staubwedel OR title:Staubpinsel OR title:Eiskratzer OR title:Eisschaber OR title:Schneebesen OR title:Isolierdecke" },
+      { label: "Motoröl", slug: "motoroel", query: 'product_type:"Motoröl"' },
+      { label: "Filter", slug: "filter", query: 'product_type:"Filter"' },
+      { label: "Kühlmittel & Scheibenreiniger", slug: "kuehlmittel-scheibenreiniger", query: 'product_type:"Kühlmittel & Scheibenreiniger"' },
+      { label: "Reiniger & Fette", slug: "reiniger-fette", query: 'product_type:"Reiniger & Fette"' },
     ],
   },
   {
-    label: "Sets & Bundles",
-    slug: "bundles",
-    query: "tag:Bundle",
+    label: "Winter",
+    slug: "winter",
+    query: 'tag:"Kategorie: Winter"',
+    image: "/images/collection-winter.webp",
+    contain: true,
+    children: [
+      { label: "Eiskratzer & Schneebesen", slug: "eiskratzer-schneebesen", query: 'product_type:"Eiskratzer & Schneebesen"' },
+      { label: "Enteiser & Frostschutz", slug: "enteiser-frostschutz", query: 'product_type:"Enteiser & Frostschutz"' },
+    ],
+  },
+  {
+    label: "Sets & Sonstiges",
+    slug: "sets-sonstiges",
+    query: 'tag:"Kategorie: Sets & Sonstiges"',
+    image: "/images/collection-sets.webp",
+    contain: true,
   },
 ];
 
-// Flat list for routing
-export const allCategories: Array<{ slug: string; label: string; query: string }> = [];
+export interface ShopCategory {
+  slug: string;
+  label: string;
+  query: string;
+}
+
+/** Hauptkategorien und Unterkategorien, die eine Kollektion sind. */
+export const allCategories: ShopCategory[] = [];
 
 navCategories.forEach((cat) => {
-  if (cat.children) {
-    cat.children.forEach((child) => allCategories.push(child));
-  } else if (cat.slug && cat.query) {
-    allCategories.push({ slug: cat.slug, label: cat.label, query: cat.query });
-  }
+  if (cat.slug && cat.query) allCategories.push({ slug: cat.slug, label: cat.label, query: cat.query });
+  cat.children?.forEach((child) => {
+    if (child.slug && child.query) allCategories.push({ slug: child.slug, label: child.label, query: child.query });
+  });
 });
 
-export function getCategoryBySlug(slug: string) {
+export function getCategoryBySlug(slug: string): ShopCategory | undefined {
   return allCategories.find((c) => c.slug === slug);
 }
 
-// Homepage collections
-export const collections = [
-  { label: "Günstige Autoteile bestellen", slug: "autoteile", image: "/images/collection-autoteile.png", query: "title:Autoteile" },
-  { label: "Alle Produkte", slug: "alle", image: "/images/collection-filter.png", query: "" },
-  { label: "Günstige Lackierprodukte", slug: "lackierprodukte", image: "/images/collection-lackierprodukte.webp", query: "tag:Klarlack OR tag:Grundierung OR tag:Härter OR tag:Verdünnung OR tag:Spachtel" },
-  { label: "Öle & Flüssigkeiten", slug: "oele", image: "/images/collection-oele.webp", query: "tag:Motoröl OR tag:Ölfilter OR title:Bremsenreiniger" },
-  { label: "Karosserie & Reparaturmaterial", slug: "karosserie", image: "/images/collection-karosserie.webp", query: "tag:Steinschlagschutz OR tag:Dichtmasse OR tag:Spachtel OR tag:Strukturlack" },
-  { label: "Wunschfarben erstellen", slug: "wunschfarben", image: "/images/collection-wunschfarben.png", query: "product_type:Autolack" },
-];
+export function getParentCategory(slug: string): ShopCategory | undefined {
+  for (const group of navCategories) {
+    if (!group.children?.some((child) => child.slug === slug)) continue;
+    if (group.slug && group.query) return { slug: group.slug, label: group.label, query: group.query };
+  }
+  return undefined;
+}
+
+export function categoryPath(item: Pick<ShopLink, "slug" | "to">): string | null {
+  if (item.to) return item.to;
+  if (item.slug) return `/shop/${item.slug}`;
+  return null;
+}
+
+/** Startseiten-Kacheln: die sechs Hauptkategorien, in Menü-Reihenfolge. */
+export const collections: Array<ShopCategory & { image: string; contain?: boolean }> = navCategories
+  .filter((cat): cat is ShopLink & { slug: string; query: string; image: string } =>
+    Boolean(cat.slug && cat.query && cat.image)
+  )
+  .map((cat) => ({
+    slug: cat.slug,
+    label: cat.label,
+    query: cat.query,
+    image: cat.image,
+    contain: cat.contain,
+  }));
+
+/**
+ * Alte Shop-Slugs (frühere hart codierte Kategorien) → neue Adresse.
+ * Leerer String = /shop. Neue Handles stehen hier bewusst nicht.
+ */
+const LEGACY_SLUGS: Record<string, string> = {
+  wunschfarben: "wunschfarbe-lackstift",
+  spraydosen: "wunschfarbe-lackstift",
+  lackstifte: "wunschfarbe-lackstift",
+  klarlacke: "klarlack-produkte",
+  grundierungen: "grundierung-fueller",
+  verduennungen: "verduennung-zusaetze",
+  schleifmaterial: "schleifmittel-produkte",
+  abdeckmaterial: "abdecken-produkte",
+  oelfilter: "filter",
+  "oelfilter-einsatz": "filter",
+  "oelfilter-anschraub": "filter",
+  hydraulikfilter: "filter",
+  bremsenreiniger: "reiniger-fette",
+  silikonentferner: "reiniger-fette",
+  steinschlagschutz: "steinschlag-rostschutz",
+  dichtmasse: "dichten-kleben-produkte",
+  versiegelung: "steinschlag-rostschutz",
+  auspuff: "karosserie-reparatur",
+  pflegeprodukte: "autopflege-detailing",
+  "waschen-schwaemme": "waschzubehoer",
+  buersten: "buersten-pinsel",
+  "mikrofaser-tuecher": "mikrofasertuecher",
+  "polieren-politur": "politur-schleifpaste",
+  "scheiben-trocknen": "trocknen-leder",
+  "innenraum-winter": "winter",
+  bundles: "sets-sonstiges",
+  autoteile: "",
+  alle: "",
+  lackierprodukte: "lackierbedarf-alle",
+  oele: "oele-fluessigkeiten-filter",
+  karosserie: "karosserie-reparatur",
+};
+
+/** Neue Adresse für einen veralteten Slug, sonst undefined. */
+export function legacyCategoryRedirect(slug: string): string | undefined {
+  if (!Object.prototype.hasOwnProperty.call(LEGACY_SLUGS, slug)) return undefined;
+  const next = LEGACY_SLUGS[slug];
+  return next ? `/shop/${next}` : "/shop";
+}

@@ -2,11 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type ShopifyProduct,
   storefrontApiRequest,
+  STOREFRONT_COLLECTION_PRODUCTS_QUERY,
   STOREFRONT_PRODUCTS_QUERY,
 } from "@/lib/shopify";
 
 interface UseProductsOptions {
   query?: string;
+  /** Kollektions-Handle. Wird zuerst über die Storefront-API geladen;
+   *  fällt auf `query` zurück, wenn die Collection nicht veröffentlicht ist. */
+  collectionHandle?: string;
   pageSize?: number;
   /** Alle Seiten am Stück nachladen statt auf "Mehr laden" zu warten.
    *  Nötig für Sortierungen über den GESAMTEN Katalog (z.B. nach Marken):
@@ -15,7 +19,20 @@ interface UseProductsOptions {
   loadAll?: boolean;
 }
 
-export function useProducts({ query = "", pageSize = 24, loadAll = false }: UseProductsOptions = {}) {
+interface PageInfo {
+  hasNextPage?: boolean;
+  endCursor?: string | null;
+}
+
+/** Einmal pro Sitzung: neue Collections sind (noch) nicht im Headless-Kanal. */
+let collectionsOnStorefront: boolean | null = null;
+
+export function useProducts({
+  query = "",
+  collectionHandle,
+  pageSize = 24,
+  loadAll = false,
+}: UseProductsOptions = {}) {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,25 +49,46 @@ export function useProducts({ query = "", pageSize = 24, loadAll = false }: UseP
         let after = append ? cursorRef.current : null;
         let collected: ShopifyProduct[] = [];
         let more = true;
+        let useCollection = Boolean(collectionHandle) && collectionsOnStorefront !== false;
 
         while (more) {
-          const data = await storefrontApiRequest(STOREFRONT_PRODUCTS_QUERY, {
-            first: pageSize,
-            after,
-            query: query || null,
-          });
-          // Neue Suche/Kategorie gestartet → veraltete Antwort verwerfen
-          if (requestId !== requestIdRef.current) return;
+          let edges: ShopifyProduct[] = [];
+          let pageInfo: PageInfo | undefined;
 
-          const edges: ShopifyProduct[] = data?.data?.products?.edges ?? [];
-          const pageInfo = data?.data?.products?.pageInfo;
+          if (useCollection && collectionHandle) {
+            const data = await storefrontApiRequest(STOREFRONT_COLLECTION_PRODUCTS_QUERY, {
+              handle: collectionHandle,
+              first: pageSize,
+              after,
+            });
+            if (requestId !== requestIdRef.current) return;
+            const collection = data?.data?.collection;
+            if (!collection) {
+              // Nicht im Headless-Kanal — für den Rest der Sitzung die Regel-Suche nutzen.
+              collectionsOnStorefront = false;
+              useCollection = false;
+              continue;
+            }
+            collectionsOnStorefront = true;
+            edges = collection.products?.edges ?? [];
+            pageInfo = collection.products?.pageInfo;
+          } else {
+            const data = await storefrontApiRequest(STOREFRONT_PRODUCTS_QUERY, {
+              first: pageSize,
+              after,
+              query: query || null,
+            });
+            if (requestId !== requestIdRef.current) return;
+            edges = data?.data?.products?.edges ?? [];
+            pageInfo = data?.data?.products?.pageInfo;
+          }
+
           collected = collected.concat(edges);
           after = pageInfo?.endCursor ?? null;
           more = Boolean(pageInfo?.hasNextPage);
 
           cursorRef.current = after;
           setHasNextPage(more);
-          // Zwischenstand sofort rendern — Nutzer wartet nicht auf alle Seiten
           const snapshot = collected;
           setProducts((prev) => (append ? [...prev, ...edges] : snapshot));
 
@@ -63,7 +101,7 @@ export function useProducts({ query = "", pageSize = 24, loadAll = false }: UseP
         if (requestId === requestIdRef.current) setIsLoading(false);
       }
     },
-    [query, pageSize, loadAll]
+    [query, collectionHandle, pageSize, loadAll]
   );
 
   useEffect(() => {

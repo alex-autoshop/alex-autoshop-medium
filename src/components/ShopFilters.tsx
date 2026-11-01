@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, X, RotateCcw } from "lucide-react";
-import { navCategories } from "@/lib/categories";
+import { categoryPath, navCategories } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 import type { ShopifyProduct } from "@/lib/shopify";
 
@@ -180,27 +180,65 @@ export function ShopFilters({
           Kategorien
         </p>
         <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
-          {navCategories.map((group) => (
-            <div key={group.label}>
-              <p className="text-[11px] font-semibold text-foreground/70 mb-1">{group.label}</p>
-              <div className="space-y-0.5">
-                {(group.children ?? []).map((c) => (
+          {navCategories.map((group) => {
+            const children = group.children ?? [];
+            const groupHref = group.slug ? `/shop/${group.slug}` : null;
+            const groupActive = Boolean(group.slug && activeSlug === group.slug);
+            return (
+              <div key={group.label}>
+                {groupHref && children.length === 0 ? (
                   <Link
-                    key={c.slug}
-                    to={`/shop/${c.slug}`}
+                    to={groupHref}
                     className={cn(
-                      "block px-2 py-1 rounded-md text-[13px] transition-colors",
-                      activeSlug === c.slug
-                        ? "bg-primary/10 text-foreground font-semibold"
-                        : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
+                      "block px-2 py-1 rounded-md text-[13px] font-semibold transition-colors",
+                      groupActive
+                        ? "bg-primary/10 text-foreground"
+                        : "text-foreground/80 hover:bg-secondary/70 hover:text-foreground"
                     )}
                   >
-                    {c.label}
+                    {group.label}
                   </Link>
-                ))}
+                ) : groupHref ? (
+                  <Link
+                    to={groupHref}
+                    className={cn(
+                      "block text-[11px] font-semibold mb-1 px-2 py-1 rounded-md transition-colors",
+                      groupActive
+                        ? "bg-primary/10 text-foreground"
+                        : "text-foreground/70 hover:bg-secondary/70 hover:text-foreground"
+                    )}
+                  >
+                    {group.label}
+                  </Link>
+                ) : (
+                  <p className="text-[11px] font-semibold text-foreground/70 mb-1 px-2">{group.label}</p>
+                )}
+                {children.length > 0 && (
+                  <div className="space-y-0.5">
+                    {children.map((c) => {
+                      const href = categoryPath(c);
+                      if (!href) return null;
+                      const active = Boolean(c.slug && activeSlug === c.slug);
+                      return (
+                        <Link
+                          key={c.slug ?? href}
+                          to={href}
+                          className={cn(
+                            "block px-2 py-1 rounded-md text-[13px] transition-colors",
+                            active
+                              ? "bg-primary/10 text-foreground font-semibold"
+                              : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
+                          )}
+                        >
+                          {c.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

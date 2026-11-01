@@ -382,8 +382,12 @@ function DashboardShop({ level, profile, trialActive, userId }: { level: number;
   const [category, setCategory] = useState<string>("");
   const [search, setSearch] = useState("");
   const [submitted, setSubmitted] = useState("");
-  const query = submitted ? `title:*${submitted}*` : category;
-  const { products, isLoading, error, hasNextPage, loadMore } = useProducts({ query });
+  const selectedCategory = allCategories.find((c) => c.slug === category);
+  const query = submitted ? `title:*${submitted}*` : (selectedCategory?.query ?? "");
+  const { products, isLoading, error, hasNextPage, loadMore } = useProducts({
+    query,
+    collectionHandle: submitted ? undefined : selectedCategory?.slug,
+  });
   const modules = profile.membership_modules ?? ["Autoteile", "Lackfarben", "Lackmaterial"];
   const discounts = moduleDiscounts(level, modules);
   // Im B2B Shop zeigen wir Lack-Rabatte (Lackfarben + Lackmaterial)
@@ -478,8 +482,8 @@ function DashboardShop({ level, profile, trialActive, userId }: { level: number;
         {allCategories.map((c) => (
           <button
             key={c.slug}
-            onClick={() => { setCategory(c.query); setSubmitted(""); setSearch(""); }}
-            className={cn("shrink-0 px-4 min-h-[44px] rounded-full border text-sm font-medium", category === c.query ? "bg-night text-white border-night" : "bg-card border-border hover:border-primary")}
+            onClick={() => { setCategory(c.slug); setSubmitted(""); setSearch(""); }}
+            className={cn("shrink-0 px-4 min-h-[44px] rounded-full border text-sm font-medium", category === c.slug ? "bg-night text-white border-night" : "bg-card border-border hover:border-primary")}
           >
             {c.label}
           </button>

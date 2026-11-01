@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Palette, Droplets, Layers, Pipette, FlaskConical,
@@ -14,7 +14,13 @@ import {
   STOREFRONT_PRODUCT_BY_HANDLE_QUERY,
   type ShopifyProduct,
 } from "@/lib/shopify";
-import { allCategories, getCategoryBySlug, collections, navCategories } from "@/lib/categories";
+import {
+  categoryPath,
+  getCategoryBySlug,
+  getParentCategory,
+  legacyCategoryRedirect,
+  navCategories,
+} from "@/lib/categories";
 import {
   ShopFilters, ActiveFilterChips, EMPTY_FILTERS, productPrice, productAvailable,
   type ShopFilterState,
@@ -239,7 +245,7 @@ function CategoryDropdown({
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
             style={{ willChange: "transform, opacity" }}
-            className="absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
+            className="absolute right-0 top-[calc(100%+8px)] w-[22rem] max-w-[calc(100vw-1.5rem)] rounded-2xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl z-50 overflow-hidden"
           >
             {/* Alle Produkte */}
             <div className="p-2">
@@ -263,31 +269,63 @@ function CategoryDropdown({
             {/* Grouped categories */}
             <div className="p-2 max-h-[62vh] overflow-y-auto">
               {navCategories.map((group) => {
-                const children = group.children ?? (group.slug ? [group as { label: string; slug: string }] : []);
-                if (!children.length) return null;
+                const children = group.children ?? [];
+                const groupHref = group.slug ? `/shop/${group.slug}` : null;
+                const groupActive = Boolean(group.slug && activeSlug === group.slug);
                 return (
                   <div key={group.label} className="mb-1">
-                    <p className="px-3 pt-3 pb-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest select-none">
-                      {group.label}
-                    </p>
-                    {children.map((child) => (
+                    {groupHref && children.length === 0 ? (
                       <Link
-                        key={child.slug}
-                        to={`/shop/${child.slug}`}
+                        to={groupHref}
                         onClick={() => setOpen(false)}
                         className={cn(
-                          "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors",
-                          activeSlug === child.slug
-                            ? "bg-primary/10 text-primary font-medium"
+                          "flex items-center justify-between px-3 py-2.5 mt-2 rounded-xl text-sm font-medium transition-colors",
+                          groupActive
+                            ? "bg-primary/10 text-primary"
                             : "hover:bg-muted/60 text-foreground/80 hover:text-foreground",
                         )}
                       >
-                        <span>{child.label}</span>
-                        {activeSlug === child.slug && (
-                          <Check className="w-3.5 h-3.5 shrink-0" />
-                        )}
+                        <span>{group.label}</span>
+                        {groupActive && <Check className="w-3.5 h-3.5 shrink-0" />}
                       </Link>
-                    ))}
+                    ) : groupHref ? (
+                      <Link
+                        to={groupHref}
+                        onClick={() => setOpen(false)}
+                        className={cn(
+                          "flex items-center justify-between gap-2 px-3 pt-3 pb-1.5 text-[11px] font-bold leading-snug rounded-lg",
+                          groupActive ? "text-primary" : "text-foreground/80 hover:text-foreground",
+                        )}
+                      >
+                        <span>{group.label}</span>
+                        {groupActive && <Check className="w-3.5 h-3.5 shrink-0" />}
+                      </Link>
+                    ) : (
+                      <p className="px-3 pt-3 pb-1.5 text-[11px] font-bold text-foreground/70 leading-snug select-none">
+                        {group.label}
+                      </p>
+                    )}
+                    {children.map((child) => {
+                      const href = categoryPath(child);
+                      if (!href) return null;
+                      const active = Boolean(child.slug && activeSlug === child.slug);
+                      return (
+                        <Link
+                          key={child.slug ?? href}
+                          to={href}
+                          onClick={() => setOpen(false)}
+                          className={cn(
+                            "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors",
+                            active
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "hover:bg-muted/60 text-foreground/80 hover:text-foreground",
+                          )}
+                        >
+                          <span>{child.label}</span>
+                          {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        </Link>
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -313,7 +351,9 @@ const SORT_LABELS: Record<SortMode, string> = {
 
 // ── Shop Page ─────────────────────────────────────────────────────────────────
 export default function Shop() {
-  const { category } = useParams();
+  const { category: rawCategory } = useParams();
+  const legacyTarget = rawCategory ? legacyCategoryRedirect(rawCategory) : undefined;
+  const category = legacyTarget ? undefined : rawCategory;
   const [search, setSearch] = useState("");
   const [submittedSearch, setSubmittedSearch] = useState("");
   const [shopMode, setShopMode] = useState<ShopMode>('standard');
@@ -336,10 +376,8 @@ export default function Shop() {
   // Kategorie-/Suchwechsel setzt die Filter zurück — sonst steht man vor 0 Treffern.
   useEffect(() => { setFilters(EMPTY_FILTERS); }, [category, submittedSearch]);
 
-  const activeCategory =
-    category
-      ? getCategoryBySlug(category) ?? collections.find((c) => c.slug === category)
-      : undefined;
+  const activeCategory = category ? getCategoryBySlug(category) : undefined;
+  const parentCategory = category ? getParentCategory(category) : undefined;
 
   // Live search — debounced 300ms
   useEffect(() => {
@@ -373,8 +411,10 @@ export default function Shop() {
 
   // Kompletten Katalog laden (442 Produkte = 2 Requests à 250), damit die
   // Markensortierung über ALLE Produkte greift und nicht nur über die erste Seite.
+  // In einer Kategorie zuerst die Shopify-Collection, sonst die Regel-Suche.
   const { products, isLoading, error, hasNextPage, loadMore } = useProducts({
     query,
+    collectionHandle: submittedSearch.trim() ? undefined : activeCategory?.slug,
     pageSize: 250,
     loadAll: true,
   });
@@ -469,6 +509,8 @@ export default function Shop() {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  if (legacyTarget) return <Navigate to={legacyTarget} replace />;
 
   return (
     <div className="mx-auto w-full max-w-[1760px] px-3 sm:px-6 py-8 sm:py-10">
@@ -600,10 +642,18 @@ export default function Shop() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                 <Link to="/shop" className="hover:text-foreground transition-colors">
                   Alle
                 </Link>
+                {parentCategory && (
+                  <>
+                    <span>/</span>
+                    <Link to={`/shop/${parentCategory.slug}`} className="hover:text-foreground transition-colors">
+                      {parentCategory.label}
+                    </Link>
+                  </>
+                )}
                 <span>/</span>
                 <span className="text-foreground font-medium">{activeCategory.label}</span>
                 <Link
@@ -626,10 +676,10 @@ export default function Shop() {
         <section className="mb-8">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { slug: "klarlacke", label: "Klarlack", sub: "2K HS & Express", icon: <Layers className="w-7 h-7" />, color: "from-blue-500/20 to-blue-400/5" },
+              { slug: "klarlack-produkte", label: "Klarlack", sub: "2K HS & Express", icon: <Layers className="w-7 h-7" />, color: "from-blue-500/20 to-blue-400/5" },
               { slug: "haerter", label: "Härter", sub: "Standard · Fast · Slow", icon: <FlaskConical className="w-7 h-7" />, color: "from-amber-500/20 to-amber-400/5" },
-              { slug: "wunschfarben", label: "Wunschfarbe", sub: "Mipa · Standox · Sikkens", icon: <Pipette className="w-7 h-7" />, color: "from-primary/20 to-primary/5" },
-              { slug: "verduennungen", label: "Verdünnung", sub: "Acryl · Nitro · Uni", icon: <Droplets className="w-7 h-7" />, color: "from-emerald-500/20 to-emerald-400/5" },
+              { slug: "wunschfarbe-lackstift", label: "Wunschfarbe", sub: "Mipa · Standox · Sikkens", icon: <Pipette className="w-7 h-7" />, color: "from-primary/20 to-primary/5" },
+              { slug: "verduennung-zusaetze", label: "Verdünnung", sub: "Acryl · Nitro · Uni", icon: <Droplets className="w-7 h-7" />, color: "from-emerald-500/20 to-emerald-400/5" },
             ].map(({ slug, label, sub, icon, color }) => (
               <Link
                 key={slug}

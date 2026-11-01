@@ -4,10 +4,12 @@ import { SHOP_INFO } from "@/data/shopInfo";
 
 const PRODUKTE = [
   { label: "Alle Produkte", to: "/shop" },
-  { label: "Wunschfarbe", to: "/shop/wunschfarben" },
-  { label: "Klarlack", to: "/shop/klarlacke" },
-  { label: "Grundierung", to: "/shop/grundierungen" },
-  { label: "Schleifmaterial", to: "/shop/schleifmaterial" },
+  { label: "Lackierbedarf", to: "/shop/lackierbedarf-alle" },
+  { label: "Karosserie & Reparatur", to: "/shop/karosserie-reparatur" },
+  { label: "Autopflege & Detailing", to: "/shop/autopflege-detailing" },
+  { label: "Öle, Flüssigkeiten & Filter", to: "/shop/oele-fluessigkeiten-filter" },
+  { label: "Winter", to: "/shop/winter" },
+  { label: "Sets & Sonstiges", to: "/shop/sets-sonstiges" },
 ];
 
 const SERVICE = [
