@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingCart, Minus, Plus, ChevronDown } from "lucide-react";
+import { ShoppingCart, Minus, Plus, ChevronDown, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { type ShopifyProduct, formatPrice } from "@/lib/shopify";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
@@ -13,6 +13,7 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
   const addItem = useCartStore((s) => s.addItem);
   const [qty, setQty] = useState(1);
   const [showPrices, setShowPrices] = useState(false);
+  const [kopiert, setKopiert] = useState(false);
 
   /**
    * Mengenwähler und "Hinzufügen" nebeneinander brauchen zusammen rund 270 px.
@@ -61,7 +62,35 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
   };
 
   return (
-    <div className="card-tilt overflow-hidden flex flex-col">
+    <div className="card-tilt overflow-hidden flex flex-col relative">
+      {/* Name kopieren — zum Einsetzen in die Suche des Produkt-Abos */}
+      <button
+        type="button"
+        onClick={async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          try {
+            await navigator.clipboard.writeText(node.title);
+            setKopiert(true);
+            toast.success("Name kopiert", { description: "Im Produkt-Abo in die Suche einsetzen." });
+            setTimeout(() => setKopiert(false), 1600);
+          } catch {
+            toast.error("Kopieren hat nicht geklappt — Name bitte von Hand markieren.");
+          }
+        }}
+        aria-label={`Produktnamen „${node.title}" kopieren`}
+        title="Namen kopieren — für die Suche im Produkt-Abo"
+        className={cn(
+          "absolute top-2 left-2 z-10 w-8 h-8 rounded-lg inline-flex items-center justify-center",
+          "border backdrop-blur-sm transition-colors",
+          kopiert
+            ? "border-primary bg-primary text-primary-foreground"
+            : "border-border bg-background/80 text-muted-foreground hover:text-primary hover:border-primary"
+        )}
+      >
+        {kopiert ? <Check className="w-4 h-4" /> : <Copy className="w-3.5 h-3.5" />}
+      </button>
+
       <Link to={`/produkt/${node.handle}`} className="block group">
         <div className="aspect-square bg-white overflow-hidden">
           {img ? (

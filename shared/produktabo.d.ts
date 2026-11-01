@@ -22,3 +22,25 @@ export declare function produktAboErsparnis(
   summeNormalpreise: number,
   rabatt: number
 ): number;
+
+export declare const ANTEIL_AN_ERSPARNIS: number;
+export declare const MENGE_MINDESTBEITRAG: number;
+
+export interface MengenRechnung {
+  normal: number;
+  mitglied: number;
+  ersparnis: number;
+  beitrag: number;
+}
+
+export declare function mengenPosition(pos: {
+  einzelpreis: number;
+  menge: number;
+  rabatt: number;
+}): MengenRechnung | null;
+
+export declare function aboGesamt(liste: {
+  rabatt: number;
+  einzelAnzahl: number;
+  mengen: Array<{ einzelpreis: number; menge: number }>;
+}): { rabatt: number; einzelAnzahl: number; mengenAnzahl: number; beitrag: number; ersparnisMengen: number } | null;

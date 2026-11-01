@@ -11,13 +11,15 @@ import { supabase } from "@/lib/supabase";
 import { empfehlungLesen } from "@/lib/empfehlung";
 import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
-  produktAboBeitrag, produktAboErsparnis,
+  produktAboErsparnis, mengenPosition, aboGesamt,
 } from "../../shared/produktabo.js";
+import { WunschfarbenLeiste, type MengenEintrag } from "@/components/WunschfarbenLeiste";
 import { cn } from "@/lib/utils";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
  *  localStorage passt und auch ohne erneute Shop-Abfrage anzeigbar bleibt. */
 export interface AboProdukt {
+  art?: "einzel";
   id: string;
   handle: string;
   titel: string;
@@ -25,6 +27,12 @@ export interface AboProdukt {
   waehrung: string;
   bild?: string;
 }
+
+/** Eine Zeile der Abo-Liste: entweder ein einzelnes Produkt oder eine
+ *  Monatsmenge (Wunschfarbe, Spraydose, Lackstift). */
+export type AboZeile = AboProdukt | MengenEintrag;
+
+const istMenge = (z: AboZeile): z is MengenEintrag => (z as MengenEintrag).art === "menge";
 
 const SPEICHER = "alex-produktabo-v1";
 
@@ -34,7 +42,7 @@ const STUFEN_TEXT: Record<number, string> = {
   40: "Höchstrabatt",
 };
 
-function liste_laden(): { rabatt: number; produkte: AboProdukt[] } {
+function liste_laden(): { rabatt: number; produkte: AboZeile[] } {
   try {
     const roh = localStorage.getItem(SPEICHER);
     if (!roh) return { rabatt: 28, produkte: [] };
@@ -67,7 +75,7 @@ export function ProduktAbo() {
   const { user } = useAuth();
   const start = useMemo(liste_laden, []);
   const [rabatt, setRabatt] = useState<number>(start.rabatt);
-  const [produkte, setProdukte] = useState<AboProdukt[]>(start.produkte);
+  const [produkte, setProdukte] = useState<AboZeile[]>(start.produkte);
   const [suche, setSuche] = useState("");
   const [suchbegriff, setSuchbegriff] = useState("");
   const [email, setEmail] = useState("");
@@ -92,9 +100,15 @@ export function ProduktAbo() {
     pageSize: 12,
   });
 
-  const beitrag = produktAboBeitrag({ rabatt, anzahl: produkte.length });
-  const summeNormal = produkte.reduce((s, p) => s + p.preis, 0);
-  const ersparnis = produktAboErsparnis(summeNormal, rabatt);
+  const einzelne = produkte.filter((p) => !istMenge(p)) as AboProdukt[];
+  const mengen = produkte.filter(istMenge);
+  const gesamt = aboGesamt({
+    rabatt,
+    einzelAnzahl: einzelne.length,
+    mengen: mengen.map((m) => ({ einzelpreis: m.einzelpreis, menge: m.menge })),
+  });
+  const summeNormal = einzelne.reduce((s, p) => s + p.preis, 0);
+  const ersparnis = produktAboErsparnis(summeNormal, rabatt) + (gesamt?.ersparnisMengen ?? 0);
   const proProdukt = PRODUKT_ABO_PREISE[rabatt];
 
   const drin = (id: string) => produkte.some((p) => p.id === id);
@@ -113,7 +127,7 @@ export function ProduktAbo() {
     e.preventDefault();
     const mail = (user?.email || email).trim().toLowerCase();
     if (!mail) { toast.error("Bitte E-Mail-Adresse angeben."); return; }
-    if (!beitrag) { toast.error("Leg zuerst mindestens ein Produkt in die Liste."); return; }
+    if (!gesamt) { toast.error("Leg zuerst mindestens ein Produkt in die Liste."); return; }
 
     setLaeuft(true);
     try {
@@ -121,8 +135,10 @@ export function ProduktAbo() {
         aboTyp: "produkt" as const,
         email: mail,
         rabatt,
-        produkte: produkte.map((p) => ({ id: p.id, handle: p.handle, titel: p.titel })),
-        price: beitrag.preis,
+        produkte: produkte.map((p) => istMenge(p)
+          ? { id: p.id, handle: p.handle, titel: p.titel, variante: p.variante, menge: p.menge, einzelpreis: p.einzelpreis }
+          : { id: p.id, handle: p.handle, titel: p.titel }),
+        price: gesamt.beitrag,
         ref: empfehlungLesen() || undefined,
       };
 
@@ -201,6 +217,20 @@ export function ProduktAbo() {
       </div>
 
       <div className="grid lg:grid-cols-[1fr_380px] gap-6 items-start">
+        <div className="space-y-6">
+        <WunschfarbenLeiste
+          rabatt={rabatt}
+          onHinzufuegen={(e) => {
+            if (produkte.some((p) => p.id === e.id)) {
+              setProdukte((alt) => alt.map((p) => (p.id === e.id && istMenge(p) ? { ...p, menge: p.menge + e.menge } : p)));
+              toast.success("Menge erhöht");
+              return;
+            }
+            if (produkte.length >= MAX_PRODUKTE) { toast.error("Liste ist voll — ruf uns an."); return; }
+            setProdukte((alt) => [...alt, e]);
+          }}
+        />
+
         {/* ── Produkte suchen und hinzufügen ──────────────────────────── */}
         <div className="card-tilt hover:translate-y-0 p-5 sm:p-6">
           <h3 className="text-lg mb-1">Produkte auswählen</h3>
@@ -274,6 +304,7 @@ export function ProduktAbo() {
             })}
           </div>
         </div>
+        </div>
 
         {/* ── Abo-Liste und Rechner ───────────────────────────────────── */}
         <div className="lg:sticky lg:top-28 space-y-4">
@@ -292,21 +323,35 @@ export function ProduktAbo() {
               </p>
             ) : (
               <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
-                {produkte.map((p) => (
+                {produkte.map((p) => {
+                  const m = istMenge(p) ? mengenPosition({ einzelpreis: p.einzelpreis, menge: p.menge, rabatt }) : null;
+                  return (
                   <div key={p.id} className="flex items-center gap-3 rounded-xl bg-secondary/50 p-2.5">
                     <div className="w-12 h-12 rounded-lg bg-background shrink-0 overflow-hidden">
                       {p.bild && <img src={p.bild} alt="" className="w-full h-full object-cover" loading="lazy" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold leading-snug line-clamp-2">{p.titel}</p>
-                      <p className="text-xs mt-0.5">
-                        <span className="text-muted-foreground line-through mr-1.5">
-                          {formatPrice(String(p.preis), p.waehrung)}
-                        </span>
-                        <span className="text-primary font-bold">
-                          {euro(p.preis * (1 - rabatt / 100))}
-                        </span>
-                      </p>
+                      {istMenge(p) && m ? (
+                        <>
+                          <p className="text-[11px] text-muted-foreground leading-tight">
+                            {p.variante} · {p.menge}× / Monat
+                          </p>
+                          <p className="text-xs mt-0.5">
+                            <span className="text-muted-foreground line-through mr-1.5">{euro(m.normal)}</span>
+                            <span className="text-primary font-bold">{euro(m.mitglied)}</span>
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs mt-0.5">
+                          <span className="text-muted-foreground line-through mr-1.5">
+                            {formatPrice(String((p as AboProdukt).preis), (p as AboProdukt).waehrung)}
+                          </span>
+                          <span className="text-primary font-bold">
+                            {euro((p as AboProdukt).preis * (1 - rabatt / 100))}
+                          </span>
+                        </p>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -317,7 +362,8 @@ export function ProduktAbo() {
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -329,14 +375,16 @@ export function ProduktAbo() {
           >
             <p className="text-sm text-muted-foreground">Du zahlst</p>
             <p className="font-display font-bold text-3xl tabular-nums leading-none mt-1">
-              {euro(beitrag?.preis ?? 0)} <span className="text-base font-normal text-muted-foreground">/ Monat</span>
+              {euro(gesamt?.beitrag ?? 0)} <span className="text-base font-normal text-muted-foreground">/ Monat</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1.5">
-              {produkte.length} {produkte.length === 1 ? "Produkt" : "Produkte"} × {euro(proProdukt)}
+              {einzelne.length > 0 && <>{einzelne.length} × {euro(proProdukt)}</>}
+              {einzelne.length > 0 && mengen.length > 0 && " · "}
+              {mengen.length > 0 && <>{mengen.length} Mengen-Position{mengen.length === 1 ? "" : "en"}</>}
             </p>
             {ersparnis > 0 && (
               <p className="text-sm font-semibold text-red-600 mt-3">
-                Du sparst ca. {euro(ersparnis)}, wenn du die Liste einmal komplett kaufst
+                Du sparst ca. {euro(ersparnis)} im Monat
               </p>
             )}
 
