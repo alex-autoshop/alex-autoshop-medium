@@ -416,3 +416,30 @@ export function formatPrice(amount: string, currencyCode: string): string {
     currency: currencyCode,
   }).format(parseFloat(amount));
 }
+
+// ── Kollektionen (Kategorieseiten /kategorie/<handle>) ───────────────────────
+export const STOREFRONT_COLLECTION_SORTED_QUERY = `
+  query GetCollectionProductsSorted($handle: String!, $first: Int!, $after: String, $sortKey: ProductCollectionSortKeys, $reverse: Boolean) {
+    collection(handle: $handle) {
+      id
+      title
+      description
+      image { url altText }
+      products(first: $first, after: $after, sortKey: $sortKey, reverse: $reverse) {
+        edges { node { ${PRODUCT_CARD_FIELDS} } }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+`;
+
+/** Bild je Kollektion: Kollektionsbild oder Bild des ersten Produkts. */
+export function collectionPreviewQuery(handles: string[]): string {
+  const felder = handles
+    .map(
+      (h, i) =>
+        `c${i}: collection(handle: ${JSON.stringify(h)}) { handle image { url altText } products(first: 1) { edges { node { images(first: 1) { edges { node { url } } } } } } }`
+    )
+    .join("\n");
+  return `query CollectionPreviews {\n${felder}\n}`;
+}

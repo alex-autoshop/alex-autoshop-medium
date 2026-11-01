@@ -12,6 +12,7 @@ import { CookieConsent } from "@/components/CookieConsent";
 
 const Home = lazy(() => import("@/pages/Home"));
 const Shop = lazy(() => import("@/pages/Shop"));
+const Kategorie = lazy(() => import("@/pages/Kategorie"));
 const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
 const Mitgliedschaft = lazy(() => import("@/pages/Mitgliedschaft"));
 const Teileportal = lazy(() => import("@/pages/Teileportal"));
@@ -103,6 +104,7 @@ export default function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/shop/:category" element={<Shop />} />
+                    <Route path="/kategorie/:handle" element={<Kategorie />} />
                     <Route path="/produkt/:handle" element={<ProductDetail />} />
                     <Route
                       path="/mitgliedschaft"

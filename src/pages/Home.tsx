@@ -6,8 +6,12 @@ import { BrandMarquee } from "@/components/BrandMarquee";
 import { MembershipCards } from "@/components/MembershipCards";
 import { ProductGrid } from "@/components/ProductGrid";
 import { useProducts } from "@/hooks/useProducts";
+import { SHOP_CATEGORIES, kategoriePfad } from "@/lib/shopCategories";
+import { useCollectionPreviews } from "@/hooks/useCollectionPreviews";
+
 import { collections } from "@/lib/categories";
-import { cn } from "@/lib/utils";
+
+const HAUPT_HANDLES = SHOP_CATEGORIES.map((c) => c.handle);
 import { SHOP_INFO } from "@/data/shopInfo";
 
 const fadeUp = {
@@ -40,6 +44,7 @@ const USPS = [
 
 export default function Home() {
   const { products, isLoading, error } = useProducts({ pageSize: 8 });
+  const kategorieBilder = useCollectionPreviews(HAUPT_HANDLES);
 
   return (
     <div>
@@ -103,27 +108,31 @@ export default function Home() {
           <h2 className="text-2xl sm:text-3xl mb-6">Kategorien</h2>
         </motion.div>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-          {collections.map((col, i) => (
-            <motion.div key={col.slug} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.05 }}>
-              <Link to={`/shop/${col.slug}`} className="card-tilt overflow-hidden group block">
-                <div className={cn("aspect-[4/3] overflow-hidden", col.contain ? "bg-white" : "bg-secondary")}>
-                  <img
-                    src={col.image}
-                    alt={col.label}
-                    loading="lazy"
-                    className={cn(
-                      "w-full h-full group-hover:scale-105 transition-transform duration-300",
-                      col.contain ? "object-contain p-3" : "object-cover"
+          {SHOP_CATEGORIES.map((col, i) => {
+            const bild = kategorieBilder[col.handle] ?? collections.find((c) => c.slug === col.handle)?.image;
+            return (
+              <motion.div key={col.handle} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.05 }}>
+                <Link to={kategoriePfad(col.handle)} className="card-tilt overflow-hidden group block">
+                  <div className="aspect-[4/3] overflow-hidden bg-secondary flex items-center justify-center">
+                    {bild ? (
+                      <img
+                        src={bild}
+                        alt={col.label}
+                        loading="lazy"
+                        className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground/60 font-semibold px-4 text-center">{col.label}</span>
                     )}
-                  />
-                </div>
-                <div className="p-4 flex items-center justify-between gap-2">
-                  <span className="font-semibold text-sm sm:text-base leading-tight">{col.label}</span>
-                  <ArrowRight className="w-5 h-5 text-primary shrink-0" />
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+                  </div>
+                  <div className="p-4 flex items-center justify-between gap-2">
+                    <span className="font-semibold text-sm sm:text-base leading-tight">{col.label}</span>
+                    <ArrowRight className="w-5 h-5 text-primary shrink-0" />
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
         </div>
       </section>
 

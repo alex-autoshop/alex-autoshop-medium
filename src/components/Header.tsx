@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut } from "lucide-react";
+import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut, ChevronDown } from "lucide-react";
+import { SHOP_CATEGORIES, kategoriePfad } from "@/lib/shopCategories";
 import { useCartStore } from "@/stores/cartStore";
 import { CartDrawer } from "@/components/CartDrawer";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -35,6 +36,143 @@ const BetaBadge = ({ className = "" }: { className?: string }) => (
     NEU
   </span>
 );
+
+/** Kategorieleiste (Desktop): 6 Hauptkategorien, Hover öffnet Dropdown mit Unterkategorien. */
+function KategorieLeiste() {
+  const [offen, setOffen] = useState<string | null>(null);
+  return (
+    <div className="hidden lg:block border-t border-white/10">
+      <nav aria-label="Kategorien" className="container flex items-stretch justify-between">
+        {SHOP_CATEGORIES.map((cat, i) => {
+          const rechts = i >= SHOP_CATEGORIES.length - 2;
+          return (
+            <div
+              key={cat.handle}
+              className="relative"
+              onMouseEnter={() => setOffen(cat.handle)}
+              onMouseLeave={() => setOffen((o) => (o === cat.handle ? null : o))}
+              onFocus={() => setOffen(cat.handle)}
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) setOffen(null);
+              }}
+            >
+              <NavLink
+                to={kategoriePfad(cat.handle)}
+                onClick={() => setOffen(null)}
+                aria-haspopup={cat.children.length > 0 || undefined}
+                aria-expanded={cat.children.length > 0 ? offen === cat.handle : undefined}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-1 px-3 min-h-[44px] text-sm font-semibold whitespace-nowrap transition-colors border-b-2",
+                    isActive || offen === cat.handle
+                      ? "text-gold-bright border-gold-bright"
+                      : "text-white/80 border-transparent hover:text-white"
+                  )
+                }
+              >
+                {cat.label}
+                {cat.children.length > 0 && <ChevronDown className="w-3.5 h-3.5 opacity-70" />}
+              </NavLink>
+              {cat.children.length > 0 && offen === cat.handle && (
+                <div className={cn("absolute top-full z-50 pt-1", rechts ? "right-0" : "left-0")}>
+                  <div className="w-72 rounded-2xl border border-border bg-card text-foreground shadow-2xl p-2">
+                    <Link
+                      to={kategoriePfad(cat.handle)}
+                      onClick={() => setOffen(null)}
+                      className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-primary hover:bg-muted/60"
+                    >
+                      Alle {cat.label}
+                    </Link>
+                    <div className="h-px bg-border/60 mx-2 my-1" />
+                    {cat.children.map((sub) => (
+                      <NavLink
+                        key={sub.handle}
+                        to={kategoriePfad(sub.handle)}
+                        onClick={() => setOffen(null)}
+                        className={({ isActive }) =>
+                          cn(
+                            "block px-3 py-2.5 rounded-xl text-sm transition-colors",
+                            isActive ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/60 text-foreground/85"
+                          )
+                        }
+                      >
+                        {sub.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
+/** Kategorien im Burger-Menü: aufklappbare Hauptkategorien. */
+function KategorieAkkordeon({ onNavigate }: { onNavigate: () => void }) {
+  const [offen, setOffen] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col gap-1 pb-2 mb-1 border-b border-white/10">
+      <p className="px-4 pt-1 pb-1 text-[11px] font-bold uppercase tracking-widest text-white/45">Kategorien</p>
+      {SHOP_CATEGORIES.map((cat) => {
+        const auf = offen === cat.handle;
+        if (cat.children.length === 0) {
+          return (
+            <NavLink
+              key={cat.handle}
+              to={kategoriePfad(cat.handle)}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn("px-4 py-3 rounded-lg font-semibold text-base min-h-[48px] flex items-center", isActive ? "text-gold-bright bg-white/10" : "text-white/85 hover:bg-white/10")
+              }
+            >
+              {cat.label}
+            </NavLink>
+          );
+        }
+        return (
+          <div key={cat.handle}>
+            <button
+              type="button"
+              onClick={() => setOffen(auf ? null : cat.handle)}
+              aria-expanded={auf}
+              className="w-full px-4 py-3 rounded-lg font-semibold text-base min-h-[48px] flex items-center justify-between text-white/85 hover:bg-white/10"
+            >
+              {cat.label}
+              <ChevronDown className={cn("w-5 h-5 transition-transform", auf && "rotate-180")} />
+            </button>
+            {auf && (
+              <div className="ml-4 pl-3 border-l border-white/15 flex flex-col">
+                <NavLink
+                  to={kategoriePfad(cat.handle)}
+                  end
+                  onClick={onNavigate}
+                  className="px-3 py-2.5 min-h-[44px] flex items-center text-sm font-semibold text-gold-bright"
+                >
+                  Alle {cat.label}
+                </NavLink>
+                {cat.children.map((sub) => (
+                  <NavLink
+                    key={sub.handle}
+                    to={kategoriePfad(sub.handle)}
+                    onClick={onNavigate}
+                    className={({ isActive }) =>
+                      cn("px-3 py-2.5 min-h-[44px] flex items-center text-sm rounded-lg", isActive ? "text-gold-bright bg-white/10" : "text-white/75 hover:bg-white/10")
+                    }
+                  >
+                    {sub.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -154,9 +292,12 @@ export function Header() {
           </div>
         </div>
 
+        <KategorieLeiste />
+
         {mobileOpen && (
           <nav className="xl:hidden border-t border-white/10 bg-night animate-fade-up">
-            <div className="container py-3 flex flex-col gap-1">
+            <div className="container py-3 flex flex-col gap-1 max-h-[calc(100dvh-6rem)] overflow-y-auto">
+              <KategorieAkkordeon onNavigate={() => setMobileOpen(false)} />
               {navPunkte.map((item) => {
                 const mBase = "px-4 py-4 rounded-lg font-semibold text-lg min-h-[52px] flex items-center";
                 return item.href ? (
