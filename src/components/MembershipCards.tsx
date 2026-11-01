@@ -487,7 +487,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h3 className="text-xl">Mitgliedschaft</h3>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 text-primary font-bold text-sm px-3 py-1">
-          {m.discountPercent}% Rabatt
+          {activeDiscount}% Rabatt
         </span>
       </div>
       <p className="text-sm text-muted-foreground mt-1">{m.tagline}</p>
