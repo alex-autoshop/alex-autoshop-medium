@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/shopify";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useAuth } from "@/context/AuthContext";
 import { discountForLevel } from "@/data/memberships";
+import { versandkosten, VERSAND_FREI_AB } from "../../shared/versand.js";
 import { recordOrder, type OrderItem } from "@/lib/orders";
 import { sendMessage } from "@/lib/inbox";
 import { AuthModal } from "@/components/AuthModal";
@@ -153,14 +154,13 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const discount = user ? discountForLevel(profile.membership_level) : 0;
   const memberSaving = total * (discount / 100);
 
-  // Versandlogik
-  const FREE_THRESHOLD = 150;
-  const DHL_RATE = 5.9;
-  const membershipKey = profile.membership_level as unknown as string | number | undefined;
-  const isMember = !!user && (membershipKey === "level1" || membershipKey === "level2" || membershipKey === "level3");
-  const shippingCost = isMember ? 0 : total >= FREE_THRESHOLD ? 0 : DHL_RATE;
-  const remainingForFree = Math.max(0, FREE_THRESHOLD - total);
-  const freeProgress = Math.min(100, (total / FREE_THRESHOLD) * 100);
+  // Dieselbe Regel wie Teilebörse und /api/parts-checkout (shared/versand.js).
+  // Nur Level 1–3 aus der bezahlten Mitgliedschaft, nicht die Teststunde.
+  const stufe = Number(profile.membership_level);
+  const isMember = !!user && stufe >= 1 && stufe <= 3;
+  const shippingCost = versandkosten({ summe: total, mitglied: isMember });
+  const remainingForFree = Math.max(0, VERSAND_FREI_AB - total);
+  const freeProgress = Math.min(100, (total / VERSAND_FREI_AB) * 100);
 
   // PLZ-Check NUR aus gespeichertem Profil — kein manuelles Eingabefeld im Warenkorb
   const profilePlz = (profile.delivery_plz || "").replace(/\D/g, "");
@@ -476,7 +476,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             {items.length > 0 && (
               <div className="border-t border-border p-4 space-y-3">
                 {/* ── Versand-Fortschrittsbalken (nur für Nicht-Mitglieder unter Freigrenze) ── */}
-                {!isMember && total < FREE_THRESHOLD && total > 0 && (
+                {!isMember && total < VERSAND_FREI_AB && total > 0 && (
                   <div className="rounded-lg bg-secondary/60 border border-border p-3 space-y-2">
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Noch <strong className="text-foreground">{formatPrice(String(remainingForFree), currency)}</strong> bis kostenlosem Versand</span>

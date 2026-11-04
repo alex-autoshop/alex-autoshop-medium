@@ -258,13 +258,15 @@ export function PartsCartButton({ count, onClick, admin = false }: { count: numb
   );
 }
 
-export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin, level = "none", istAdmin = false, onLevel, angemeldet = false, guthaben = 0 }: {
+export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin, level = "none", versandFrei = false, istAdmin = false, onLevel, angemeldet = false, guthaben = 0 }: {
   open: boolean;
   onClose: () => void;
   cart: ReturnType<typeof usePartsCart>;
   vehicleLabel: string;
   vehicleVin?: string;
   level?: MemberLevelId;
+  /** Aktive bezahlte Mitgliedschaft (Level 1–3). Nicht die Anzeige-Stufe und nicht die Teststunde. */
+  versandFrei?: boolean;
   /** Nur Alex: Ladenverkauf, alle Preisstufen, Marge. Bequemlichkeit — geprüft wird serverseitig. */
   istAdmin?: boolean;
   /** Preisstufe ändern (im Laden: die des Kunden). */
@@ -369,7 +371,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
   const [guthabenNutzen, setGuthabenNutzen] = useState(true);
   const [abholung, setAbholung] = useState(false);
   const [agbOk, setAgbOk] = useState(false);
-  const mitglied = level !== "none";
+  const mitglied = versandFrei;
   const holtAb = !!theke || abholung;
   const versand = versandkosten({ summe: subtotal, mitglied, abholung: holtAb });
   const pfand = pfandBetrag(mitPreis.map((i) => ({ name: `${i.name} ${i.brand}`, menge: i.quantity })));

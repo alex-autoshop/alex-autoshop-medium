@@ -5,8 +5,13 @@
 // die Seite dem Kunden schon nennt.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** DHL-Pauschale innerhalb Deutschlands. */
-export const DHL_EUR = 5.9;
+/**
+ * DHL-Pauschale innerhalb Deutschlands.
+ * Aktive bezahlte Mitgliedschaft (Level 1–3) zahlt sie nie.
+ * Alle anderen: dieser Betrag, kostenlos ab VERSAND_FREI_AB.
+ * Die kostenlose Teststunde ist keine bezahlte Mitgliedschaft.
+ */
+export const DHL_EUR = 7.49;
 
 /** Ab diesem Warenwert (Teile, ohne Pfand) ist der DHL-Versand inklusive. */
 export const VERSAND_FREI_AB = 150;
@@ -30,7 +35,8 @@ export function istStarterbatterie(name) {
 
 /**
  * @param {{ summe: number, mitglied?: boolean, abholung?: boolean }} wahl
- * summe = Teile ohne Versand und ohne Pfand.
+ * summe = Warenwert ohne Versand und ohne Pfand.
+ * mitglied = aktive bezahlte Mitgliedschaft (Level 1–3), nicht die Teststunde.
  */
 export function versandkosten(wahl) {
   if (wahl && wahl.abholung) return 0;

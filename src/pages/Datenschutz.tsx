@@ -92,8 +92,10 @@ const Datenschutz = () => (
         Wir setzen technisch notwendige Cookies und localStorage-Einträge ein (Warenkorb, Login,
         Materialplaner-Stand, Cookie-Auswahl). Diese sind für den Betrieb erforderlich
         (Art. 6 Abs. 1 lit. f DSGVO bzw. § 25 Abs. 2 TDDDG). Das Übersetzungs-Cookie („googtrans")
-        wird nur nach aktiver Nutzung der Übersetzungsfunktion gesetzt. Tracking- oder
-        Werbe-Cookies setzen wir nicht ein.
+        wird nur nach aktiver Nutzung der Übersetzungsfunktion gesetzt.
+        Google Analytics 4 laden wir nur, wenn du im Cookie-Hinweis „Alle akzeptieren“ wählst
+        (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG). Ein Meta- bzw. Facebook-Pixel ist nicht
+        eingebunden. „Nur notwendige“ lädt kein Analyse-Skript.
       </p>
 
       <h2>11. Kommunikation (E-Mail, Telefon, WhatsApp)</h2>
