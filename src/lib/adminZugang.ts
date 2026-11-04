@@ -63,6 +63,8 @@ export interface EkPreis {
 
 export async function adminPreiseHolen(
   skus: string[],
+  /** SKU → Artikelname, damit der Margenrechner denselben Gruppen-Faktor nimmt */
+  namen?: Record<string, string>,
 ): Promise<{ preise: EkPreis[]; aufschlag: number } | { fehler: AdminFehler }> {
   if (!adminPinLesen()) return { fehler: { art: "pin", text: "Admin-PIN eingeben" } };
   const liste = [...new Set(skus.filter(Boolean))];
@@ -71,7 +73,7 @@ export async function adminPreiseHolen(
     const r = await fetch("/api/intercars", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await adminKopf()) },
-      body: JSON.stringify({ action: "adminPreise", skus: liste }),
+      body: JSON.stringify({ action: "adminPreise", skus: liste, namen: namen || undefined }),
     });
     const d = await r.json().catch(() => null);
     if (r.ok && Array.isArray(d?.preise)) return { preise: d.preise as EkPreis[], aufschlag: Number(d.aufschlag) || 2 };
