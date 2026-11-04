@@ -7,6 +7,7 @@ export const config = { maxDuration: 25 };
 import { adminPruefen } from "./_admin.js";
 import { createHmac } from "node:crypto";
 import { artikelVarianten } from "../shared/artikelnummer.js";
+import { verkaufspreis, basisAusEnv, spanneAusEnv, gruppenFaktor } from "../shared/aufschlag.js";
 
 /**
  * Intercars IC API Proxy — Vercel Edge Function
@@ -167,29 +168,43 @@ function artVariantsServer(artNo) {
 // Teils, und wer einen EK kennt, lernt daraus nichts über die anderen.
 // Derselbe Artikel hat immer denselben Faktor, Preise springen also nicht.
 //
-// Vercel-Env (alle optional):
-//   PRICE_MARKUP   Basis-Aufschlag                     (sonst Standardwert unten)
-//   PRICE_SPANNE   Streuung je Teil, 0.05 = ±5 %       (0 = aus)
-//   PRICE_SALT     Geheimnis für die Streuung          (sonst INTERCARS_CLIENT_SECRET)
-const aufschlagBasis = () => (Number(process.env.PRICE_MARKUP) > 0 ? Number(process.env.PRICE_MARKUP) : 2.0);
-const aufschlagSpanne = () => {
-  const roh = process.env.PRICE_SPANNE;
-  if (roh === undefined || roh === "") return 0.05;
-  const v = Number(roh);
-  return Number.isFinite(v) && v >= 0 && v <= 0.3 ? v : 0.05;
-};
+// Vercel-Env (alle optional, Standard bleibt ×2,0 und ohne Deckel):
+//   PRICE_MARKUP         Basis-Aufschlag                  (sonst 2.0)
+//   PRICE_SPANNE         Streuung je Teil, 0.05 = ±5 %    (0 = aus)
+//   PRICE_SALT           Geheimnis für die Streuung       (sonst INTERCARS_CLIENT_SECRET)
+//   PRICE_MARKUP_GROUPS  JSON {"ölfilter":1.35,"bremse":1.45}
+//                        längster Treffer im Namen ersetzt die Basis
+//   PRICE_MARKET_CAP     "1" = Verkaufspreis höchstens die UVP (listPriceGross)
+const aufschlagBasis = () => basisAusEnv(process.env);
+const aufschlagSpanne = () => spanneAusEnv(process.env);
 const preisGeheimnis = () => (process.env.PRICE_SALT || process.env.INTERCARS_CLIENT_SECRET || "").trim();
 
-function aufschlagFuer(sku) {
-  const basis = aufschlagBasis();
-  const spanne = aufschlagSpanne();
+function streuWert(sku) {
   const geheim = preisGeheimnis();
-  if (!geheim || !sku || !spanne) return basis;
+  if (!geheim || !sku) return null;
   const h = createHmac("sha256", geheim).update(String(sku).trim().toUpperCase()).digest();
-  const u = h.readUInt32BE(0) / 0xffffffff; // 0 … 1, je SKU fest
+  return h.readUInt32BE(0) / 0xffffffff; // 0 … 1, je SKU fest
+}
+
+function aufschlagFuer(sku, name) {
+  const gruppe = gruppenFaktor(name, process.env);
+  const basis = gruppe != null ? gruppe : aufschlagBasis();
+  const spanne = aufschlagSpanne();
+  const u = streuWert(sku);
+  if (u == null || !spanne) return basis;
   return basis * (1 + spanne * (2 * u - 1));
 }
-const aufschlagen = (ek, sku) => Math.ceil(ek * aufschlagFuer(sku) * 100) / 100;
+const aufschlagen = (ek, sku, name, listenpreis) => verkaufspreis({
+  ek,
+  sku,
+  name,
+  listenpreis,
+  env: process.env,
+  streuung: (() => {
+    const u = streuWert(sku);
+    return u == null ? undefined : () => u;
+  })(),
+});
 
 // ── Parallel in Batches (schont IC Rate-Limits) ──────────────────────────────
 async function inChunks(items, size, fn) {
@@ -335,7 +350,7 @@ function normalizeProduct(product, quote = null, stockLines = null) {
   // vermutlich ungewollt — aber es zu aendern waere eine Preisaenderung,
   // und darum geht es hier nicht. Verhalten bleibt also 1:1 wie vorher.
   const basis = customerPrice || listPrice || 0;
-  const price = basis > 0 ? aufschlagen(basis, sku) : 0;
+  const price = basis > 0 ? aufschlagen(basis, sku, name, listPrice) : 0;
 
   const specs = {};
   if (product.index)   specs["Index"]    = product.index;
@@ -649,7 +664,7 @@ export default async function handler(req, res) {
           listeNetto,
           mwst: Number(p.vatPercentage) > 0 ? Number(p.vatPercentage) : 19,
           // exakt der Verkaufspreis, den normalizeProduct der Liste gibt
-          vk: basis > 0 ? aufschlagen(basis, s) : 0,
+          vk: basis > 0 ? aufschlagen(basis, s, "", listeBrutto) : 0,
           faktor: Math.round(aufschlagFuer(s) * 1000) / 1000,
           // Fehlt der EK, rechnet die Liste mit UVP × Aufschlag — sichtbar machen
           ohneEk: !ekBrutto && !!listeBrutto,
