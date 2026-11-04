@@ -6,10 +6,18 @@
 // Ablauf: Kunde autorisiert SEPA-Mandat (Billing Request) → Event
 // billing_requests "fulfilled" → wir holen Mandat + Metadaten, erstellen ein
 // monatliches Abo (Subscription) und schalten die Mitgliedschaft frei.
+//
+// Abo-Ende nimmt dem Shopify-Kunden das Tag "mitglied":
+//   subscriptions cancelled|finished, mandates cancelled|failed|expired
+//   (nur wenn daran ein Mitglieds-Abo hängt), sowie eine fehlgeschlagene
+//   Mitglieds-Zahlung, deren Abo nicht mehr aktiv ist oder deren Einzug
+//   zurückgebucht wurde. Eine einzelne fehlgeschlagene Rate bei laufendem
+//   Abo lässt den Tag stehen. Teile-Zahlungen (metadata.typ=teile) nie.
 
 export const config = { runtime: "edge" };
 
 import { activateMembership } from "./_activate-membership.js";
+import { shopifyMitgliedTag } from "./_shopify-order.js";
 import { EMPFEHLUNGS_PROZENT } from "../shared/empfehlung.js";
 import { rabattName } from "../shared/mitgliedspreise.js";
 
@@ -177,6 +185,79 @@ async function handleBillingRequestFulfilled(billingRequestId) {
   }
 }
 
+function mitgliedsEmail(meta) {
+  if (!meta || meta.typ === "teile" || meta.typ === "theke") return "";
+  if (!meta.email || (!meta.paket && !meta.level)) return "";
+  return String(meta.email).trim().toLowerCase();
+}
+
+async function mitgliedTagEntfernen(email, grund) {
+  const mail = String(email || "").trim().toLowerCase();
+  if (!mail) {
+    console.warn("[gocardless-webhook] mitglied-tag nicht entfernt, keine E-Mail:", grund);
+    return;
+  }
+  try {
+    const r = await shopifyMitgliedTag(mail, false);
+    if (!r.ok) console.error("[gocardless-webhook] mitglied-tag:", grund, r.grund);
+    else console.log("[gocardless-webhook] mitglied-tag:", grund, r.aktion);
+  } catch (e) {
+    console.error("[gocardless-webhook] mitglied-tag:", grund, String(e?.message || e).slice(0, 200));
+  }
+}
+
+async function gcJson(path) {
+  if (!gcToken()) return null;
+  try {
+    const r = await fetch(`${gcHost()}${path}`, { headers: gcHeaders() });
+    if (!r.ok) {
+      console.error("[gocardless-webhook] Abruf", r.status, String(path).split("?")[0]);
+      return null;
+    }
+    return await r.json();
+  } catch (e) {
+    console.error("[gocardless-webhook] Abruf:", String(e?.message || e).slice(0, 160));
+    return null;
+  }
+}
+
+async function aboTagWeg(subscriptionId, grund) {
+  if (!subscriptionId) return;
+  const sub = (await gcJson(`/subscriptions/${subscriptionId}`))?.subscriptions;
+  const email = mitgliedsEmail(sub?.metadata || {});
+  if (!email) return;
+  await mitgliedTagEntfernen(email, grund);
+}
+
+async function mandatTagWeg(mandateId, grund) {
+  if (!mandateId) return;
+  const liste = (await gcJson(`/subscriptions?mandate=${encodeURIComponent(mandateId)}&limit=50`))?.subscriptions || [];
+  const mails = new Set();
+  for (const sub of liste) {
+    const email = mitgliedsEmail(sub?.metadata || {});
+    if (email) mails.add(email);
+  }
+  for (const email of mails) await mitgliedTagEntfernen(email, grund);
+}
+
+async function zahlungTagWeg(paymentId, action) {
+  if (!paymentId) return;
+  const pay = (await gcJson(`/payments/${paymentId}`))?.payments;
+  if (!pay || (pay.metadata || {}).typ === "teile") return;
+  const subId = pay.links?.subscription;
+  if (!subId) return;
+  const sub = (await gcJson(`/subscriptions/${subId}`))?.subscriptions;
+  const email = mitgliedsEmail(sub?.metadata || {});
+  if (!email) return;
+  const status = String(sub.status || "");
+  const ende = ["cancelled", "finished"].includes(status) || ["charged_back", "late_failure_settled"].includes(action);
+  if (!ende) {
+    console.log("[gocardless-webhook] Mitglieds-Zahlung ohne Abo-Ende:", action, status);
+    return;
+  }
+  await mitgliedTagEntfernen(email, `payment:${action}:${status || "ohne-status"}`);
+}
+
 export default async function handler(req) {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
@@ -197,7 +278,18 @@ export default async function handler(req) {
       if (ev.resource_type === "payments") {
         const id = ev.links?.payment;
         if (["confirmed", "paid_out"].includes(ev.action)) { await zahlungStatus(id, "bezahlt"); await provisionBuchen(id); await guthabenAbschliessen(id, true); }
-        if (["failed", "cancelled", "charged_back", "late_failure_settled"].includes(ev.action)) { await zahlungStatus(id, "fehlgeschlagen"); await provisionBuchen(id); await guthabenAbschliessen(id, false); }
+        if (["failed", "cancelled", "charged_back", "late_failure_settled"].includes(ev.action)) {
+          await zahlungStatus(id, "fehlgeschlagen");
+          await provisionBuchen(id);
+          await guthabenAbschliessen(id, false);
+          await zahlungTagWeg(id, ev.action);
+        }
+      }
+      if (ev.resource_type === "subscriptions" && ["cancelled", "finished"].includes(ev.action)) {
+        await aboTagWeg(ev.links?.subscription, `subscription:${ev.action}`);
+      }
+      if (ev.resource_type === "mandates" && ["cancelled", "failed", "expired"].includes(ev.action)) {
+        await mandatTagWeg(ev.links?.mandate, `mandate:${ev.action}`);
       }
       // Lastschrift-Anfrage abgebrochen → eingesetztes Guthaben zurück
       if (ev.resource_type === "billing_requests" && ev.action === "cancelled") {
