@@ -2,13 +2,18 @@
 // In Stripe anlegen: Developers → Webhooks → Endpoint
 //   URL:    https://alex-autoshop.de/api/stripe-webhook
 //   Events: checkout.session.completed, checkout.session.expired,
-//           checkout.session.async_payment_succeeded, checkout.session.async_payment_failed
+//           checkout.session.async_payment_succeeded, checkout.session.async_payment_failed,
+//           customer.subscription.updated, customer.subscription.deleted,
+//           invoice.payment_failed
 //   (expired ist wichtig: dann kommt eingesetztes Empfehlungs-Guthaben zurück)
+//   Abo-Ende nimmt dem Shopify-Kunden das Tag "mitglied". Eine einzelne
+//   fehlgeschlagene Rate, die Stripe noch einmal versucht, tut das nicht.
 //   Signing secret → Vercel-Env STRIPE_WEBHOOK_SECRET (whsec_…)
 
 export const config = { runtime: "edge" };
 
 import { activateMembership } from "./_activate-membership.js";
+import { shopifyMitgliedTag } from "./_shopify-order.js";
 import { EMPFEHLUNGS_PROZENT } from "../shared/empfehlung.js";
 
 // ── Teile-Zahlungen für die Zahlungsgrenze festhalten (nur Server) ──────────
@@ -84,6 +89,56 @@ async function verifyStripe(rawBody, sigHeader, secret) {
   return diff === 0;
 }
 
+function istMitgliedsMeta(m) {
+  if (!m || m.typ === "teile" || m.typ === "theke") return false;
+  return !!(m.email && (m.level || m.paket));
+}
+
+async function mitgliedTagEntfernen(email, grund) {
+  const mail = String(email || "").trim().toLowerCase();
+  if (!mail) {
+    console.warn("[stripe-webhook] mitglied-tag nicht entfernt, keine E-Mail:", grund);
+    return;
+  }
+  try {
+    const r = await shopifyMitgliedTag(mail, false);
+    if (!r.ok) console.error("[stripe-webhook] mitglied-tag:", grund, r.grund);
+    else console.log("[stripe-webhook] mitglied-tag:", grund, r.aktion);
+  } catch (e) {
+    console.error("[stripe-webhook] mitglied-tag:", grund, String(e?.message || e).slice(0, 200));
+  }
+}
+
+async function stripeAboMeta(subscriptionId) {
+  const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
+  if (!key || !subscriptionId || typeof subscriptionId !== "string") return {};
+  try {
+    const r = await fetch(`https://api.stripe.com/v1/subscriptions/${encodeURIComponent(subscriptionId)}`, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!r.ok) return {};
+    const sub = await r.json().catch(() => null);
+    return sub?.metadata || {};
+  } catch {
+    return {};
+  }
+}
+
+async function stripeKundenEmail(customerId) {
+  const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
+  if (!key || !customerId || typeof customerId !== "string" || customerId.startsWith("{")) return "";
+  try {
+    const r = await fetch(`https://api.stripe.com/v1/customers/${encodeURIComponent(customerId)}`, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!r.ok) return "";
+    const c = await r.json().catch(() => null);
+    return c?.email || "";
+  } catch {
+    return "";
+  }
+}
+
 export default async function handler(req) {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
@@ -134,6 +189,41 @@ export default async function handler(req) {
         provider: "stripe", providerId: s.subscription || s.id, ref: m.ref || "",
       });
       console.log("[stripe-webhook] aktiviert:", JSON.stringify(r));
+    }
+  }
+
+  // Erste Lastschrift der Mitgliedschaft endgültig fehlgeschlagen.
+  if (event.type === "checkout.session.async_payment_failed") {
+    const s = event.data?.object || {};
+    const m = s.metadata || {};
+    if (istMitgliedsMeta(m)) await mitgliedTagEntfernen(m.email, "async_payment_failed");
+  }
+
+  // Abo gekündigt, abgelaufen oder nach fehlender Zahlung beendet.
+  // past_due bleibt Mitglied: Stripe versucht die Rate noch einmal.
+  if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
+    const sub = event.data?.object || {};
+    const status = String(sub.status || "");
+    const ende = event.type === "customer.subscription.deleted"
+      || ["canceled", "unpaid", "incomplete_expired"].includes(status);
+    if (ende && istMitgliedsMeta(sub.metadata || {})) {
+      const email = sub.metadata?.email || await stripeKundenEmail(sub.customer);
+      await mitgliedTagEntfernen(email, `${event.type}:${status || "deleted"}`);
+    } else if (ende) {
+      console.warn("[stripe-webhook] Abo-Ende ohne Mitglieds-Metadaten:", sub.id || "");
+    }
+  }
+
+  // Keine weitere Rate mehr — das Abo ist am Ende, auch wenn das Status-Event
+  // später kommt. Eine Rechnung mit gesetztem nächsten Versuch bleibt unberührt.
+  if (event.type === "invoice.payment_failed") {
+    const inv = event.data?.object || {};
+    if (!inv.next_payment_attempt) {
+      let meta = inv.subscription_details?.metadata || inv.metadata || inv.lines?.data?.[0]?.metadata || {};
+      if (!istMitgliedsMeta(meta) && inv.subscription) meta = await stripeAboMeta(inv.subscription);
+      if (istMitgliedsMeta(meta)) {
+        await mitgliedTagEntfernen(meta.email || inv.customer_email, "invoice.payment_failed");
+      }
     }
   }
 

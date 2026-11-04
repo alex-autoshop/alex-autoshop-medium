@@ -2,9 +2,10 @@
 // 1) ruft den bestehenden /api/membership-email Endpoint auf
 //    (legt Supabase-Nutzer an, speichert membership_requests, sendt Willkommens-
 //     + Admin-Benachrichtigungs-Mails) — unverändert wiederverwendet.
-// 2) legt die Mitgliedschaft als echte Shopify-Bestellung an (Betrag sichtbar).
+// 2) markiert den Shopify-Kunden mit dem Tag "mitglied" (Versand im Shop).
+// 3) legt die Mitgliedschaft als echte Shopify-Bestellung an (Betrag sichtbar).
 
-import { createShopifyOrder } from "./_shopify-order.js";
+import { createShopifyOrder, shopifyMitgliedTag } from "./_shopify-order.js";
 import { internSignatur } from "./_intern.js";
 import { rabattName } from "../shared/mitgliedspreise.js";
 
@@ -22,7 +23,7 @@ export async function activateMembership(meta) {
     : String(meta.modules || "").split(",").map((s) => s.trim()).filter(Boolean);
   const provider = meta.provider || "unbekannt";
 
-  const results = { email, level, membershipEmail: false, shopifyOrder: null, errors: [] };
+  const results = { email, level, membershipEmail: false, shopifyOrder: null, shopifyTag: null, errors: [] };
 
   // 1) Freischaltung + E-Mails (bestehender Flow)
   try {
@@ -42,7 +43,18 @@ export async function activateMembership(meta) {
     results.errors.push(`membership-email: ${String(e.message).slice(0, 120)}`);
   }
 
-  // 2) Shopify-Bestellung
+  // 2) Shopify-Kunde trägt das Tag "mitglied" (Versandregel im Shop).
+  //    Fehler hier dürfen die Freischaltung nicht abbrechen.
+  try {
+    const tag = await shopifyMitgliedTag(email, true);
+    results.shopifyTag = tag?.aktion || tag?.grund || null;
+    if (tag && tag.ok === false) results.errors.push(`shopify-tag: ${tag.grund || "fehler"}`);
+  } catch (e) {
+    console.error("[mitglied] shopify-tag:", String(e?.message || e).slice(0, 200));
+    results.errors.push(`shopify-tag: ${String(e?.message || e).slice(0, 160)}`);
+  }
+
+  // 3) Shopify-Bestellung (eigenes Bestell-Tag, unverändert)
   try {
     const order = await createShopifyOrder({
       email,
