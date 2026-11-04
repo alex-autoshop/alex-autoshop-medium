@@ -239,8 +239,10 @@ export default function Versand() {
             </p>
             <p>
               <strong className="text-foreground">Gefahrgut & Sperrgut:</strong> Lacke, Spraydosen
-              und Verdünner werden gemäß ADR-Vorschriften versendet. Für Sperrgut können
-              Aufschläge entstehen — wir informieren dich vorab.
+              und Verdünner versenden wir nach den Gefahrgutvorschriften (ADR). Zuschläge gibt es
+              dafür nicht — du zahlst nur die Versandkosten, die dir vor der Bestellung im
+              Warenkorb angezeigt werden. Artikel, die wir nicht per Paket versenden können, sind
+              am Artikel als „nur Abholung“ gekennzeichnet.
             </p>
             <p>
               <strong className="text-foreground">Teillieferungen:</strong> Wenn Artikel getrennt
@@ -255,6 +257,41 @@ export default function Versand() {
               wirst du aktiv per WhatsApp oder E-Mail informiert.
             </p>
           </div>
+        </div>
+
+        {/* ── Rücknahme und Entsorgung (BattDG, AltölV) ── */}
+        <div id="entsorgung" className="rounded-xl border border-border bg-card p-5 space-y-3 text-sm text-muted-foreground scroll-mt-24">
+          <h2 className="text-lg font-semibold text-foreground">Rücknahme und Entsorgung</h2>
+          <p className="font-semibold text-foreground">Altbatterien</p>
+          <p>
+            Altbatterien gehören nicht in den Hausmüll. Du bist gesetzlich verpflichtet, Altbatterien
+            zurückzugeben. Bei uns kannst du sie unentgeltlich zurückgeben — im Laden in der
+            Handelstraße 64, 42277 Wuppertal, oder per Post an diese Adresse (Fahrzeug-Altbatterien
+            nur nach Absprache, weil sie als Gefahrgut versendet werden müssen). Außerdem nehmen
+            kommunale Sammelstellen Altbatterien kostenlos an.
+          </p>
+          <p>
+            Das Symbol der durchgestrichenen Mülltonne auf einer Batterie bedeutet, dass sie nicht
+            in den Hausmüll darf. Steht darunter „Pb“, „Cd“ oder „Hg“, enthält die Batterie mehr als
+            0,004 % Blei, 0,002 % Cadmium bzw. 0,0005 % Quecksilber. Batterien können Stoffe
+            enthalten, die Umwelt und Gesundheit schaden, und Lithiumbatterien können bei
+            Beschädigung brennen. Kleb bei Lithiumbatterien vor der Rückgabe die Pole ab. Durch
+            Rückgabe und Recycling werden Rohstoffe wie Blei zurückgewonnen; vermeide Abfall, indem
+            du Batterien möglichst lange nutzt.
+          </p>
+          <p>
+            <strong className="text-foreground">Batteriepfand:</strong> Für Starterbatterien
+            berechnen wir 7,50 € Pfand je Stück, wenn du keine Altbatterie zurückgibst (§ 19 BattDG).
+            Gibst du eine Starter-Altbatterie bei uns ab, bekommst du das Pfand zurück.
+          </p>
+          <p className="font-semibold text-foreground pt-2">Altöl (Motor- und Getriebeöl)</p>
+          <p>
+            Gebrauchtes Motor- und Getriebeöl sowie die beim Ölwechsel anfallenden Ölfilter und
+            ölhaltigen Abfälle nehmen wir bis zur Menge des bei uns gekauften Öls kostenlos zurück:
+            Annahmestelle Alex Autoshop, Handelstraße 64, 42277 Wuppertal (Mo–Fr 9–17:30,
+            Sa 9–14 Uhr). Bitte bring den Kaufbeleg mit. Altöl gehört nicht in den Abfluss, den
+            Boden oder den Hausmüll — unsachgemäße Entsorgung schadet der Umwelt und ist verboten.
+          </p>
         </div>
 
       </div>

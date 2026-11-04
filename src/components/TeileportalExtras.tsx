@@ -645,7 +645,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                         className="btn-primary w-full gap-2 disabled:opacity-60">
                         {zahlt === "stripe"
                           ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
-                          : <><CreditCard className="w-4 h-4" /> {eur(zuZahlen)} bezahlen</>}
+                          : <><CreditCard className="w-4 h-4" /> Zahlungspflichtig bestellen · {eur(zuZahlen)} per Karte</>}
                       </button>
                     )}
                     {sepaDa && (
@@ -655,7 +655,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                           : "btn-primary w-full gap-2 disabled:opacity-60"}>
                         {zahlt === "gocardless"
                           ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
-                          : <><Landmark className="w-4 h-4" /> {karteDa ? "Per SEPA-Lastschrift" : `${eur(zuZahlen)} per SEPA-Lastschrift`}</>}
+                          : <><Landmark className="w-4 h-4" /> {karteDa ? "Zahlungspflichtig bestellen · per SEPA-Lastschrift" : `Zahlungspflichtig bestellen · ${eur(zuZahlen)} per SEPA-Lastschrift`}</>}
                       </button>
                     )}
                     {!allPriced && (

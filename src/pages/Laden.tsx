@@ -1,3 +1,4 @@
+import { useState } from "react";
 ﻿import { motion } from "framer-motion";
 import { MapPin, Phone, Clock, MessageCircle, Zap, Shield, Users, Navigation } from "lucide-react";
 import { Seo } from "@/components/Seo";
@@ -23,6 +24,7 @@ const VALUES = [
 ];
 
 export default function Laden() {
+  const [karteAn, setKarteAn] = useState(false);
   return (
     <div>
       <Seo
@@ -106,14 +108,23 @@ export default function Laden() {
           </div>
 
           <div className="card-tilt hover:translate-y-0 overflow-hidden min-h-[320px]">
-            <iframe
-              src={SHOP_INFO.mapsEmbedUrl}
-              title="Alex Autoshop auf Google Maps"
-              className="w-full h-full min-h-[320px] border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
-            />
+            {karteAn ? (
+              <iframe
+                src={SHOP_INFO.mapsEmbedUrl}
+                title="Alex Autoshop auf Google Maps"
+                className="w-full h-full min-h-[320px] border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            ) : (
+              // Zwei-Klick-Lösung: Google bekommt die IP erst nach Einwilligung (§ 25 TDDDG)
+              <div className="w-full h-full min-h-[320px] flex flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground">
+                <p>Handelstraße 64 · 42277 Wuppertal</p>
+                <p className="max-w-xs">Beim Laden der Karte werden Daten (u. a. deine IP-Adresse) an Google übertragen. Mehr in der <a href="/datenschutz" className="underline">Datenschutzerklärung</a>.</p>
+                <button className="btn-outline" onClick={() => setKarteAn(true)}>Karte laden</button>
+              </div>
+            )}
           </div>
         </div>
       </section>

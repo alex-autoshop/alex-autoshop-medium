@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { einwilligungZuruecksetzen } from "@/lib/tracking";
 import { RotateCcw, ArrowUpRight } from "lucide-react";
 import { SHOP_INFO } from "@/data/shopInfo";
 
@@ -25,14 +26,8 @@ const RECHTLICHES = [
   { label: "AGB", to: "/agb" },
   { label: "Versand", to: "/versand" },
   { label: "Widerrufsrecht", to: "/widerruf" },
+  { label: "Verträge hier kündigen", to: "/kuendigen" },
 ];
-
-const widerrufMailto =
-  `mailto:${SHOP_INFO.email}?subject=${encodeURIComponent("Widerruf meiner Bestellung")}` +
-  `&body=${encodeURIComponent(
-    "Hiermit widerrufe ich den von mir abgeschlossenen Vertrag über folgende Waren:\n\n" +
-      "Bestellnummer:\nBestelldatum:\nName:\nAnschrift:\n\nDatum:"
-  )}`;
 
 export function Footer() {
   return (
@@ -71,12 +66,25 @@ export function Footer() {
       <div className="border-t border-white/10">
         <div className="container py-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/40">
           <span>© {new Date().getFullYear()} Alex Autoshop — {SHOP_INFO.owner}. Alle Rechte vorbehalten.</span>
-          <a
-            href={widerrufMailto}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gold-bright/90 text-night font-semibold hover:bg-gold-bright transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" /> Widerruf ausüben
-          </a>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {/* § 356a BGB: Widerrufsfunktion, ständig verfügbar und hervorgehoben */}
+            <Link
+              to="/widerruf#vertrag-widerrufen"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gold-bright/90 text-night font-semibold hover:bg-gold-bright transition-colors"
+            >
+              <RotateCcw className="w-4 h-4" /> Vertrag widerrufen
+            </Link>
+            {/* § 312k BGB: Kündigungsbutton für Mitgliedschaft und Produkt-Abo */}
+            <Link
+              to="/kuendigen"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/30 text-white font-semibold hover:bg-white/10 transition-colors"
+            >
+              Verträge hier kündigen
+            </Link>
+            <button onClick={einwilligungZuruecksetzen} className="underline hover:text-white">
+              Cookie-Einstellungen
+            </button>
+          </div>
           <span>Wuppertal · NRW · Deutschland</span>
         </div>
       </div>

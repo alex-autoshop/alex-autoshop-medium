@@ -29,7 +29,7 @@ const ABOS: { id: AboArt; titel: string; text: string; icon: typeof Wrench }[] =
 const FAQ = [
   {
     q: "Gilt die Mitgliedschaft nur in Wuppertal?",
-    a: "Nein — deutschlandweit! Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Du bestellst online zu deinen Mitgliedspreisen, wir versenden in ganz Deutschland (versandkostenfrei ab 100 €).",
+    a: "Nein — deutschlandweit! Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Du bestellst online zu deinen Mitgliedspreisen, wir versenden in ganz Deutschland — für Mitglieder immer versandkostenfrei.",
   },
   {
     q: "Wie werde ich Mitglied?",
@@ -37,7 +37,7 @@ const FAQ = [
   },
   {
     q: "Kann ich monatlich kündigen?",
-    a: "Ja, die Mitgliedschaft ist monatlich kündbar. Keine Mindestlaufzeit, kein Risiko.",
+    a: "Ja, die Mitgliedschaft ist jederzeit zum Monatsende kündbar, ohne Mindestlaufzeit — online über „Verträge hier kündigen“ im Seitenfuß, per E-Mail oder per Brief.",
   },
   {
     q: "Gilt der Rabatt auf alles?",
@@ -61,7 +61,7 @@ export default function Mitgliedschaft() {
     <div>
       <Seo
         title="Mitgliedschaft – bis 40% Rabatt, deutschlandweit"
-        description="Mitgliedschaften bei Alex Autoshop: 15%, 24% oder 40% Rabatt auf Lackierprodukte und Werkstattbedarf. Deutschlandweit für alle — Werkstatt wie privat. Monatlich kündbar, Versand in ganz Deutschland."
+        description="Mitgliedschaften bei Alex Autoshop: 15 %, 28 % oder 40 % Rabatt auf Lackierprodukte und Werkstattbedarf. Deutschlandweit für alle — Werkstatt wie privat. Monatlich kündbar, Versand in ganz Deutschland."
       />
 
       <section className="section-dark py-16 sm:py-20">
