@@ -216,8 +216,8 @@ export function ProduktAbo() {
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_380px] gap-6 items-start">
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start [&>*]:min-w-0">
+        <div className="space-y-6 min-w-0">
         <WunschfarbenLeiste
           rabatt={rabatt}
           onHinzufuegen={(e) => {

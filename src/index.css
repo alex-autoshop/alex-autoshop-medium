@@ -40,18 +40,34 @@
 
   html {
     scroll-behavior: smooth;
+    /* Nichts darf die Seite breiter als den Bildschirm machen (iOS Safari
+       zeigt sonst einen hellen Streifen und lässt seitwärts wischen).
+       clip statt hidden, damit position:sticky im Header bleibt.
+       hidden davor: Browser ohne clip fallen darauf zurück. */
+    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   body {
     @apply bg-background text-foreground antialiased font-body;
     -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: none;
+    overflow-x: clip;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
     letter-spacing: -0.03em;
     font-weight: 700;
+  }
+}
+
+/* Lange Wörter in Überschriften nur unterhalb von sm (640px) umbrechen.
+   Weiche Trennstriche im Text (z.B. Geschäfts-bedingungen) haben Vorrang,
+   sonst bricht das Wort, statt die Seite zu verbreitern. Desktop bleibt unverändert. */
+@media (max-width: 639px) {
+  h1, h2, h3, h4, h5, h6 {
+    overflow-wrap: break-word;
   }
 }
 

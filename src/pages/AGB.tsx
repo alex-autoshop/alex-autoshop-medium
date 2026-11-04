@@ -2,7 +2,7 @@
 const AGB = () => (
   <div>
     <article className="prose-legal">
-      <h1>Allgemeine Geschäftsbedingungen (AGB)</h1>
+      <h1>Allgemeine Geschäfts{"\u00AD"}bedingungen (AGB)</h1>
       <p><em>Alex Autoshop – Alexander Haritopoulos</em></p>
       <p><em>Stand: Juni 2025</em></p>
 
