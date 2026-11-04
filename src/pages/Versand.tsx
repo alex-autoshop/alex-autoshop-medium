@@ -1,8 +1,9 @@
 import { Truck, Zap, Package, MapPin, Clock, CheckCircle2, Star, Info } from "lucide-react";
 import { Seo } from "@/components/Seo";
+import { DHL_EUR, VERSAND_FREI_AB } from "../../shared/versand.js";
 
-const FREE_THRESHOLD = 150;
-const DHL_RATE = 5.9;
+const FREE_THRESHOLD = VERSAND_FREI_AB;
+const DHL_RATE = DHL_EUR;
 const LOCAL_BASE = 2.9;
 const LOCAL_PER_KM = 0.29;
 
@@ -48,10 +49,10 @@ export default function Versand() {
             <Star className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="font-semibold text-sm">Mitglieder erhalten immer kostenlosen Versand</p>
+            <p className="font-semibold text-sm">Bezahlte Mitgliedschaft: Versand immer kostenlos</p>
             <p className="text-muted-foreground text-sm mt-0.5">
-              Egal ob Lieferung oder DHL — als Level-1-, Level-2- oder Level-3-Mitglied zahlt du
-              <strong className="text-foreground"> nie Versandkosten</strong>.
+              Mit aktiver Mitgliedschaft Level 1, 2 oder 3 kostet DHL nichts, auch unter {FREE_THRESHOLD} €.
+              Die kostenlose Teststunde zählt nicht dazu.
             </p>
           </div>
         </div>
@@ -185,7 +186,7 @@ export default function Versand() {
                 <tr>
                   <td className="py-2.5 pr-4 font-medium">Normalkunde</td>
                   <td className="py-2.5 pr-4 text-muted-foreground">Bestellwert &lt; 150 €</td>
-                  <td className="py-2.5 text-muted-foreground">5,90 € (DHL) oder ab 2,90 € (Lieferung)</td>
+                  <td className="py-2.5 text-muted-foreground">{DHL_RATE.toFixed(2).replace(".", ",")} € DHL</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 pr-4 font-medium">Normalkunde</td>
@@ -193,8 +194,8 @@ export default function Versand() {
                   <td className="py-2.5 font-semibold text-primary">Kostenlos ✓</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 pr-4 font-medium">Mitglied Level 1–3</td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">Immer</td>
+                  <td className="py-2.5 pr-4 font-medium">Bezahlte Mitgliedschaft Level 1–3</td>
+                  <td className="py-2.5 pr-4 text-muted-foreground">Jede Bestellung</td>
                   <td className="py-2.5 font-semibold text-primary">Immer kostenlos ✓</td>
                 </tr>
               </tbody>

@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Cookie } from "lucide-react";
-
-const STORAGE_KEY = "cookie-consent";
+import { CONSENT_KEY as STORAGE_KEY, trackingLaden } from "@/lib/tracking";
 
 // Cookie-Hinweis — erscheint nur beim ersten Besuch (Auswahl in localStorage gemerkt).
 export function CookieConsent() {
@@ -10,7 +9,9 @@ export function CookieConsent() {
 
   useEffect(() => {
     try {
-      if (!localStorage.getItem(STORAGE_KEY)) setVisible(true);
+      const gespeichert = localStorage.getItem(STORAGE_KEY);
+      if (!gespeichert) setVisible(true);
+      else if (gespeichert === "all") trackingLaden();
     } catch {
       setVisible(true);
     }
@@ -22,6 +23,7 @@ export function CookieConsent() {
     } catch {
       /* localStorage nicht verfügbar — Banner trotzdem schließen */
     }
+    if (value === "all") trackingLaden();
     setVisible(false);
   };
 
@@ -39,8 +41,9 @@ export function CookieConsent() {
           <div className="flex-1 min-w-0">
             <h2 className="font-display font-bold text-lg">Cookies & Datenschutz</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Wir verwenden notwendige Cookies, damit die Seite funktioniert (z.&nbsp;B. Warenkorb &amp; Login).
-              Optionale Cookies helfen uns, das Angebot zu verbessern. Details findest du in der{" "}
+              Wir verwenden notwendige Cookies, damit die Seite funktioniert (z.&nbsp;B. Warenkorb und Login).
+              Wenn du alle akzeptierst, laden wir Google Analytics. Ein Meta-Pixel setzen wir nicht.
+              Details stehen in der{" "}
               <Link to="/datenschutz" className="text-primary font-semibold underline">
                 Datenschutzerklärung
               </Link>

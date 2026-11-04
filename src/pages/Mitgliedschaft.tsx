@@ -29,7 +29,7 @@ const ABOS: { id: AboArt; titel: string; text: string; icon: typeof Wrench }[] =
 const FAQ = [
   {
     q: "Gilt die Mitgliedschaft nur in Wuppertal?",
-    a: "Nein — deutschlandweit! Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Du bestellst online zu deinen Mitgliedspreisen, wir versenden in ganz Deutschland (versandkostenfrei ab 100 €).",
+    a: "Nein — deutschlandweit. Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Mit aktiver bezahlter Mitgliedschaft (Level 1–3) ist der Versand jeder Bestellung kostenlos. Ohne Mitgliedschaft kostet DHL 7,49 € und ist ab 150 € Warenwert frei.",
   },
   {
     q: "Wie werde ich Mitglied?",

@@ -35,8 +35,9 @@ const AGB = () => (
       <p>Alle Preise verstehen sich in Euro, inklusive der gesetzlichen Mehrwertsteuer.</p>
       <p>Versandkosten innerhalb Deutschlands, gleichlautend mit der Seite Versand:</p>
       <ul>
-        <li><strong>DHL 5,90 € pauschal</strong></li>
-        <li><strong>Kostenlos ab einem Bestellwert von 150 €</strong> und für Mitglieder der Stufen Level 1 bis 3</li>
+        <li><strong>DHL 7,49 € pauschal</strong> für alle ohne bezahlte Mitgliedschaft</li>
+        <li><strong>Kostenlos ab einem Bestellwert von 150 €</strong></li>
+        <li><strong>Mitglieder mit aktiver bezahlter Mitgliedschaft (Level 1–3) versenden immer kostenlos</strong>, auch unter 150 €</li>
         <li>Selbstabholung in der Handelstraße 64, Wuppertal, ohne Versandkosten</li>
         <li>Lieferung im Umkreis von Wuppertal sowie Versand nach Österreich oder in die Schweiz nur auf Anfrage per WhatsApp oder E-Mail, nicht automatisch an der Kasse</li>
       </ul>

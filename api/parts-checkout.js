@@ -620,6 +620,7 @@ export default async function handler(req, res) {
     // Versand und Pfand rechnet der Server. Der Browser darf den Betrag nicht
     // selbst festlegen. An der Theke nimmt der Kunde die Ware mit.
     const abholung = !!theke || abholungRoh === true;
+    // Level 1–3 kommt aus der bezahlten Mitgliedschaft (app_metadata), nicht aus der Teststunde.
     const mitglied = level >= 1;
     const versand = versandkosten({ summe, mitglied, abholung });
     const pfand = pfandBetrag(positionen.map((p) => ({ name: `${p.name || ""} ${p.brand || ""}`, menge: p.quantity })));
