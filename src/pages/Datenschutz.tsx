@@ -2,7 +2,7 @@ const Datenschutz = () => (
   <div>
     <article className="prose-legal">
       <h1>Datenschutzerklärung</h1>
-      <p><em>Stand: Juli 2026</em></p>
+      <p><em>Stand: November 2026</em></p>
 
       <h2>1. Verantwortlicher</h2>
       <p>
@@ -53,6 +53,62 @@ const Datenschutz = () => (
         Details: <a href="https://www.shopify.com/de/legal/datenschutz" target="_blank" rel="noopener noreferrer">Shopify-Datenschutzerklärung</a>.
       </p>
 
+      <h2>5a. Teilebörse: Zahlung (Stripe, GoCardless)</h2>
+      <p>
+        Bezahlen Sie in der Teilebörse oder für eine Mitgliedschaft per Karte, verarbeitet Stripe
+        Payments Europe Ltd., 1 Grand Canal Street Lower, Dublin 2, Irland, Ihre Zahlungsdaten,
+        E-Mail-Adresse und den Betrag. Bei SEPA-Lastschrift verarbeitet GoCardless SAS,
+        7 rue de Madrid, 75008 Paris, Frankreich, Name, IBAN, E-Mail und Mandatsdaten. Beide
+        Anbieter können Daten zur Betrugsprävention verarbeiten und Daten in die USA bzw. das
+        Vereinigte Königreich übermitteln (EU-Standardvertragsklauseln bzw.
+        Angemessenheitsbeschluss). Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Zahlung) und
+        lit. f DSGVO (Betrugsprävention).
+      </p>
+
+      <h2>5b. Teilebörse: Teilekatalog und Lieferant (Inter Cars, TecDoc)</h2>
+      <p>
+        Für die Suche nach passenden Teilen übermitteln wir Ihre Fahrzeugangaben (z.&nbsp;B.
+        Hersteller- und Typschlüssel, Modell, Fahrgestellnummer) und Suchbegriffe an
+        Katalogdienste (TecDoc-Daten über apiprofile.com/autopartsapi.com, Teilekatalog
+        yqservice.eu) und an unseren Großhändler Inter Cars S.A., ul. Inżynierska 2,
+        02-001 Warschau, Polen. Bei einer Bestellung bestellen wir das Teil bei Inter Cars; Ihre
+        Lieferanschrift geben wir dabei nur weiter, wenn Inter Cars direkt an Sie liefert.
+        Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.
+      </p>
+
+      <h2>5c. Versand (DHL)</h2>
+      <p>
+        Für die Lieferung geben wir Name und Lieferanschrift an die Deutsche Post DHL Group
+        weiter (Art. 6 Abs. 1 lit. b DSGVO). Ihre E-Mail-Adresse oder Telefonnummer geben wir
+        DHL nur weiter, wenn Sie im Bestellvorgang ausdrücklich eingewilligt haben, damit DHL
+        Ihnen die Zustellung ankündigt (Art. 6 Abs. 1 lit. a DSGVO); die Einwilligung können Sie
+        jederzeit widerrufen.
+      </p>
+
+      <h2>5d. E-Mail-Versand (Resend) und Chat-Benachrichtigung (ntfy)</h2>
+      <p>
+        Bestell-, Mitgliedschafts- und Bestätigungs-E-Mails versenden wir über Resend
+        (Plus Five Five, Inc., USA; EU-Standardvertragsklauseln). Schreiben Sie uns über den
+        Website-Chat, erhalten wir eine Push-Benachrichtigung über ntfy.sh mit Ihrem angegebenen
+        Namen und dem Anfang Ihrer Nachricht. Rechtsgrundlage: Art. 6 Abs. 1 lit. b und f DSGVO.
+      </p>
+
+      <h2>5e. Finanzierung (YouLend)</h2>
+      <p>
+        Fragen Sie über unsere Seite eine Unternehmensfinanzierung an, übermitteln wir Ihre
+        Angaben zum Betrieb und Umsatz an YouLend Limited, London, Vereinigtes Königreich
+        (Angemessenheitsbeschluss), die die Anfrage prüft. Rechtsgrundlage: Art. 6 Abs. 1 lit. b
+        DSGVO.
+      </p>
+
+      <h2>5f. Kartenausschnitt (Google Maps)</h2>
+      <p>
+        Auf der Seite „Laden“ können Sie eine Google-Maps-Karte einblenden. Sie wird erst geladen,
+        wenn Sie auf „Karte laden“ klicken; dann werden u.&nbsp;a. Ihre IP-Adresse an Google
+        Ireland Ltd. bzw. Google LLC (USA) übertragen. Rechtsgrundlage: Ihre Einwilligung
+        (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG).
+      </p>
+
       <h2>6. Kundenkonto &amp; Datenbank (Supabase)</h2>
       <p>
         Kundenkonten, Bestellhistorie, Nachrichten und freiwillig hinterlegte Fahrzeugdaten
@@ -87,13 +143,27 @@ const Datenschutz = () => (
         <strong> keine Verbindung zu Google Fonts</strong> oder anderen Font-Diensten statt.
       </p>
 
-      <h2>10. Cookies &amp; lokale Speicherung</h2>
+      <h2>10. Cookies, lokale Speicherung, Analyse und Werbung</h2>
       <p>
-        Wir setzen technisch notwendige Cookies und localStorage-Einträge ein (Warenkorb, Login,
-        Materialplaner-Stand, Cookie-Auswahl). Diese sind für den Betrieb erforderlich
-        (Art. 6 Abs. 1 lit. f DSGVO bzw. § 25 Abs. 2 TDDDG). Das Übersetzungs-Cookie („googtrans")
-        wird nur nach aktiver Nutzung der Übersetzungsfunktion gesetzt. Tracking- oder
-        Werbe-Cookies setzen wir nicht ein.
+        Technisch notwendige Cookies und localStorage-Einträge (Warenkorb, Login,
+        Materialplaner-Stand, Ihre Cookie-Auswahl) setzen wir ohne Einwilligung ein, weil sie für
+        den Betrieb erforderlich sind (§ 25 Abs. 2 TDDDG, Art. 6 Abs. 1 lit. f DSGVO).
+      </p>
+      <p>
+        <strong>Nur wenn Sie im Cookie-Banner „Alle akzeptieren“ wählen</strong>, laden wir
+        zusätzlich Google Analytics 4 (Google Ireland Ltd., Gordon House, Barrow Street, Dublin 4,
+        Irland) zur Reichweitenmessung und das Meta Pixel (Meta Platforms Ireland Ltd., Merrion
+        Road, Dublin 4, Irland) zur Messung und Ausspielung von Werbung auf Facebook und
+        Instagram. Dabei werden Cookies gesetzt und u.&nbsp;a. IP-Adresse (gekürzt), Geräte- und
+        Browserdaten, besuchte Seiten und Zeitpunkte verarbeitet; eine Übermittlung in die USA ist
+        möglich (EU-US Data Privacy Framework). Rechtsgrundlage ist Ihre Einwilligung (Art. 6
+        Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG). Speicherdauer: Google Analytics bis zu 14
+        Monate, Meta Pixel bis zu 90 Tage. Sie können die Einwilligung jederzeit über
+        „Cookie-Einstellungen“ im Seitenfuß widerrufen.
+      </p>
+      <p>
+        Das Übersetzungs-Cookie („googtrans") wird nur nach aktiver Nutzung der
+        Übersetzungsfunktion gesetzt.
       </p>
 
       <h2>11. Kommunikation (E-Mail, Telefon, WhatsApp)</h2>
@@ -116,11 +186,22 @@ const Datenschutz = () => (
       <p>
         Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung
         (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) sowie
-        Widerspruch gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21 DSGVO).
+        Widerspruch (Art. 21 DSGVO, siehe unten).
         Eine erteilte Einwilligung können Sie jederzeit mit Wirkung für die Zukunft widerrufen.
         Außerdem haben Sie das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren —
         für uns zuständig: Landesbeauftragte für Datenschutz und Informationsfreiheit
         Nordrhein-Westfalen (LDI NRW), Kavalleriestraße 2-4, 40213 Düsseldorf.
+      </p>
+
+      <h2>13a. Widerspruchsrecht (Art. 21 DSGVO)</h2>
+      <p>
+        <strong>Soweit wir Daten auf Grundlage berechtigter Interessen (Art. 6 Abs. 1 lit. f
+        DSGVO) verarbeiten, können Sie aus Gründen, die sich aus Ihrer besonderen Situation
+        ergeben, jederzeit widersprechen. Wir verarbeiten die Daten dann nicht mehr, es sei denn,
+        wir weisen zwingende schutzwürdige Gründe nach, die Ihre Interessen überwiegen, oder die
+        Verarbeitung dient der Geltendmachung, Ausübung oder Verteidigung von Rechtsansprüchen.
+        Einer Verarbeitung zu Zwecken der Direktwerbung können Sie jederzeit ohne Angabe von
+        Gründen widersprechen.</strong>
       </p>
 
       <h2>14. Kontakt in Datenschutzfragen</h2>

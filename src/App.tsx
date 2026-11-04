@@ -34,6 +34,7 @@ const Datenschutz = lazy(() => import("@/pages/Datenschutz"));
 const AGB = lazy(() => import("@/pages/AGB"));
 const Versand = lazy(() => import("@/pages/Versand"));
 const Widerruf = lazy(() => import("@/pages/Widerruf"));
+const Kuendigen = lazy(() => import("@/pages/Kuendigen"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const AdminChat = lazy(() => import("@/pages/AdminChat"));
 
@@ -148,6 +149,7 @@ export default function App() {
                     <Route path="/agb" element={<AGB />} />
                     <Route path="/versand" element={<Versand />} />
                     <Route path="/widerruf" element={<Widerruf />} />
+                    <Route path="/kuendigen" element={<Kuendigen />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>
