@@ -15,7 +15,7 @@ const ABOS: { id: AboArt; titel: string; text: string; icon: typeof Wrench }[] =
   {
     id: "dienstleistung",
     titel: "Dienstleistungs-Mitgliedschaft",
-    text: "Rabatt auf das ganze Sortiment, dazu Lieferung, Gratis-Farbe, Farbfehlerschutz und Aufbereitung.",
+    text: "Rabatt im Shopify-Shop, dazu Lieferung, Gratis-Farbe, Farbfehlerschutz und Aufbereitung. Nicht in der Teilebörse.",
     icon: Wrench,
   },
   {
@@ -29,7 +29,7 @@ const ABOS: { id: AboArt; titel: string; text: string; icon: typeof Wrench }[] =
 const FAQ = [
   {
     q: "Gilt die Mitgliedschaft nur in Wuppertal?",
-    a: "Nein — deutschlandweit. Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Mit aktiver bezahlter Mitgliedschaft (Level 1–3) ist der Versand jeder Bestellung kostenlos. Ohne Mitgliedschaft kostet DHL 7,49 € und ist ab 150 € Warenwert frei.",
+    a: "Nein — deutschlandweit. Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Die Mitgliedschaft gilt im Shopify-Shop: dort ist der Versand mit aktiver bezahlter Mitgliedschaft (Level 1–3) kostenlos. In der Teilebörse gilt ein Preis für alle, und DHL kostet 7,49 €, frei ab 150 € Warenwert — auch für Mitglieder.",
   },
   {
     q: "Wie werde ich Mitglied?",
@@ -41,7 +41,7 @@ const FAQ = [
   },
   {
     q: "Gilt der Rabatt auf alles?",
-    a: "Der Rabatt gilt auf das gesamte Lager-Sortiment. Bei Sonderbestellungen und Teilen sprechen wir individuelle Konditionen ab.",
+    a: "Der Rabatt gilt im Shopify-Shop auf Lack und Werkstattbedarf. In der Teilebörse gibt es keine Mitgliedspreise und keinen Mitglieds-Versand: dort zahlt jeder denselben Preis, DHL 7,49 €, frei ab 150 €.",
   },
   {
     q: "Kann ich den Rabatt später ändern?",
@@ -61,7 +61,7 @@ export default function Mitgliedschaft() {
     <div>
       <Seo
         title="Mitgliedschaft – bis 40% Rabatt, deutschlandweit"
-        description="Mitgliedschaften bei Alex Autoshop: 15%, 24% oder 40% Rabatt auf Lackierprodukte und Werkstattbedarf. Deutschlandweit für alle — Werkstatt wie privat. Monatlich kündbar, Versand in ganz Deutschland."
+        description="Mitgliedschaft im Shopify-Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle. Monatlich kündbar."
       />
 
       <section className="section-dark py-16 sm:py-20">
@@ -73,8 +73,9 @@ export default function Mitgliedschaft() {
             Dein Betrieb. <span className="text-gold-accent">Deine Konditionen.</span>
           </h1>
           <p className="text-white/65 text-lg">
-            Bündle deinen kompletten Werkstatt-Einkauf bei Alex Autoshop und spar bei jeder
-            Bestellung — bis 40% auf das gesamte Sortiment. Monatlich kündbar, keine Mindestabnahme.
+            Die Mitgliedschaft gilt im Shopify-Shop: Rabatt auf Lack und Werkstattbedarf,
+            und kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle.
+            Monatlich kündbar, keine Mindestabnahme.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             {["🇩🇪 Deutschlandweit verfügbar", "Für jeden abschließbar — Werkstatt wie privat", "Lieferung direkt zu dir"].map((t) => (

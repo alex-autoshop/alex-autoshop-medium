@@ -28,11 +28,11 @@ test("siehtNachNummer trennt Nummern von Freitext", () => {
   assert.equal(siehtNachNummer("Ölfilter"), false);
 });
 
-test("Versand: DHL 7,49, frei ab 150, bezahlte Mitglieder und Abholung umsonst", () => {
+test("Versand Teilebörse: DHL 7,49 für alle, frei ab 150, Abholung umsonst", () => {
   assert.equal(DHL_EUR, 7.49);
   assert.equal(versandkosten({ summe: 40 }), DHL_EUR);
+  assert.equal(versandkosten({ summe: 149.99 }), DHL_EUR);
   assert.equal(versandkosten({ summe: 150 }), 0);
-  assert.equal(versandkosten({ summe: 20, mitglied: true }), 0);
   assert.equal(versandkosten({ summe: 20, abholung: true }), 0);
 });
 

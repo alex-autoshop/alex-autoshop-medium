@@ -154,11 +154,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const discount = user ? discountForLevel(profile.membership_level) : 0;
   const memberSaving = total * (discount / 100);
 
-  // Dieselbe Regel wie Teilebörse und /api/parts-checkout (shared/versand.js).
-  // Nur Level 1–3 aus der bezahlten Mitgliedschaft, nicht die Teststunde.
+  // Shopify-Shop: bezahlte Mitgliedschaft (Level 1–3) versendet kostenlos.
+  // Die Teilebörse nutzt shared/versand.js ohne diesen Nachlass.
   const stufe = Number(profile.membership_level);
   const isMember = !!user && stufe >= 1 && stufe <= 3;
-  const shippingCost = versandkosten({ summe: total, mitglied: isMember });
+  const shippingCost = isMember ? 0 : versandkosten({ summe: total });
   const remainingForFree = Math.max(0, VERSAND_FREI_AB - total);
   const freeProgress = Math.min(100, (total / VERSAND_FREI_AB) * 100);
 

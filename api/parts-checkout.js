@@ -5,9 +5,10 @@
 //   method="gocardless" → GoCardless Billing Request (SEPA)       → { url }
 //
 // GRUNDREGEL: Der Browser darf KEINEN Betrag mitschicken.
-// Er schickt nur Artikelnummer, Marke und Menge. Preis und Mitgliedsstufe
-// holt dieser Server selbst — sonst kauft sich jemand den Lüfter für 1 Euro,
-// indem er den Request in den Entwicklertools umschreibt.
+// Er schickt nur Artikelnummer, Marke und Menge. Den Preis holt dieser
+// Server selbst — sonst kauft sich jemand den Lüfter für 1 Euro, indem er
+// den Request in den Entwicklertools umschreibt. Die Mitgliedschaft ändert
+// den Teilepreis nicht: ein Preis für alle.
 //
 // MWST: Inter Cars liefert "Gross" INKLUSIVE MwSt — nachgemessen am 17.09.2026:
 //   listPriceNet 39,87 × 1,19 = listPriceGross 47,45, vatPercentage 19,00.
@@ -29,14 +30,15 @@
 // Webhooks lösen ein (bezahlt) oder geben zurück (abgebrochen/geplatzt).
 // Öffnet der Kunde den Warenkorb wieder (GET mit Anmeldung), werden seine
 // verlassenen Bezahlseiten geschlossen und das Guthaben steht wieder voll da.
-//   SUPABASE_SERVICE_ROLE_KEY    für die Mitgliedsstufe
+//   SUPABASE_SERVICE_ROLE_KEY    für Konto, Guthaben und Zahlungsgrenze
 //   PUBLIC_BASE_URL              z.B. https://alex-autoshop.de
 //   ADMIN_PIN                    für den Ladenverkauf (siehe unten)
 //
 // LADENVERKAUF ("theke"): Alex bestellt im Laden für den Kunden vor ihm.
-//   Dann darf der Browser die Preisstufe DES KUNDEN mitschicken — aber nur,
-//   wenn api/_admin.js bestätigt, dass Alex selbst am Rechner sitzt
-//   (Admin-Sitzung + PIN). Ohne das wird "theke" abgelehnt, nicht ignoriert.
+//   Der Browser darf keine Preisstufe mitschicken: die Teilebörse hat einen
+//   Preis für alle. "theke" geht nur, wenn api/_admin.js bestätigt, dass
+//   Alex selbst am Rechner sitzt (Admin-Sitzung + PIN). Ohne das wird
+//   "theke" abgelehnt, nicht ignoriert.
 //   Der Kunde zahlt per QR-Code am eigenen Handy; method="status" sagt Alex,
 //   ob die Zahlung durch ist.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,10 +48,6 @@ import { versandkosten, pfandBetrag, DHL_EUR, VERSAND_FREI_AB } from "../shared/
 
 const BASE = () => (process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de").replace(/\/+$/, "");
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co";
-
-// Muss mit MEMBER_LEVELS in src/components/TeileportalPricing.tsx übereinstimmen.
-const STUFEN = { 1: 15, 2: 28, 3: 40 };
-const mitgliedspreis = (grund, pct) => Math.ceil(grund * (1 - pct / 100) * 100) / 100;
 
 const MAX_POSITIONEN = 50;
 const MAX_MENGE = 99;
@@ -400,7 +398,7 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, u
   if (versand > 0) {
     zeileSetzen(
       "DHL-Versand Deutschland",
-      `Pauschale ${DHL_EUR.toFixed(2).replace(".", ",")} €, kostenlos ab ${VERSAND_FREI_AB} € und für Mitglieder`,
+      `Pauschale ${DHL_EUR.toFixed(2).replace(".", ",")} €, kostenlos ab ${VERSAND_FREI_AB} €`,
       1,
       versand,
     );
@@ -553,9 +551,8 @@ export default async function handler(req, res) {
         return send(res, 500, { error: String(err?.message || err).slice(0, 200) });
       }
     }
-    const stufe = Math.floor(Number(thekeRoh?.stufe));
     theke = {
-      stufe: stufe >= 1 && stufe <= 3 ? stufe : 0,
+      stufe: 0,
       kunde: String(thekeRoh?.kunde || "").trim().slice(0, 120),
       email: String(thekeRoh?.email || "").trim().slice(0, 200),
       von: zugang.email,
@@ -570,22 +567,16 @@ export default async function handler(req, res) {
   const origin = BASE();
 
   try {
-    let level;
     let email;
     let userId = "";
     if (theke) {
-      // Preisstufe und E-Mail DES KUNDEN — nicht die von Alex' Konto.
-      level = theke.stufe;
       email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(theke.email) ? theke.email : "";
     } else {
       const konto = await stufeErmitteln(req.headers.authorization);
-      level = konto.level;
       email = konto.email || String(emailAusFormular || "").trim();
       userId = konto.userId || "";
     }
-    const pct = STUFEN[level] || 0;
-
-    // Preise parallel neu auflösen — der Client-Preis wird bewusst ignoriert.
+    // Ein Preis für alle — die Mitgliedsstufe ändert die Teilebörse nicht.
     const aufgeloest = await Promise.all(
       items.slice(0, MAX_POSITIONEN).map(async (i) => {
         const artNr = String(i?.articleNumber || "").trim();
@@ -593,7 +584,7 @@ export default async function handler(req, res) {
         if (!artNr) return null;
         const p = await preisHolen(artNr, i?.brand, origin);
         if (!p) return { articleNumber: artNr, quantity: menge, ohnePreis: true };
-        const einzel = pct > 0 ? mitgliedspreis(p.price, pct) : p.price;
+        const einzel = p.price;
         return {
           articleNumber: artNr,
           quantity: menge,
@@ -620,9 +611,7 @@ export default async function handler(req, res) {
     // Versand und Pfand rechnet der Server. Der Browser darf den Betrag nicht
     // selbst festlegen. An der Theke nimmt der Kunde die Ware mit.
     const abholung = !!theke || abholungRoh === true;
-    // Level 1–3 kommt aus der bezahlten Mitgliedschaft (app_metadata), nicht aus der Teststunde.
-    const mitglied = level >= 1;
-    const versand = versandkosten({ summe, mitglied, abholung });
+    const versand = versandkosten({ summe, abholung });
     const pfand = pfandBetrag(positionen.map((p) => ({ name: `${p.name || ""} ${p.brand || ""}`, menge: p.quantity })));
     const brutto = rund2(summe + versand + pfand.betrag);
     if (brutto > MAX_SUMME) {
@@ -708,8 +697,8 @@ export default async function handler(req, res) {
       ...(theke ? { sessionId: ergebnis.sessionId } : {}),
       summe: zuZahlen,
       guthaben,
-      level,
-      rabattProzent: pct,
+      level: 0,
+      rabattProzent: 0,
       positionen: positionen.length,
       ohnePreis,
     });

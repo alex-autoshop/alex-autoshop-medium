@@ -4,7 +4,7 @@ import {
   ShoppingBag, Check, X, Copy, ChevronRight, Package, Layers,
   ArrowDown, ArrowUp, CornerDownLeft, Search as SearchIcon, ZoomIn,
 } from "lucide-react";
-import { PriceBlock, DeliveryBadge, SpecStrip, eur, memberPrice, MEMBER_LEVELS, type MemberLevelId } from "@/components/TeileportalPricing";
+import { PriceBlock, DeliveryBadge, SpecStrip, eur, type MemberLevelId } from "@/components/TeileportalPricing";
 import { usePartImage } from "@/hooks/usePartImage";
 import { useEinbauposition, type Einbauposition } from "@/lib/einbauposition";
 import { cn } from "@/lib/utils";
@@ -98,8 +98,7 @@ export function TeileZeile({
    */
   kompakt?: boolean;
 }) {
-  const lvl = MEMBER_LEVELS.find((l) => l.id === level);
-  const shown = a.price != null ? (lvl ? memberPrice(a.price, lvl.pct) : a.price) : null;
+  const shown = a.price != null ? a.price : null;
   const [menge, setMenge] = useState(1);
   const bild = usePartImage(a.imageUrl, a.articleNumber, a.brand, a.id);
 
@@ -201,9 +200,6 @@ export function TeileZeile({
           {shown != null ? (
             <>
               <p className={cn("font-bold tabular-nums leading-none", kompakt ? "text-[16px]" : "text-[17px] sm:text-lg")}>{eur(shown)}</p>
-              {lvl && a.price != null && a.price > shown && (
-                <p className="mt-1 text-[11px] text-muted-foreground tabular-nums line-through">{eur(a.price)}</p>
-              )}
             </>
           ) : (
             // Auf dem Handy ist die Schiene 104 px schmal — da passt nur die Kurzform.
@@ -285,7 +281,6 @@ function OfferPanel({
     }).catch(() => { /* ohne Zwischenablage eben nicht */ });
   };
 
-  const lvl = MEMBER_LEVELS.find((l) => l.id === level);
   const cheapest = alternatives.find((x) => x.price != null && a.price != null && x.price < a.price);
   const position = useEinbauposition(a.id, a.specs, true);
 
@@ -378,9 +373,9 @@ function OfferPanel({
               <ShoppingBag className="w-4 h-4" /> In den Warenkorb
             </button>
           </div>
-          {lvl && a.price != null && qty > 1 && (
+          {a.price != null && qty > 1 && (
             <p className="text-[11px] text-muted-foreground mt-2 text-right">
-              {qty} × {eur(memberPrice(a.price, lvl.pct))} = <b className="text-foreground">{eur(memberPrice(a.price, lvl.pct) * qty)}</b>
+              {qty} × {eur(a.price)} = <b className="text-foreground">{eur(a.price * qty)}</b>
             </p>
           )}
         </div>
@@ -408,7 +403,7 @@ function OfferPanel({
             )}
             <div className="space-y-1">
               {alternatives.map((alt) => {
-                const p = alt.price != null ? (lvl ? memberPrice(alt.price, lvl.pct) : alt.price) : null;
+                const p = alt.price != null ? alt.price : null;
                 return (
                   <button
                     key={key(alt)}

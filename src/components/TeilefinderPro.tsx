@@ -4,7 +4,7 @@ import {
   Clock, ScanLine, Users, Crown, Check, Hammer,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { eur, memberPrice, MEMBER_LEVELS, type MemberLevelId } from "@/components/TeileportalPricing";
+import { eur, type MemberLevelId } from "@/components/TeileportalPricing";
 import { akteLesen, akteEintragLoeschen, akteNotiz, type Fahrzeugakte } from "@/lib/fahrzeugakte";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
@@ -283,8 +283,7 @@ function Angebot({
     } catch { /* egal */ }
   }, [werkstatt, satz]);
 
-  const lvl = MEMBER_LEVELS.find((l) => l.id === level);
-  const stueck = (p?: number) => (p == null ? null : lvl ? memberPrice(p, lvl.pct) : p);
+  const stueck = (p?: number) => (p == null ? null : p);
 
   const teileSumme = positionen.reduce((s, p) => s + (stueck(p.price) ?? 0) * p.quantity, 0);
   const stundenSatz = Number(String(satz).replace(",", ".")) || 0;

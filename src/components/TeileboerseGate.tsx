@@ -5,11 +5,8 @@ import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
 /**
- * Stöbern ist frei. Mitgliederpreise gibt es nur mit Anmeldung — die Seite
- * selbst wird nicht nach ein paar Minuten zugesperrt.
- *
- * Eine laufende Teststunde oder eine abgelaufene Teststunde bleibt ein Hinweis
- * für angemeldete Konten, kein Vollbild über der Suche.
+ * Stöbern ist frei, und der Teilepreis ist für alle gleich. Die Mitgliedschaft
+ * gilt im Shopify-Shop. Die Seite wird nicht nach ein paar Minuten zugesperrt.
  */
 
 function mmss(ms: number) {
@@ -54,7 +51,7 @@ export function TeileboerseGate() {
       return {
         tone: "calm" as const,
         icon: LogIn,
-        text: <>Stöbern ist frei. Mitgliederpreise siehst du nach der Anmeldung.</>,
+        text: <>Stöbern ist frei. In der Teilebörse gilt ein Preis für alle — die Mitgliedschaft gilt im Shop.</>,
         cta: { to: "/konto", label: "Anmelden" },
       };
     }
@@ -64,8 +61,8 @@ export function TeileboerseGate() {
         icon: Zap,
         text: (
           <>
-            Teststunde läuft — noch <strong className="font-semibold">{mmss(trialLeft!)}</strong> mit
-            allen Mitgliederpreisen. Bestellen inklusive.
+            Teststunde läuft — noch <strong className="font-semibold">{mmss(trialLeft!)}</strong>.
+            Der Teilepreis ist derselbe wie ohne Anmeldung. Die Mitgliedschaft gilt im Shop.
           </>
         ),
         cta: { to: "/mitgliedschaft", label: "Mitglied werden" },
@@ -77,8 +74,8 @@ export function TeileboerseGate() {
         icon: CreditCard,
         text: (
           <>
-            Deine Gratis-Teststunde ist vorbei. Zahlungsart hinterlegen und zu Mitgliederpreisen
-            weiterbestellen.
+            Deine Gratis-Teststunde ist vorbei. Teile bestellst du weiter zum gleichen Preis.
+            Die Mitgliedschaft gilt im Shop, nicht in der Teilebörse.
           </>
         ),
         cta: { to: "/mitgliedschaft", label: "Zahlungsart hinterlegen" },

@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { versandkosten, pfandBetrag, DHL_EUR, VERSAND_FREI_AB } from "../../shared/versand.js";
-import { formatSpecValue, memberPrice, MEMBER_LEVELS, eur, type MemberLevelId } from "@/components/TeileportalPricing";
+import { formatSpecValue, eur, type MemberLevelId } from "@/components/TeileportalPricing";
 import { icPriceLookup } from "@/lib/intercarsGateway";
 import { adminPreiseHolen, type EkPreis, type AdminFehler } from "@/lib/adminZugang";
 import {
@@ -349,21 +349,12 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, theke, margeAn, korbSchluessel, pinRunde]);
 
-  // ── Mitgliedspreis auch im Warenkorb ──────────────────────────────────────
-  // Der Korb speichert absichtlich den LISTENPREIS. Der Mitgliedsrabatt wird
-  // erst hier gerechnet, damit ein Level-Wechsel den Korb sofort korrigiert
-  // statt einen alten Preis aus dem localStorage weiterzuschleppen.
-  // Vorher fehlte das komplett: die Liste zeigte 24,41 EUR (Level 3), der Korb
-  // 33,90 EUR — das Mitglied hat seinen Rabatt an der Kasse wieder verloren.
   const [zahlt, setZahlt] = useState<"" | "stripe" | "gocardless">("");
   const [zahlFehler, setZahlFehler] = useState("");
 
-  const lvl = MEMBER_LEVELS.find((l) => l.id === level);
-  const stueckPreis = (listenpreis: number) => (lvl ? memberPrice(listenpreis, lvl.pct) : listenpreis);
+  const stueckPreis = (listenpreis: number) => listenpreis;
   const mitPreis = items.filter((i) => i.price != null);
   const subtotal = mitPreis.reduce((s, i) => s + stueckPreis(i.price as number) * i.quantity, 0);
-  const subtotalListe = mitPreis.reduce((s, i) => s + (i.price as number) * i.quantity, 0);
-  const ersparnis = Math.round((subtotalListe - subtotal) * 100) / 100;
 
   // ── Empfehlungs-Guthaben verrechnen (nur Kunde mit Konto, nie an der Theke)
   // Mindestens 1 € bleibt zu zahlen. Wie viel wirklich abgeht, entscheidet
@@ -371,9 +362,8 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
   const [guthabenNutzen, setGuthabenNutzen] = useState(true);
   const [abholung, setAbholung] = useState(false);
   const [agbOk, setAgbOk] = useState(false);
-  const mitglied = versandFrei;
   const holtAb = !!theke || abholung;
-  const versand = versandkosten({ summe: subtotal, mitglied, abholung: holtAb });
+  const versand = versandkosten({ summe: subtotal, abholung: holtAb });
   const pfand = pfandBetrag(mitPreis.map((i) => ({ name: `${i.name} ${i.brand}`, menge: i.quantity })));
   const brutto = Math.round((subtotal + versand + pfand.betrag) * 100) / 100;
   const guthabenDa = !theke && angemeldet && guthabenStand > 0 && brutto > 1;
@@ -509,16 +499,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                         <button onClick={() => setQty(i.key, i.quantity + 1)} className="p-1.5 hover:text-primary" aria-label="Mehr"><Plus className="w-3.5 h-3.5" /></button>
                       </div>
                       <span className="text-sm font-bold text-right leading-tight">
-                        {i.price != null ? (
-                          <>
-                            {eur(stueckPreis(i.price) * i.quantity)}
-                            {lvl && stueckPreis(i.price) < i.price && (
-                              <span className="block text-[10px] font-normal text-muted-foreground line-through tabular-nums">
-                                {eur(i.price * i.quantity)}
-                              </span>
-                            )}
-                          </>
-                        ) : "auf Anfrage"}
+                        {i.price != null ? eur(stueckPreis(i.price) * i.quantity) : "auf Anfrage"}
                       </span>
                     </div>
                     {theke && margeAn && !ekFehler && i.price != null && (
@@ -547,7 +528,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                         <input type="radio" name="versandart" checked={!abholung} onChange={() => setAbholung(false)} className="accent-primary" />
                         DHL Deutschland
                       </span>
-                      <span className="tabular-nums">{versandkosten({ summe: subtotal, mitglied, abholung: false }).toFixed(2).replace(".", ",")} €</span>
+                      <span className="tabular-nums">{versandkosten({ summe: subtotal, abholung: false }).toFixed(2).replace(".", ",")} €</span>
                     </label>
                     <label className="flex items-center justify-between gap-2 cursor-pointer">
                       <span className="inline-flex items-center gap-2">
@@ -557,7 +538,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                       <span className="tabular-nums">0,00 €</span>
                     </label>
                     <p className="text-[10.5px] text-muted-foreground leading-snug">
-                      DHL {DHL_EUR.toFixed(2).replace(".", ",")} €, kostenlos ab {VERSAND_FREI_AB} € und für Mitglieder.
+                      DHL {DHL_EUR.toFixed(2).replace(".", ",")} € für alle, kostenlos ab {VERSAND_FREI_AB} €. Die Mitgliedschaft gilt im Shop, nicht in der Teilebörse.
                       Lieferung im Umkreis und Versand nach Österreich oder in die Schweiz auf Anfrage.
                     </p>
                   </div>
@@ -577,12 +558,6 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                   <div className="flex justify-between text-sm">
                     <span className="font-semibold">Summe</span>
                     <span className="font-bold tabular-nums">{brutto.toFixed(2).replace(".", ",")} €</span>
-                  </div>
-                )}
-                {lvl && ersparnis > 0 && (
-                  <div className="flex justify-between text-xs">
-                    <span className="text-primary font-semibold">{theke ? "Kunde " : ""}{lvl.name} (−{lvl.pct} %)</span>
-                    <span className="text-primary font-semibold">{theke ? "spart" : "du sparst"} {eur(ersparnis)}</span>
                   </div>
                 )}
                 {guthabenDa && (

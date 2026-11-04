@@ -24,7 +24,7 @@ import { TeileboerseReiter, ProBereich, CampusBereich, type Stufe, type KvaPosit
  *
  * Der Weg zum Kauf ist EIN System: Teil in der Zeichnung anklicken → rechts
  * stehen sofort die passenden Ersatzteile in derselben Zeile wie überall in
- * der Teilebörse, mit Mitgliedspreis, Lieferzeit und Warenkorb. Die
+ * der Teilebörse, mit Preis, Lieferzeit und Warenkorb. Die
  * Originalnummer ist nur das Bindeglied — gekauft wird das Ersatzteil.
  *
  * Die Zeichnung kommt als Bild plus Koordinaten-Rechtecke ("imageMaps") vom

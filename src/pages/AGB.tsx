@@ -35,12 +35,12 @@ const AGB = () => (
       <p>Alle Preise verstehen sich in Euro, inklusive der gesetzlichen Mehrwertsteuer.</p>
       <p>Versandkosten innerhalb Deutschlands, gleichlautend mit der Seite Versand:</p>
       <ul>
-        <li><strong>DHL 7,49 € pauschal</strong> für alle ohne bezahlte Mitgliedschaft</li>
-        <li><strong>Kostenlos ab einem Bestellwert von 150 €</strong></li>
-        <li><strong>Mitglieder mit aktiver bezahlter Mitgliedschaft (Level 1–3) versenden immer kostenlos</strong>, auch unter 150 €</li>
+        <li><strong>Teilebörse:</strong> DHL 7,49 € pauschal für alle, kostenlos ab einem Warenwert von 150 €. Eine Mitgliedschaft ändert diesen Preis nicht.</li>
+        <li><strong>Shopify-Shop</strong> (Lack und Werkstattbedarf): mit aktiver bezahlter Mitgliedschaft (Level 1–3) ist der Versand kostenlos. Ohne Mitgliedschaft gilt dort ebenfalls DHL 7,49 €, kostenlos ab 150 €.</li>
         <li>Selbstabholung in der Handelstraße 64, Wuppertal, ohne Versandkosten</li>
         <li>Lieferung im Umkreis von Wuppertal sowie Versand nach Österreich oder in die Schweiz nur auf Anfrage per WhatsApp oder E-Mail, nicht automatisch an der Kasse</li>
       </ul>
+      <p>Mitgliedspreise und der Mitgliederrabatt gelten im Shopify-Shop, nicht in der Teilebörse. Dort zahlt jeder denselben Teilepreis.</p>
       <p>Für Starterbatterien in der Teilebörse berechnen wir ein Batteriepfand von 7,50 € je Batterie. Einen pauschalen Altteilpfand erheben wir nicht. Für Gefahrgut (z. B. Spraydosen, Lacke) können im Einzelfall Zuschläge anfallen; wir sagen das vor der Sendung.</p>
 
       <hr />

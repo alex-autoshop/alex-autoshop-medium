@@ -2,88 +2,81 @@
 // Verkaufspreis aus dem Inter-Cars-Einkauf.
 //
 // Standard (ohne Umgebung):
-//   Warengruppen-Faktor aus STANDARD_GRUPPEN, sonst Basis 2,0
-//   Streuung ±5 % je SKU · UVP-Deckel an · Mindestpreis an
+//   Warengruppen-Faktor aus STANDARD_GRUPPEN, sonst Basis 1,35
+//   keine Streuung · UVP-Deckel an · Mindestpreis an
 //
-// Mindestpreis: Der Mitgliedsrabatt (bis 40 %) geht auf den VOLLEN Preis
-// (api/parts-checkout.js, src/components/TeileportalPricing.tsx). Damit auch
-// ein 40-%-Mitglied nicht unter Einkauf + Kosten kauft, liegt der Gastpreis
-// nie unter (EK × (1 + MIN_MARGE) + FIXKOSTEN) / (1 − MAX_RABATT).
+// Die Teilebörse hat einen Preis für alle. Die Mitgliedschaft gilt im
+// Shopify-Shop, nicht hier. Der Mindestpreis deckt Einkauf plus 2,50 € und
+// die Zahlungsgebühr: (EK + 2,50 + 0,25) / (1 − 0,015).
 //
 // Vercel-Env (alle optional, überschreiben die Standards):
-//   PRICE_MARKUP          Basis für Teile ohne Gruppe (sonst 2,0)
-//   PRICE_SPANNE          Streuung, 0.05 = ±5 %, 0 = aus
-//   PRICE_MARKUP_GROUPS   JSON {"oelfilter":1.85,…} ersetzt STANDARD_GRUPPEN
+//   PRICE_MARKUP          Basis für Teile ohne Gruppe (sonst 1,35)
+//   PRICE_SPANNE          Streuung, 0 = aus (Standard), 0.05 = ±5 %
+//   PRICE_MARKUP_GROUPS   JSON {"oelfilter":1.25,…} ersetzt STANDARD_GRUPPEN
 //                         komplett; "aus" oder "{}" schaltet Gruppen ab.
 //                         Verglichen wird nur die Warengruppe vorn im Namen
 //                         (Text vor „passt zu“), nicht die Fahrzeugliste.
 //   PRICE_MARKET_CAP      Standard an: höchstens die UVP (listPriceGross), aber
 //                         nie unter den Mindestpreis. "0" schaltet ab.
 //   PRICE_FLOOR           "0" schaltet den Mindestpreis ab (nicht empfohlen)
-//   PRICE_FLOOR_MARGE     Mindestmarge über EK für das höchste Mitglied (0.04)
-//   PRICE_FLOOR_FIX       Fixkosten je Position in € (Zahlung, Verpackung) (1.5)
-//   PRICE_FLOOR_RABATT    höchster Mitgliedsrabatt (0.40)
+//   PRICE_FLOOR_MARGE     Aufschlag auf den EK im Mindestpreis (Standard 0)
+//   PRICE_FLOOR_FIX       Fixbetrag je Position in € (Standard 2,75 = 2,50 + 0,25)
+//   PRICE_FLOOR_RABATT    Abzug für die Zahlungsgebühr (Standard 0,015)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const STANDARD_BASIS = 2;
-export const STANDARD_SPANNE = 0.05;
+export const STANDARD_BASIS = 1.35;
+export const STANDARD_SPANNE = 0;
 
 /**
- * Warengruppen-Faktoren (Gastpreis = EK × Faktor). Gewählt am 04.11.2026:
- * Mit 40 % Mitgliedsrabatt auf den vollen Preis bleibt ab Faktor ≈ 1,75
- * überhaupt erst Marge beim Level-3-Mitglied. Darum liegen alle Gruppen
- * zwischen 1,78 und 2,0: niedrig, wo der Preisvergleich hart ist und der EK
- * hoch (Bremsen, Batterien, Fahrwerk), höher bei kleinen, billigen Teilen,
- * wo Fixkosten den Ausschlag geben. Schlüssel ohne Umlaute (ä→ae usw.).
+ * Warengruppen-Faktoren (Verkaufspreis = EK × Faktor), ein Preis für alle.
+ * Schlüssel ohne Umlaute (ä→ae usw.). Kleinteile ohne Gruppe: STANDARD_BASIS.
  */
 export const STANDARD_GRUPPEN = Object.freeze({
-  // Bremse — höchster Preisdruck, hoher EK
-  "bremsscheibe": 1.78,
-  "bremsbelag": 1.78,
-  "bremstrommel": 1.8,
-  "bremsbacke": 1.8,
-  "bremssattel": 1.8,
-  "bremsschlauch": 1.9,
-  "verschleisswarnkontakt": 2.0,
-  // Batterie — schwer, Versand für Mitglieder frei
-  "batterie": 1.82,
-  // Filter — Topseller im Vergleich, aber kleiner EK
-  "oelfilter": 1.85,
-  "luftfilter": 1.85,
-  "innenraum": 1.85,
-  "kraftstofffilter": 1.85,
-  "filtersatz": 1.82,
-  // Wischer
-  "wischer": 1.85,
-  // Zündung/Glühen
-  "zuendkerze": 1.95,
-  "gluehkerze": 1.92,
-  "zuendspule": 1.85,
-  // Motor/Antrieb — hoher EK
-  "zahnriemen": 1.8,
-  "keilrippenriemen": 1.85,
-  "wasserpumpe": 1.8,
-  "kupplung": 1.78,
-  "schwungrad": 1.78,
-  "turbolader": 1.78,
-  "anlasser": 1.8,
-  "generator": 1.8,
-  // Fahrwerk/Lenkung
-  "stossdaempfer": 1.8,
-  "feder": 1.85,
-  "querlenker": 1.82,
-  "spurstange": 1.85,
-  "koppelstange": 1.9,
-  "radlager": 1.82,
-  // Flüssigkeiten (Grundpreis und Altöl-Hinweis beachten)
-  "motoroel": 1.8,
-  "getriebeoel": 1.85,
-  "kuehlmittel": 1.9,
-  "frostschutz": 1.9,
-  "bremsfluessigkeit": 1.9,
-  // Beleuchtung
-  "gluehlampe": 2.0,
-  "scheinwerfer": 1.8,
+  // 1,15 — Bremse (Scheibe, Belag, Trommel, Backe, Sattel, Schlauch), Kupplung, Schwungrad
+  "bremsscheibe": 1.15,
+  "bremsbelag": 1.15,
+  "bremstrommel": 1.15,
+  "bremsbacke": 1.15,
+  "bremssattel": 1.15,
+  "bremsschlauch": 1.15,
+  "kupplung": 1.15,
+  "schwungrad": 1.15,
+  // 1,12 — Batterien
+  "batterie": 1.12,
+  // 1,18 — Turbo, Anlasser, Lichtmaschine, Dämpfer, Querlenker, Radlager, Zahnriemen, Wasserpumpe, Scheinwerfer
+  "turbolader": 1.18,
+  "anlasser": 1.18,
+  "generator": 1.18,
+  "lichtmaschine": 1.18,
+  "stossdaempfer": 1.18,
+  "querlenker": 1.18,
+  "radlager": 1.18,
+  "zahnriemen": 1.18,
+  "wasserpumpe": 1.18,
+  "scheinwerfer": 1.18,
+  // 1,25 — Filter, Wischer, Spulen, Riemen, Federn, Spurstangen, Koppelstangen, Öle, Kerzen
+  "oelfilter": 1.25,
+  "luftfilter": 1.25,
+  "innenraum": 1.25,
+  "pollenfilter": 1.25,
+  "kraftstofffilter": 1.25,
+  "filtersatz": 1.25,
+  "wischer": 1.25,
+  "zuendspule": 1.25,
+  "keilrippenriemen": 1.25,
+  "feder": 1.25,
+  "spurstange": 1.25,
+  "koppelstange": 1.25,
+  "motoroel": 1.25,
+  "getriebeoel": 1.25,
+  "kuehlmittel": 1.25,
+  "frostschutz": 1.25,
+  "bremsfluessigkeit": 1.25,
+  "zuendkerze": 1.25,
+  "gluehkerze": 1.25,
+  // 1,35 — Kleinteile
+  "gluehlampe": 1.35,
+  "verschleisswarnkontakt": 1.35,
 });
 
 function zahl(v, min, max, standard) {
@@ -145,16 +138,16 @@ function norm(s) {
     .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss");
 }
 
-/** Gastpreis, unter dem selbst das höchste Mitglied noch Einkauf + Kosten deckt. */
+/** Untergrenze: (EK × (1 + Marge) + Fix) / (1 − Gebühr). Standard deckt EK + 2,50 € plus 0,25 € und 1,5 % Zahlungsgebühr. */
 export function mindestpreis(ek, env) {
   const e = env || {};
   if (/^(0|aus|false|nein)$/i.test(String(e.PRICE_FLOOR || "").trim())) return 0;
-  const marge = zahl(e.PRICE_FLOOR_MARGE, 0, 1, 0.04);
-  const fix = zahl(e.PRICE_FLOOR_FIX, 0, 50, 1.5);
-  const rabatt = zahl(e.PRICE_FLOOR_RABATT, 0, 0.9, 0.4);
+  const marge = zahl(e.PRICE_FLOOR_MARGE, 0, 1, 0);
+  const fix = zahl(e.PRICE_FLOOR_FIX, 0, 50, 2.75);
+  const gebuehr = zahl(e.PRICE_FLOOR_RABATT, 0, 0.9, 0.015);
   const x = Number(ek) || 0;
   if (!(x > 0)) return 0;
-  return Math.ceil(((x * (1 + marge) + fix) / (1 - rabatt)) * 100) / 100;
+  return Math.ceil(((x * (1 + marge) + fix) / (1 - gebuehr)) * 100) / 100;
 }
 
 /**
