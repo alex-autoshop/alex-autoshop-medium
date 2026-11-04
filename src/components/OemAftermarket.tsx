@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 /**
  * Rechte Spalte, wenn in der Explosionszeichnung ein Teil angeklickt wurde:
  * die kaufbaren Ersatzteile dazu — in genau derselben Zeile wie in der
- * normalen Teilebörse (Foto, Marke, Lieferzeit, Mitgliedspreis, Warenkorb).
+ * normalen Teilebörse (Foto, Marke, Lieferzeit, Preis, Warenkorb).
  * Ein System, keine zweite Oberfläche.
  *
  * Reihenfolge wie überall in der Teilebörse: was am schnellsten da ist, steht

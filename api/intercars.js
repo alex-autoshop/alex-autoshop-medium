@@ -161,16 +161,13 @@ function artVariantsServer(artNo) {
 // Zentral, damit Trefferliste, Checkout und Margenrechner exakt dieselbe Zahl
 // sehen.
 //
-// Jedes Teil bekommt einen EIGENEN Aufschlag: Basis ± Spanne, festgelegt durch
-// einen geheimen Schlüssel und die SKU (HMAC). Bei einem festen Faktor ließe
-// sich der Einkaufspreis aus jedem Verkaufspreis zurückrechnen — mit diesem
-// Verfahren nicht mehr: ohne das Geheimnis kennt niemand den Faktor eines
-// Teils, und wer einen EK kennt, lernt daraus nichts über die anderen.
-// Derselbe Artikel hat immer denselben Faktor, Preise springen also nicht.
+// Jedes Teil bekommt den Faktor seiner Warengruppe. Die Streuung ist
+// standardmäßig aus (PRICE_SPANNE=0), damit der Preis vorhersagbar bleibt.
+// Ein gesetztes PRICE_SPANNE nutzt weiter den HMAC über SKU und Geheimnis.
 //
-// Vercel-Env (alle optional, Standard bleibt ×2,0 und ohne Deckel):
-//   PRICE_MARKUP         Basis-Aufschlag                  (sonst 2.0)
-//   PRICE_SPANNE         Streuung je Teil, 0.05 = ±5 %    (0 = aus)
+// Vercel-Env (alle optional, Standard ist die Tabelle in shared/aufschlag.js):
+//   PRICE_MARKUP         Basis für Teile ohne Gruppe      (sonst 1.35)
+//   PRICE_SPANNE         Streuung je Teil, 0 = aus        (0.05 = ±5 %)
 //   PRICE_SALT           Geheimnis für die Streuung       (sonst INTERCARS_CLIENT_SECRET)
 //   PRICE_MARKUP_GROUPS  JSON, ersetzt die Standard-Warengruppen in shared/aufschlag.js
 //   PRICE_MARKET_CAP     Standard an (höchstens UVP, nie unter Mindestpreis), "0" = aus

@@ -6,10 +6,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * DHL-Pauschale innerhalb Deutschlands.
- * Aktive bezahlte Mitgliedschaft (Level 1–3) zahlt sie nie.
- * Alle anderen: dieser Betrag, kostenlos ab VERSAND_FREI_AB.
- * Die kostenlose Teststunde ist keine bezahlte Mitgliedschaft.
+ * DHL-Pauschale der Teilebörse innerhalb Deutschlands.
+ * Für alle gleich: dieser Betrag, kostenlos ab VERSAND_FREI_AB, Abholung 0 €.
+ * Kostenloser Versand für Mitglieder gilt nur im Shopify-Shop, nicht hier.
  */
 export const DHL_EUR = 7.49;
 
@@ -34,13 +33,12 @@ export function istStarterbatterie(name) {
 }
 
 /**
- * @param {{ summe: number, mitglied?: boolean, abholung?: boolean }} wahl
+ * @param {{ summe: number, abholung?: boolean }} wahl
  * summe = Warenwert ohne Versand und ohne Pfand.
- * mitglied = aktive bezahlte Mitgliedschaft (Level 1–3), nicht die Teststunde.
+ * Teilebörse: kein Mitglieds-Versand. Abholung und Warenwert ab VERSAND_FREI_AB sind frei.
  */
 export function versandkosten(wahl) {
   if (wahl && wahl.abholung) return 0;
-  if (wahl && wahl.mitglied) return 0;
   const summe = Number(wahl && wahl.summe) || 0;
   if (summe >= VERSAND_FREI_AB) return 0;
   return DHL_EUR;

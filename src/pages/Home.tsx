@@ -155,8 +155,8 @@ export default function Home() {
           <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-10">
             <h2 className="text-2xl sm:text-3xl mb-3">Ein Lieferant für deine ganze Werkstatt.</h2>
             <p className="text-muted-foreground">
-              Lack, Teile und Werkstattbedarf aus einer Hand — mit bis zu 40% Mitglieder-Rabatt.
-              Monatlich kündbar, keine Mindestabnahme.
+              Lack und Werkstattbedarf im Shop — mit bis zu 40% Mitglieder-Rabatt.
+              Die Teilebörse hat einen Preis für alle. Monatlich kündbar, keine Mindestabnahme.
             </p>
           </motion.div>
           <MembershipCards />

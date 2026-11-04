@@ -22,7 +22,7 @@ import { icPriceLookup } from "@/lib/intercarsGateway";
 import { ADMIN_EMAILS } from "@/lib/inbox";
 import { akteEintragen } from "@/lib/fahrzeugakte";
 import { ArticleExpander, BrandFilter, SubCatList } from "@/components/TeileportalExtras";
-import { MembershipSelect, useMembership, PriceBlock, DeliveryBadge, SpecStrip, type MemberLevelId } from "@/components/TeileportalPricing";
+import { useMembership, PriceBlock, DeliveryBadge, SpecStrip, type MemberLevelId } from "@/components/TeileportalPricing";
 import { useAuth } from "@/context/AuthContext";
 import { OemExplosionView } from "@/components/OemExplosionView";
 import { OemCatalog } from "@/components/OemCatalog";
@@ -1062,7 +1062,7 @@ export default function Teileportal() {
               {/* Feature Badges */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
                 className="flex flex-wrap justify-center gap-2 mb-5">
-                {['TecDoc-Katalog', 'Preise und Bestand von Inter Cars', 'B2B-Preise ab Level 1', 'Abholung in Wuppertal'].map(b => (
+                {['TecDoc-Katalog', 'Preise und Bestand von Inter Cars', 'Ein Preis für alle', 'Abholung in Wuppertal'].map(b => (
                   <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium text-primary">
                     <Check className="w-3.5 h-3.5" /> {b}
                   </span>
@@ -1500,9 +1500,6 @@ export default function Teileportal() {
                         <span className="text-muted-foreground font-normal text-sm ml-2">({totalCount > articles.length ? totalCount : articles.length})</span>
                       </span>
                       <div className="flex items-center gap-3">
-                        {(actualLevel !== "none" || istAdmin) && (
-                          <MembershipSelect level={effectiveMemberLevel} onChange={setMemberLevel} />
-                        )}
                         {selectedBrands.size > 0 && <span className="text-sm text-muted-foreground">{filtered.length} gefiltert</span>}
                       </div>
                     </div>

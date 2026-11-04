@@ -4,7 +4,7 @@ import {
   Eye, EyeOff, KeyRound, Loader2, Printer, QrCode, Store, Calculator, Check, X,
   TriangleAlert, ChevronDown, Copy,
 } from "lucide-react";
-import { MEMBER_LEVELS, eur, memberPrice, type MemberLevelId } from "@/components/TeileportalPricing";
+import { eur, type MemberLevelId } from "@/components/TeileportalPricing";
 import { adminPinLesen, adminPinSetzen, adminKopf, adminFehlerAus, type EkPreis, type AdminFehler } from "@/lib/adminZugang";
 import { marge, vkFuerMarge, grundpreis, prozentText, zahlAusText, netto, brutto, rund2 } from "@/lib/marge";
 import { SHOP_INFO } from "@/data/shopInfo";
@@ -22,15 +22,7 @@ import { cn } from "@/lib/utils";
  * Abholschein.
  */
 
-export const STUFEN: { id: MemberLevelId; kurz: string; pct: number }[] = [
-  { id: "none", kurz: "Einzelhandel", pct: 0 },
-  ...MEMBER_LEVELS.map((l) => ({ id: l.id as MemberLevelId, kurz: `L${l.id.slice(1)} −${l.pct} %`, pct: l.pct })),
-];
-
-export const preisBeiStufe = (listenpreis: number, level: MemberLevelId) => {
-  const l = MEMBER_LEVELS.find((x) => x.id === level);
-  return l ? memberPrice(listenpreis, l.pct) : listenpreis;
-};
+export const preisBeiStufe = (listenpreis: number, _level?: MemberLevelId) => listenpreis;
 
 const THEKE_KEY = "tp:theke";
 export function thekeGemerkt(): boolean {
@@ -101,25 +93,9 @@ export function ThekenLeiste({
         </button>
       </div>
 
-      <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-black/50 mb-1">Preis für den Kunden</p>
-        <div role="radiogroup" aria-label="Preis für den Kunden" className="grid grid-cols-4 gap-1">
-          {STUFEN.map((s) => (
-            <button
-              key={s.id}
-              role="radio"
-              aria-checked={level === s.id}
-              onClick={() => onLevel(s.id)}
-              className={cn(
-                "rounded-lg px-1 py-1.5 text-[11px] font-semibold leading-tight border transition-colors",
-                level === s.id ? "bg-primary text-primary-foreground border-primary" : "bg-white text-black/70 border-black/10 hover:border-black/30",
-              )}
-            >
-              {s.kurz}
-            </button>
-          ))}
-        </div>
-      </div>
+      <p className="text-[11px] text-black/70 leading-snug">
+        Ein Preis für alle. Die Mitgliedschaft ändert den Teilepreis nicht.
+      </p>
 
       <div className="grid grid-cols-2 gap-1.5">
         <input value={kunde} onChange={(e) => setKunde(e.target.value)} placeholder="Kunde (optional)"
@@ -172,45 +148,38 @@ export function MargenZeile({ ek, vkStueck, menge }: { ek?: EkPreis | null; vkSt
 
 export interface MargenPosition { listenpreis: number; menge: number; ek?: EkPreis | null }
 
-export function MargenSumme({ positionen, level }: { positionen: MargenPosition[]; level: MemberLevelId }) {
+export function MargenSumme({ positionen }: { positionen: MargenPosition[]; level?: MemberLevelId }) {
   const mitEk = positionen.filter((p) => p.ek && p.ek.ekBrutto > 0);
   if (mitEk.length === 0) return null;
   const fehlt = positionen.length - mitEk.length;
-  const zeile = (lv: MemberLevelId) => {
-    const vk = mitEk.reduce((s, p) => s + preisBeiStufe(p.listenpreis, lv) * p.menge, 0);
-    const ek = mitEk.reduce((s, p) => s + (p.ek as EkPreis).ekBrutto * p.menge, 0);
-    return { vk: rund2(vk), ek: rund2(ek), ...marge(vk, ek) };
-  };
+  const vk = mitEk.reduce((s, p) => s + p.listenpreis * p.menge, 0);
+  const ek = mitEk.reduce((s, p) => s + (p.ek as EkPreis).ekBrutto * p.menge, 0);
+  const z = { vk: rund2(vk), ek: rund2(ek), ...marge(vk, ek) };
   return (
     <div className="rounded-xl border border-border bg-secondary/30 p-2.5 text-[11.5px]">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-        Marge bei jeder Stufe{fehlt > 0 ? ` · ${fehlt} Pos. ohne EK nicht drin` : ""}
+        Marge zum Verkaufspreis{fehlt > 0 ? ` · ${fehlt} Pos. ohne EK nicht drin` : ""}
       </p>
       <table className="w-full tabular-nums">
         <thead>
           <tr className="text-[10px] text-muted-foreground">
-            <th className="text-left font-medium pb-1">Stufe</th>
+            <th className="text-left font-medium pb-1">Preis</th>
             <th className="text-right font-medium pb-1">Kunde zahlt</th>
             <th className="text-right font-medium pb-1">Rohertrag</th>
             <th className="text-right font-medium pb-1">Marge</th>
           </tr>
         </thead>
         <tbody>
-          {STUFEN.map((s) => {
-            const z = zeile(s.id);
-            return (
-              <tr key={s.id} className={cn(level === s.id && "font-bold text-primary")}>
-                <td className="py-0.5">{s.id === "none" ? "Einzelhandel" : s.kurz.split(" ")[0]}</td>
-                <td className="py-0.5 text-right">{eur(z.vk)}</td>
-                <td className="py-0.5 text-right">{eur(z.rohertrag)}</td>
-                <td className={cn("py-0.5 text-right", z.prozent < 10 && "text-red-700")}>{prozentText(z.prozent)}</td>
-              </tr>
-            );
-          })}
+          <tr className="font-bold">
+            <td className="py-0.5">Verkauf</td>
+            <td className="py-0.5 text-right">{eur(z.vk)}</td>
+            <td className="py-0.5 text-right">{eur(z.rohertrag)}</td>
+            <td className={cn("py-0.5 text-right", z.prozent < 10 && "text-red-700")}>{prozentText(z.prozent)}</td>
+          </tr>
         </tbody>
       </table>
       <p className="text-[10px] text-muted-foreground mt-1.5">
-        EK gesamt {eur(zeile("none").ek)} · Rohertrag netto (ohne MwSt)
+        EK gesamt {eur(z.ek)} · Rohertrag netto (ohne MwSt). Kein Mitgliedsrabatt auf Teile.
       </p>
     </div>
   );
@@ -262,28 +231,22 @@ export function Margenrechner({ vorschlagEk, aufschlag = 2 }: { vorschlagEk?: nu
 
           {Number.isFinite(ekBrutto) && (
             <>
-              <table className="w-full tabular-nums text-[11.5px]" aria-label="Preise und Marge je Stufe">
+              <table className="w-full tabular-nums text-[11.5px]" aria-label="Preis und Marge">
                 <thead>
                   <tr className="text-[10px] text-muted-foreground">
-                    <th className="text-left font-medium pb-1">Stufe</th>
+                    <th className="text-left font-medium pb-1">Preis</th>
                     <th className="text-right font-medium pb-1">VK</th>
                     <th className="text-right font-medium pb-1">Rohertrag</th>
                     <th className="text-right font-medium pb-1">Marge</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {STUFEN.map((s) => {
-                    const p = preisBeiStufe(grund, s.id);
-                    const m = marge(p, ekBrutto);
-                    return (
-                      <tr key={s.id}>
-                        <td className="py-0.5">{s.id === "none" ? `Einzelhandel (Ø ×${aufschlag.toFixed(2).replace(".", ",")})` : s.kurz}</td>
-                        <td className="py-0.5 text-right">{eur(p)}</td>
-                        <td className="py-0.5 text-right">{eur(m.rohertrag)}</td>
-                        <td className={cn("py-0.5 text-right", m.prozent < 10 && "text-red-700")}>{prozentText(m.prozent)}</td>
-                      </tr>
-                    );
-                  })}
+                  <tr>
+                    <td className="py-0.5">{`Verkauf (Ø ×${aufschlag.toFixed(2).replace(".", ",")})`}</td>
+                    <td className="py-0.5 text-right">{eur(grund)}</td>
+                    <td className="py-0.5 text-right">{eur(marge(grund, ekBrutto).rohertrag)}</td>
+                    <td className={cn("py-0.5 text-right", marge(grund, ekBrutto).prozent < 10 && "text-red-700")}>{prozentText(marge(grund, ekBrutto).prozent)}</td>
+                  </tr>
                 </tbody>
               </table>
               <p className="text-[10px] text-muted-foreground -mt-1">
@@ -372,7 +335,7 @@ export function QrZahlung({
   const [stand, setStand] = useState<QrStand>({ art: "laden" });
   const [versuch, setVersuch] = useState(0);
   const [kopiert, setKopiert] = useState(false);
-  const stufe = level === "none" ? 0 : Number(level.slice(1));
+  const stufe = 0;
 
   // Zahlungssitzung anlegen — der Server rechnet den Preis selbst.
   useEffect(() => {
@@ -457,7 +420,7 @@ export function QrZahlung({
           <div className="flex flex-col items-center text-center">
             <p className="text-3xl font-bold tabular-nums mb-1">{eur(stand.summe)}</p>
             <p className="text-[12px] text-black/60 mb-3">
-              {kunde ? `${kunde} · ` : ""}{STUFEN.find((s) => s.id === level)?.kurz}
+              {kunde || "Ein Preis für alle"}
             </p>
             <QrBild text={stand.url} />
             <p className="text-[12px] text-black/70 mt-3 leading-snug">

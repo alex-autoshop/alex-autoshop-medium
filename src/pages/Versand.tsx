@@ -26,7 +26,7 @@ export default function Versand() {
     <>
       <Seo
         title="Versand & Lieferung"
-        description="Versandkosten, Lieferzeiten und Lieferregeln für Alex Autoshop — kostenloser Versand ab 150€, Mitglieder immer kostenlos."
+        description="Versandkosten bei Alex Autoshop: Teilebörse 7,49 € DHL für alle, frei ab 150 €. Im Shopify-Shop ist der Versand für Mitglieder kostenlos."
       />
 
       <div className="max-w-3xl mx-auto px-4 py-12 space-y-10">
@@ -43,16 +43,16 @@ export default function Versand() {
           </p>
         </div>
 
-        {/* ── Mitglieder-Highlight ── */}
         <div className="rounded-2xl border border-primary/30 bg-primary/5 p-5 flex gap-4">
           <div className="shrink-0 w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
             <Star className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="font-semibold text-sm">Bezahlte Mitgliedschaft: Versand immer kostenlos</p>
+            <p className="font-semibold text-sm">Mitgliedschaft gilt im Shopify-Shop</p>
             <p className="text-muted-foreground text-sm mt-0.5">
-              Mit aktiver Mitgliedschaft Level 1, 2 oder 3 kostet DHL nichts, auch unter {FREE_THRESHOLD} €.
-              Die kostenlose Teststunde zählt nicht dazu.
+              Mit aktiver bezahlter Mitgliedschaft (Level 1–3) ist der Versand im Shopify-Shop kostenlos,
+              auch unter {FREE_THRESHOLD} €. In der Teilebörse zahlt jeder {DHL_RATE.toFixed(2).replace(".", ",")} € DHL,
+              frei ab {FREE_THRESHOLD} €. Die Teststunde ist kein kostenloser Shop-Versand.
             </p>
           </div>
         </div>
@@ -79,8 +79,9 @@ export default function Versand() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
+              <ShippingBadge label="Teilebörse: für alle gleich" highlight />
               <ShippingBadge label="Ab 150 € kostenlos" highlight />
-              <ShippingBadge label="Mitglieder immer gratis" highlight />
+              <ShippingBadge label="Shop: Mitglieder gratis" />
               <ShippingBadge label="Sendungsverfolgung inklusive" />
             </div>
           </div>
@@ -122,7 +123,7 @@ export default function Versand() {
 
             <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
               <ShippingBadge label="Ab 150 € kostenlos" highlight />
-              <ShippingBadge label="Mitglieder immer gratis" highlight />
+              <ShippingBadge label="Shop: Mitglieder gratis" />
               <ShippingBadge label="Per WhatsApp koordiniert" />
             </div>
           </div>
@@ -145,7 +146,7 @@ export default function Versand() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
-              <ShippingBadge label="Mitglieder kostenlos" highlight />
+              <ShippingBadge label="Shop: Mitglieder gratis" />
               <ShippingBadge label="Auf Anfrage" />
               <ShippingBadge label="WhatsApp: 0202 82690" />
             </div>
@@ -184,19 +185,24 @@ export default function Versand() {
               </thead>
               <tbody className="divide-y divide-border">
                 <tr>
-                  <td className="py-2.5 pr-4 font-medium">Normalkunde</td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">Bestellwert &lt; 150 €</td>
+                  <td className="py-2.5 pr-4 font-medium">Teilebörse, alle Kunden</td>
+                  <td className="py-2.5 pr-4 text-muted-foreground">Warenwert &lt; 150 €</td>
                   <td className="py-2.5 text-muted-foreground">{DHL_RATE.toFixed(2).replace(".", ",")} € DHL</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 pr-4 font-medium">Normalkunde</td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">Bestellwert ≥ 150 €</td>
+                  <td className="py-2.5 pr-4 font-medium">Teilebörse, alle Kunden</td>
+                  <td className="py-2.5 pr-4 text-muted-foreground">Warenwert ≥ 150 €</td>
                   <td className="py-2.5 font-semibold text-primary">Kostenlos ✓</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 pr-4 font-medium">Bezahlte Mitgliedschaft Level 1–3</td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">Jede Bestellung</td>
-                  <td className="py-2.5 font-semibold text-primary">Immer kostenlos ✓</td>
+                  <td className="py-2.5 pr-4 font-medium">Shopify-Shop, Mitglied Level 1–3</td>
+                  <td className="py-2.5 pr-4 text-muted-foreground">Jede Shop-Bestellung</td>
+                  <td className="py-2.5 font-semibold text-primary">Kostenlos ✓</td>
+                </tr>
+                <tr>
+                  <td className="py-2.5 pr-4 font-medium">Shopify-Shop ohne Mitgliedschaft</td>
+                  <td className="py-2.5 pr-4 text-muted-foreground">Wie die Teilebörse</td>
+                  <td className="py-2.5 text-muted-foreground">{DHL_RATE.toFixed(2).replace(".", ",")} €, frei ab 150 €</td>
                 </tr>
               </tbody>
             </table>

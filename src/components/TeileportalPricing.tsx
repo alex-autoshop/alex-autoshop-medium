@@ -1,9 +1,9 @@
 /**
  * Preis-/Liefer-Bausteine fürs Teileportal — IC-Style Design.
- * Mitgliedspreise (Level 1–3), Lieferprognose, Spec-Zeile.
+ * Ein Verkaufspreis für alle. Die Mitgliedschaft gilt im Shopify-Shop.
  */
 import { useEffect, useState } from "react";
-import { ChevronDown, Crown, Truck, Zap } from "lucide-react";
+import { Crown, Truck, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { merkmaleLaden, positionZuerst } from "@/lib/einbauposition";
 
@@ -44,69 +44,15 @@ export function MembershipSelect({ level, onChange }: { level: MemberLevelId; on
 // ─── IC-STYLE PREIS-BLOCK ────────────────────────────────────
 
 /**
- * Preisanzeige:
- * - Einzelhandel / UVP (groß, fett) = was Kunden zahlen
- * - Mitgliedspreis: hervorgehoben mit Badge wenn Level gewählt
- *
- * WICHTIG: Der Einkaufspreis verlaesst den Server gar nicht mehr — Kunden duerfen
- * unsere Einkaufskonditionen nicht sehen. Das Feld bleibt nur bestehen, damit
- * bestehende Aufrufer nicht brechen; es wird bewusst ignoriert.
+ * Ein Bruttopreis für alle. `level` bleibt in der Signatur, damit bestehende
+ * Aufrufer nicht brechen; die Teilebörse rechnet keinen Mitgliedsrabatt.
  */
-export function PriceBlock({
-  price,
-  level,
-}: {
-  price: number;
-  /** @deprecated Einkaufspreis — wird NICHT mehr angezeigt. */
-  level: MemberLevelId;
-}) {
-  const [open, setOpen] = useState(false);
-  const my = MEMBER_LEVELS.find((l) => l.id === level);
-  const myPrice = my ? memberPrice(price, my.pct) : null;
-
+export function PriceBlock({ price }: { price: number; level?: MemberLevelId }) {
   return (
     <div className="text-right">
-      {myPrice != null ? (
-        <>
-          <p className="text-xs text-muted-foreground leading-none mb-0.5">
-            Einzelhandel <span className="line-through">{eur(price)}</span>
-          </p>
-          <p className="font-bold text-lg leading-tight text-primary">{eur(myPrice)}</p>
-          <p className="text-[10px] text-muted-foreground leading-none mb-0.5">inkl. MwSt</p>
-          <span className="inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary leading-none">
-            −{my!.pct} % {my!.name}
-          </span>
-        </>
-      ) : (
-        <>
-          <p className="text-[11px] text-muted-foreground/70 leading-none mb-0.5">Einzelhandel</p>
-          <p className="font-bold text-lg leading-tight">{eur(price)}</p>
-          <p className="text-[10px] text-muted-foreground leading-none">inkl. MwSt</p>
-        </>
-      )}
-
-      {/* Mitgliedspreise aufklappbar */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
-      >
-        Mitgliedspreise <ChevronDown className={cn("w-2.5 h-2.5 transition-transform", open && "rotate-180")} />
-      </button>
-      {open && (
-        <div className="mt-1 rounded-lg border border-border bg-secondary/40 text-[11px] divide-y divide-border/60 overflow-hidden text-left min-w-[160px]">
-          <div className="flex justify-between gap-3 px-2.5 py-1.5 font-medium">
-            <span>Einzelhandel</span><b>{eur(price)}</b>
-          </div>
-          {MEMBER_LEVELS.map((l) => (
-            <div key={l.id} className={cn(
-              "flex justify-between gap-3 px-2.5 py-1.5",
-              level === l.id && "bg-primary/10 text-primary font-semibold"
-            )}>
-              <span>{l.name} (−{l.pct} %)</span><b>{eur(memberPrice(price, l.pct))}</b>
-            </div>
-          ))}
-        </div>
-      )}
+      <p className="text-[11px] text-muted-foreground/70 leading-none mb-0.5">Preis</p>
+      <p className="font-bold text-lg leading-tight">{eur(price)}</p>
+      <p className="text-[10px] text-muted-foreground leading-none">inkl. MwSt</p>
     </div>
   );
 }
