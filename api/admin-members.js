@@ -14,11 +14,17 @@
  *   ADMIN_PIN                  — frei wählbar, nur Alex kennt ihn
  *   SUPABASE_SERVICE_ROLE_KEY  — bereits gesetzt (nutzt auch membership-email)
  *   VITE_SUPABASE_URL          — bereits gesetzt
+ *
+ * POST { aktion: "shopify-mitglied", ab?: number } markiert alle aktiven
+ * Mitglieder (Stufe 1–3, keine Teststunde) im Shopify-Kundenstamm mit dem
+ * Tag "mitglied". Dafür zusätzlich SHOPIFY_ADMIN_TOKEN und optional
+ * SHOPIFY_STORE_DOMAIN. Die Antwort nennt shopifyKonfiguriert nur als ja/nein.
  */
 
 export const config = { runtime: 'nodejs', maxDuration: 30 };
 
 import { adminPruefen } from './_admin.js';
+import { shopifyConfigured, shopifyMitgliedTag } from './_shopify-order.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://zasbdvtsxgimcezotlsi.supabase.co';
 const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -28,6 +34,66 @@ function send(res, status, obj) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
   res.status(status).end(JSON.stringify(obj));
+}
+
+async function aktiveMitgliedsMails() {
+  const mails = [];
+  for (let page = 1; page <= 20; page++) {
+    const data = await sb(`/auth/v1/admin/users?page=${page}&per_page=200`);
+    const batch = Array.isArray(data) ? data : data.users || [];
+    for (const u of batch) {
+      const level = Number(u?.app_metadata?.membership_level);
+      const email = String(u?.email || '').trim().toLowerCase();
+      if ([1, 2, 3].includes(level) && email) mails.push(email);
+    }
+    if (batch.length < 200) break;
+  }
+  return [...new Set(mails)];
+}
+
+async function shopifyMitgliederMarkieren(res, body) {
+  const konfiguriert = shopifyConfigured();
+  let mails = [];
+  try {
+    mails = await aktiveMitgliedsMails();
+  } catch (e) {
+    return send(res, 502, { error: String(e?.message || e).slice(0, 200), shopifyKonfiguriert: konfiguriert });
+  }
+  if (!konfiguriert) {
+    return send(res, 200, {
+      shopifyKonfiguriert: false,
+      aktiv: mails.length,
+      hinweis: 'SHOPIFY_ADMIN_TOKEN fehlt — es wurde niemand markiert.',
+    });
+  }
+  const roh = Number(body?.ab);
+  const start = Number.isFinite(roh) ? Math.max(0, Math.min(mails.length, Math.floor(roh))) : 0;
+  const zaehler = { gesetzt: 0, angelegt: 0, unverändert: 0, fehler: 0 };
+  const fehler = [];
+  const t0 = Date.now();
+  let index = start;
+  for (; index < mails.length; index++) {
+    if (Date.now() - t0 > 20000) break;
+    const r = await shopifyMitgliedTag(mails[index], true);
+    if (!r.ok) {
+      zaehler.fehler += 1;
+      if (fehler.length < 30) fehler.push({ email: mails[index], grund: r.grund || 'fehler' });
+      continue;
+    }
+    if (r.aktion === 'gesetzt') zaehler.gesetzt += 1;
+    else if (r.aktion === 'angelegt') zaehler.angelegt += 1;
+    else zaehler.unverändert += 1;
+  }
+  return send(res, 200, {
+    shopifyKonfiguriert: true,
+    tag: 'mitglied',
+    aktiv: mails.length,
+    ab: start,
+    naechste: index,
+    fertig: index >= mails.length,
+    ...zaehler,
+    fehler,
+  });
 }
 
 async function sb(path) {
@@ -61,6 +127,9 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body || '{}'); } catch { body = {}; } }
+    if (body?.aktion === 'shopify-mitglied') {
+      return shopifyMitgliederMarkieren(res, body);
+    }
     const ziel = String(body?.userId || '');
     const betrag = Math.round(Number(body?.betrag) * 100) / 100;
     if (body?.aktion !== 'guthaben' || !/^[0-9a-f-]{36}$/i.test(ziel) || !betrag || Math.abs(betrag) > 10000) {
