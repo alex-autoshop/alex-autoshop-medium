@@ -4,12 +4,12 @@ const AGB = () => (
     <article className="prose-legal">
       <h1>Allgemeine Geschäfts{"\u00AD"}bedingungen (AGB)</h1>
       <p><em>Alex Autoshop – Alexander Haritopoulos</em></p>
-      <p><em>Stand: Juni 2025</em></p>
+      <p><em>Stand: November 2026. Die Formulierung soll ein Anwalt gegenlesen, bevor sie als endgültiger Rechtstext gilt.</em></p>
 
       <hr />
 
       <h3>1. Geltungsbereich</h3>
-      <p>Diese AGB gelten für alle Bestellungen über unseren Online-Shop unter <a href="https://www.alex-autoshop.de">www.alex-autoshop.de</a> durch Verbraucher und Unternehmer.</p>
+      <p>Diese AGB gelten für Bestellungen über den Online-Shop und die Teilebörse unter <a href="https://www.alex-autoshop.de">www.alex-autoshop.de</a> durch Verbraucher und Unternehmer.</p>
       <p>Verbraucher ist jede natürliche Person, die ein Rechtsgeschäft zu Zwecken abschließt, die überwiegend weder ihrer gewerblichen noch ihrer selbstständigen beruflichen Tätigkeit zugerechnet werden können (§ 13 BGB). Unternehmer ist eine natürliche oder juristische Person oder eine rechtsfähige Personengesellschaft, die bei Abschluss eines Rechtsgeschäfts in Ausübung ihrer gewerblichen oder selbstständigen beruflichen Tätigkeit handelt (§ 14 BGB).</p>
 
       <hr />
@@ -33,28 +33,29 @@ const AGB = () => (
 
       <h3>4. Preise und Versandkosten</h3>
       <p>Alle Preise verstehen sich in Euro, inklusive der gesetzlichen Mehrwertsteuer.</p>
-      <p>Versandkosten innerhalb Deutschlands:</p>
+      <p>Versandkosten innerhalb Deutschlands, gleichlautend mit der Seite Versand:</p>
       <ul>
-        <li><strong>5,90 € pauschal</strong></li>
-        <li><strong>Kostenloser Versand ab einem Bestellwert von 100 €</strong></li>
-        <li>Versand nach Österreich oder in die Schweiz auf Anfrage per WhatsApp oder E-Mail</li>
+        <li><strong>DHL 5,90 € pauschal</strong></li>
+        <li><strong>Kostenlos ab einem Bestellwert von 150 €</strong> und für Mitglieder der Stufen Level 1 bis 3</li>
+        <li>Selbstabholung in der Handelstraße 64, Wuppertal, ohne Versandkosten</li>
+        <li>Lieferung im Umkreis von Wuppertal sowie Versand nach Österreich oder in die Schweiz nur auf Anfrage per WhatsApp oder E-Mail, nicht automatisch an der Kasse</li>
       </ul>
-      <p>Für Gefahrgut (z. B. Spraydosen, Lacke) gelten keine zusätzlichen Versandzuschläge, außer im Einzelfall.</p>
+      <p>Für Starterbatterien in der Teilebörse berechnen wir ein Batteriepfand von 7,50 € je Batterie. Einen pauschalen Altteilpfand erheben wir nicht. Für Gefahrgut (z. B. Spraydosen, Lacke) können im Einzelfall Zuschläge anfallen; wir sagen das vor der Sendung.</p>
 
       <hr />
 
       <h3>5. Zahlungsmethoden</h3>
       <p>Folgende Zahlungsmethoden werden akzeptiert:</p>
       <ul>
-        <li>Shopify Payments (inkl. Klarna, Kreditkarte, Sofortüberweisung, Apple Pay usw.)</li>
-        <li>PayPal</li>
+        <li>Im Lack- und Werkstattshop: Shopify Payments und PayPal</li>
+        <li>In der Teilebörse: Kartenzahlung und SEPA-Lastschrift, sobald die Zahlungsanbieter eingerichtet sind. Bis dahin nimmt die Teilebörse die Bestellung als Anfrage entgegen.</li>
       </ul>
 
       <hr />
 
       <h3>6. Lieferung</h3>
-      <p>Die Lieferung erfolgt mit DHL innerhalb von Deutschland. Auf Anfrage versenden wir auch nach Österreich oder in die Schweiz.</p>
-      <p><strong>Lieferzeit:</strong> 2–4 Werktage, längere Lieferzeiten werden auf der Produktseite angegeben.</p>
+      <p>Die Lieferung erfolgt mit DHL innerhalb von Deutschland. Auf Anfrage versenden wir auch nach Österreich oder in die Schweiz. Die Teilebörse liefert an der Kasse nur nach Deutschland oder zur Abholung.</p>
+      <p><strong>Lieferzeit:</strong> beim Lack-Shop in der Regel 1–3 Werktage, in der Teilebörse das Datum, das Inter Cars zum Artikel nennt. Längere Zeiten stehen am Artikel.</p>
       <p><strong>Sendungsverfolgung:</strong> Ja (via Parcel Panel App)</p>
       <p><strong>Selbstabholung</strong> im Ladengeschäft in Wuppertal ist möglich.</p>
       <p><strong>Teillieferungen</strong> behalten wir uns vor, falls technisch oder logistisch erforderlich.</p>

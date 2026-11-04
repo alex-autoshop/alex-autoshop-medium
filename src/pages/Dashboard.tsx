@@ -709,7 +709,7 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
         <div className="card-tilt hover:translate-y-0 p-6">
           <p className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">Empfohlene Kollegen</p>
           <p className="text-4xl font-display font-bold">{geworben ?? "–"}</p>
-          <p className="text-xs text-muted-foreground mt-2">Live-Tracking — aktualisiert sich automatisch</p>
+          <p className="text-xs text-muted-foreground mt-2">Stand beim Öffnen dieser Seite</p>
         </div>
       </div>
 

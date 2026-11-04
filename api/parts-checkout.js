@@ -42,6 +42,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { adminPruefen } from "./_admin.js";
+import { versandkosten, pfandBetrag, DHL_EUR, VERSAND_FREI_AB } from "../shared/versand.js";
 
 const BASE = () => (process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de").replace(/\/+$/, "");
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co";
@@ -332,7 +333,7 @@ async function preisHolen(articleNumber, brand, origin) {
 }
 
 // ── Stripe: Einmalzahlung ────────────────────────────────────────────────────
-async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, userId, guthaben = 0 }) {
+async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, userId, guthaben = 0, versand = 0, pfand = 0, pfandStueck = 0 }) {
   const key = stripeKey();
   if (!key) return { fallback: true };
 
@@ -370,24 +371,43 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, u
     form.set("success_url", `${BASE()}/teileboerse?zahlung=ok&session_id={CHECKOUT_SESSION_ID}`);
     form.set("cancel_url", `${BASE()}/teileboerse?zahlung=abbruch`);
     form.set("billing_address_collection", "required");
+    // Nur Deutschland. Österreich und die Schweiz laufen auf Anfrage, wie auf
+    // der Versandseite — nicht still als Lieferland in der Kasse.
     form.set("shipping_address_collection[allowed_countries][0]", "DE");
-    form.set("shipping_address_collection[allowed_countries][1]", "AT");
     // Mit Guthaben: Bezahlseite läuft nach 60 Minuten ab, dann kommt das
     // reservierte Guthaben zurück (Webhook checkout.session.expired).
     if (gutschein) form.set("expires_at", String(Math.floor(Date.now() / 1000) + 60 * 60));
   }
   if (gutschein) form.set("discounts[0][coupon]", gutschein);
 
-  positionen.forEach((pos, i) => {
-    form.set(`line_items[${i}][quantity]`, String(pos.quantity));
-    form.set(`line_items[${i}][price_data][currency]`, "eur");
-    form.set(`line_items[${i}][price_data][unit_amount]`, String(Math.round(pos.einzel * 100)));
-    form.set(`line_items[${i}][price_data][product_data][name]`, `${pos.brand} ${pos.name}`.trim().slice(0, 120));
-    form.set(
-      `line_items[${i}][price_data][product_data][description]`,
-      `Art.-Nr. ${pos.articleNumber} · inkl. 19 % MwSt`.slice(0, 200),
+  let zeile = 0;
+  const zeileSetzen = (name, beschreibung, menge, einzel) => {
+    form.set(`line_items[${zeile}][quantity]`, String(menge));
+    form.set(`line_items[${zeile}][price_data][currency]`, "eur");
+    form.set(`line_items[${zeile}][price_data][unit_amount]`, String(Math.round(einzel * 100)));
+    form.set(`line_items[${zeile}][price_data][product_data][name]`, String(name).slice(0, 120));
+    form.set(`line_items[${zeile}][price_data][product_data][description]`, String(beschreibung).slice(0, 200));
+    zeile += 1;
+  };
+  positionen.forEach((pos) => {
+    zeileSetzen(
+      `${pos.brand} ${pos.name}`.trim(),
+      `Art.-Nr. ${pos.articleNumber} · inkl. 19 % MwSt`,
+      pos.quantity,
+      pos.einzel,
     );
   });
+  if (versand > 0) {
+    zeileSetzen(
+      "DHL-Versand Deutschland",
+      `Pauschale ${DHL_EUR.toFixed(2).replace(".", ",")} €, kostenlos ab ${VERSAND_FREI_AB} € und für Mitglieder`,
+      1,
+      versand,
+    );
+  }
+  if (pfand > 0 && pfandStueck > 0) {
+    zeileSetzen("Batteriepfand", "Pfand je Starterbatterie, wird bei Rückgabe erstattet", pfandStueck, Math.round((pfand / pfandStueck) * 100) / 100);
+  }
 
   // Kompakte Metadaten — Stripe erlaubt 500 Zeichen pro Wert.
   form.set("metadata[typ]", theke ? "theke" : "teile");
@@ -436,7 +456,7 @@ async function stripeStatus(sessionId) {
 }
 
 // ── GoCardless: einmalige SEPA-Zahlung ───────────────────────────────────────
-async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId, guthaben = 0 }) {
+async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId, guthaben = 0, versand = 0, pfand = 0 }) {
   const token = gcToken();
   if (!token) return { fallback: true };
   const host = gcHost(token);
@@ -454,8 +474,8 @@ async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId,
       billing_requests: {
         mandate_request: { scheme: "sepa_core", currency: "EUR" },
         payment_request: {
-          description: `Alex Autoshop Teilebestellung${fahrzeug ? ` — ${fahrzeug}` : ""}${guthaben > 0 ? ` (Guthaben −${guthaben.toFixed(2).replace(".", ",")} €)` : ""}`.slice(0, 100),
-          amount: Math.round(rund2(summe - guthaben) * 100),
+          description: `Alex Autoshop Teile${fahrzeug ? ` — ${fahrzeug}` : ""}${versand > 0 ? " inkl. Versand" : ""}${pfand > 0 ? " inkl. Batteriepfand" : ""}`.slice(0, 100),
+          amount: Math.round(rund2(summe + versand + pfand - guthaben) * 100),
           currency: "EUR",
           scheme: "sepa_core",
         },
@@ -516,7 +536,7 @@ export default async function handler(req, res) {
     return send(res, 400, { error: "Ungültige Anfrage." });
   }
   if (!body || typeof body !== "object") return send(res, 400, { error: "Ungültige Anfrage." });
-  const { items, method, email: emailAusFormular, vehicleLabel, vin, theke: thekeRoh, sessionId, guthaben: guthabenWunsch } = body;
+  const { items, method, email: emailAusFormular, vehicleLabel, vin, theke: thekeRoh, sessionId, guthaben: guthabenWunsch, abholung: abholungRoh } = body;
 
   // ── Ladenverkauf: nur Alex. Geprüft wird VOR allem anderen. ─────────────────
   let theke = null;
@@ -597,7 +617,14 @@ export default async function handler(req, res) {
 
     const summe = Math.round(positionen.reduce((s, p) => s + p.einzel * p.quantity, 0) * 100) / 100;
     if (!(summe > 0)) return send(res, 409, { error: "Summe ist null." });
-    if (summe > MAX_SUMME) {
+    // Versand und Pfand rechnet der Server. Der Browser darf den Betrag nicht
+    // selbst festlegen. An der Theke nimmt der Kunde die Ware mit.
+    const abholung = !!theke || abholungRoh === true;
+    const mitglied = level >= 1;
+    const versand = versandkosten({ summe, mitglied, abholung });
+    const pfand = pfandBetrag(positionen.map((p) => ({ name: `${p.name || ""} ${p.brand || ""}`, menge: p.quantity })));
+    const brutto = rund2(summe + versand + pfand.betrag);
+    if (brutto > MAX_SUMME) {
       return send(res, 409, { error: "Der Betrag ist zu hoch für die Online-Zahlung — bitte ruf uns an." });
     }
 
@@ -607,7 +634,7 @@ export default async function handler(req, res) {
     const anbieterDa = method === "stripe" ? !!stripeKey() : !!gcToken();
     if (!theke && userId && guthabenWunsch === true && anbieterDa) {
       // in Cent rechnen — (18,74 − 1) × 100 ergibt sonst 1773,999… → 17,73 €
-      const hoechstens = (Math.round(summe * 100) - MIN_ZAHLUNG * 100) / 100;
+      const hoechstens = (Math.round(brutto * 100) - MIN_ZAHLUNG * 100) / 100;
       if (hoechstens > 0) {
         await offeneKlaeren(userId);
         const r = await rpc("guthaben_reservieren", { p_user: userId, p_max: hoechstens, p_anbieter: method });
@@ -616,7 +643,7 @@ export default async function handler(req, res) {
       }
     }
     const guthaben = reservierung?.betrag || 0;
-    const zuZahlen = rund2(summe - guthaben);
+    const zuZahlen = rund2(brutto - guthaben);
     const zurueckgeben = async () => { if (reservierung) await rpc("guthaben_freigeben", { p_id: reservierung.id }); };
 
     // Zahlungsgrenze — nicht an der Theke: dort steht Alex selbst daneben.
@@ -639,7 +666,10 @@ export default async function handler(req, res) {
       }
     }
 
-    const arg = { positionen, summe, email, fahrzeug: vehicleLabel, vin, theke, userId, guthaben };
+    const arg = {
+      positionen, summe, email, fahrzeug: vehicleLabel, vin, theke, userId, guthaben,
+      versand, pfand: pfand.betrag, pfandStueck: pfand.stueck,
+    };
     let ergebnis;
     try {
       ergebnis = method === "stripe" ? await stripeSession(arg) : await gocardlessFlow(arg);

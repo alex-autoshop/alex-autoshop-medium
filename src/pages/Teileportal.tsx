@@ -12,7 +12,10 @@ import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import { PartnerStrip } from "@/components/PartnerStrip";
 import { TeileWorkspace } from "@/components/TeileWorkspace";
-import { apVehicleByKba, apResolveVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, apEnrichVehicle, type ApArticle, type ApCategoryNode, type ApVinCandidate } from "@/lib/autoparts";
+import { apVehiclesByKba, apResolveVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, apEnrichVehicle, type ApArticle, type ApCategoryNode, type ApVinCandidate } from "@/lib/autoparts";
+import { siehtNachNummer } from "../../shared/artikelnummer.js";
+import { passtZurKategorie } from "@/lib/artikelArt";
+import { FahrzeugWahl } from "@/components/FahrzeugWahl";
 import { STATIC_CAT_TREE } from "@/lib/catTreeStatic";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
 import { icPriceLookup } from "@/lib/intercarsGateway";
@@ -286,11 +289,13 @@ interface Article {
   availability?: string;
   deliveryDays?: number;
   source?: "intercars" | "static";
+  /** true nur, wenn die TecDoc-Verknüpfung dieses Fahrzeugs den Artikel enthält. */
+  linked?: boolean;
 }
 
 type Phase = 'search' | 'categories' | 'articles' | 'oem';
 type SearchMode = 'vin' | 'kba';
-type HeroTab = 'search' | 'vin' | 'kba' | 'vehicle' | 'number';
+type HeroTab = 'search' | 'vin' | 'kba' | 'typ' | 'vehicle' | 'number';
 // Verkaufspreise rechnet ausschließlich der Server (api/intercars.js).
 
 async function postJson(url: string, payload: Record<string, unknown>, ms: number) {
@@ -395,6 +400,8 @@ export default function Teileportal() {
   // eindeutig bestimmen, die Rangfolge hat entschieden. Kein Dialog —
   // aber der Kunde soll wissen, dass hier eine Annahme drinsteckt.
   const [vehicleExact, setVehicleExact] = useState(true);
+  /** HSN/TSN trifft mehrere Fahrzeuge — der Kunde wählt, nichts wird still genommen. */
+  const [kbaChoices, setKbaChoices] = useState<ApVinCandidate[] | null>(null);
   // Fahrzeug aus dem Hersteller-Katalog: liefert die Belege fuer die
   // Variantenbestimmung UND den Token fuer Baugruppen und Zeichnungen.
   const [yqIdent, setYqIdent] = useState<YqIdent | null>(null);
@@ -403,6 +410,7 @@ export default function Teileportal() {
   // fuehrt — sonst muesste der Kunde die OEM-Kachel selbst suchen.
   const [oemRescue, setOemRescue] = useState<string | null>(null);
   const [activeCat, setActiveCat] = useState<typeof CATEGORIES[0] | null>(null);
+  const [subName, setSubName] = useState("");
   const [partQuery, setPartQuery] = useState('');
   const [articles, setArticles] = useState<Article[]>([]);
   const [partsLoading, setPartsLoading] = useState(false);
@@ -546,6 +554,7 @@ export default function Teileportal() {
     setVehicleLoading(true);
     setVehicleError(null);
     setVehicleExact(true);
+    setKbaChoices(null);
     setYqIdent(null);
     setOemRescue(null);
     setVehicle(null);
@@ -610,8 +619,9 @@ export default function Teileportal() {
         } catch { /* weiter zu Fallback */ }
       } else {
         try {
-          const veh = await apVehicleByKba(hsn.trim().padStart(4,'0'), tsn.trim().padStart(3,'0'));
-          if (veh) { applyVehicle(veh as ApVinCandidate, ''); setVehicleLoading(false); return; }
+          const liste = await apVehiclesByKba(hsn.trim().padStart(4,'0'), tsn.trim().padStart(3,'0'));
+          if (liste.length === 1) { applyVehicle(liste[0], ''); setVehicleLoading(false); return; }
+          if (liste.length > 1) { setKbaChoices(liste); setPhase('search'); setHeroTab('kba'); setVehicleLoading(false); return; }
         } catch { /* weiter */ }
       }
       const payload = mode === 'vin'
@@ -644,28 +654,57 @@ export default function Teileportal() {
       let parsed: Article[] = [];
       let total = 0;
       const norm = (x: string) => (x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (vehicleKtype) {
-        try { parsed = (await apArticlesForVehicle(vehicleKtype, query)).map(apToArticle); total = parsed.length; } catch {}
-      }
-      try {
-        const icData = await intercarsApi({ action: 'search', query, limit: 48 });
-        const icArts = parseIntercarsArticles(icData);
-        if (parsed.length === 0) { parsed = icArts; total = icData?.totalCount ?? icArts.length; }
-        else if (icArts.length > 0) {
-          const icMap = new Map(icArts.map(ic => [norm(ic.articleNumber), ic]));
-          parsed = parsed.map(a => { const hit = icMap.get(norm(a.articleNumber)); return hit ? { ...a, price: hit.price, availability: hit.availability, deliveryDays: hit.deliveryDays, imageUrl: a.imageUrl ?? hit.imageUrl, source: 'intercars' as const } : a; });
-          const known = new Set(parsed.map(a => norm(a.articleNumber)));
-          parsed = [...parsed, ...icArts.filter(ic => !known.has(norm(ic.articleNumber)))];
-          total = parsed.length;
+      const mitPreis = (liste: Article[], icArts: Article[]) => {
+        if (!icArts.length) return liste;
+        const icMap = new Map(icArts.map(ic => [norm(ic.articleNumber), ic]));
+        return liste.map(a => {
+          const hit = icMap.get(norm(a.articleNumber));
+          return hit
+            ? { ...a, price: hit.price ?? a.price, availability: hit.availability, deliveryDays: hit.deliveryDays, imageUrl: a.imageUrl ?? hit.imageUrl, source: 'intercars' as const }
+            : a;
+        });
+      };
+
+      if (siehtNachNummer(query)) {
+        // Nummer zuerst im Katalog (inkl. OE-Querverweis), Preise danach von Inter Cars.
+        // Die Verknüpfung zum Fahrzeug ist damit nicht belegt.
+        try { parsed = (await apArticlesByNumber(query)).map((a) => ({ ...apToArticle(a), linked: false })); } catch { /* weiter */ }
+        try {
+          const icData = await intercarsApi({ action: 'search', query, limit: 12 });
+          const icArts = parseIntercarsArticles(icData).map((a) => ({ ...a, linked: false }));
+          parsed = parsed.length ? mitPreis(parsed, icArts) : icArts;
+        } catch { /* Preise optional */ }
+        total = parsed.length;
+      } else {
+        if (vehicleKtype) {
+          try {
+            parsed = (await apArticlesForVehicle(vehicleKtype, query))
+              .map((a) => ({ ...apToArticle(a), linked: true }))
+              .filter((a) => passtZurKategorie(a.name, a.category, query));
+            total = parsed.length;
+          } catch { /* Katalog optional */ }
         }
-      } catch {}
-      if (parsed.length === 0) {
-        try { parsed = (await apArticlesByNumber(query)).map(apToArticle); total = parsed.length; } catch {}
-      }
-      if (parsed.length === 0) {
-        const tdData = await tecdoc({ action: 'search', query });
-        parsed = parseArticles(tdData);
-        total = (tdData as any)?.totalMatchingArticles ?? parsed.length;
+        try {
+          const icData = await intercarsApi({ action: 'search', query, limit: 48 });
+          const icArts = parseIntercarsArticles(icData);
+          if (parsed.length === 0) {
+            // Ohne TecDoc-Treffer bleiben die Inter-Cars-Artikel sichtbar,
+            // aber ohne „passt“ — die Zuordnung ist nicht geprüft.
+            parsed = icArts.map((a) => ({ ...a, linked: false }));
+            total = icData?.totalCount ?? parsed.length;
+          } else {
+            parsed = mitPreis(parsed, icArts);
+            total = parsed.length;
+          }
+        } catch { /* Bestand optional */ }
+        if (parsed.length === 0) {
+          try { parsed = (await apArticlesByNumber(query)).map((a) => ({ ...apToArticle(a), linked: false })); total = parsed.length; } catch { /* weiter */ }
+        }
+        if (parsed.length === 0) {
+          const tdData = await tecdoc({ action: 'search', query });
+          parsed = parseArticles(tdData).map((a) => ({ ...a, linked: false }));
+          total = (tdData as any)?.totalMatchingArticles ?? parsed.length;
+        }
       }
       parsed = sortKnownBrandsFirst(parsed);
       setArticles(parsed); setTotalCount(total);
@@ -712,7 +751,11 @@ export default function Teileportal() {
   const loadPartsByCategory = async (categoryId: number, catName: string) => {
     setPhase('articles'); setPartsLoading(true); setPartsError(null); setSelectedBrands(new Set());
     try {
-      const parsed = sortKnownBrandsFirst((await apArticlesByCategory(vehicleKtype!, categoryId)).map(apToArticle));
+      const parsed = sortKnownBrandsFirst(
+        (await apArticlesByCategory(vehicleKtype!, categoryId))
+          .map((a) => ({ ...apToArticle(a), linked: true }))
+          .filter((a) => passtZurKategorie(a.name, a.category, catName)),
+      );
       setArticles(parsed); setTotalCount(parsed.length);
       enrichTopWithIc(parsed);
     } catch { setPartsError('Suche fehlgeschlagen.'); }
@@ -722,6 +765,7 @@ export default function Teileportal() {
   /** Klick auf Kategorie: Unterkategorien inline auf-/zuklappen (wie Inter Cars). */
   const handleCategoryClick = async (cat: typeof CATEGORIES[0]) => {
     setPartQuery('');
+    setSubName("");
     if (openCatId === cat.id) { setOpenCatId(null); return; }
     setActiveCat(cat);
     // Fahrzeugspezifischen Baum laden (falls Fahrzeug mit ktype), sonst statischen nutzen
@@ -742,6 +786,7 @@ export default function Teileportal() {
   /** Klick auf Unterkategorie: mit Fahrzeug exakte Kategorie-Artikel, sonst Textsuche. */
   const pickSubCat = (n: ApCategoryNode) => {
     setOpenCatId(null);
+    setSubName(n.name);
     if (vehicleKtype && n.id) { loadPartsByCategory(n.id, n.name); return; }
     setPhase('articles');
     loadParts(n.name);
@@ -750,7 +795,7 @@ export default function Teileportal() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!partQuery.trim()) return;
-    setActiveCat(null); setPhase('articles');
+    setActiveCat(null); setSubName(""); setPhase('articles');
     loadParts(partQuery.trim());
   };
 
@@ -764,11 +809,12 @@ export default function Teileportal() {
   // Schnellfilter-Chips sind EINZELN schaltbar und beliebig kombinierbar.
   // (Vorher teilten sich instant/fast einen State und cheapest/quality den
   //  sortOrder — dadurch ging immer nur einer von beiden.)
-  // Standardmaessig an: wer ein Teil sucht, will es meistens SCHNELL. Beide
-  // Chips sind sichtbar aktiv und mit einem Klick wieder aus — kein
-  // verstecktes Filtern. Zusammen ergeben sie "alles, was in 3 Tagen da ist".
-  const [fInstant, setFInstant] = useState(true);
-  const [fFast,    setFFast]    = useState(true);
+  // Standardmäßig aus. Eingeschaltet haben sie Treffer versteckt, deren
+  // Lieferzeit noch nicht nachgeladen war (8 von 100, Freitext 1 von 2).
+  const [fInstant, setFInstant] = useState(false);
+  const [fFast,    setFFast]    = useState(false);
+  /** Auf dem Handy ist der Filterkasten zugeklappt, damit die Treffer sichtbar sind. */
+  const [filterAuf, setFilterAuf] = useState(false);
   const [fCheap,   setFCheap]   = useState(false);
   const [fQuality, setFQuality] = useState(false);
 
@@ -997,14 +1043,13 @@ export default function Teileportal() {
                 className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-card/80 backdrop-blur text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-4">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 Alex Autoshop · Teilebörse
-                <span className="px-2 py-0.5 rounded bg-amber-500 text-black text-xs font-black tracking-wider">BETA</span>
               </motion.div>
 
               {/* Headline */}
               <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
                 className="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] mb-3">
-                Über 5 Mio.<br />
-                <span className="text-primary">KFZ-Teile</span> finden.
+                Teile zum<br />
+                <span className="text-primary">Fahrzeug</span> finden.
               </motion.h1>
 
               {/* Subtitle */}
@@ -1017,7 +1062,7 @@ export default function Teileportal() {
               {/* Feature Badges */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
                 className="flex flex-wrap justify-center gap-2 mb-5">
-                {['5 Mio. Teile', 'Günstigster Preis je Teil & Marke', 'B2B-Preise ab Level 1', 'Next-Day Lieferung'].map(b => (
+                {['TecDoc-Katalog', 'Preise und Bestand von Inter Cars', 'B2B-Preise ab Level 1', 'Abholung in Wuppertal'].map(b => (
                   <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium text-primary">
                     <Check className="w-3.5 h-3.5" /> {b}
                   </span>
@@ -1034,6 +1079,7 @@ export default function Teileportal() {
                     { id: 'search' as HeroTab, label: 'Suche', mobileLabel: 'Suche', Icon: Search },
                     { id: 'vin' as HeroTab, label: 'VIN / FIN', mobileLabel: 'VIN', Icon: Hash },
                     { id: 'kba' as HeroTab, label: 'HSN / TSN', mobileLabel: 'HSN/TSN', Icon: Wrench },
+                    { id: 'typ' as HeroTab, label: 'Marke / Motor', mobileLabel: 'Marke', Icon: Car },
                     { id: 'vehicle' as HeroTab, label: 'Meine Fahrzeuge', mobileLabel: 'Garage', Icon: Car },
                   ]).map(({ id, label, mobileLabel, Icon }) => (
                     <button key={id} onClick={() => setHeroTab(id)}
@@ -1099,7 +1145,31 @@ export default function Teileportal() {
                           </button>
                         </div>
                         <p className="text-xs text-muted-foreground">Seite 1 der Zulassungsbescheinigung — Zeile 2.1 = HSN, Zeile 2.2 = TSN</p>
+                        {kbaChoices && kbaChoices.length > 1 && (
+                          <div className="rounded-xl border border-border bg-secondary/40 p-3 text-left space-y-2">
+                            <p className="text-sm font-semibold">Diese Schlüsselnummer trifft {kbaChoices.length} Fahrzeuge. Welches ist deins?</p>
+                            {kbaChoices.map((c) => (
+                              <button
+                                key={`${c.vehicleId || "x"}-${c.model}-${c.typeName}-${c.buildFrom}`}
+                                type="button"
+                                onClick={() => { setKbaChoices(null); applyVehicle(c, ""); }}
+                                className="w-full text-left rounded-lg border border-border bg-card px-3 py-2.5 hover:border-primary/50"
+                              >
+                                <span className="block text-sm font-semibold">{[c.manufacturer, c.model, c.typeName].filter(Boolean).join(" ")}</span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {[c.ps && `${c.ps} PS`, c.power && `${c.power} kW`, c.bodyType, c.fuel, c.buildFrom && `${c.buildFrom.slice(0, 7)}–${c.buildTo ? c.buildTo.slice(0, 7) : "heute"}`, c.engineCodes].filter(Boolean).join(" · ")}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </motion.form>
+                    )}
+
+                    {heroTab === 'typ' && (
+                      <motion.div key="htyp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <FahrzeugWahl onPick={(v) => { setKbaChoices(null); applyVehicle(v, ""); }} />
+                      </motion.div>
                     )}
 
                     {heroTab === 'vehicle' && (
@@ -1162,7 +1232,6 @@ export default function Teileportal() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <span className="text-sm font-bold text-foreground">Teilefinder</span>
-                    <span className="px-1.5 py-0.5 rounded bg-amber-500 text-black text-[10px] font-black">PREVIEW</span>
                   </div>
                   <p className="text-xs text-foreground/70 leading-relaxed">
                     Zeichnung anklicken, Ersatzteil mit Preis bekommen — Vorschau anzeigen.
@@ -1235,23 +1304,24 @@ export default function Teileportal() {
               {vehicle ? (
                 <>
                   <span className="text-muted-foreground/30 shrink-0">|</span>
-                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                  <div className="flex items-start gap-2 min-w-0 flex-1">
                     {vehicle.manufacturer && getCarBrandLogo(vehicle.manufacturer) && (
                       <img src={getCarBrandLogo(vehicle.manufacturer)!} alt={vehicle.manufacturer}
-                        className="h-5 w-5 object-contain shrink-0"
+                        className="h-5 w-5 object-contain shrink-0 mt-0.5"
                         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     )}
-                    <span className="text-sm font-semibold truncate">{vehicleLabel}</span>
-                    {(vehicle.buildFrom || vehicle.buildTo) && (
-                      <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">
-                        ({fmtBau(vehicle.buildFrom)} – {fmtBau(vehicle.buildTo) || 'heute'})
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold leading-tight line-clamp-2">{vehicleLabel}</span>
+                      <span className="block text-[11px] text-muted-foreground leading-tight">
+                        {[
+                          vehicle.ps && `${vehicle.ps} PS`,
+                          vehicle.power && `${vehicle.power} kW`,
+                          vehicle.fuel,
+                          (vehicle.buildFrom || vehicle.buildTo) && `${fmtBau(vehicle.buildFrom)}–${fmtBau(vehicle.buildTo) || "heute"}`,
+                          !vehicleExact && "Variante bitte prüfen",
+                        ].filter(Boolean).join(" · ")}
                       </span>
-                    )}
-                    {!vehicleExact && (
-                      <span className="text-xs text-muted-foreground shrink-0 hidden md:inline" title="Die Fahrzeugdaten liessen mehrere Motorvarianten zu — wir haben die wahrscheinlichste genommen.">
-                        · Variante automatisch bestimmt
-                      </span>
-                    )}
+                    </span>
                   </div>
                   {/* Solange das Fahrzeug steht, sind die Original-Zeichnungen einen
                       Klick entfernt — vorher lagen sie auf der Startseite der
@@ -1335,9 +1405,9 @@ export default function Teileportal() {
                               transition={{ duration: 0.18 }} className="overflow-hidden">
                               <div className="px-3 pb-3 border-t border-border/60 pt-2">
                                 <SubCatList nodes={nodes} onPick={pickSubCat} />
-                                {!vehicleKtype && (
+                                {!vehicle && (
                                   <p className="text-[11px] text-muted-foreground mt-2 px-2">
-                                    Tipp: Fahrzeug wählen, um nur exakt passende Teile zu sehen.
+                                    Ohne Fahrzeug zeigen wir Katalogtreffer ohne Passungszusage.
                                   </p>
                                 )}
                               </div>
@@ -1365,7 +1435,7 @@ export default function Teileportal() {
                   <ArrowLeft className="w-4 h-4" />
                   Alle Teile
                 </button>
-                {activeCat && <><span className="text-muted-foreground/50">/</span><span className="text-sm font-medium">{activeCat.name}</span></>}
+                {activeCat && <><span className="text-muted-foreground/50">/</span><span className="text-sm font-medium">{subName || activeCat.name}</span></>}
               </div>
               {/* Suchfeld */}
               <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-5">
@@ -1426,7 +1496,7 @@ export default function Teileportal() {
                   title={
                     <>
                     <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
-                      <span className="font-bold">{activeCat ? activeCat.name : 'Suchergebnisse'}
+                      <span className="font-bold">{subName || (activeCat ? activeCat.name : 'Suchergebnisse')}
                         <span className="text-muted-foreground font-normal text-sm ml-2">({totalCount > articles.length ? totalCount : articles.length})</span>
                       </span>
                       <div className="flex items-center gap-3">
@@ -1442,6 +1512,15 @@ export default function Teileportal() {
                     <>
                     {/* ── SCHNELLFILTER + FILTER-BAR ─────────────────────── */}
                     <div className="mb-4 rounded-xl border border-border bg-card/60 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setFilterAuf((v) => !v)}
+                        className="lg:hidden w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold"
+                      >
+                        Filter {filterAuf ? "schließen" : "öffnen"}
+                        <ChevronRight className={cn("w-4 h-4 transition-transform", filterAuf && "rotate-90")} />
+                      </button>
+                      <div className={cn(!filterAuf && "hidden lg:block")}>
                       {/* Schnellfilter-Chips */}
                       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50 flex-wrap">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 shrink-0 mr-1">Schnellfilter</span>
@@ -1554,6 +1633,7 @@ export default function Teileportal() {
                             {filtered.length} von {articles.length}
                           </span>
                         )}
+                      </div>
                       </div>
                     </div>
                     </>

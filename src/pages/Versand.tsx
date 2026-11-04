@@ -230,7 +230,12 @@ export default function Versand() {
           <div className="border-t border-border pt-6 space-y-3">
             <p>
               <strong className="text-foreground">Liefergebiet:</strong> Paketversand deutschlandweit.
-              Österreich und Schweiz auf Anfrage (+49 202 82690).
+              Österreich und Schweiz auf Anfrage (+49 202 82690). Die Kasse der Teilebörse
+              bietet DHL innerhalb Deutschlands oder Abholung an. Dieselben Sätze stehen in den AGB.
+            </p>
+            <p>
+              <strong className="text-foreground">Batteriepfand:</strong> für Starterbatterien in der
+              Teilebörse 7,50 € je Stück. Einen Altteilpfand berechnen wir nicht.
             </p>
             <p>
               <strong className="text-foreground">Gefahrgut & Sperrgut:</strong> Lacke, Spraydosen

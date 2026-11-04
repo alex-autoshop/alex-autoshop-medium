@@ -505,7 +505,7 @@ function buildAffiliateEmail({ email, level, memberNo, referralCode }) {
   <!-- CTA -->
   <tr><td style="background:linear-gradient(135deg,#111008 0%,${B.night} 100%);padding:40px 40px;text-align:center;border-bottom:1px solid ${B.borderSub};">
     <p style="color:${B.textMuted};font-size:14px;margin:0 0 24px;line-height:1.8;font-family:${B.fontBody};">
-      Dein Referral-Dashboard zeigt dir in Echtzeit,<br>wer sich über deinen Link angemeldet hat und wie viel du verdient hast.
+      Im Referral-Dashboard siehst du,<br>wer sich über deinen Link angemeldet hat und wie viel du verdient hast.
     </p>
     <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
       <tr><td style="background:${B.gold};border-radius:12px;padding:16px 44px;box-shadow:0 4px 32px rgba(241,235,91,0.2);">

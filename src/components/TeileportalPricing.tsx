@@ -113,7 +113,6 @@ export function PriceBlock({
 
 // ─── IC-STYLE LIEFER-BADGE ───────────────────────────────────
 
-const TOUR_NAME = "Morgentour";
 const WOCHENTAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
 export function deliveryForecast(days: number): string {
@@ -146,21 +145,21 @@ export function DeliveryBadge({
         </span>
       );
     }
-    const heute = deliveryDays <= 1;
+    const naechsterTag = deliveryDays <= 1;
     return (
       <span
         className={cn(
           "inline-flex items-center gap-1.5 text-[12px] font-semibold",
-          heute ? "text-green-700 dark:text-green-400" : "text-muted-foreground"
+          naechsterTag ? "text-green-700 dark:text-green-400" : "text-muted-foreground"
         )}
       >
         <span
           className={cn(
             "w-1.5 h-1.5 rounded-full shrink-0",
-            heute ? "bg-green-500" : deliveryDays === 2 ? "bg-yellow-500" : "bg-amber-500"
+            naechsterTag ? "bg-green-500" : deliveryDays === 2 ? "bg-yellow-500" : "bg-amber-500"
           )}
         />
-        {heute ? "Heute in der Filiale · 06:00" : `${deliveryForecast(deliveryDays)} · ${deliveryDays} Werktage`}
+        {naechsterTag ? "1 Werktag · Inter Cars" : `${deliveryForecast(deliveryDays)} · ${deliveryDays} Werktage`}
       </span>
     );
   }
@@ -172,7 +171,7 @@ export function DeliveryBadge({
           <Truck className="w-3.5 h-3.5" /> Lieferzeit auf Anfrage
         </span>
         <p className="text-[11px] text-muted-foreground leading-snug">
-          Meist schon {deliveryForecast(1)} · ca. 9:00 · {TOUR_NAME}
+          Lieferzeit steht fest, sobald Inter Cars ein Datum nennt.
         </p>
       </div>
     );
@@ -198,7 +197,7 @@ export function DeliveryBadge({
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
           </span>
         )}
-        {is1day ? "Heute · Filiale · 06:00" : `${deliveryForecast(deliveryDays)} · ca. 9:00`}
+        {is1day ? "1 Werktag · Inter Cars" : `${deliveryForecast(deliveryDays)} · ${deliveryDays} Werktage`}
       </span>
 
       {/* Werktage-Badge */}

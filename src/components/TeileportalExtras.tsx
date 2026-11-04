@@ -4,11 +4,13 @@
  */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Car, X, Plus, Minus, Trash2, ShoppingCart, MessageCircle, Package, Phone, CreditCard, Landmark, Loader2, Store, QrCode, Printer } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
+import { versandkosten, pfandBetrag, DHL_EUR, VERSAND_FREI_AB } from "../../shared/versand.js";
 import { formatSpecValue, memberPrice, MEMBER_LEVELS, eur, type MemberLevelId } from "@/components/TeileportalPricing";
 import { icPriceLookup } from "@/lib/intercarsGateway";
 import { adminPreiseHolen, type EkPreis, type AdminFehler } from "@/lib/adminZugang";
@@ -137,6 +139,7 @@ export interface DetailArticle {
   specs?: { name: string; value: string }[];
   price?: number;
   availability?: string;
+  linked?: boolean;
 }
 
 export function PartDetailModal({ article, vehicleLabel, onClose, onAddToCart, brandLogo }: {
@@ -180,9 +183,15 @@ export function PartDetailModal({ article, vehicleLabel, onClose, onAddToCart, b
                 {article.category && <span className="text-xs text-muted-foreground">{article.category}</span>}
               </div>
               {vehicleLabel && (
-                <div className="rounded-lg bg-green-500/10 border border-green-600/30 px-3 py-2 text-xs font-medium text-green-700 dark:text-green-400">
-                  ✓ Passend für: {vehicleLabel}
-                </div>
+                article.linked ? (
+                  <div className="rounded-lg bg-green-500/10 border border-green-600/30 px-3 py-2 text-xs font-medium text-green-700 dark:text-green-400">
+                    ✓ Passt zu: {vehicleLabel}
+                  </div>
+                ) : (
+                  <div className="rounded-lg bg-secondary border border-border px-3 py-2 text-xs font-medium text-muted-foreground">
+                    Passung nicht geprüft
+                  </div>
+                )
               )}
               {article.price != null ? (
                 <p className="text-2xl font-bold">{article.price.toFixed(2).replace(".", ",")} €</p>
@@ -354,11 +363,18 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
   // Mindestens 1 € bleibt zu zahlen. Wie viel wirklich abgeht, entscheidet
   // der Server beim Reservieren — hier steht die Vorschau.
   const [guthabenNutzen, setGuthabenNutzen] = useState(true);
-  const guthabenDa = !theke && angemeldet && guthabenStand > 0 && subtotal > 1;
+  const [abholung, setAbholung] = useState(false);
+  const [agbOk, setAgbOk] = useState(false);
+  const mitglied = level !== "none";
+  const holtAb = !!theke || abholung;
+  const versand = versandkosten({ summe: subtotal, mitglied, abholung: holtAb });
+  const pfand = pfandBetrag(mitPreis.map((i) => ({ name: `${i.name} ${i.brand}`, menge: i.quantity })));
+  const brutto = Math.round((subtotal + versand + pfand.betrag) * 100) / 100;
+  const guthabenDa = !theke && angemeldet && guthabenStand > 0 && brutto > 1;
   const anrechnung = guthabenDa && guthabenNutzen
-    ? Math.max(0, Math.min(Math.floor(guthabenStand * 100 + 1e-6) / 100, (Math.round(subtotal * 100) - 100) / 100)) // in Cent, sonst 17,73 statt 17,74
+    ? Math.max(0, Math.min(Math.floor(guthabenStand * 100 + 1e-6) / 100, (Math.round(brutto * 100) - 100) / 100))
     : 0;
-  const zuZahlen = Math.round((subtotal - anrechnung) * 100) / 100;
+  const zuZahlen = Math.round((brutto - anrechnung) * 100) / 100;
   const orderText = [
     "🛒 BESTELLANFRAGE — Alex Autoshop Teilebörse",
     vehicleLabel ? `Fahrzeug: ${vehicleLabel}` : "",
@@ -366,7 +382,10 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
     "",
     ...items.map((i, n) => `${n + 1}. ${i.quantity}× ${i.brand} ${i.name} — Art.-Nr. ${i.articleNumber}${i.price != null ? ` — ${(stueckPreis(i.price) * i.quantity).toFixed(2)} €` : ""}`),
     "",
-    allPriced ? `Zwischensumme: ${subtotal.toFixed(2)} €` : "Bitte Preise und Verfügbarkeit bestätigen.",
+    allPriced ? `Teile: ${subtotal.toFixed(2)} €` : "Bitte Preise und Verfügbarkeit bestätigen.",
+    versand > 0 ? `DHL-Versand: ${versand.toFixed(2)} €` : (holtAb ? "Abholung in Wuppertal: 0,00 €" : "Versand: 0,00 €"),
+    pfand.betrag > 0 ? `Batteriepfand: ${pfand.betrag.toFixed(2)} €` : "",
+    allPriced ? `Summe: ${brutto.toFixed(2)} €` : "",
   ].filter((l) => l !== null).join("\n");
 
   /**
@@ -390,6 +409,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
           vehicleLabel,
           vin: vehicleVin,
           guthaben: anrechnung > 0,
+          abholung: holtAb,
           items: items.map((i) => ({
             articleNumber: i.articleNumber,
             brand: i.brand,
@@ -511,9 +531,48 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
             {items.length > 0 && (
               <div className="p-4 border-t border-border space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{allPriced ? "Zwischensumme" : "Positionen mit Preis"} <span className="text-[10px]">inkl. MwSt</span></span>
+                  <span className="text-muted-foreground">{allPriced ? "Teile" : "Positionen mit Preis"} <span className="text-[10px]">inkl. MwSt</span></span>
                   <span className="font-bold">{subtotal > 0 ? `${subtotal.toFixed(2).replace(".", ",")} €` : "—"}</span>
                 </div>
+                {!theke && subtotal > 0 && (
+                  <div className="space-y-1.5 text-xs">
+                    <label className="flex items-center justify-between gap-2 cursor-pointer">
+                      <span className="inline-flex items-center gap-2">
+                        <input type="radio" name="versandart" checked={!abholung} onChange={() => setAbholung(false)} className="accent-primary" />
+                        DHL Deutschland
+                      </span>
+                      <span className="tabular-nums">{versandkosten({ summe: subtotal, mitglied, abholung: false }).toFixed(2).replace(".", ",")} €</span>
+                    </label>
+                    <label className="flex items-center justify-between gap-2 cursor-pointer">
+                      <span className="inline-flex items-center gap-2">
+                        <input type="radio" name="versandart" checked={abholung} onChange={() => setAbholung(true)} className="accent-primary" />
+                        Abholung Wuppertal
+                      </span>
+                      <span className="tabular-nums">0,00 €</span>
+                    </label>
+                    <p className="text-[10.5px] text-muted-foreground leading-snug">
+                      DHL {DHL_EUR.toFixed(2).replace(".", ",")} €, kostenlos ab {VERSAND_FREI_AB} € und für Mitglieder.
+                      Lieferung im Umkreis und Versand nach Österreich oder in die Schweiz auf Anfrage.
+                    </p>
+                  </div>
+                )}
+                {pfand.betrag > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span>Batteriepfand ({pfand.stueck}×)</span>
+                    <span className="tabular-nums">{pfand.betrag.toFixed(2).replace(".", ",")} €</span>
+                  </div>
+                )}
+                {items.some((i) => /öl|oel|oil/i.test(i.name)) && (
+                  <p className="text-[10.5px] text-muted-foreground leading-snug">
+                    Altöl gehört nicht in den Ausguss. Die Annahmestelle sagen wir dir auf Nachfrage. Ein Altteilpfand berechnen wir nicht.
+                  </p>
+                )}
+                {subtotal > 0 && (versand > 0 || pfand.betrag > 0) && (
+                  <div className="flex justify-between text-sm">
+                    <span className="font-semibold">Summe</span>
+                    <span className="font-bold tabular-nums">{brutto.toFixed(2).replace(".", ",")} €</span>
+                  </div>
+                )}
                 {lvl && ersparnis > 0 && (
                   <div className="flex justify-between text-xs">
                     <span className="text-primary font-semibold">{theke ? "Kunde " : ""}{lvl.name} (−{lvl.pct} %)</span>
@@ -566,10 +625,19 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                   </>
                 )}
                 {!allPriced && !theke && <p className="text-xs text-muted-foreground">Endpreise & Verfügbarkeit bestätigen wir sofort nach der Anfrage — meist ist das Teil am selben Tag da.</p>}
+                {subtotal > 0 && !theke && (
+                  <label className="flex items-start gap-2 text-xs cursor-pointer">
+                    <input type="checkbox" checked={agbOk} onChange={(e) => setAgbOk(e.target.checked)} className="accent-primary mt-0.5" />
+                    <span>
+                      Ich akzeptiere die <Link to="/agb" className="underline" onClick={(e) => e.stopPropagation()}>AGB</Link> und habe die{" "}
+                      <Link to="/widerruf" className="underline" onClick={(e) => e.stopPropagation()}>Widerrufsbelehrung</Link> zur Kenntnis genommen.
+                    </span>
+                  </label>
+                )}
                 {subtotal > 0 && !theke && (karteDa || sepaDa) && (
                   <>
                     {karteDa && (
-                      <button onClick={() => bezahlen("stripe")} disabled={zahlt !== ""}
+                      <button onClick={() => bezahlen("stripe")} disabled={zahlt !== "" || !agbOk}
                         className="btn-primary w-full gap-2 disabled:opacity-60">
                         {zahlt === "stripe"
                           ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
@@ -577,7 +645,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                       </button>
                     )}
                     {sepaDa && (
-                      <button onClick={() => bezahlen("gocardless")} disabled={zahlt !== ""}
+                      <button onClick={() => bezahlen("gocardless")} disabled={zahlt !== "" || !agbOk}
                         className={karteDa
                           ? "w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-secondary disabled:opacity-60"
                           : "btn-primary w-full gap-2 disabled:opacity-60"}>
