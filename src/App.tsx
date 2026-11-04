@@ -16,6 +16,7 @@ const Kategorie = lazy(() => import("@/pages/Kategorie"));
 const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
 const Mitgliedschaft = lazy(() => import("@/pages/Mitgliedschaft"));
 const Teileportal = lazy(() => import("@/pages/Teileportal"));
+const TeilArtikel = lazy(() => import("@/pages/TeilArtikel"));
 const AdminMembers = lazy(() => import("@/pages/AdminMembers"));
 const Fahrzeugmarkt = lazy(() => import("@/pages/Fahrzeugmarkt"));
 const FahrzeugDetail = lazy(() => import("@/pages/FahrzeugDetail"));
@@ -119,6 +120,7 @@ export default function App() {
                         </ProtectedRoute>
                       }
                     />
+                    <Route path="/teileboerse/artikel" element={<TeilArtikel />} />
                     <Route path="/teileboerse" element={<Teileportal />} />
                     <Route path="/fahrzeugboerse" element={<NurAdmin><Fahrzeugmarkt /></NurAdmin>} />
                     <Route path="/fahrzeugboerse/:slug" element={<NurAdmin><FahrzeugDetail /></NurAdmin>} />

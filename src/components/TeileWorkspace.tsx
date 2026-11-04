@@ -33,6 +33,8 @@ export interface WorkArticle {
   price?: number;
   availability?: string;
   deliveryDays?: number;
+  /** Gesetzt, wenn die TecDoc-Verknüpfung des gewählten Fahrzeugs den Artikel enthält. */
+  linked?: boolean;
 }
 
 const key = (a: WorkArticle) => String(a.id);
@@ -78,6 +80,7 @@ export function TeileZeile({
   onAdd,
   innerRef,
   kompakt = false,
+  vehicleLabel,
 }: {
   a: WorkArticle;
   active: boolean;
@@ -86,6 +89,7 @@ export function TeileZeile({
   onSelect: () => void;
   onAdd: (menge: number) => void;
   innerRef?: (el: HTMLDivElement | null) => void;
+  vehicleLabel?: string;
   /**
    * Schmale Spalte (z.B. neben der Explosionszeichnung): feste kleine Maße,
    * unabhängig von der Fensterbreite. Die sm:-Stufen richten sich nach dem
@@ -179,6 +183,14 @@ export function TeileZeile({
         <div className="mt-2 truncate">
           <DeliveryBadge deliveryDays={a.deliveryDays} availability={a.availability} compact />
         </div>
+        {vehicleLabel && (
+          <p className={cn(
+            "mt-1 text-[11px] font-medium truncate",
+            a.linked ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground",
+          )}>
+            {a.linked ? `Passt zu ${vehicleLabel}` : "Passung nicht geprüft"}
+          </p>
+        )}
       </div>
 
       {/* Rechte Schiene: fester Platz, damit Preise und Knoepfe der ganzen
@@ -324,9 +336,15 @@ function OfferPanel({
 
       <div className="flex-1 overflow-y-auto">
         {vehicleLabel && (
-          <p className="flex items-center gap-1.5 px-4 py-2 text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-b border-emerald-500/20">
-            <Check className="w-3.5 h-3.5 shrink-0" /> Passt zu {vehicleLabel}
-          </p>
+          a.linked ? (
+            <p className="flex items-center gap-1.5 px-4 py-2 text-[11px] text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-b border-emerald-500/20">
+              <Check className="w-3.5 h-3.5 shrink-0" /> Passt zu {vehicleLabel}
+            </p>
+          ) : (
+            <p className="flex items-center gap-1.5 px-4 py-2 text-[11px] text-muted-foreground bg-secondary/60 border-b border-border">
+              Passung nicht geprüft
+            </p>
+          )
         )}
 
         {oemSlot?.(a.articleNumber, a.name, a.oeNumbers)}
@@ -558,6 +576,7 @@ export function TeileWorkspace({
                 onSelect={() => pick(a, true)}
                 onAdd={(menge) => onAddToCart(a, menge)}
                 innerRef={(el) => { rowRefs.current[key(a)] = el; }}
+                vehicleLabel={vehicleLabel}
               />
             ))}
             {articles.length === 0 && (

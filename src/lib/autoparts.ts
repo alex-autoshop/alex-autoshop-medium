@@ -5,6 +5,7 @@
  */
 
 import { istBildAdresse } from '@/lib/partImages';
+import { artikelVarianten } from '../../shared/artikelnummer.js';
 
 const LANG = 1;      // Deutsch
 const COUNTRY = 63;  // Deutschland
@@ -86,6 +87,21 @@ function pickArray(obj: any, ...keys: string[]): any[] {
     if (Array.isArray(v) && v.length && typeof v[0] === 'object') return v as any[];
   }
   return [];
+}
+
+/** Alle Seiten einer Listen-Antwort (Modelle sind z.B. 291 auf 3 Seiten). */
+async function apPages(path: string, arrayKey: string): Promise<any[]> {
+  const first = await ap(path);
+  const acc = pickArray(first, arrayKey);
+  const pages = Number(first?.totalPages) || 1;
+  if (pages <= 1) return acc;
+  const rest = await Promise.all(
+    Array.from({ length: Math.min(pages, 8) - 1 }, (_, i) =>
+      ap(path, { page: i + 2 }).catch(() => null),
+    ),
+  );
+  for (const r of rest) if (r) acc.push(...pickArray(r, arrayKey));
+  return acc;
 }
 
 function pickImage(a: any): string | undefined {
@@ -170,18 +186,15 @@ function toApVehicle(v: any): ApVehicle | null {
 async function resolveVehicleType(v: ApVehicle): Promise<any | undefined> {
   try {
     if (!v.manufacturer || !v.model) return undefined;
-    const manus = await ap(`/manufacturers/list/type-id/${TYPE_PC}`);
-    const mArr = pickArray(manus, 'manufacturers');
+    const mArr = await apPages(`/manufacturers/list/type-id/${TYPE_PC}`, 'manufacturers');
     const manu = mArr.find((m: any) => String(m.manufacturerName).toUpperCase() === String(v.manufacturer).toUpperCase());
     if (!manu) return undefined;
-    const models = await ap(`/models/list/type-id/${TYPE_PC}/manufacturer-id/${manu.manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`);
-    const modArr = pickArray(models, 'models');
+    const modArr = await apPages(`/models/list/type-id/${TYPE_PC}/manufacturer-id/${manu.manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`, 'models');
     const model =
       modArr.find((m: any) => String(m.modelName) === v.model) ||
       modArr.find((m: any) => String(m.modelName).split(' (')[0] === String(v.model).split(' (')[0]);
     if (!model) return undefined;
-    const types = await ap(`/types/type-id/${TYPE_PC}/list-vehicles-types/${model.modelId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`);
-    const tArr = pickArray(types, 'modelTypes', 'types');
+    const tArr = await apPages(`/types/type-id/${TYPE_PC}/list-vehicles-types/${model.modelId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`, 'modelTypes');
     const raw: any = v.raw || {};
     const wantEngine = String(raw.typeEngineName || v.typeName || '');
     const wantPs = Math.round(parseFloat(String(raw.powerPs || ''))) || 0;
@@ -228,20 +241,151 @@ export async function apEnrichVehicle(v: ApVehicle): Promise<ApVehicle> {
   return v;
 }
 
-/** Fahrzeug per deutscher Schlüsselnummer (HSN 2.1 + TSN 2.2). */
-export async function apVehicleByKba(hsn: string, tsn: string): Promise<ApVehicle | null> {
+const normName = (x: string) => String(x || '').toLowerCase()
+  .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+  .replace(/[^a-z0-9]/g, '');
+
+/**
+ * Von mehreren TecDoc-Typen bleiben nur die, die zur KBA-Zeile passen.
+ * Gleiche vehicleId (z.B. zwei Motorcodes) zählt einmal. Bleiben mehrere
+ * verschiedene IDs übrig, werden alle zurückgegeben — nicht die erste.
+ */
+export function engeTypen(kba: ApVehicle, types: ApVehicle[]): ApVehicle[] {
+  const engine = normName(kba.typeName || '');
+  const ps = Math.round(parseFloat(kba.ps || '0')) || 0;
+  const kw = Math.round(parseFloat(kba.power || '0')) || 0;
+  const start = String(kba.buildFrom || '').slice(0, 10);
+  const body = normName(kba.bodyType || '');
+  let list = types.filter((t) => t.vehicleId);
+  const step = (pred: (t: ApVehicle) => boolean) => {
+    const n = list.filter(pred);
+    return n.length ? n : list;
+  };
+  if (engine) list = step((t) => normName(t.typeName || '') === engine || normName(t.typeName || '').includes(engine));
+  if (ps) list = step((t) => Math.round(parseFloat(t.ps || '0')) === ps);
+  else if (kw) list = step((t) => Math.round(parseFloat(t.power || '0')) === kw);
+  if (start) list = step((t) => String(t.buildFrom || '').slice(0, 10) === start);
+  if (body) list = step((t) => !t.bodyType || normName(t.bodyType) === body);
+  const seen = new Set<number>();
+  return list.filter((t) => {
+    const id = Number(t.vehicleId);
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+async function modelleDerMarke(hersteller: string): Promise<{ manuId: number; models: any[] } | null> {
+  const mArr = await apPages(`/manufacturers/list/type-id/${TYPE_PC}`, 'manufacturers');
+  const want = hersteller.toUpperCase();
+  const manu = mArr.find((m: any) => String(m.manufacturerName).toUpperCase() === want)
+    || mArr.find((m: any) => String(m.manufacturerName).toUpperCase().includes(want));
+  if (!manu) return null;
+  const models = await apPages(
+    `/models/list/type-id/${TYPE_PC}/manufacturer-id/${manu.manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`,
+    'models',
+  );
+  return { manuId: Number(manu.manufacturerId), models };
+}
+
+function modelZurZeile(models: any[], name: string): any | undefined {
+  const n = normName(name);
+  return models.find((m) => normName(String(m.modelName)) === n)
+    || models.find((m) => normName(String(m.modelName).split(' (')[0]) === normName(name.split(' (')[0]) && n.length > 3);
+}
+
+/** Alle Fahrzeuge zu einer HSN/TSN. Mehr als eines: der Kunde wählt. */
+export async function apVehiclesByKba(hsn: string, tsn: string): Promise<ApVinCandidate[]> {
   const kba = `${hsn.trim()}${tsn.trim()}`.toUpperCase();
-  if (kba.length < 5) return null;
+  if (kba.length < 5) return [];
   const r = await ap(
     `/types/searching-the-passenger-car-by-ltn-number/lang-id/${LANG}/country-filter-id/${COUNTRY}/ltn-number/${encodeURIComponent(kba)}/number-type/1`
   );
-  const arr = pickArray(r, 'modelTypes', 'vehicles', 'types', 'cars');
-  const veh = toApVehicle(arr[0]);
-  if (veh && (!veh.vehicleId || !veh.buildFrom)) {
-    const t = await resolveVehicleType(veh);
-    if (t) mergeTypeDetails(veh, t);
+  const rows = pickArray(r, 'vehicles', 'modelTypes', 'types', 'cars')
+    .map(toApVehicle)
+    .filter((v): v is ApVehicle => !!v);
+  if (!rows.length) return [];
+
+  const cache = new Map<string, { manuId: number; models: any[] } | null>();
+  const aus: ApVinCandidate[] = [];
+  const seen = new Set<number>();
+
+  for (const row of rows) {
+    const key = String(row.manufacturer || '').toUpperCase();
+    if (!cache.has(key)) {
+      try { cache.set(key, key ? await modelleDerMarke(key) : null); }
+      catch { cache.set(key, null); }
+    }
+    const marke = cache.get(key);
+    const model = marke && row.model ? modelZurZeile(marke.models, row.model) : undefined;
+    let typen: ApVehicle[] = [];
+    if (model?.modelId) {
+      try {
+        const roh = await apPages(
+          `/types/type-id/${TYPE_PC}/list-vehicles-types/${model.modelId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`,
+          'modelTypes',
+        );
+        typen = roh.map(toApVehicle).filter((t): t is ApVehicle => !!t && !!t.vehicleId);
+      } catch { typen = []; }
+    }
+    const eng = typen.length ? engeTypen(row, typen) : [];
+    const liste = eng.length ? eng : (row.vehicleId ? [row] : []);
+    if (!liste.length) {
+      // Die KBA-Zeile bleibt wählbar, auch wenn der Katalog keine Typ-ID hat.
+      aus.push({ ...row, modelName: row.model });
+      continue;
+    }
+    for (const t of liste) {
+      const id = Number(t.vehicleId);
+      if (id && seen.has(id)) continue;
+      if (id) seen.add(id);
+      aus.push({
+        ...row,
+        ...t,
+        manufacturer: t.manufacturer || row.manufacturer,
+        model: t.model || row.model,
+        modelName: t.model || row.model,
+        typeName: t.typeName || row.typeName,
+      });
+    }
   }
-  return veh;
+  return aus;
+}
+
+/** Ein Fahrzeug, nur wenn die Schlüsselnummer genau eines ergibt. */
+export async function apVehicleByKba(hsn: string, tsn: string): Promise<ApVehicle | null> {
+  const alle = await apVehiclesByKba(hsn, tsn);
+  return alle.length === 1 ? alle[0] : null;
+}
+
+export async function apListManufacturers(): Promise<Array<{ id: number; name: string }>> {
+  const arr = await apPages(`/manufacturers/list/type-id/${TYPE_PC}`, 'manufacturers');
+  return arr
+    .map((m: any) => ({ id: Number(m.manufacturerId), name: String(m.manufacturerName || '') }))
+    .filter((m) => m.id && m.name)
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
+export async function apListModels(manufacturerId: number): Promise<Array<{ id: number; name: string }>> {
+  const arr = await apPages(
+    `/models/list/type-id/${TYPE_PC}/manufacturer-id/${manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`,
+    'models',
+  );
+  return arr
+    .map((m: any) => ({ id: Number(m.modelId), name: String(m.modelName || '') }))
+    .filter((m) => m.id && m.name)
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+}
+
+export async function apListTypes(modelId: number): Promise<ApVinCandidate[]> {
+  const arr = await apPages(
+    `/types/type-id/${TYPE_PC}/list-vehicles-types/${modelId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`,
+    'modelTypes',
+  );
+  const seen = new Set<number>();
+  return arr
+    .map(toApVehicle)
+    .filter((t): t is ApVinCandidate => !!t && !!t.vehicleId && !seen.has(t.vehicleId!) && !!seen.add(t.vehicleId!));
 }
 
 /**
@@ -373,15 +517,15 @@ export async function apResolveVin(vin: string, hinweise?: VinHinweise): Promise
   // Marke → Modellreihe(n) → Motorvarianten. Robust: jeder Fehler liefert Teilergebnis
   // (mind. manufacturer/model), damit NIE in den alten Fallback gefallen wird.
   try {
-    const manus = pickArray(await ap(`/manufacturers/list/type-id/${TYPE_PC}`), 'manufacturers');
+    const manus = await apPages(`/manufacturers/list/type-id/${TYPE_PC}`, 'manufacturers');
     const MK = make.toUpperCase();
     const manu = manus.find((x: any) => String(x.manufacturerName).toUpperCase() === MK)
               || manus.find((x: any) => String(x.manufacturerName).toUpperCase().includes(MK));
     if (!manu) return { manufacturer: make, model, candidates: [] };
 
-    const models = pickArray(
-      await ap(`/models/list/type-id/${TYPE_PC}/manufacturer-id/${manu.manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`),
-      'models'
+    const models = await apPages(
+      `/models/list/type-id/${TYPE_PC}/manufacturer-id/${manu.manufacturerId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`,
+      'models',
     );
     const nModel = norm(model);
     // Baureihen-Code im Klammerteil des Modellnamens: "CLA Coupe (C117)", "2 Gran Coupe (F74)"
@@ -427,9 +571,9 @@ export async function apResolveVin(vin: string, hinweise?: VinHinweise): Promise
     for (const mdl of matched) {
       let types: any[] = [];
       try {
-        types = pickArray(
-          await ap(`/types/type-id/${TYPE_PC}/list-vehicles-types/${mdl.modelId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`),
-          'modelTypes', 'types'
+        types = await apPages(
+          `/types/type-id/${TYPE_PC}/list-vehicles-types/${mdl.modelId}/lang-id/${LANG}/country-filter-id/${COUNTRY}`,
+          'modelTypes',
         );
       } catch { continue; }
       for (const t of types) {
@@ -756,7 +900,12 @@ async function vehicleCategoryIds(vehicleId: number, query: string): Promise<num
   // Gleicher Score → kürzerer Name gewinnt (das ist die präzisere Kategorie:
   // "Ruß-/Partikelfilter" statt "Regeneration Ruß-/Partikelfilter").
   scored.sort((a, b) => b.score - a.score || a.len - b.len);
-  return [...new Set(scored.map((s) => s.id))].slice(0, 3);
+  // "Ölfilter" trifft auch die Obergruppe "Filter" (Score 50). Die würde Luft-,
+  // Kraftstofffilter und den DPF mit in die Liste ziehen. Bei einem klaren
+  // Treffer bleiben nur die engen Kategorien.
+  const top = scored[0]?.score || 0;
+  const min = top >= 85 ? 80 : 0;
+  return [...new Set(scored.filter((s) => s.score >= min).map((s) => s.id))].slice(0, 3);
 }
 
 /** Alle passenden Artikel für Fahrzeug + Suchbegriff — mit Bildern, alle Marken. */
@@ -826,20 +975,38 @@ export async function apArticlesForVehicle(vehicleId: number, query: string): Pr
   return relevant;
 }
 
-/** Artikel-/OE-Nummern-Suche (ohne Fahrzeug). */
+/** Artikel-/OE-Nummern-Suche (ohne Fahrzeug). Probiert Schreibweisen und OE-Querverweise. */
 export async function apArticlesByNumber(articleNo: string): Promise<ApArticle[]> {
+  const varianten = artikelVarianten(articleNo);
   const raw: any[] = [];
-  try {
-    const r = await ap('/articles/search-by-article-no', { articleNo, langId: LANG });
-    raw.push(...pickArray(r, 'articles'));
-  } catch { /* weiter */ }
-  if (raw.length < 3) {
+  const gesehen = new Set<string>();
+  const dazu = (liste: any[]) => {
+    for (const a of liste) {
+      const art = toApArticle(a, raw.length);
+      if (!art?.articleNumber) continue;
+      const k = `${art.brand}|${art.articleNumber}`.toUpperCase().replace(/\s+/g, '');
+      if (gesehen.has(k)) continue;
+      gesehen.add(k);
+      raw.push(a);
+    }
+  };
+  for (const v of varianten.slice(0, 8)) {
     try {
-      const r = await ap('/articles-oem/search-by-article-oem-no', { articleOemNo: articleNo, langId: LANG });
-      raw.push(...pickArray(r, 'articles'));
-    } catch { /* optional */ }
+      const r = await ap('/articles/search-by-article-no', { articleNo: v, langId: LANG });
+      const treffer = pickArray(r, 'articles');
+      if (treffer.length) { dazu(treffer); break; }
+    } catch { /* nächste Schreibweise */ }
   }
-  return raw.map(toApArticle).filter((a): a is ApArticle => !!a && !!a.articleNumber);
+  if (raw.length < 3) {
+    for (const v of varianten.slice(0, 4)) {
+      try {
+        const r = await ap('/articles-oem/search-by-article-oem-no', { articleOemNo: v, langId: LANG });
+        dazu(pickArray(r, 'articles'));
+        if (gesehen.size >= 24) break;
+      } catch { /* optional */ }
+    }
+  }
+  return raw.map(toApArticle).filter((a): a is ApArticle => !!a && !!a.articleNumber).slice(0, 40);
 }
 
 /**

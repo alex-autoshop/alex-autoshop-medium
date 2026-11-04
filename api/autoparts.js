@@ -28,6 +28,52 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+// Nur die Pfade, die die Teilebörse wirklich aufruft. Alles andere (auch
+// `..` und fremde Hosts) bleibt draußen — der Schlüssel ist bezahlt.
+const ERLAUBT = [
+  /^\/manufacturers\//,
+  /^\/models\//,
+  /^\/types\//,
+  /^\/vin\//,
+  /^\/articles\//,
+  /^\/articles-oem\//,
+  /^\/artlookup\//,
+  /^\/category\//,
+  /^\/languages\//,
+  /^\/countries\//,
+  /^\/suppliers\//,
+  /^\/engines\//,
+];
+
+export function pfadErlaubt(path) {
+  if (!path || typeof path !== "string") return false;
+  if (path.length > 500) return false;
+  if (!path.startsWith("/") || path.includes("..") || path.includes("\\") || path.includes("://") || path.includes("\0")) {
+    return false;
+  }
+  return ERLAUBT.some((r) => r.test(path));
+}
+
+// Weiches Limit je IP, im Speicher dieser Instanz. Ein kalter Start setzt es
+// zurück — es bremst Ausbrüche, es ist keine harte Kontingent-Sperre.
+const FENSTER_MS = 60_000;
+const LIMIT_JE_IP = 80;
+const aufrufe = new Map();
+
+function rateOk(ip) {
+  const jetzt = Date.now();
+  const alt = aufrufe.get(ip) || [];
+  const neu = alt.filter((t) => jetzt - t < FENSTER_MS);
+  if (neu.length >= LIMIT_JE_IP) {
+    aufrufe.set(ip, neu);
+    return false;
+  }
+  neu.push(jetzt);
+  aufrufe.set(ip, neu);
+  if (aufrufe.size > 4000) aufrufe.clear();
+  return true;
+}
+
 function cacheSeconds(path) {
   if (/^\/(languages|countries|manufacturers|models|suppliers|category)\//.test(path)) return 86400;
   if (/^\/(types|engines)\//.test(path)) return 43200;
@@ -58,6 +104,20 @@ async function tryFetch(base, path, qs, method, bodyText, timeoutMs = 9000) {
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  if (req.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Nur GET.' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', ...CORS },
+    });
+  }
+
+  const ip = String(req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'lokal').split(',')[0].trim();
+  if (!rateOk(ip)) {
+    return new Response(JSON.stringify({ error: 'Zu viele Katalog-Anfragen. Bitte einen Moment warten.' }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', ...CORS, 'Retry-After': '30', 'Cache-Control': 'no-store' },
+    });
+  }
 
   if (!AUTOPARTS_KEY) {
     return new Response(JSON.stringify({ error: 'AUTOPARTS_API_KEY nicht gesetzt — Vercel → Settings → Environment Variables' }), {
@@ -90,8 +150,8 @@ export default async function handler(req) {
     const m = url.pathname.match(/\/api\/autoparts(\/.+)/);
     apiPath = m && m[1] ? m[1] : '';
   }
-  if (!apiPath || !apiPath.startsWith('/')) {
-    return new Response(JSON.stringify({ error: 'Pfad fehlt: ?p=/manufacturers/list/type-id/1' }), {
+  if (!apiPath || !pfadErlaubt(apiPath)) {
+    return new Response(JSON.stringify({ error: 'Dieser Katalog-Pfad ist nicht freigegeben.' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json', ...CORS },
     });

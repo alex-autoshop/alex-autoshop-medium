@@ -9,8 +9,8 @@ export function ProtectedRoute({
   unschaerfe = 7,
   text = (
     <>
-      Melde dich an, um Autoteile zu suchen,<br />
-      Preise zu vergleichen und zu bestellen.
+      Melde dich an, um dein Konto,<br />
+      Bestellungen und die Mitgliedschaft zu sehen.
     </>
   ),
 }: {

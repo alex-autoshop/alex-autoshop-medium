@@ -603,11 +603,11 @@ export function OemExplosionView({ vehicle, vehicleKtype, vehicleVin, onBack }: 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-primary" />
-            <p className="text-sm font-bold">OEM-Explosionszeichnungen — coming soon</p>
+            <p className="text-sm font-bold">Zeichnung zum Fahrzeug</p>
           </div>
           <p className="text-xs text-muted-foreground">
-            Echte Explosionsbilder mit nummerierten OE-Teilen über PartsLink24 — API-Freischaltung läuft.
-            Artikel und Preise sind schon jetzt verfügbar.
+            Mit der FIN öffnet der Teilefinder die Zeichnung des Herstellers. Ohne FIN bleibt diese
+            Baugruppen-Übersicht aus dem Teilekatalog.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

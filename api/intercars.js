@@ -6,6 +6,7 @@ export const config = { maxDuration: 25 };
 
 import { adminPruefen } from "./_admin.js";
 import { createHmac } from "node:crypto";
+import { artikelVarianten } from "../shared/artikelnummer.js";
 
 /**
  * Intercars IC API Proxy — Vercel Edge Function
@@ -152,20 +153,7 @@ async function icPost(path, body, token, payerId, recipientId, branch) {
 // unterschiedlich: "HU 716/2 x" ↔ "HU716/2X" ↔ "HU7162X". Deshalb der Reihe nach
 // durchprobieren — von der wörtlichsten zur stärksten Normalisierung.
 function artVariantsServer(artNo) {
-  const s = String(artNo || "").trim();
-  if (!s) return [];
-  const noSpace = s.replace(/\s+/g, "");
-  const alnum   = s.replace(/[^A-Za-z0-9]/g, "");
-  const list = [
-    s, s.toUpperCase(),
-    noSpace, noSpace.toUpperCase(),
-    alnum, alnum.toUpperCase(),
-    // Trenner vereinheitlichen: "HU716-2X" → "HU716/2X"
-    noSpace.replace(/-/g, "/").toUpperCase(),
-    // Führende Nullen im Zahlenblock weglassen: "W 0712/95" → "W712/95"
-    noSpace.replace(/\b0+(\d)/g, "$1").toUpperCase(),
-  ];
-  return [...new Set(list.filter(Boolean))];
+  return artikelVarianten(artNo);
 }
 
 // ── Verkaufspreis aus dem Einkaufspreis ───────────────────────────────────────
@@ -592,35 +580,26 @@ export default async function handler(req, res) {
       let products   = catalogRaw?.products || (Array.isArray(catalogRaw) ? catalogRaw : []);
 
       // Wenn Text-Suche leer → Artikel-Nummer-Fallback (?index= dann ?sku=)
-      // Betrifft z.B. "S410485006024" — IC findet das nur über index/sku, nicht Freitext.
+      // Betrifft z.B. "HU 719/6x" und "S410485006024" — IC findet das nur über
+      // index/sku, und nur in der Schreibweise, die im Katalog steht.
       if (!products.length && query && !categoryId) {
-        const stripped = query.replace(/\s+/g, "").toUpperCase();
-        // 1) index-Suche (Hersteller-Artikelnummer)
-        const idxRaw = await icFetch(
-          `/catalog/products?index=${encodeURIComponent(stripped)}&limit=${cap}`,
-          token, payerId, recipientId, branch
-        ).catch(() => null);
-        products = idxRaw?.products || (Array.isArray(idxRaw) ? idxRaw : []);
+        const varianten = artVariantsServer(query);
+        for (const v of varianten) {
+          const idxRaw = await icFetch(
+            `/catalog/products?index=${encodeURIComponent(v)}&limit=${cap}`,
+            token, payerId, recipientId, branch
+          ).catch(() => null);
+          const treffer = idxRaw?.products || (Array.isArray(idxRaw) ? idxRaw : []);
+          if (treffer.length) { products = treffer; break; }
+        }
 
-        // 2) SKU-Suche (IC-interner Code)
         if (!products.length) {
+          const stripped = query.replace(/\s+/g, "").toUpperCase();
           const skuRaw = await icFetch(
             `/catalog/products?sku=${encodeURIComponent(stripped)}&limit=${cap}`,
             token, payerId, recipientId, branch
           ).catch(() => null);
           products = skuRaw?.products || (Array.isArray(skuRaw) ? skuRaw : []);
-        }
-
-        // 3) Nochmal Text-Suche ohne Sonderzeichen (z.B. "HU716/2X" → "HU7162X")
-        if (!products.length) {
-          const norm = query.replace(/[^a-zA-Z0-9]/g, "");
-          if (norm && norm !== query.replace(/\s/g, "")) {
-            const normRaw = await icFetch(
-              `/catalog/products?search=${encodeURIComponent(norm)}&limit=${cap}`,
-              token, payerId, recipientId, branch
-            ).catch(() => null);
-            products = normRaw?.products || (Array.isArray(normRaw) ? normRaw : []);
-          }
         }
       }
 
@@ -721,12 +700,13 @@ export default async function handler(req, res) {
         const searchRaw = await icFetch(`/catalog/products?search=${encodeURIComponent(productIndex.replace(/\s+/g, ""))}&limit=10`, token, payerId, recipientId, branch);
         const searchProds = searchRaw?.products || (Array.isArray(searchRaw) ? searchRaw : []);
 
-        // Erst exakter Treffer (normalisiert), dann erster Treffer
+        // Nur der Treffer, dessen Nummer wirklich dieselbe ist. Der erste
+        // Freitext-Treffer war oft ein anderes Teil — mehrere Marken bekamen
+        // dadurch denselben Preis (gemessen: 12,63 € über Blue Print, Borg & Beck, Hella).
         products = searchProds.filter(p => {
           const normIdx = (p.index || "").replace(/\s+/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
-          return normIdx === normQuery;
+          return normIdx && normIdx === normQuery;
         });
-        if (!products.length && searchProds.length > 0) products = [searchProds[0]];
       }
 
       if (!products.length) return json([]);

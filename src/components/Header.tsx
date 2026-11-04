@@ -18,7 +18,7 @@ const NAV_ADMIN: NavPunkt[] = [{ to: "/fahrzeugboerse", label: "Fahrzeugbörse" 
 
 const NAV: NavPunkt[] = [
   { to: "/shop", label: "Shop" },
-  { to: "/teileboerse", label: "Teilebörse", beta: true },
+  { to: "/teileboerse", label: "Teilebörse" },
   { to: "/mitgliedschaft", label: "Mitgliedschaft" },
   { to: "/laden", label: "Laden & Kontakt" },
 ];

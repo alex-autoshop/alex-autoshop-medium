@@ -3,47 +3,24 @@ import { Truck, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Leiste mit unseren Bezugsquellen und Verkaufskanälen.
+ * Leiste unter der Teilebörse.
  *
- * WICHTIG: Die NAMEN unserer Teile-Lieferanten werden bewusst NICHT genannt
- * (Alex, 17.08.2026) — sie sind unser Wettbewerbsvorteil, sobald die Teilebörse
- * live Preise aus mehreren Quellen vergleicht. Stattdessen steht dort die
- * Leistung: wie viele Quellen wir vergleichen und was der Kunde davon hat.
- * Auf `SHOW_SOURCE_NAMES = true` stellen, falls die Namen doch erscheinen sollen.
- *
- * Fremde LOGOS bleiben tabu — die brauchen immer die Freigabe des Marken-
- * inhabers (ausdrückliche Ansage von DS Color). Namen in Schriftform wären ok.
+ * Angezeigt wird nur, was der Code wirklich tut: TecDoc-Katalog und ein
+ * Großhändler (Inter Cars) für Preis und Bestand. Kein Preisvergleich,
+ * keine weiteren Quellen. Fremde Logos bleiben tabu.
  */
-
-/** Namen der Teile-Lieferanten anzeigen? Bewusst aus. */
-const SHOW_SOURCE_NAMES = false;
-
-/** Anzahl der Quellen, die wir bei jeder Anfrage vergleichen. */
-export const SOURCE_COUNT = 7;
 
 export interface PartnerEntry {
   name: string;
   note: string;
 }
 
-/** Woher wir Teile beziehen. */
-export const SOURCING: PartnerEntry[] = [
-  { name: "Inter Cars", note: "Teile-Großhandel" },
-  { name: "PV Automotive", note: "Großhandel" },
-  { name: "WM SE", note: "Großhandel" },
-  { name: "Tyre24 · Azura", note: "Teile & Reifen" },
-  { name: "Motorintegrator", note: "Teile-Plattform" },
-  { name: "kfzteile24", note: "Teile-Portal" },
-  { name: "autoteile-markt.de", note: "Teile-Portal" },
-];
-
-/** Was der Kunde davon hat — ohne unsere Quellen zu verraten. */
-export const ANONYM: PartnerEntry[] = [
-  { name: `${SOURCE_COUNT} Quellen`, note: "gleichzeitig abgefragt" },
-  { name: "Live-Preise", note: "kein veralteter Katalog" },
-  { name: "Echtzeit-Bestand", note: "nur was wirklich da ist" },
-  { name: "Bester Preis", note: "automatisch gewählt" },
-  { name: "Original & Ersatz", note: "beide Qualitäten" },
+const FAKTEN: PartnerEntry[] = [
+  { name: "TecDoc-Katalog", note: "Fahrzeug und Teilenummer" },
+  { name: "Inter Cars", note: "eine Bezugsquelle" },
+  { name: "Live-Bestand", note: "von Inter Cars" },
+  { name: "Live-Preise", note: "von Inter Cars" },
+  { name: "Abholung", note: "Wuppertal, Handelstraße" },
 ];
 
 /** Wo man uns ausserdem findet. */
@@ -81,19 +58,15 @@ export function PartnerStrip({ className }: { className?: string }) {
         <div className="flex items-center justify-center gap-2 mb-1">
           <Truck className="w-4 h-4 text-primary" />
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            {SHOW_SOURCE_NAMES ? "Beschaffung über unsere Partner" : `Preisvergleich über ${SOURCE_COUNT} Quellen`}
+            Preise und Bestand von Inter Cars
           </p>
         </div>
         <p className="text-center text-xs text-muted-foreground mb-4">
-          {SHOW_SOURCE_NAMES
-            ? "Wir kaufen bei mehreren Großhändlern und Plattformen gleichzeitig ein — deshalb finden wir fast jedes Teil, oft am selben Tag."
-            : `Für jedes Teil fragen wir ${SOURCE_COUNT} Großhändler und Plattformen gleichzeitig ab und zeigen dir den besten Preis — du musst nirgendwo sonst vergleichen.`}
+          Der Teilekatalog kommt von TecDoc. Preis und Lagerbestand fragen wir bei Inter Cars ab — eine Quelle, kein Vergleich mit anderen Händlern.
         </p>
 
         <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
-          {SHOW_SOURCE_NAMES
-            ? SOURCING.map((p, i) => <Chip key={p.name} p={p} i={i} tone="gold" />)
-            : ANONYM.map((p, i) => <Chip key={p.name} p={p} i={i} tone="gold" />)}
+          {FAKTEN.map((p, i) => <Chip key={p.name} p={p} i={i} tone="gold" />)}
         </div>
 
         <div className="flex items-center gap-3 my-4">

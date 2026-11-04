@@ -11,5 +11,10 @@ export default defineConfig({
   },
   server: {
     port: 8081,
+    host: true,
+    proxy: {
+      // Nur lokal: die Vercel-Funktionen laufen in der Vorschau, nicht in Vite.
+      "/api": { target: "https://www.alex-autoshop.de", changeOrigin: true, secure: true },
+    },
   },
 });

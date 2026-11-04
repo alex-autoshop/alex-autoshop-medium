@@ -1,59 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Clock, Lock, Phone, LogIn, Zap, CreditCard } from "lucide-react";
+import { LogIn, Zap, CreditCard } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
 /**
- * Zugang zur Teilebörse für Nicht-Angemeldete.
+ * Stöbern ist frei. Mitgliederpreise gibt es nur mit Anmeldung — die Seite
+ * selbst wird nicht nach ein paar Minuten zugesperrt.
  *
- *   Gast            10 Minuten frei stöbern und bestellen
- *   danach          Hinweis auf die Gratis-Teststunde (dafür Konto nötig)
- *   Teststunde      60 Minuten mit allen Mitgliederpreisen, Bestellen möglich
- *   danach          Aufforderung, eine Zahlungsart zu hinterlegen
- *
- * Die Uhr läuft in `localStorage`, überlebt also einen Reload — sonst wäre der
- * Zugang mit F5 endlos verlängerbar. Es ist bewusst eine weiche Schranke: sie
- * hält niemanden davon ab, telefonisch zu bestellen, und die Telefonnummer
- * steht deshalb auch im Overlay.
+ * Eine laufende Teststunde oder eine abgelaufene Teststunde bleibt ein Hinweis
+ * für angemeldete Konten, kein Vollbild über der Suche.
  */
-
-const GUEST_MINUTES = 10;
-const KEY = "aa:tb:guestStart";
-const WARN_MS = 3 * 60 * 1000; // letzte 3 Minuten deutlich sichtbar
 
 function mmss(ms: number) {
   const s = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-}
-
-/** Verbleibende Gastzeit in ms — `null`, solange die Uhr nicht laufen soll. */
-function useGuestClock(active: boolean) {
-  const [left, setLeft] = useState<number | null>(null);
-  useEffect(() => {
-    if (!active) {
-      setLeft(null);
-      return;
-    }
-    let start = 0;
-    try {
-      start = Number(localStorage.getItem(KEY)) || 0;
-      // Kaputter oder in die Zukunft manipulierter Wert -> neu starten
-      if (!start || Number.isNaN(start) || start > Date.now()) {
-        start = Date.now();
-        localStorage.setItem(KEY, String(start));
-      }
-    } catch {
-      start = Date.now(); // Privater Modus: Uhr läuft nur für diese Sitzung
-    }
-    const end = start + GUEST_MINUTES * 60_000;
-    const tick = () => setLeft(Math.max(0, end - Date.now()));
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, [active]);
-  return left;
 }
 
 /** Restzeit der Gratis-Teststunde in ms — `null`, wenn keine läuft. */
@@ -81,7 +42,6 @@ export function TeileboerseGate() {
   const { user, profile } = useAuth();
 
   const isGuest = !user;
-  const guestLeft = useGuestClock(isGuest);
   const trialLeft = useTrialClock(profile?.trial_expires_at);
 
   const trialRunning = !isGuest && trialLeft !== null && trialLeft > 0;
@@ -89,22 +49,14 @@ export function TeileboerseGate() {
   const trialOver =
     !isGuest && !trialRunning && !!profile?.trial_used && level === 0;
 
-  const guestOver = isGuest && guestLeft !== null && guestLeft <= 0;
-  const urgent = guestLeft !== null && guestLeft > 0 && guestLeft <= WARN_MS;
-
   const bar = useMemo(() => {
-    if (isGuest && guestLeft !== null && guestLeft > 0) {
+    if (isGuest) {
       return {
-        tone: urgent ? "urgent" : "calm",
-        icon: Clock,
-        text: (
-          <>
-            <strong className="font-semibold">{mmss(guestLeft)}</strong> Gast-Zugang übrig —
-            danach eine Stunde alles gratis testen.
-          </>
-        ),
-        cta: { to: "/mitgliedschaft", label: "1 Std. gratis testen" },
-      } as const;
+        tone: "calm" as const,
+        icon: LogIn,
+        text: <>Stöbern ist frei. Mitgliederpreise siehst du nach der Anmeldung.</>,
+        cta: { to: "/konto", label: "Anmelden" },
+      };
     }
     if (trialRunning) {
       return {
@@ -133,7 +85,7 @@ export function TeileboerseGate() {
       } as const;
     }
     return null;
-  }, [isGuest, guestLeft, urgent, trialRunning, trialLeft, trialOver]);
+  }, [isGuest, trialRunning, trialLeft, trialOver]);
 
   return (
     <>
@@ -169,35 +121,6 @@ export function TeileboerseGate() {
         </div>
       )}
 
-      {guestOver && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-night/85 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl bg-card border border-border shadow-2xl p-7 text-center">
-            <div className="w-14 h-14 rounded-full bg-primary/12 flex items-center justify-center mx-auto mb-4">
-              <Lock className="w-7 h-7 text-primary" />
-            </div>
-            <h2 className="text-2xl mb-2">Deine 10 Minuten sind um</h2>
-            <p className="text-muted-foreground leading-relaxed mb-6">
-              Weitersuchen kostet dich nichts: leg ein Konto an und teste eine Mitgliedschaft{" "}
-              <strong className="text-foreground">eine Stunde lang gratis</strong> — mit allen
-              Mitgliederpreisen in der Teilebörse. Bestellen ist in dieser Stunde inklusive.
-            </p>
-            <div className="flex flex-col gap-2.5">
-              <Link to="/mitgliedschaft" className="btn-primary text-base">
-                <Clock className="w-5 h-5" /> 1 Stunde gratis testen
-              </Link>
-              <Link to="/konto" className="btn-outline text-sm">
-                <LogIn className="w-4 h-4" /> Ich bin schon Mitglied — anmelden
-              </Link>
-              <a
-                href={`tel:${SHOP_INFO.phoneIntl}`}
-                className="text-xs text-muted-foreground hover:text-primary inline-flex items-center justify-center gap-1.5 mt-1 min-h-[44px]"
-              >
-                <Phone className="w-3.5 h-3.5" /> Lieber direkt bestellen? {SHOP_INFO.phone}
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
