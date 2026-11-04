@@ -326,11 +326,15 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
       // SKU je Position auf DEMSELBEN Weg wie die Preisanzeige (inkl.
       // baugleicher Ersatzmarke) — sonst passt die Marge nicht zum Preis.
       const skuJeKey: Record<string, string> = {};
+      const nameJeSku: Record<string, string> = {};
       await Promise.all(items.filter((i) => i.price != null).map(async (i) => {
         const live = await icPriceLookup(i.articleNumber, i.name).catch(() => null);
-        if (live?.icSku) skuJeKey[i.key] = live.icSku;
+        if (live?.icSku) {
+          skuJeKey[i.key] = live.icSku;
+          nameJeSku[live.icSku] = (live as { name?: string }).name || i.name || "";
+        }
       }));
-      const res = await adminPreiseHolen(Object.values(skuJeKey));
+      const res = await adminPreiseHolen(Object.values(skuJeKey), nameJeSku);
       if (!lebt) return;
       if ("fehler" in res) { setEkFehler(res.fehler); return; }
       setAufschlag(res.aufschlag);

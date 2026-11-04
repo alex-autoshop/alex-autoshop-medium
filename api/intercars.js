@@ -172,9 +172,9 @@ function artVariantsServer(artNo) {
 //   PRICE_MARKUP         Basis-Aufschlag                  (sonst 2.0)
 //   PRICE_SPANNE         Streuung je Teil, 0.05 = ±5 %    (0 = aus)
 //   PRICE_SALT           Geheimnis für die Streuung       (sonst INTERCARS_CLIENT_SECRET)
-//   PRICE_MARKUP_GROUPS  JSON {"ölfilter":1.35,"bremse":1.45}
-//                        längster Treffer im Namen ersetzt die Basis
-//   PRICE_MARKET_CAP     "1" = Verkaufspreis höchstens die UVP (listPriceGross)
+//   PRICE_MARKUP_GROUPS  JSON, ersetzt die Standard-Warengruppen in shared/aufschlag.js
+//   PRICE_MARKET_CAP     Standard an (höchstens UVP, nie unter Mindestpreis), "0" = aus
+//   PRICE_FLOOR*         Mindestpreis, siehe shared/aufschlag.js
 const aufschlagBasis = () => basisAusEnv(process.env);
 const aufschlagSpanne = () => spanneAusEnv(process.env);
 const preisGeheimnis = () => (process.env.PRICE_SALT || process.env.INTERCARS_CLIENT_SECRET || "").trim();
@@ -644,6 +644,7 @@ export default async function handler(req, res) {
         .map((x) => String(x || "").replace(/^ic-/, "").trim())
         .filter(Boolean))].slice(0, 60);
       if (!liste.length) return json({ error: "Keine SKUs übergeben." }, 400);
+      const namen = body.namen && typeof body.namen === "object" && !Array.isArray(body.namen) ? body.namen : null;
 
       const quotes = await fetchQuotes(liste, token, payerId, recipientId, branch);
       const zahl = (v) => (Number(v) > 0 ? Math.round(Number(v) * 100) / 100 : 0);
@@ -655,6 +656,10 @@ export default async function handler(req, res) {
         const listeBrutto = zahl(p.listPriceGross);
         const listeNetto = zahl(p.listPriceNet);
         const basis = ekBrutto || listeBrutto;
+        // Name für die Warengruppe — sonst rechnet der Margenrechner mit der
+        // Basis, während Liste und Kasse den Gruppen-Faktor nehmen.
+        const name = String((namen && namen[s]) || "").slice(0, 200);
+        const vk = basis > 0 ? aufschlagen(basis, s, name, listeBrutto) : 0;
         return {
           sku: s,
           gefunden: !!q,
@@ -664,8 +669,9 @@ export default async function handler(req, res) {
           listeNetto,
           mwst: Number(p.vatPercentage) > 0 ? Number(p.vatPercentage) : 19,
           // exakt der Verkaufspreis, den normalizeProduct der Liste gibt
-          vk: basis > 0 ? aufschlagen(basis, s, "", listeBrutto) : 0,
-          faktor: Math.round(aufschlagFuer(s) * 1000) / 1000,
+          vk,
+          // tatsächlicher Faktor dieses Teils (Gruppe, Streuung, Deckel, Mindestpreis)
+          faktor: basis > 0 ? Math.round((vk / basis) * 1000) / 1000 : Math.round(aufschlagFuer(s, name) * 1000) / 1000,
           // Fehlt der EK, rechnet die Liste mit UVP × Aufschlag — sichtbar machen
           ohneEk: !ekBrutto && !!listeBrutto,
         };
