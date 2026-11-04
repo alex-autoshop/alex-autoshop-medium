@@ -144,13 +144,13 @@ export default function Mieten() {
       </section>
 
       <section className="container py-14 sm:py-20">
-        <motion.div {...auf} className="card-tilt hover:translate-y-0 p-8 sm:p-10 grid md:grid-cols-[1fr_auto] gap-8 items-start">
-          <div>
+        <motion.div {...auf} className="card-tilt hover:translate-y-0 p-8 sm:p-10 grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-8 items-start [&>*]:min-w-0">
+          <div className="min-w-0">
             <span className="inline-flex items-center gap-2 text-primary font-semibold text-sm mb-4">
               <ShieldCheck className="w-4 h-4" /> Richtig versichert
             </span>
             <h2 className="text-2xl mb-4 leading-tight">
-              Unsere Mietfahrzeuge sind als <span className="text-primary">Selbstfahrervermietfahrzeuge</span> versichert
+              Unsere Mietfahrzeuge sind als <span className="text-primary">Selbstfahrer{"\u00AD"}vermietfahrzeuge</span> versichert
             </h2>
             <p className="text-muted-foreground leading-relaxed mb-6">
               Das ist kein Detail für Versicherungsleute, sondern der Unterschied zwischen „ist versichert"

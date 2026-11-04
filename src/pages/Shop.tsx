@@ -660,11 +660,11 @@ export default function Shop() {
       )}
 
       {/* ── Einkaufsmodus-Selector ────────────────────────────────────── */}
-      <div className="flex items-center gap-3 mb-5 py-3 px-4 rounded-xl border border-border bg-card/60">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-5 py-3 px-3 sm:px-4 rounded-xl border border-border bg-card/60">
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 shrink-0">
           Einkaufsmodus
         </span>
-        <div className="flex items-center rounded-lg border border-border bg-secondary/40 p-0.5 gap-0.5">
+        <div className="flex w-full sm:w-auto items-center rounded-lg border border-border bg-secondary/40 p-0.5 gap-0.5">
           {([
             { id: 'standard', label: 'Standard' },
             { id: 'schnell',  label: 'Schnellbestellung' },
@@ -674,7 +674,7 @@ export default function Shop() {
               key={m.id}
               onClick={() => setShopMode(m.id)}
               className={cn(
-                "px-4 py-1.5 rounded-md text-xs font-semibold transition-all duration-150",
+                "flex-1 sm:flex-none px-2 sm:px-4 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all duration-150",
                 shopMode === m.id
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -685,10 +685,10 @@ export default function Shop() {
           ))}
         </div>
         {shopMode === 'schnell' && (
-          <span className="text-xs text-muted-foreground ml-2">Artikelnummer eingeben → sofort in den Warenkorb</span>
+          <span className="basis-full sm:basis-auto min-w-0 text-xs text-muted-foreground sm:ml-2">Artikelnummer eingeben → sofort in den Warenkorb</span>
         )}
         {shopMode === 'menge' && (
-          <span className="text-xs text-muted-foreground ml-2">Mengen direkt anpassen und alles auf einmal bestellen</span>
+          <span className="basis-full sm:basis-auto min-w-0 text-xs text-muted-foreground sm:ml-2">Mengen direkt anpassen und alles auf einmal bestellen</span>
         )}
       </div>
 
