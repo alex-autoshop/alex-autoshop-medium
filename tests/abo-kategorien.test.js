@@ -64,9 +64,15 @@ test("Reihe ordnen lässt Produkte ohne Menge in der bisherigen Folge", () => {
   assert.deepEqual(handles, ["Politur 500 ml", "Politur 1 l", "Schwamm", "Wachs"]);
 });
 
-test("Nur die graue UBS-Dose bekommt einen Anzeige-Zuschnitt", () => {
-  const grau = aboBildrahmen("troton-ubs-steinschlagschutz-korrosionsschutz-unterbodenschutz-grau-500ml");
-  assert.deepEqual(grau, { scale: 1.42, x: -1, y: -22 });
+test("Anzeige-Zuschnitt nur für die graue Dose und die schmalere 750-g-Politur", () => {
+  assert.deepEqual(
+    aboBildrahmen("troton-ubs-steinschlagschutz-korrosionsschutz-unterbodenschutz-grau-500ml"),
+    { scale: 1.42, x: -1, y: -22 },
+  );
+  assert.deepEqual(
+    aboBildrahmen("hochglanz-antihologramm-politur-750g-friz"),
+    { scale: 1.08, x: 0, y: 0 },
+  );
   assert.equal(aboBildrahmen("troton-ubs-steinschlagschutz-korrosionsschutz-unterbodenschutz-500ml"), null);
-  assert.equal(aboBildrahmen("hochglanz-antihologramm-politur-750g-friz"), null);
+  assert.equal(aboBildrahmen("schleifpaste-perfect-heavy-cut-750g-silikonfrei-friz"), null);
 });
