@@ -4,11 +4,11 @@ import { ausTeileSlug, teilePfad } from "../../shared/teile-pfad.js";
 import { Loader2, Package } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { apArticlesByNumber, type ApArticle } from "@/lib/autoparts";
-import { icPriceLookup } from "@/lib/intercarsGateway";
+import { icPriceLookup } from "@/lib/livePreis";
 
 /**
  * Eine Adresse pro Teilenummer, damit die Nummer geteilt und von Google
- * gelesen werden kann. Der Preis kommt von Inter Cars, sobald er da ist —
+ * gelesen werden kann. Der Preis kommt live, sobald er da ist —
  * ohne Preis steht kein erfundener Offer-Preis im Schema.
  */
 export default function TeilArtikel() {
@@ -78,7 +78,7 @@ export default function TeilArtikel() {
       <Seo
         title={name}
         description={nr
-          ? `Teilenummer ${nr} im TecDoc-Katalog. Preis und Bestand von Inter Cars, Abholung in Wuppertal.`
+          ? `Teilenummer ${nr} im TecDoc-Katalog. Preis und Bestand live, Abholung in Wuppertal.`
           : "Teil aus dem TecDoc-Katalog."}
         jsonLd={jsonLd}
       />
@@ -96,7 +96,7 @@ export default function TeilArtikel() {
             <p className="font-mono">{artikel.articleNumber}</p>
             <p>{artikel.brand}</p>
             {preis != null
-              ? <p className="text-lg font-bold">{preis.toFixed(2).replace(".", ",")} € <span className="text-xs font-normal text-muted-foreground">inkl. MwSt, Inter Cars</span></p>
+              ? <p className="text-lg font-bold">{preis.toFixed(2).replace(".", ",")} € <span className="text-xs font-normal text-muted-foreground">inkl. MwSt</span></p>
               : <p className="text-muted-foreground">Preis auf Anfrage</p>}
             {bestand && <p className="text-muted-foreground">{bestand}</p>}
             <p className="text-xs text-muted-foreground">Passung nicht geprüft — dafür das Fahrzeug in der Teilebörse wählen.</p>

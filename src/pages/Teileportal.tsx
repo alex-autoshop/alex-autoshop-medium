@@ -14,11 +14,13 @@ import { PartnerStrip } from "@/components/PartnerStrip";
 import { TeileWorkspace } from "@/components/TeileWorkspace";
 import { apVehiclesByKba, apResolveVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, apEnrichVehicle, type ApArticle, type ApCategoryNode, type ApVinCandidate } from "@/lib/autoparts";
 import { siehtNachNummer } from "../../shared/artikelnummer.js";
+import { kraftstoffHinweis, ordneSuchtreffer } from "../../shared/suchrelevanz.js";
+import { markeFuerKunde } from "../../shared/grosshaendler.js";
 import { passtZurKategorie } from "@/lib/artikelArt";
 import { FahrzeugWahl } from "@/components/FahrzeugWahl";
 import { STATIC_CAT_TREE } from "@/lib/catTreeStatic";
 import { useGarage, usePartsCart, GarageList, PartDetailModal, PartsCartButton, PartsCartDrawer, type GarageVehicle, type DetailArticle } from "@/components/TeileportalExtras";
-import { icPriceLookup } from "@/lib/intercarsGateway";
+import { icPriceLookup } from "@/lib/livePreis";
 import { ADMIN_EMAILS } from "@/lib/inbox";
 import { akteEintragen } from "@/lib/fahrzeugakte";
 import { ArticleExpander, BrandFilter, SubCatList } from "@/components/TeileportalExtras";
@@ -288,7 +290,7 @@ interface Article {
   price?: number;        // Einzelhandel / UVP — was Kunden sehen (listPriceGross)
   availability?: string;
   deliveryDays?: number;
-  source?: "intercars" | "static";
+  source?: "live" | "static";
   /** true nur, wenn die TecDoc-Verknüpfung dieses Fahrzeugs den Artikel enthält. */
   linked?: boolean;
 }
@@ -321,7 +323,7 @@ function parseIntercarsArticles(data: any): Article[] {
     return {
       id: ic.id ?? ic._sku ?? Math.random(),
       name: ic.name ?? "Artikel",
-      brand: ic.brand ?? "",
+      brand: markeFuerKunde(ic.brand ?? ""),
       articleNumber: ic._sku ?? ic._index ?? ic.id ?? "",
       imageUrl,
       oeNumbers: ic.oemNumbers ?? [],
@@ -329,7 +331,7 @@ function parseIntercarsArticles(data: any): Article[] {
       price: uvpPrice,      // Einzelhandel — für Kunden
       availability: ic.availability,
       deliveryDays: ic.deliveryDays,
-      source: "intercars" as const,
+      source: "live" as const,
     };
   });
 }
@@ -415,6 +417,7 @@ export default function Teileportal() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [partsLoading, setPartsLoading] = useState(false);
   const [partsError, setPartsError] = useState<string | null>(null);
+  const [suchHinweis, setSuchHinweis] = useState<{ text: string; suche: string } | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
   const { garage, add: addToGarage, remove: removeFromGarage } = useGarage();
@@ -501,7 +504,7 @@ export default function Teileportal() {
         setDetailArticle((prev) => prev && prev.articleNumber === a.articleNumber
           ? { ...prev, price: live.price, availability: live.availability } : prev);
         setArticles((prev) => prev.map((x) => x.articleNumber === a.articleNumber
-          ? { ...x, price: live.price, availability: live.availability, source: 'intercars' as const } : x));
+          ? { ...x, price: live.price, availability: live.availability, source: 'live' as const } : x));
       });
     }
   };
@@ -660,7 +663,7 @@ export default function Teileportal() {
         return liste.map(a => {
           const hit = icMap.get(norm(a.articleNumber));
           return hit
-            ? { ...a, price: hit.price ?? a.price, availability: hit.availability, deliveryDays: hit.deliveryDays, imageUrl: a.imageUrl ?? hit.imageUrl, source: 'intercars' as const }
+            ? { ...a, price: hit.price ?? a.price, availability: hit.availability, deliveryDays: hit.deliveryDays, imageUrl: a.imageUrl ?? hit.imageUrl, source: 'live' as const }
             : a;
         });
       };
@@ -706,6 +709,22 @@ export default function Teileportal() {
           total = (tdData as any)?.totalMatchingArticles ?? parsed.length;
         }
       }
+      if (!siehtNachNummer(query)) {
+        const hinweis = kraftstoffHinweis(vehicle?.fuel, query);
+        const eng = ordneSuchtreffer(parsed, query);
+        const amFahrzeug = eng.filter((a) => a.linked);
+        if (amFahrzeug.length === 0 && hinweis) {
+          setSuchHinweis(hinweis);
+          parsed = [];
+          total = 0;
+        } else {
+          setSuchHinweis(null);
+          parsed = eng;
+          total = parsed.length;
+        }
+      } else {
+        setSuchHinweis(null);
+      }
       parsed = sortKnownBrandsFirst(parsed);
       setArticles(parsed); setTotalCount(total);
       enrichTopWithIc(parsed);
@@ -740,7 +759,7 @@ export default function Teileportal() {
                 availability: live.availability,
                 deliveryDays: live.deliveryDays,
                 imageUrl: x.imageUrl ?? live.imageUrl,
-                source: 'intercars' as const,
+                source: 'live' as const,
               }
             : x));
         }).catch(() => {});
@@ -1062,7 +1081,7 @@ export default function Teileportal() {
               {/* Feature Badges */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
                 className="flex flex-wrap justify-center gap-2 mb-5">
-                {['TecDoc-Katalog', 'Preise und Bestand von Inter Cars', 'Ein Preis für alle', 'Abholung in Wuppertal'].map(b => (
+                {['TecDoc-Katalog', 'Live-Preise und Bestand', 'Ein Preis für alle', 'Abholung in Wuppertal'].map(b => (
                   <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium text-primary">
                     <Check className="w-3.5 h-3.5" /> {b}
                   </span>
@@ -1641,8 +1660,28 @@ export default function Teileportal() {
               {!partsLoading && articles.length === 0 && !partsError && (
                 <div className="text-center py-20 text-muted-foreground">
                   <Package className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                  <p className="font-medium">Keine Teile gefunden</p>
-                  <p className="text-sm mt-1">Versuch eine andere Suchanfrage oder ruf uns an: <a href={`tel:${SHOP_INFO.phone}`} className="text-primary hover:underline">{SHOP_INFO.phone}</a></p>
+                  {suchHinweis ? (
+                    <p className="font-medium text-foreground">
+                      Dein Fahrzeug ist ein Diesel – meintest du{" "}
+                      <button
+                        type="button"
+                        className="text-primary underline cursor-pointer font-semibold"
+                        onClick={() => {
+                          setPartQuery(suchHinweis.suche);
+                          setSuchHinweis(null);
+                          loadParts(suchHinweis.suche);
+                        }}
+                      >
+                        Glühkerzen
+                      </button>
+                      ?
+                    </p>
+                  ) : (
+                    <>
+                      <p className="font-medium">Keine Teile gefunden</p>
+                      <p className="text-sm mt-1">Versuch eine andere Suchanfrage oder ruf uns an: <a href={`tel:${SHOP_INFO.phone}`} className="text-primary hover:underline">{SHOP_INFO.phone}</a></p>
+                    </>
+                  )}
                 </div>
               )}
             </motion.div>

@@ -126,12 +126,12 @@ export function MargenZeile({ ek, vkStueck, menge }: { ek?: EkPreis | null; vkSt
     return <p className="text-[10.5px] text-muted-foreground mt-1 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> EK wird geholt …</p>;
   }
   if (!ek || !ek.gefunden || (!ek.ekBrutto && !ek.ohneEk)) {
-    return <p className="text-[10.5px] text-muted-foreground mt-1">Kein EK von Inter Cars für dieses Teil.</p>;
+    return <p className="text-[10.5px] text-muted-foreground mt-1">Kein Einkaufspreis für dieses Teil.</p>;
   }
   if (ek.ohneEk) {
     return (
       <p className="text-[10.5px] text-amber-700 mt-1 leading-snug">
-        Kein EK von Inter Cars — Preis ist UVP {eur(ek.listeBrutto)} × Aufschlag. Bitte prüfen.
+        Kein Einkaufspreis — Preis ist UVP {eur(ek.listeBrutto)} × Aufschlag. Bitte prüfen.
       </p>
     );
   }
@@ -445,7 +445,7 @@ export function QrZahlung({
           <div className="py-8 flex flex-col items-center text-center gap-2">
             <span className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center"><Check className="w-6 h-6" /></span>
             <p className="font-bold text-lg">Bezahlt: {eur(stand.summe)}</p>
-            <p className="text-[12px] text-black/60">Jetzt Abholschein drucken und bei Inter Cars bestellen.</p>
+            <p className="text-[12px] text-black/60">Jetzt Abholschein drucken und bestellen.</p>
           </div>
         )}
 

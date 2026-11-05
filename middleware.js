@@ -8,6 +8,7 @@
  */
 
 import { ausTeileSlug, teilePfad, TEILE_BELIEBT } from "./shared/teile-pfad.js";
+import { markeFuerKunde } from "./shared/grosshaendler.js";
 
 const SITE = "https://www.alex-autoshop.de";
 
@@ -51,7 +52,7 @@ async function teilFinden(origin, nummer) {
   }
   if (!ic && !td) return fehler === 2 ? { fehler: true } : null;
   const name = ic?.name || td?.description || td?.articleName || td?.genericArticleDescription || nummer;
-  const brand = ic?.brand || td?.brandName || td?.mfrName || "";
+  const brand = markeFuerKunde(ic?.brand || td?.brandName || td?.mfrName || "");
   const artNr = ic?.index || td?.articleNumber || td?.articleNo || nummer;
   const preis = Number(ic?.price) > 0 ? Number(ic.price) : null;
   const bestand = String(ic?.availability || "");
@@ -62,7 +63,7 @@ function seiteListe() {
   return {
     title: "Teilebörse – Autoteile per HSN/TSN oder FIN | Alex Autoshop Wuppertal",
     description:
-      "Fahrzeug per HSN/TSN, FIN oder Marke wählen. Passende Teile aus dem TecDoc-Katalog, Preise und Bestand von Inter Cars. Abholung in Wuppertal.",
+      "Fahrzeug per HSN/TSN, FIN oder Marke wählen. Passende Teile aus dem TecDoc-Katalog, Preise und Bestand live. Abholung in Wuppertal.",
     canonical: `${SITE}/teileboerse`,
     jsonLd: null,
     inhalt: "",
@@ -101,7 +102,7 @@ function produktHtml(teil, pfad) {
   const inhalt = `<main><p><a href="/teileboerse">Teilebörse</a></p><h1>${esc(name)}</h1><p>Artikelnummer ${esc(teil.artNr)}</p><p>${esc(preisText)}</p>${teil.bestand ? `<p>${esc(teil.bestand)}</p>` : ""}<p>Abholung in Wuppertal, Handelstraße 64.</p></main>`;
   return {
     title: `${name} | Alex Autoshop Wuppertal`,
-    description: `${name}, Artikelnummer ${teil.artNr}. ${preisText}. TecDoc-Katalog, Bestand von Inter Cars, Abholung in Wuppertal.`,
+    description: `${name}, Artikelnummer ${teil.artNr}. ${preisText}. TecDoc-Katalog, Bestand live, Abholung in Wuppertal.`,
     canonical: url,
     jsonLd,
     inhalt,

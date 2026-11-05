@@ -285,7 +285,8 @@ function normalizeProduct(product, quote = null, stockLines = null) {
 
   const sku   = product.sku   || product.index || "";
   const name  = product.description || product.shortDescription || product.name || "Artikel";
-  const brand = product.brand || "Inter Cars";
+  const brandRoh = String(product.brand || "").trim();
+  const brand = /^inter\s*cars$/i.test(brandRoh) ? "" : brandRoh;
 
   // ── Bestand: über alle Lager der Logistikkette summieren ──────────────────
   const lines = Array.isArray(quote?.lines) ? quote.lines

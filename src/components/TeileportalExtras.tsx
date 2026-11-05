@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { versandkosten, pfandBetrag, DHL_EUR, VERSAND_FREI_AB } from "../../shared/versand.js";
 import { formatSpecValue, eur, type MemberLevelId } from "@/components/TeileportalPricing";
-import { icPriceLookup } from "@/lib/intercarsGateway";
+import { icPriceLookup } from "@/lib/livePreis";
 import { adminPreiseHolen, type EkPreis, type AdminFehler } from "@/lib/adminZugang";
 import {
   ThekenLeiste, MargenZeile, MargenSumme, Margenrechner, QrZahlung, Abholschein,

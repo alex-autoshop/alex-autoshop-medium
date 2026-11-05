@@ -3,7 +3,7 @@ import { ArrowLeft, Loader2, PackageSearch, Phone, MessageCircle, ChevronDown } 
 import { TeileZeile, type WorkArticle } from "@/components/TeileWorkspace";
 import { type MemberLevelId } from "@/components/TeileportalPricing";
 import { aftermarketZuOe, type OeArtikel } from "@/lib/oeAftermarket";
-import { icPriceLookup } from "@/lib/intercarsGateway";
+import { icPriceLookup } from "@/lib/livePreis";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
