@@ -121,6 +121,7 @@ export default function App() {
                         </ProtectedRoute>
                       }
                     />
+                    <Route path="/teile/:slug" element={<TeilArtikel />} />
                     <Route path="/teileboerse/artikel" element={<TeilArtikel />} />
                     <Route path="/teileboerse" element={<Teileportal />} />
                     <Route path="/fahrzeugboerse" element={<NurAdmin><Fahrzeugmarkt /></NurAdmin>} />

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { teilePfad } from "../../shared/teile-pfad.js";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShoppingBag, Check, X, Copy, ChevronRight, Package, Layers,
@@ -165,7 +167,7 @@ export function TeileZeile({
         <p className="mt-0.5 text-[12px] text-muted-foreground truncate">
           <span className="font-semibold uppercase tracking-wide">{a.brand}</span>
           {a.brand && a.articleNumber && <span className="mx-1.5 opacity-40">·</span>}
-          <span className="font-mono">{a.articleNumber}</span>
+          <Link to={teilePfad(a.brand, a.articleNumber)} className="font-mono hover:text-primary" onClick={(e) => e.stopPropagation()}>{a.articleNumber}</Link>
         </p>
 
         {daten.length > 0 && (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ausTeileSlug, teilePfad } from "../../shared/teile-pfad.js";
 import { Loader2, Package } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { apArticlesByNumber, type ApArticle } from "@/lib/autoparts";
@@ -11,8 +12,10 @@ import { icPriceLookup } from "@/lib/intercarsGateway";
  * ohne Preis steht kein erfundener Offer-Preis im Schema.
  */
 export default function TeilArtikel() {
+  const { slug } = useParams();
   const [params] = useSearchParams();
-  const nr = (params.get("nr") || "").trim();
+  const ausSlug = slug ? ausTeileSlug(slug).nummer : "";
+  const nr = (ausSlug || params.get("nr") || "").trim();
   const [artikel, setArtikel] = useState<ApArticle | null>(null);
   const [preis, setPreis] = useState<number | null>(null);
   const [bestand, setBestand] = useState<string>("");
@@ -55,15 +58,15 @@ export default function TeilArtikel() {
         sku: artikel?.articleNumber || nr,
         brand: artikel?.brand ? { "@type": "Brand", name: artikel.brand } : undefined,
         image: artikel?.imageUrl,
-        url: `https://www.alex-autoshop.de/teileboerse/artikel?nr=${encodeURIComponent(nr)}`,
+        url: `https://www.alex-autoshop.de${teilePfad(artikel?.brand || "teil", artikel?.articleNumber || nr)}`,
         ...(preis != null
           ? {
               offers: {
                 "@type": "Offer",
                 priceCurrency: "EUR",
                 price: preis.toFixed(2),
-                availability: bestand ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
-                url: `https://www.alex-autoshop.de/teileboerse/artikel?nr=${encodeURIComponent(nr)}`,
+                availability: bestand && !/anfrage/i.test(bestand) ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
+                url: `https://www.alex-autoshop.de${teilePfad(artikel?.brand || "teil", artikel?.articleNumber || nr)}`,
               },
             }
           : {}),
