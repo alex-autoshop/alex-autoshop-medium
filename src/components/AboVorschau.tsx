@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { CheckCircle, Plus, X } from "lucide-react";
 import { ABO_RABATTE } from "../../shared/produktabo.js";
+import { aboBildStil } from "../../shared/abo-bildrahmen.js";
 import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { cn } from "@/lib/utils";
 
@@ -72,9 +73,14 @@ export function AboVorschau({
         >
           <X className="w-5 h-5" />
         </button>
-        <div className="bg-white">
+        <div className="bg-white overflow-hidden">
           {bilder[bild] && (
-            <img src={bilder[bild]} alt="" className="w-full aspect-square object-contain" />
+            <img
+              src={bilder[bild]}
+              alt=""
+              className="w-full aspect-square object-contain object-center"
+              style={bild === 0 ? aboBildStil(n.handle) : undefined}
+            />
           )}
           {bilder.length > 1 && (
             <div className="flex gap-2 px-4 pb-3 overflow-x-auto">

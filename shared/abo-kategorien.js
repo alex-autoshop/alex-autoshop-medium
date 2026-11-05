@@ -60,7 +60,52 @@ export function aboKategorieLabel(id) {
   return String(id);
 }
 
-/** @param {Array<{ handle?: string, productType?: string }>} liste */
+function titelVon(produkt) {
+  return String(produkt?.title || produkt?.titel || "");
+}
+
+/** Erste Mengenangabe in g oder ml. Liter wird nach ml umgerechnet. */
+function groesseVon(titel) {
+  const m = titel.replace(/\u00a0/g, " ").match(/(\d+(?:[.,]\d+)?)\s*(ml|l|g)\b/i);
+  if (!m) return null;
+  const n = parseFloat(m[1].replace(",", "."));
+  if (!Number.isFinite(n)) return null;
+  return m[2].toLowerCase() === "l" ? n * 1000 : n;
+}
+
+/** Produktlinie ohne Marke, Gebinde und Füllwörter, damit 250 g und 750 g zusammenfinden. */
+function linieVon(titel) {
+  return titel
+    .toLowerCase()
+    .replace(/\u00a0/g, " ")
+    .replace(/(\d+(?:[.,]\d+)?)\s*(ml|l|g)\b/gi, " ")
+    .replace(/\b(friz|silikonfrei)\b/g, " ")
+    .replace(/[^a-zäöüß]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Innerhalb einer Reihe: kleine Gebinde vor großen, gleiche Linie beieinander.
+ * Produkte ohne Mengenangabe behalten ihre Reihenfolge und stehen dahinter.
+ */
+export function aboReiheOrdnen(produkte) {
+  return (produkte || [])
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => {
+      const ga = groesseVon(titelVon(a.p));
+      const gb = groesseVon(titelVon(b.p));
+      if ((ga == null) !== (gb == null)) return ga == null ? 1 : -1;
+      if (ga != null && gb != null && ga !== gb) return ga - gb;
+      const la = linieVon(titelVon(a.p));
+      const lb = linieVon(titelVon(b.p));
+      if (la !== lb) return la.localeCompare(lb, "de");
+      return a.i - b.i;
+    })
+    .map((x) => x.p);
+}
+
+/** @param {Array<{ handle?: string, productType?: string, title?: string, titel?: string }>} liste */
 export function aboGruppen(liste) {
   const map = new Map();
   for (const produkt of liste || []) {
@@ -76,6 +121,8 @@ export function aboGruppen(liste) {
   return [...bekannt, ...rest, ...ende].map((id) => ({
     id,
     label: aboKategorieLabel(id),
-    produkte: map.get(id),
+    // Nur Pflege: dort liegen die Politur-Paare 250 g / 750 g. Andere Reihen
+    // behalten die Shop-Reihenfolge, damit z. B. Schwarz vor Grau stehen bleibt.
+    produkte: id === "pflege" ? aboReiheOrdnen(map.get(id)) : map.get(id),
   }));
 }
