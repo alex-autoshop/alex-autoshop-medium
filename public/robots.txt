@@ -1,7 +1,7 @@
 ﻿User-agent: *
 Allow: /
 
-# Teilebörse vorübergehend zu (TEILEBOERSE_PUBLIC). Beim Öffnen diese zwei Zeilen entfernen.
+# Vorübergehend geschlossen. Beim Öffnen diese zwei Zeilen entfernen.
 Disallow: /teileboerse
 Disallow: /teile
 
