@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 type Variant = ShopifyProduct["node"]["variants"]["edges"][number]["node"];
 
 // hübschere Step-Labels für bekannte Shopify-Optionsnamen
-const LABEL: Record<string, string> = { Hersteller: "Marke", Komponenten: "System", Menge: "Menge" };
+const LABEL: Record<string, string> = { Hersteller: "Lackmarke", Marke: "Lackmarke", Komponenten: "System", Menge: "Menge" };
 
 const COLOR_TABS = [
   { id: "Lackcode", label: "Lackcode", icon: Palette, placeholder: "z.B. LY9T, A1A1, 040" },
