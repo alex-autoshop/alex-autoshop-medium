@@ -130,6 +130,7 @@ export function aboListeErgaenzen(roh, produkt) {
   if (!id || !titel) return { ...liste, ergebnis: "leer" };
   if (liste.produkte.some((p) => p && p.id === id)) return { ...liste, ergebnis: "schon" };
   if (liste.produkte.length >= MAX_PRODUKTE) return { ...liste, ergebnis: "voll" };
+  const eigene = Math.floor(Number(produkt && produkt.rabatt));
   const neu = {
     id,
     handle: String(produkt.handle || ""),
@@ -137,9 +138,57 @@ export function aboListeErgaenzen(roh, produkt) {
     preis: Number(produkt.preis) > 0 ? Number(produkt.preis) : 0,
     waehrung: String(produkt.waehrung || "EUR"),
     bild: produkt.bild ? String(produkt.bild) : "",
-    rabatt: liste.standard,
+    rabatt: rabattGueltig(eigene) ? eigene : liste.standard,
   };
   return { standard: liste.standard, produkte: [...liste.produkte, neu], ergebnis: "neu" };
+}
+
+/** Stufe (und optional den Einzelpreis) einer vorhandenen Einzelposition ändern. */
+export function aboEinzelAktualisieren(roh, produkt) {
+  const liste = listeNormalisieren(roh);
+  const id = String(produkt && produkt.id || "").trim();
+  const rabatt = Math.floor(Number(produkt && produkt.rabatt));
+  if (!id || !rabattGueltig(rabatt)) return { ...liste, ergebnis: "leer" };
+  const idx = liste.produkte.findIndex((p) => p && p.id === id);
+  if (idx < 0) return { ...liste, ergebnis: "leer" };
+  if (liste.produkte[idx].art === "menge") return { ...liste, ergebnis: "schon" };
+  const produkte = liste.produkte.slice();
+  const preis = Number(produkt.preis);
+  produkte[idx] = {
+    ...produkte[idx],
+    rabatt,
+    ...(Number.isFinite(preis) && preis >= 0 ? { preis } : {}),
+  };
+  return { standard: liste.standard, produkte, ergebnis: "neu" };
+}
+
+/** Einzelposition aus der Liste nehmen. Eine Mengen-Position bleibt. */
+export function aboEinzelEntfernen(roh, id) {
+  const liste = listeNormalisieren(roh);
+  const ziel = liste.produkte.find((p) => p && p.id === id);
+  if (!ziel) return { ...liste, ergebnis: "leer" };
+  if (ziel.art === "menge") return { ...liste, ergebnis: "schon" };
+  return {
+    standard: liste.standard,
+    produkte: liste.produkte.filter((p) => p.id !== id),
+    ergebnis: "weg",
+  };
+}
+
+/**
+ * Mitgliedspreis einer Warenkorbzeile.
+ * einzel = Normalpreis einer Einheit, menge = Stückzahl, rabatt = 15, 28 oder 40.
+ */
+export function mitgliedZeile(einzel, menge, rabatt) {
+  const r = Math.floor(Number(rabatt));
+  if (!rabattGueltig(r)) return null;
+  const e = Number(einzel);
+  const m = Math.floor(Number(menge));
+  if (!Number.isFinite(e) || e < 0 || !Number.isFinite(m) || m < 1) return null;
+  const cent = (n) => Math.round(n * 100) / 100;
+  const normal = cent(e * m);
+  const mitglied = cent(normal * (1 - r / 100));
+  return { normal, mitglied, ersparnis: cent(normal - mitglied), rabatt: r };
 }
 
 /**
