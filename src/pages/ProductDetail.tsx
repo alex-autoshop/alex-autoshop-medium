@@ -15,6 +15,8 @@ import { useCartStore } from "@/stores/cartStore";
 import { PaintConfigurator } from "@/components/PaintConfigurator";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
 import { AboKnopf } from "@/components/AboKnopf";
+import { BaldVerfuegbar, GefahrstoffBlock, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
+import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
 import { cn } from "@/lib/utils";
 
 // Produkte mit Farb-Konfigurator (Marke → System → Menge → Fahrzeug → Farbcode)
@@ -103,6 +105,9 @@ export default function ProductDetail() {
     );
   }
 
+  const gefahr = gefahrstoffVonKnoten(product);
+  const gesperrt = kaufGesperrt(gefahr);
+
   const addToCart = async () => {
     console.log('[addToCart] called, selectedVariant:', selectedVariant?.id, 'cartLoading:', cartLoading);
     if (!selectedVariant) { console.log('[addToCart] no selectedVariant, return'); return; }
@@ -139,7 +144,9 @@ export default function ProductDetail() {
         </div>
 
         <div>
-          <h1 className="text-2xl sm:text-3xl leading-tight mb-6">{product.title}</h1>
+          <h1 className="text-2xl sm:text-3xl leading-tight mb-4">{product.title}</h1>
+          {gefahr.ist && !gesperrt && <div className="mb-4"><GefahrstoffKompakt g={gefahr} /></div>}
+          <GefahrstoffBlock g={gefahr} titel={product.title} handle={product.handle} />
 
           {CONFIGURATOR_HANDLES.has(handle ?? "") ? (
             <>
@@ -188,7 +195,7 @@ export default function ProductDetail() {
             </div>
           )}
 
-          <div className="flex items-center gap-3 mt-6">
+          {gesperrt ? <div className="mt-6"><BaldVerfuegbar /></div> : <div className="flex items-center gap-3 mt-6">
             <div className="flex items-center border border-border rounded-lg">
               <button
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -214,8 +221,8 @@ export default function ProductDetail() {
               <ShoppingCart className="w-5 h-5" />
               {selectedVariant?.availableForSale ? "In den Warenkorb" : "Nicht verfügbar"}
             </button>
-          </div>
-          <AboKnopf
+          </div>}
+          {!gesperrt && <AboKnopf
             className="mt-3"
             produkt={{
               id: product.id,
@@ -225,7 +232,7 @@ export default function ProductDetail() {
               waehrung: price?.currencyCode ?? "EUR",
               bild: img || undefined,
             }}
-          />
+          />}
 
           <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-5">
             <p className="font-display font-bold mb-3">Mitgliederpreise</p>

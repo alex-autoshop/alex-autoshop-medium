@@ -26,6 +26,7 @@ const RECHTLICHES = [
   { label: "Datenschutz", to: "/datenschutz" },
   { label: "AGB", to: "/agb" },
   { label: "Versand", to: "/versand" },
+  { label: "Gefahrstoffe & Sicherheitsdatenblätter", to: "/gefahrstoffe" },
   { label: "Widerrufsrecht", to: "/widerruf" },
   { label: "Verträge hier kündigen", to: "/kuendigen" },
 ];

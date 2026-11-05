@@ -51,6 +51,7 @@ export interface ShopifyProduct {
       name: string;
       values: string[];
     }>;
+    gefahrstoffMetafelder?: Array<{ key: string; value: string } | null> | null;
   };
 }
 
@@ -143,6 +144,18 @@ const PRODUCT_CARD_FIELDS = `
     name
     values
   }
+  gefahrstoffMetafelder: metafields(identifiers: [
+    {namespace: "gefahrstoff", key: "ist_gefahrstoff"},
+    {namespace: "gefahrstoff", key: "h_saetze"},
+    {namespace: "gefahrstoff", key: "p_saetze"},
+    {namespace: "gefahrstoff", key: "piktogramme"},
+    {namespace: "gefahrstoff", key: "signalwort"},
+    {namespace: "gefahrstoff", key: "sdb_url"},
+    {namespace: "gefahrstoff", key: "sdb_stand"},
+    {namespace: "gefahrstoff", key: "gefahrgut_un_nr"},
+    {namespace: "gefahrstoff", key: "mindestalter"},
+    {namespace: "gefahrstoff", key: "versand_hinweis"}
+  ]) { key value }
 `;
 
 export const STOREFRONT_PRODUCTS_QUERY = `
@@ -229,6 +242,18 @@ export const STOREFRONT_PRODUCT_BY_HANDLE_QUERY = `
         name
         values
       }
+      gefahrstoffMetafelder: metafields(identifiers: [
+        {namespace: "gefahrstoff", key: "ist_gefahrstoff"},
+        {namespace: "gefahrstoff", key: "h_saetze"},
+        {namespace: "gefahrstoff", key: "p_saetze"},
+        {namespace: "gefahrstoff", key: "piktogramme"},
+        {namespace: "gefahrstoff", key: "signalwort"},
+        {namespace: "gefahrstoff", key: "sdb_url"},
+        {namespace: "gefahrstoff", key: "sdb_stand"},
+        {namespace: "gefahrstoff", key: "gefahrgut_un_nr"},
+        {namespace: "gefahrstoff", key: "mindestalter"},
+        {namespace: "gefahrstoff", key: "versand_hinweis"}
+      ]) { key value }
     }
   }
 `;

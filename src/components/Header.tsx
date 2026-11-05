@@ -16,7 +16,10 @@ type NavPunkt = { to: string; label: string; href?: string; beta?: boolean };
 
 // Die Fahrzeugbörse ist noch nicht öffentlich — sie taucht nur im Menü des
 // Admin-Kontos auf. Zum Freischalten: Eintrag nach NAV verschieben.
-const NAV_ADMIN: NavPunkt[] = [{ to: "/fahrzeugboerse", label: "Fahrzeugbörse" }];
+const NAV_ADMIN: NavPunkt[] = [
+  { to: "/fahrzeugboerse", label: "Fahrzeugbörse" },
+  { to: "/intern/gefahrstoffe", label: "Gefahrstoffe" },
+];
 
 const NAV: NavPunkt[] = [
   { to: "/shop", label: "Shop" },

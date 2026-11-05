@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { CheckCircle, Plus, X } from "lucide-react";
 import { ABO_RABATTE } from "../../shared/produktabo.js";
+import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
+import { BaldVerfuegbar, GefahrstoffBlock } from "@/components/GefahrstoffHinweis";
 import { aboBildStil } from "../../shared/abo-bildrahmen.js";
 import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { cn } from "@/lib/utils";
@@ -42,6 +44,8 @@ export function AboVorschau({
   const waehrung = n.priceRange?.minVariantPrice?.currencyCode ?? "EUR";
   const dialog = useRef<HTMLDivElement>(null);
   const text = kurz(n.description || "");
+  const gefahr = gefahrstoffVonKnoten(n);
+  const gesperrt = kaufGesperrt(gefahr);
 
   useEffect(() => {
     const vorher = document.activeElement as HTMLElement | null;
@@ -103,6 +107,7 @@ export function AboVorschau({
           <h2 id="abo-vorschau-titel" className="font-display text-xl sm:text-2xl leading-snug pr-8">
             {n.title}
           </h2>
+          <GefahrstoffBlock g={gefahr} titel={n.title} handle={n.handle} />
           {text && <p className="text-sm leading-relaxed text-neutral-600">{text}</p>}
           <p className="text-sm text-neutral-500 line-through">{formatPrice(String(preis), waehrung)}</p>
           <ul className="space-y-1">
@@ -131,6 +136,7 @@ export function AboVorschau({
               ))}
             </div>
           )}
+          {gesperrt ? <BaldVerfuegbar /> : (
           <button
             type="button"
             onClick={onHinzu}
@@ -142,6 +148,7 @@ export function AboVorschau({
           >
             {schon && misch ? "Öffnen" : schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
           </button>
+          )}
           <Link to={`/produkt/${n.handle}`} className="inline-block text-sm font-semibold text-primary underline underline-offset-2">
             Zur Produktseite
           </Link>
