@@ -503,7 +503,7 @@ export function ProduktAbo() {
                 disabled={laeuft || produkte.length === 0}
                 className={cn("btn-primary w-full", (laeuft || produkte.length === 0) && "opacity-50 cursor-not-allowed")}
               >
-                {laeuft ? <><Loader2 className="w-5 h-5 animate-spin" /> Moment …</> : "Produkt-Abo abschließen"}
+                {laeuft ? <><Loader2 className="w-5 h-5 animate-spin" /> Moment …</> : "Zahlungspflichtig bestellen"}
               </button>
             </form>
 

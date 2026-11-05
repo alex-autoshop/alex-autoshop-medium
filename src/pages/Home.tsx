@@ -14,6 +14,11 @@ import { collections } from "@/lib/categories";
 const HAUPT_HANDLES = SHOP_CATEGORIES.map((c) => c.handle);
 import { SHOP_INFO } from "@/data/shopInfo";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
+import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
+import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
+
+const euro = (n: number) =>
+  new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -32,14 +37,14 @@ const USPS = [
   {
     icon: Wrench,
     title: "Teile per Kennzeichen",
-    text: "Kennzeichen eingeben, Fahrzeug erkannt, passende Teile finden — im Teilebörse.",
+    text: "Kennzeichen eingeben, Fahrzeug erkannt, passende Teile finden — in der Teilebörse.",
     badge: "Neu",
   },
   {
     icon: BadgePercent,
-    title: "B2B-Rabatte bis 40%",
-    text: "Drei Mitgliedschaftsstufen für Werkstätten — monatlich kündbar, sofort sparen.",
-    badge: "Nächste Freigabe ab 1. Sept.",
+    title: "Rabatt bis 40 %",
+    text: "Du wählst den Rabatt pro Produkt — monatlich kündbar, sofort im Shop.",
+    badge: "Monatlich kündbar",
   },
 ];
 
@@ -53,7 +58,7 @@ export default function Home() {
     <div>
       <Seo
         title="Autolack, Autoteile & Werkstattbedarf"
-        description="Alex Autoshop Wuppertal: Lackierprodukte, Autoteile und Werkstattbedarf mit B2B-Rabatten bis 40%. Heute bestellt, schnell abholbereit."
+        description="Alex Autoshop Wuppertal: Lackierprodukte, Autoteile und Werkstattbedarf mit bis zu 40 % Rabatt. Heute bestellt, schnell abholbereit."
       />
 
       {/* Hero — dunkel mit hellem Brand-Gold */}
@@ -68,7 +73,7 @@ export default function Home() {
         <div className="container py-20 sm:py-28 relative">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <p className="text-gold-accent font-semibold tracking-wide uppercase text-sm mb-4">
-              B2B-Distributor in Wuppertal
+              Fachgroßhandel in Wuppertal
             </p>
             <h1 className="text-4xl sm:text-6xl max-w-3xl leading-[1.05]">
               Alles für Lack, Karosserie <span className="text-gold-accent">&amp; Werkstatt.</span>
@@ -162,7 +167,14 @@ export default function Home() {
               {teileSichtbar ? " Die Teilebörse hat einen Preis für alle." : ""} Monatlich kündbar, keine Mindestabnahme.
             </p>
           </motion.div>
-          <MembershipCards />
+          {DIENSTLEISTUNG_BUCHBAR ? <MembershipCards /> : (
+            <div className="max-w-xl mx-auto text-center">
+              <p className="text-muted-foreground mb-6">
+                Pro Produkt im Monat: {euro(PRODUKT_ABO_PREISE[15])} bei 15 %, {euro(PRODUKT_ABO_PREISE[28])} bei 28 %, {euro(PRODUKT_ABO_PREISE[40])} bei 40 %.
+              </p>
+              <Link to="/mitgliedschaft" className="btn-gold-bright text-lg px-8">Zum Produkt-Abo</Link>
+            </div>
+          )}
           <motion.div {...fadeUp} className="text-center mt-8">
             <Link
               to="/mitgliedschaft"

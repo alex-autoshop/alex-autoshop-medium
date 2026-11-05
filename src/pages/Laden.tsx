@@ -18,7 +18,7 @@ const VALUES = [
   },
   {
     icon: Users,
-    title: "B2B-Partner",
+    title: "Für Werkstätten",
     text: "Für Lackierbetriebe, Karosseriewerkstätten und Aufbereiter — mit Mitgliedschaft bis 40% Rabatt.",
   },
 ];

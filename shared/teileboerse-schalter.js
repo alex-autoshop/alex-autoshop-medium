@@ -17,7 +17,7 @@ export const TEILEBOERSE_PUBLIC = false;
 /** Einziges Konto, das die geschlossene Teilebörse nutzen darf. */
 export const TEILEBOERSE_ADMIN_EMAIL = "info@alex-autoshop.de";
 
-export const TEILEBOERSE_HINWEIS = "Die Teilebörse ist bald wieder verfügbar";
+export const TEILEBOERSE_HINWEIS = "Diese Seite ist derzeit nicht verfügbar";
 
 export const TEILEBOERSE_COOKIE = "tb-zugang";
 

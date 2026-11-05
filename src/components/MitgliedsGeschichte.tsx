@@ -15,6 +15,7 @@ const BEISPIEL = {
 };
 const mitglied = Math.round(BEISPIEL.normal * (1 - BEISPIEL.rabatt / 100) * 100) / 100;
 const ersparnis = Math.round((BEISPIEL.normal - mitglied) * 100) / 100;
+const netto = Math.round((ersparnis - PRODUKT_ABO_PREISE[40]) * 100) / 100;
 
 const KARTEN = [
   { name: "Schleifpaste, 750 g", preis: 33 },
@@ -223,7 +224,7 @@ export function MitgliedsGeschichte({ onDurch, seo = false }: { onDurch?: () => 
       </Szene>
 
       <Szene index={3} setzen={setzen}>
-        <Text schritt="04" titel={`Beispiel: Du sparst ${euro(ersparnis)} im Monat.`}>
+        <Text schritt="04" titel={`Beispiel: Unterm Strich ${euro(netto)} im Monat.`}>
           <p>
             {BEISPIEL.name}, {BEISPIEL.menge}, einmal im Monat. Normal {euro(BEISPIEL.normal)}, mit {BEISPIEL.rabatt} % {euro(mitglied)}. Der Beitrag für dieses eine Produkt: {euro(PRODUKT_ABO_PREISE[40])} im Monat.
           </p>
@@ -233,7 +234,7 @@ export function MitgliedsGeschichte({ onDurch, seo = false }: { onDurch?: () => 
           <p className="text-sm text-neutral-500 mt-1 line-through decoration-2" style={{ opacity: 0.35 + 0.65 * p[3] }}>{euro(BEISPIEL.normal)}</p>
           <p className="font-display text-4xl sm:text-5xl font-bold text-primary tabular-nums mt-1" aria-hidden="true">{euro(preisJetzt)}</p>
           <p className="sr-only">Von {euro(BEISPIEL.normal)} auf {euro(mitglied)}</p>
-          <p className="mt-3 font-semibold text-red-600">Du sparst {euro(ersparnis)} im Monat</p>
+          <p className="mt-3 font-semibold text-red-600">Unterm Strich {euro(netto)} im Monat</p>
         </div>
       </Szene>
 
@@ -284,17 +285,13 @@ export function MitgliedsGeschichte({ onDurch, seo = false }: { onDurch?: () => 
       </Szene>
 
       <Szene index={6} setzen={setzen}>
-        <Text schritt="07" titel="Zehn Gründungsplätze.">
-          <p>Diese Beiträge gelten für die ersten zehn Plätze. Danach werden sie angehoben.</p>
+        <Text schritt="07" titel="Monatlich kündbar.">
+          <p>Keine Mindestlaufzeit. Eine Erhöhung des Beitrags kündigen wir vorher an. Sie gilt nur, wenn du zustimmst.</p>
         </Text>
         <div>
           <a href="#abo-stufen" className="btn-gold-bright text-base px-6 w-full sm:w-auto">
-            Jetzt Gründungsplatz sichern
+            Zum Produkt-Abo
           </a>
-          <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-white/80">
-            <span className="font-bold text-gold-bright">Nur 10 Gründungs-Plätze</span>
-            <span>zu diesen Konditionen.</span>
-          </div>
         </div>
       </Szene>
     </div>

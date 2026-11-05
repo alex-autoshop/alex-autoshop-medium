@@ -82,6 +82,7 @@ test("Katalog-Proxies lehnen Gäste ab, bevor sie nach außen fragen", async () 
 test("geschlossene Seite nennt den Hinweis und kein Produktdokument", () => {
   const html = teileboerseGeschlossenHtml();
   assert.match(html, new RegExp(TEILEBOERSE_HINWEIS));
+  assert.equal(/teileb[oö]rse/i.test(html), false);
   assert.match(html, /noindex/);
   assert.equal(html.includes("application/ld+json"), false);
   assert.match(leereTeileSitemap(), /<urlset/);

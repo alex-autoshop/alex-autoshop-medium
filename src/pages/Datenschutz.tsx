@@ -1,8 +1,17 @@
-const Datenschutz = () => (
+import { Seo } from "@/components/Seo";
+import { teileboerseOeffentlich } from "../../shared/teileboerse-schalter.js";
+
+const Datenschutz = () => {
+  const teile = teileboerseOeffentlich();
+  return (
   <div>
+    <Seo
+      title="Datenschutz"
+      description="Datenschutzerklärung von Alex Autoshop: welche Daten wir verarbeiten und welche Rechte Sie haben."
+    />
     <article className="prose-legal">
       <h1>Datenschutzerklärung</h1>
-      <p><em>Stand: Juli 2026</em></p>
+      <p><em>Stand: November 2026</em></p>
 
       <h2>1. Verantwortlicher</h2>
       <p>
@@ -15,7 +24,7 @@ const Datenschutz = () => (
       <h2>2. Übersicht der Verarbeitungen</h2>
       <p>
         Wir verarbeiten personenbezogene Daten, wenn Sie unsere Website besuchen, ein Kundenkonto
-        anlegen, bestellen, unseren AI-Assistenten oder Materialplaner nutzen oder mit uns
+        anlegen, bestellen, den Assistenten oder Materialplaner nutzen oder mit uns
         kommunizieren. Verarbeitet werden je nach Nutzung: Kontaktdaten (Name, Adresse, E-Mail,
         Telefon), Kontodaten (E-Mail, Passwort — verschlüsselt), Bestell- und Zahlungsdaten,
         Fahrzeugdaten, die Sie freiwillig hinterlegen (z.&nbsp;B. Modell, Farbcode, VIN), Inhalte
@@ -62,9 +71,9 @@ const Datenschutz = () => (
         können Ihr Konto jederzeit löschen lassen (Kontakt unten).
       </p>
 
-      <h2>7. AI-Assistent &amp; Materialplaner (Anthropic)</h2>
+      <h2>7. Assistent &amp; Materialplaner (Anthropic)</h2>
       <p>
-        Unser AI-Assistent „Alex AI" und der AI-Materialplaner verarbeiten Ihre Eingaben (z.&nbsp;B.
+        Der Assistent und der Materialplaner verarbeiten Ihre Eingaben (z.&nbsp;B.
         Projektbeschreibung, Fahrzeugangaben) über die API von Anthropic PBC (USA), um
         Produktempfehlungen und Materiallisten zu erstellen. Geben Sie dort keine sensiblen
         persönlichen Daten ein. Die Eingaben werden von uns nicht zu Werbezwecken ausgewertet.
@@ -128,8 +137,8 @@ const Datenschutz = () => (
 
       <h2>14. Weitere Empfänger</h2>
       <p>
-        Kartenzahlung in der Teilebörse läuft über Stripe, SEPA-Lastschrift über GoCardless.
-        Teile- und Katalogdaten kommen von unserem Teilegroßhandel und von TecDoc-Datenanbietern. E-Mails
+        Kartenzahlung läuft über Stripe, SEPA-Lastschrift über GoCardless.
+        {teile ? " Teile- und Katalogdaten kommen von unserem Teilegroßhandel und von TecDoc-Datenanbietern." : ""} E-Mails
         (Bestellbestätigung, Widerruf, Kündigung) versenden wir über Resend, sofern ein
         Versandschlüssel hinterlegt ist. Google Analytics und ein Meta-Pixel laden nur, wenn
         du „Alle akzeptieren“ wählst; das Pixel nur zusätzlich, wenn eine echte Pixel-ID
@@ -149,6 +158,7 @@ const Datenschutz = () => (
       </p>
     </article>
   </div>
-);
+  );
+};
 
 export default Datenschutz;

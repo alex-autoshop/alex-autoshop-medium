@@ -1,11 +1,19 @@
 import { Link } from "react-router-dom";
+import { Seo } from "@/components/Seo";
 import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
+import { teileboerseOeffentlich } from "../../shared/teileboerse-schalter.js";
 
 const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
 
-const AGB = () => (
+const AGB = () => {
+  const teile = teileboerseOeffentlich();
+  return (
   <div>
+    <Seo
+      title="AGB"
+      description="Allgemeine Geschäftsbedingungen von Alex Autoshop für den Online-Shop und die Mitgliedschaft."
+    />
     <article className="prose-legal">
       <h1>Allgemeine Geschäfts{"\u00AD"}bedingungen (AGB)</h1>
       <p><em>Alex Autoshop – Alexander Haritopoulos · Stand: November 2026</em></p>
@@ -13,7 +21,7 @@ const AGB = () => (
       <hr />
 
       <h3>1. Geltungsbereich</h3>
-      <p>Diese AGB gelten für alle Verträge, die über den Online-Shop (shop.alex-autoshop.de), die Teilebörse und die Mitgliedschaften unter <a href="https://www.alex-autoshop.de">www.alex-autoshop.de</a> zwischen uns und Verbrauchern oder Unternehmern geschlossen werden. Abweichende Bedingungen des Kunden gelten nicht, es sei denn, wir stimmen ihnen ausdrücklich zu.</p>
+      <p>Diese AGB gelten für alle Verträge, die über den Online-Shop (shop.alex-autoshop.de){teile ? ", die Teilebörse" : ""} und die Mitgliedschaften unter <a href="https://www.alex-autoshop.de">www.alex-autoshop.de</a> zwischen uns und Verbrauchern oder Unternehmern geschlossen werden. Abweichende Bedingungen des Kunden gelten nicht, es sei denn, wir stimmen ihnen ausdrücklich zu.</p>
       <p>Verbraucher ist jede natürliche Person, die ein Rechtsgeschäft zu Zwecken abschließt, die überwiegend weder ihrer gewerblichen noch ihrer selbstständigen beruflichen Tätigkeit zugerechnet werden können (§ 13 BGB). Unternehmer ist eine natürliche oder juristische Person oder eine rechtsfähige Personengesellschaft, die bei Abschluss eines Rechtsgeschäfts in Ausübung ihrer gewerblichen oder selbstständigen beruflichen Tätigkeit handelt (§ 14 BGB).</p>
 
       <hr />
@@ -30,9 +38,11 @@ const AGB = () => (
       <hr />
 
       <h3>3. Vertragsschluss, Vertragssprache, Vertragstext</h3>
-      <p>Die Darstellung der Produkte im Shop und in der Teilebörse ist kein rechtlich bindendes Angebot, sondern eine Aufforderung zur Bestellung.</p>
+      <p>Die Darstellung der Produkte im Shop{teile ? " und in der Teilebörse" : ""} ist kein rechtlich bindendes Angebot, sondern eine Aufforderung zur Bestellung.</p>
       <p><strong>Online-Shop:</strong> Sie legen Artikel in den Warenkorb, geben im Checkout Ihre Daten ein, wählen Versand- und Zahlungsart und sehen vor dem Absenden eine Übersicht mit allen Angaben und dem Gesamtpreis. Mit dem Klick auf die Schaltfläche „Zahlungspflichtig bestellen“ (bzw. gleichbedeutend „Jetzt kaufen“) geben Sie ein verbindliches Angebot ab. Der Vertrag kommt zustande, wenn wir die Bestellung durch eine Auftragsbestätigung per E-Mail annehmen oder die Ware versenden; die automatische Eingangsbestätigung ist noch keine Annahme. Bei Zahlung per PayPal, Kreditkarte, Apple Pay oder Klarna kommt der Vertrag bereits mit der Zahlungsfreigabe zustande.</p>
-      <p><strong>Teilebörse:</strong> Sie legen Teile in den Warenkorb, sehen dort Teilepreise, Versandkosten, gegebenenfalls Batteriepfand und den Gesamtbetrag, bestätigen die AGB und klicken auf „Zahlungspflichtig bestellen“. Sie werden dann zum Zahlungsdienstleister (Stripe für Karte, GoCardless für SEPA-Lastschrift) weitergeleitet. Der Vertrag kommt mit Abschluss des Zahlungsvorgangs beim Zahlungsdienstleister zustande (Karte) bzw. mit Erteilung des SEPA-Mandats (Lastschrift). Anfragen per WhatsApp oder Formular sind keine Bestellung; wir schicken Ihnen dazu ein Angebot, das Sie annehmen können.</p>
+      {teile && (
+        <p><strong>Teilebörse:</strong> Sie legen Teile in den Warenkorb, sehen dort Teilepreise, Versandkosten, gegebenenfalls Batteriepfand und den Gesamtbetrag, bestätigen die AGB und klicken auf „Zahlungspflichtig bestellen“. Sie werden dann zum Zahlungsdienstleister (Stripe für Karte, GoCardless für SEPA-Lastschrift) weitergeleitet. Der Vertrag kommt mit Abschluss des Zahlungsvorgangs beim Zahlungsdienstleister zustande (Karte) bzw. mit Erteilung des SEPA-Mandats (Lastschrift). Anfragen per WhatsApp oder Formular sind keine Bestellung; wir schicken Ihnen dazu ein Angebot, das Sie annehmen können.</p>
+      )}
       <p><strong>Mitgliedschaft und Produkt-Abo:</strong> siehe Ziffer 11.</p>
       <p>Eingabefehler können Sie vor dem Absenden in jedem Schritt über die Zurück-Funktion des Browsers bzw. die Bearbeiten-Funktionen im Warenkorb korrigieren. Vertragssprache ist Deutsch. Wir speichern den Vertragstext und senden Ihnen die Bestelldaten und diese AGB per E-Mail; die AGB können Sie jederzeit auf dieser Seite abrufen und ausdrucken. Ältere Bestellungen sehen eingeloggte Kunden im Kundenkonto.</p>
 
@@ -40,7 +50,7 @@ const AGB = () => (
 
       <h3>4. Preise, Versandkosten, Pfand</h3>
       <p>Alle Preise sind Endpreise in Euro inklusive der gesetzlichen Mehrwertsteuer. Zusätzlich fallen nur die Versandkosten und gegebenenfalls das Batteriepfand an, die wir Ihnen vor Abgabe der Bestellung im Warenkorb bzw. Checkout nennen. Weitere Kosten oder Zuschläge berechnen wir nicht.</p>
-      <p>Versandkosten innerhalb Deutschlands stehen auf der Seite <Link to="/versand">Versand</Link> (Teilebörse) bzw. im Checkout des Online-Shops. Lieferungen nach Österreich oder in die Schweiz nur nach vorheriger Absprache und gesondertem Angebot.</p>
+      <p>Versandkosten innerhalb Deutschlands stehen auf der Seite <Link to="/versand">Versand</Link>{teile ? " und im Checkout des Online-Shops" : ""}. Lieferungen nach Österreich oder in die Schweiz nur nach vorheriger Absprache und gesondertem Angebot.</p>
       <p>Für Starterbatterien erheben wir nach § 19 Batterierecht-Durchführungsgesetz (BattDG) ein Pfand von 7,50 € inklusive Umsatzsteuer je Batterie, wenn Sie beim Kauf keine Starter-Altbatterie zurückgeben. Das Pfand erstatten wir, sobald Sie eine Starter-Altbatterie bei uns abgeben oder an uns zurücksenden; die Pfandquittung (Rechnung) bitte beilegen. Ein Altteilpfand erheben wir nicht.</p>
 
       <hr />
@@ -48,7 +58,8 @@ const AGB = () => (
       <h3>5. Zahlung</h3>
       <ul>
         <li>Online-Shop: Kreditkarte, Apple Pay, Klarna und PayPal.</li>
-        <li>Teilebörse: Kartenzahlung über Stripe und SEPA-Lastschrift über GoCardless. Den Einzug kündigen wir Ihnen vorher per E-Mail an (Pre-Notification).</li>
+        {teile && <li>Teilebörse: Kartenzahlung über Stripe und SEPA-Lastschrift über GoCardless. Den Einzug kündigen wir Ihnen vorher per E-Mail an (Pre-Notification).</li>}
+        <li>Mitgliedschaft und Produkt-Abo: Karte oder SEPA-Lastschrift. Den Einzug kündigen wir Ihnen vorher per E-Mail an.</li>
         <li>Selbstabholung: zusätzlich Barzahlung oder EC-Karte im Laden.</li>
       </ul>
 
@@ -56,7 +67,7 @@ const AGB = () => (
 
       <h3>6. Lieferung</h3>
       <p>Wir liefern innerhalb Deutschlands mit DHL oder über unseren Lieferservice im Raum Wuppertal; Selbstabholung in der Handelstraße 64, 42277 Wuppertal ist möglich.</p>
-      <p><strong>Lieferzeit:</strong> Online-Shop in der Regel 1–3 Werktage nach Vertragsschluss (bei Vorkasse nach Zahlungseingang). Teilebörse: das am Artikel angezeigte voraussichtliche Lieferdatum. Abweichende Lieferzeiten stehen am Artikel.</p>
+      <p><strong>Lieferzeit:</strong> Online-Shop in der Regel 1–3 Werktage nach Vertragsschluss (bei Vorkasse nach Zahlungseingang).{teile ? " Teilebörse: das am Artikel angezeigte voraussichtliche Lieferdatum." : ""} Abweichende Lieferzeiten stehen am Artikel.</p>
       <p>Teillieferungen nehmen wir nur vor, wenn sie Ihnen zumutbar sind; zusätzliche Versandkosten entstehen Ihnen dadurch nicht.</p>
       <p>Ist ein bestellter Artikel ohne unser Verschulden nicht lieferbar, weil uns unser Lieferant trotz rechtzeitiger Bestellung nicht beliefert, informieren wir Sie unverzüglich und erstatten bereits geleistete Zahlungen sofort.</p>
 
@@ -76,7 +87,9 @@ const AGB = () => (
       <p>Es gelten die gesetzlichen Mängelrechte. Gegenüber Unternehmern beträgt die Verjährungsfrist für Mängelansprüche bei neuen Sachen ein Jahr ab Ablieferung; gegenüber Unternehmern ist die Gewährleistung für gebrauchte Sachen ausgeschlossen. Diese Verkürzungen gelten nicht für Schadensersatzansprüche und nicht bei Arglist oder einer Garantie.</p>
       <p>Garantien geben wir nur, wenn sie am jeweiligen Produkt ausdrücklich genannt sind. Herstellergarantien bleiben unberührt; ihre Bedingungen stehen beim Hersteller.</p>
       <p>Wir haften unbeschränkt bei Vorsatz und grober Fahrlässigkeit, bei Verletzung von Leben, Körper oder Gesundheit, nach dem Produkthaftungsgesetz und im Umfang einer übernommenen Garantie. Bei leicht fahrlässiger Verletzung einer wesentlichen Vertragspflicht (Kardinalpflicht) ist die Haftung auf den vertragstypischen, vorhersehbaren Schaden begrenzt. Im Übrigen ist die Haftung für leichte Fahrlässigkeit ausgeschlossen.</p>
-      <p><strong>Passgenauigkeit (Teilebörse):</strong> Wir zeigen die Fahrzeugzuordnung nach den Katalogdaten (TecDoc). Bitte prüfen Sie vor dem Einbau Ihre Fahrzeugdaten (Fahrzeugschein, Motorcode). Das ändert nichts an Ihren gesetzlichen Rechten, wenn ein Teil nicht zu dem von Ihnen angegebenen Fahrzeug passt.</p>
+      {teile && (
+        <p><strong>Passgenauigkeit (Teilebörse):</strong> Wir zeigen die Fahrzeugzuordnung nach den Katalogdaten (TecDoc). Bitte prüfen Sie vor dem Einbau Ihre Fahrzeugdaten (Fahrzeugschein, Motorcode). Das ändert nichts an Ihren gesetzlichen Rechten, wenn ein Teil nicht zu dem von Ihnen angegebenen Fahrzeug passt.</p>
+      )}
 
       <hr />
 
@@ -86,10 +99,10 @@ const AGB = () => (
       <hr />
 
       <h3>11. Mitgliedschaft und Produkt-Abo</h3>
-      <p><strong>Vertragsschluss:</strong> Sie wählen Rabattstufe und Module, sehen den Monatsbeitrag und schließen den Vertrag mit dem Klick auf „Zahlungspflichtig buchen“ und Abschluss der Zahlung bzw. Erteilung des SEPA-Mandats.</p>
+      <p><strong>Vertragsschluss:</strong> Sie stellen Ihre Produktliste zusammen, sehen den Monatsbeitrag und schließen den Vertrag mit dem Klick auf „Zahlungspflichtig bestellen“ und Abschluss der Zahlung bzw. Erteilung des SEPA-Mandats.</p>
       <p><strong>Laufzeit und Kündigung:</strong> Mitgliedschaft und Produkt-Abo laufen auf unbestimmte Zeit, eine Mindestlaufzeit gibt es nicht. Beide Seiten können jederzeit zum Ende des laufenden Abrechnungsmonats kündigen. Sie können über die Schaltfläche <Link to="/kuendigen">„Verträge hier kündigen“</Link>, per E-Mail an info@alex-autoshop.de oder per Brief kündigen. Das Recht zur außerordentlichen Kündigung bleibt unberührt.</p>
       <p><strong>Beitrag:</strong> Der Monatsbeitrag ist monatlich im Voraus fällig und wird per Karte oder SEPA-Lastschrift eingezogen. Beim Produkt-Abo kostet jedes Produkt {euro(PRODUKT_ABO_PREISE[15])} im Monat für 15 %, {euro(PRODUKT_ABO_PREISE[28])} für 28 % und {euro(PRODUKT_ABO_PREISE[40])} für 40 %. Eine Erhöhung des Beitrags kündigen wir mindestens sechs Wochen vorher in Textform an; sie wird nur wirksam, wenn Sie ihr zustimmen. Stimmen Sie nicht zu, läuft der Vertrag zum bisherigen Beitrag weiter, und beide Seiten können ihn wie oben kündigen.</p>
-      <p><strong>Leistung:</strong> Der Rabatt und der kostenlose Versand gelten im Online-Shop (Lack und Werkstattbedarf) für eine bezahlte Mitgliedschaft der Stufe 1–3, auf den regulären Verkaufspreis, nicht zusätzlich auf Aktionspreise. In der Teilebörse gilt ein Preis für alle. DHL kostet dort 7,49 € und ist ab 150 € Warenwert frei, auch für Mitglieder. Abholung in Wuppertal ist kostenlos.</p>
+      <p><strong>Leistung:</strong> Der Rabatt und der kostenlose Versand gelten im Online-Shop (Lack und Werkstattbedarf) für eine bezahlte Mitgliedschaft der Stufe 1–3, auf den regulären Verkaufspreis, nicht zusätzlich auf Aktionspreise.{teile ? " In der Teilebörse gilt ein Preis für alle. DHL kostet dort 7,49 € und ist ab 150 € Warenwert frei, auch für Mitglieder." : ""} Abholung in Wuppertal ist kostenlos.</p>
 
       <hr />
 
@@ -103,6 +116,7 @@ const AGB = () => (
       <p>Es gilt deutsches Recht unter Ausschluss des UN-Kaufrechts. Bei Verbrauchern gilt diese Rechtswahl nur, soweit dadurch nicht der Schutz durch zwingende Vorschriften des Staates entzogen wird, in dem der Verbraucher seinen gewöhnlichen Aufenthalt hat. Ist der Kunde Kaufmann, juristische Person des öffentlichen Rechts oder öffentlich-rechtliches Sondervermögen, ist Gerichtsstand Wuppertal.</p>
     </article>
   </div>
-);
+  );
+};
 
 export default AGB;
