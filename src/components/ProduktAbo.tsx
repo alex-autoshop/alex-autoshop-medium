@@ -246,39 +246,28 @@ export function ProduktAbo() {
       {/* ── Rabattstufe ───────────────────────────────────────────────── */}
       <div id="abo-stufen" className="max-w-3xl mx-auto mb-8 scroll-mt-24">
         <p className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-          Standard für neue Produkte
+          Die drei Stufen
         </p>
-        <div className="grid grid-cols-3 gap-2.5 sm:gap-3" role="group" aria-label="Rabatt wählen">
-          {ABO_RABATTE.map((r: number) => {
-            const aktiv = r === standard;
-            return (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setStandard(r)}
-                aria-pressed={aktiv}
-                className={cn(
-                  "rounded-2xl border-2 px-2 py-4 sm:px-4 sm:py-5 text-center transition-all duration-200 min-h-[100px]",
-                  aktiv ? "border-primary bg-primary/10 shadow-sm"
-                        : "border-border bg-card hover:border-primary/50 hover:bg-primary/5"
-                )}
-              >
-                <span className={cn("block font-display font-bold leading-none text-2xl sm:text-3xl",
-                  aktiv ? "text-primary" : "text-foreground")}>
-                  {r}%
-                </span>
-                <span className="block text-[11px] sm:text-xs text-muted-foreground mt-1.5 leading-snug">
-                  {STUFEN_TEXT[r]}
-                </span>
-                <span className="block text-[11px] sm:text-xs font-semibold mt-1.5">
-                  {euro(PRODUKT_ABO_PREISE[r])} / Produkt
-                </span>
-              </button>
-            );
-          })}
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+          {ABO_RABATTE.map((r: number) => (
+            <div
+              key={r}
+              className="rounded-2xl border-2 border-border bg-card px-2 py-4 sm:px-4 sm:py-5 text-center min-h-[100px]"
+            >
+              <span className="block font-display font-bold leading-none text-2xl sm:text-3xl text-foreground">
+                {r}%
+              </span>
+              <span className="block text-[11px] sm:text-xs text-muted-foreground mt-1.5 leading-snug">
+                {STUFEN_TEXT[r]}
+              </span>
+              <span className="block text-[11px] sm:text-xs font-semibold mt-1.5">
+                {euro(PRODUKT_ABO_PREISE[r])} / Produkt
+              </span>
+            </div>
+          ))}
         </div>
         <p className="text-center text-xs text-muted-foreground mt-3">
-          Gilt nur für das nächste Produkt, das du hinzufügst. Jede Zeile in der Liste behält ihre eigene Stufe.
+          Die Stufe wählst du direkt bei jedem Produkt.
         </p>
       </div>
 
