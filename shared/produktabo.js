@@ -142,6 +142,7 @@ export function aboListeErgaenzen(roh, produkt) {
     preis: Number(produkt.preis) > 0 ? Number(produkt.preis) : 0,
     waehrung: String(produkt.waehrung || "EUR"),
     bild: produkt.bild ? String(produkt.bild) : "",
+    ab: !!produkt.ab,
     rabatt: rabattGueltig(eigene) ? eigene : liste.standard,
   };
   return { standard: liste.standard, produkte: [...liste.produkte, neu], ergebnis: "neu" };

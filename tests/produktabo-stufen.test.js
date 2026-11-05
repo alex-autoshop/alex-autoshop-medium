@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aboListeGesamt, listeNormalisieren, PRODUKT_ABO_PREISE } from "../shared/produktabo.js";
+import { aboListeGesamt, listeNormalisieren, mengenPosition, PRODUKT_ABO_PREISE } from "../shared/produktabo.js";
 
 test("jede Position behält ihre Stufe, der Beitrag ist die Summe", () => {
   const g = aboListeGesamt([
@@ -26,6 +26,18 @@ test("eine alte globale Stufe wandert auf jedes Produkt", () => {
   assert.equal(n.produkte[0].rabatt, 28);
   assert.equal(n.produkte[1].rabatt, 40);
   assert.equal(listeNormalisieren(null).standard, 15);
+});
+
+test("Lack nach Menge: 70,80 € sind 20 % der Ersparnis, nicht der Warenpreis", () => {
+  // 10 × 88,50 € = 885 € Normalpreis, 40 % → 531 € Mitglied, Ersparnis 354 €, Beitrag 70,80 €.
+  // Dieselbe Funktion rechnet die Zeile in der Liste und die Stripe-/SEPA-Summe.
+  const z = mengenPosition({ einzelpreis: 88.5, menge: 10, rabatt: 40 });
+  assert.equal(z.normal, 885);
+  assert.equal(z.mitglied, 531);
+  assert.equal(z.ersparnis, 354);
+  assert.equal(z.beitrag, 70.8);
+  assert.equal(aboListeGesamt([{ art: "menge", rabatt: 40, einzelpreis: 88.5, menge: 10 }]).beitrag, 70.8);
+  assert.equal(PRODUKT_ABO_PREISE[40], 3);
 });
 
 test("die drei Wunschfarben-Konfiguratoren fallen aus der Einzel-Liste, Mengen bleiben", () => {

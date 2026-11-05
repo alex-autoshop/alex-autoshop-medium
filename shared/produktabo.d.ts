@@ -49,7 +49,7 @@ export declare function listeNormalisieren(roh: {
 
 export declare function aboListeErgaenzen(
   roh: { rabatt?: number; standard?: number; produkte?: Array<Record<string, unknown>> } | null,
-  produkt: { id?: string; handle?: string; titel?: string; preis?: number; waehrung?: string; bild?: string; rabatt?: number }
+  produkt: { id?: string; handle?: string; titel?: string; preis?: number; waehrung?: string; bild?: string; rabatt?: number; ab?: boolean }
 ): {
   standard: number;
   produkte: Array<Record<string, unknown> & { rabatt: number }>;
