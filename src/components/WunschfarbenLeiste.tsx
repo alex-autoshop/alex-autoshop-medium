@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Minus, Palette, SprayCan, Pencil, Info, Lightbulb } from "lucide-react";
+import { Loader2, Plus, Minus, Palette, SprayCan, Pencil, Info, Lightbulb, ChevronDown } from "lucide-react";
 import {
   storefrontApiRequest, STOREFRONT_PRODUCT_BY_HANDLE_QUERY, type ShopifyProduct,
 } from "@/lib/shopify";
@@ -34,6 +34,11 @@ const zahl = (n: number) => n.toLocaleString("de-DE", { maximumFractionDigits: 2
 const wertVon = (v: Variante, name: string) =>
   v.selectedOptions.find((o) => o.name === name)?.value ?? "";
 
+/** Nur der Markenname, ohne den Klammertext aus Shopify. */
+function markenName(name: string) {
+  return String(name || "").replace(/\s*\([^)]*\)/g, "").trim();
+}
+
 /** Aufbau-Bezeichnungen in die Sprache des Lackierers übersetzen. */
 function aufbauLabel(wert: string) {
   const t = wert.toLowerCase();
@@ -45,6 +50,7 @@ function aufbauLabel(wert: string) {
 export function WunschfarbenLeiste({
   rabatt, onHinzufuegen,
 }: { rabatt: number; onHinzufuegen: (e: MengenEintrag) => void }) {
+  const [offen, setOffen] = useState(false);
   const [aktiv, setAktiv] = useState<string>(MISCH_PRODUKTE[0].id);
   const [produkte, setProdukte] = useState<Record<string, Produkt | null>>({});
   const [laedt, setLaedt] = useState(true);
@@ -135,12 +141,12 @@ export function WunschfarbenLeiste({
     const beschreibung = inLitern
       ? [
           markeB && anteilB > 0 && anteilB < 100
-            ? `${100 - anteilB} % ${markeA} / ${anteilB} % ${markeB}`
-            : anteilB === 100 ? markeB : markeA,
+            ? `${100 - anteilB} % ${markenName(markeA)} · ${anteilB} % ${markenName(markeB)}`
+            : anteilB === 100 ? markenName(markeB) : markenName(markeA),
           aufbau ? aufbauLabel(aufbau).titel : "",
           `${zahl(bedarf)} L / Monat`,
         ].filter(Boolean).join(" · ")
-      : [anteilB === 100 && markeB ? markeB : markeA, aufbau ? aufbauLabel(aufbau).titel : "", `${bedarf} ${eintrag.einheit} / Monat`]
+      : [anteilB === 100 && markeB ? markenName(markeB) : markenName(markeA), aufbau ? aufbauLabel(aufbau).titel : "", `${bedarf} ${eintrag.einheit} / Monat`]
           .filter(Boolean).join(" · ");
 
     onHinzufuegen({
@@ -158,18 +164,31 @@ export function WunschfarbenLeiste({
   }
 
   return (
-    <div className="card-tilt hover:translate-y-0 p-5 sm:p-6 border-primary/40 bg-primary/5">
-      <div className="flex items-start gap-3 mb-1">
-        <Palette className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-        <div>
-          <h3 className="text-lg leading-snug">Für Lackierer: Farbe nach Monatsbedarf</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Sag, wie viel du im Monat brauchst — welche Gebinde das günstigsten sind, rechnen wir aus.
-          </p>
-        </div>
-      </div>
+    <div className="card-tilt hover:translate-y-0 border-primary/40 bg-primary/5 overflow-hidden">
+      <button
+        type="button"
+        className="w-full flex items-center gap-3 p-4 text-left"
+        aria-expanded={offen}
+        aria-controls="farbe-nach-monatsbedarf"
+        onClick={() => setOffen((v) => !v)}
+      >
+        <span className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+          <Palette className="w-5 h-5 text-primary" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display font-bold text-base leading-snug">Für Lackierer: Farbe nach Monatsbedarf</span>
+          <span className="block text-sm text-muted-foreground mt-0.5 truncate">
+            Sag, wie viel du im Monat brauchst — wir rechnen die günstigsten Gebinde.
+          </span>
+        </span>
+        <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+          {offen ? "Zuklappen" : "Aufklappen"}
+          <ChevronDown className={cn("w-4 h-4 transition-transform", offen && "rotate-180")} aria-hidden="true" />
+        </span>
+      </button>
 
-      <div className="grid grid-cols-3 gap-2 mt-5 mb-5" role="group" aria-label="Produktart wählen">
+      <div id="farbe-nach-monatsbedarf" hidden={!offen} className="px-4 pb-5">
+      <div className="grid grid-cols-3 gap-2 mb-5" role="group" aria-label="Produktart wählen">
         {MISCH_PRODUKTE.map((m) => {
           const an = m.id === aktiv;
           return (
@@ -198,19 +217,22 @@ export function WunschfarbenLeiste({
 
       {!laedt && produkt && (
         <>
-          {/* ── Mischung zweier Marken ──────────────────────────────── */}
+          {/* ── Anteil je Marke, nicht eine vermischte Farbe ───────────── */}
           {markeB && (
             <div className="mb-5">
-              <div className="flex items-baseline justify-between gap-2 mb-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mischung</p>
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Markenaufteilung</p>
                 <p className="text-sm font-semibold tabular-nums">
-                  {100 - anteilB} % {markeA} · {anteilB} % {markeB}
+                  {100 - anteilB} % {markenName(markeA)} · {anteilB} % {markenName(markeB)}
                 </p>
               </div>
+              <p className="text-xs text-muted-foreground mt-1 mb-2">
+                So viel deines Lacks kommt von Standox, so viel von Mipa.
+              </p>
               <input
                 type="range" min={0} max={100} step={5} value={anteilB}
                 onChange={(e) => setAnteilB(Number(e.target.value))}
-                aria-label={`Anteil ${markeB} in Prozent`}
+                aria-label={`Anteil ${markenName(markeB)} in Prozent`}
                 className="w-full h-2 rounded-full appearance-none cursor-pointer
                   [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6
                   [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary
@@ -220,10 +242,10 @@ export function WunschfarbenLeiste({
                 style={{ background: `linear-gradient(to right, hsl(var(--primary)) ${anteilB}%, hsl(var(--border)) ${anteilB}%)` }}
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1.5">
-                <span>nur {markeA}</span><span>nur {markeB}</span>
+                <span>{markenName(markeA)}</span><span>{markenName(markeB)}</span>
               </div>
               <div className="flex gap-2 mt-2.5">
-                {[[0, `nur ${markeA}`], [50, "halbe/halbe"], [100, `nur ${markeB}`]].map(([w, t]) => (
+                {[[0, markenName(markeA)], [50, "halbe/halbe"], [100, markenName(markeB)]].map(([w, t]) => (
                   <button key={String(w)} type="button" onClick={() => setAnteilB(Number(w))}
                     className={cn("rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors",
                       anteilB === w ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/50")}>
@@ -349,6 +371,7 @@ export function WunschfarbenLeiste({
           </p>
         </>
       )}
+      </div>
     </div>
   );
 }

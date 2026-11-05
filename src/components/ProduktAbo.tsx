@@ -218,19 +218,6 @@ export function ProduktAbo() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start [&>*]:min-w-0">
         <div className="space-y-6 min-w-0">
-        <WunschfarbenLeiste
-          rabatt={rabatt}
-          onHinzufuegen={(e) => {
-            if (produkte.some((p) => p.id === e.id)) {
-              setProdukte((alt) => alt.map((p) => (p.id === e.id && istMenge(p) ? { ...p, menge: p.menge + e.menge } : p)));
-              toast.success("Menge erhöht");
-              return;
-            }
-            if (produkte.length >= MAX_PRODUKTE) { toast.error("Liste ist voll — ruf uns an."); return; }
-            setProdukte((alt) => [...alt, e]);
-          }}
-        />
-
         {/* ── Produkte suchen und hinzufügen ──────────────────────────── */}
         <div className="card-tilt hover:translate-y-0 p-5 sm:p-6">
           <h3 className="text-lg mb-1">Produkte auswählen</h3>
@@ -304,6 +291,19 @@ export function ProduktAbo() {
             })}
           </div>
         </div>
+
+        <WunschfarbenLeiste
+          rabatt={rabatt}
+          onHinzufuegen={(e) => {
+            if (produkte.some((p) => p.id === e.id)) {
+              setProdukte((alt) => alt.map((p) => (p.id === e.id && istMenge(p) ? { ...p, menge: p.menge + e.menge } : p)));
+              toast.success("Menge erhöht");
+              return;
+            }
+            if (produkte.length >= MAX_PRODUKTE) { toast.error("Liste ist voll — ruf uns an."); return; }
+            setProdukte((alt) => [...alt, e]);
+          }}
+        />
         </div>
 
         {/* ── Abo-Liste und Rechner ───────────────────────────────────── */}
