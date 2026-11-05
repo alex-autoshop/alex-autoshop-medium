@@ -4,7 +4,7 @@ import {
   Search, Plus, X, Loader2, CheckCircle, ShoppingBasket, Package,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useProducts } from "@/hooks/useProducts";
+import { useVollerKatalog } from "@/hooks/useVollerKatalog";
 import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { ABO_EREIGNIS, ABO_SPEICHER, aboListeLesen } from "@/lib/aboListe";
 import { AboAnmeldung } from "@/components/AboAnmeldung";
 import { AboProduktKatalog } from "@/components/AboProduktKatalog";
+import { AboVorschau } from "@/components/AboVorschau";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
  *  localStorage passt und auch ohne erneute Shop-Abfrage anzeigbar bleibt. */
@@ -100,6 +101,7 @@ export function ProduktAbo() {
   const [farbeStart, setFarbeStart] = useState("");
   const [anmeldung, setAnmeldung] = useState(false);
   const [kategorie, setKategorie] = useState("alle");
+  const [vorschau, setVorschau] = useState<ShopifyProduct | null>(null);
 
   // Auswahl überlebt einen Seitenwechsel — sonst ist die Arbeit weg
   useEffect(() => {
@@ -126,11 +128,7 @@ export function ProduktAbo() {
 
   useEffect(() => { setKategorie("alle"); }, [suchbegriff]);
 
-  const { products, isLoading } = useProducts({
-    query: suchbegriff ? `title:*${suchbegriff}* OR tag:*${suchbegriff}*` : "",
-    pageSize: suchbegriff ? 24 : 50,
-    loadAll: !suchbegriff,
-  });
+  const { products, isLoading, hasMore, fehler } = useVollerKatalog(suchbegriff);
 
   const gesamt = aboListeGesamt(produkte.map((p) => istMenge(p)
     ? { art: "menge", rabatt: p.rabatt, einzelpreis: p.einzelpreis, menge: p.menge }
@@ -277,6 +275,9 @@ export function ProduktAbo() {
           <h3 className="text-lg mb-1">Produkte auswählen</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Such dir die Artikel heraus, die du regelmäßig brauchst.
+            {products.length > 0 && (
+              <span className="block mt-1">{products.length} Produkte{hasMore || isLoading ? ", weitere werden geladen" : " im Shop"}.</span>
+            )}
           </p>
 
           <label className="relative block mb-5">
@@ -315,20 +316,22 @@ export function ProduktAbo() {
                 const stufe = stufeVon(a.id);
                 return (
                   <div className="h-full flex flex-col rounded-xl border border-border p-2.5 bg-card">
-                    <div className="aspect-square rounded-lg bg-white overflow-hidden mb-2">
+                    <button
+                      type="button"
+                      className="aspect-square rounded-lg bg-white overflow-hidden mb-2 cursor-pointer active:scale-[0.98] transition-transform"
+                      onClick={() => setVorschau(p)}
+                      aria-haspopup="dialog"
+                      aria-label={`Vorschau: ${a.titel}`}
+                    >
                       {a.bild && <img src={a.bild} alt="" className="w-full h-full object-contain" loading="lazy" />}
-                    </div>
-                    {misch ? (
-                      <button
-                        type="button"
-                        className="text-sm font-semibold leading-snug line-clamp-2 text-left min-h-[2.5rem] cursor-pointer hover:text-primary"
-                        onClick={() => wunschOeffnen(a.handle)}
-                      >
-                        {a.titel}
-                      </button>
-                    ) : (
-                      <p className="text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem]">{a.titel}</p>
-                    )}
+                    </button>
+                    <button
+                      type="button"
+                      className="text-sm font-semibold leading-snug line-clamp-2 text-left min-h-[2.5rem] cursor-pointer hover:text-primary"
+                      onClick={() => setVorschau(p)}
+                    >
+                      {a.titel}
+                    </button>
                     <p className="text-xs text-muted-foreground mt-1 line-through">
                       {formatPrice(String(a.preis), a.waehrung)}
                     </p>
@@ -369,10 +372,13 @@ export function ProduktAbo() {
               }}
             />
           )}
-          {isLoading && products.length > 0 && (
+          {(isLoading || hasMore) && products.length > 0 && (
             <p className="flex items-center gap-2 text-xs text-muted-foreground pt-3">
               <Loader2 className="w-3.5 h-3.5 animate-spin" /> Weitere Produkte …
             </p>
+          )}
+          {fehler && (
+            <p className="text-sm text-destructive pt-3">{fehler}</p>
           )}
         </div>
         </div>
@@ -498,6 +504,21 @@ export function ProduktAbo() {
         </div>
       </div>
       <AboAnmeldung offen={anmeldung} onZu={() => setAnmeldung(false)} />
+      {vorschau && (
+        <AboVorschau
+          produkt={vorschau}
+          stufe={stufeVon(vorschau.node.id)}
+          schon={drin(vorschau.node.id)}
+          misch={!!MISCH_PRODUKTE.find((m) => m.handle === vorschau.node.handle)}
+          onStufe={(r) => setWahl((alt) => ({ ...alt, [vorschau.node.id]: r }))}
+          onHinzu={() => {
+            const misch = MISCH_PRODUKTE.find((m) => m.handle === vorschau.node.handle);
+            if (misch) wunschOeffnen(vorschau.node.handle);
+            if (!drin(vorschau.node.id)) hinzufuegen(vorschau, stufeVon(vorschau.node.id));
+          }}
+          onZu={() => setVorschau(null)}
+        />
+      )}
     </div>
   );
 }
