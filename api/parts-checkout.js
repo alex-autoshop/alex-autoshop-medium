@@ -46,6 +46,7 @@
 import { adminPruefen } from "./_admin.js";
 import { versandkosten, pfandBetrag, DHL_EUR, VERSAND_FREI_AB } from "../shared/versand.js";
 import { markeFuerKunde } from "../shared/grosshaendler.js";
+import { teileboerseDarf } from "../shared/teileboerse-zugang.js";
 
 const BASE = () => (process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de").replace(/\/+$/, "");
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co";
@@ -555,6 +556,11 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     for (const [k, v] of Object.entries(CORS)) res.setHeader(k, v);
     return res.status(204).end();
+  }
+  const zugang = await teileboerseDarf(req);
+  if (!zugang.ok) {
+    res.setHeader("X-Robots-Tag", "noindex");
+    return send(res, zugang.status, { error: zugang.error });
   }
   // Welche Zahlarten sind eingerichtet? Nur ja/nein — keine Schlüssel.
   // Mit Anmeldung zusätzlich: das Guthaben, nachdem verlassene Bezahlseiten

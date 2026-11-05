@@ -16,6 +16,7 @@ import type { Feature, FeatureAccent } from "@/data/memberships";
 import { toast } from "sonner";
 import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
 import { useAuth } from "@/context/AuthContext";
+import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { supabase } from "@/lib/supabase";
 import { empfehlungLesen } from "@/lib/empfehlung";
 import { mitgliedsbeitrag } from "../../shared/mitgliedspreise.js";
@@ -168,6 +169,7 @@ type Cursor = { top: number; left: number; visible: boolean; tap: boolean };
 
 function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const { user, profile } = useAuth();
+  const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const navigate = useNavigate();
   const [modules, setModules] = useState<string[]>(m.defaultModules ?? m.modules);
   const [wantFreePaint, setWantFreePaint] = useState(true);
@@ -512,7 +514,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       {/* Untertitel bewusst in Rot: er soll aus dem goldenen Umfeld herausstechen */}
       {isBase ? (
         <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 mt-1">
-          <Zap className="w-4 h-4" /> {activeDiscount}% auf das gesamte Sortiment und Teilebörse
+          <Zap className="w-4 h-4" /> {activeDiscount}% auf das gesamte Sortiment{teileSichtbar ? " und Teilebörse" : ""}
         </p>
       ) : (
         <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 mt-1">
@@ -569,7 +571,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
                   )}
                 >
                   <span className={cn("text-left transition-all", !on && "line-through")}>
-                    {m.discountPercent}% auf {mod === "Autoteile" ? "Autoteile (in der Teilebörse)" : mod}
+                    {m.discountPercent}% auf {mod === "Autoteile" ? (teileSichtbar ? "Autoteile (in der Teilebörse)" : "Autoteile") : mod}
                   </span>
                   {on ? (
                     <span className="w-5 h-5 rounded-full border-2 border-primary bg-primary flex items-center justify-center shrink-0">
@@ -689,7 +691,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
               <span className="font-semibold text-foreground">
                 Alle Module abgewählt = Basis für {m.basePrice + detailingCost} €
                 {detailingOn && m.detailing ? " (inkl. Aufbereitungs-Paket)" : ""} — {activeDiscount}%
-                auf das gesamte Sortiment und Teilebörse
+                auf das gesamte Sortiment{teileSichtbar ? " und Teilebörse" : ""}
               </span>{" "}
               — {wantFreePaint ? "inkl. Gratis-Farbe und alle" : "alle weiteren"} Mitgliedsvorteile.
               Module jederzeit einzeln zubuchbar.

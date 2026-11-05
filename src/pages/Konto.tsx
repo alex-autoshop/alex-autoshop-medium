@@ -4,11 +4,13 @@ import { Loader2, Mail, Lock, Building2, User as UserIcon, Phone, Car, Plus, Tra
 import { toast } from "sonner";
 import { Seo } from "@/components/Seo";
 import { useAuth } from "@/context/AuthContext";
+import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 
 type Modus = "login" | "register" | "vergessen" | "neu";
 
 export default function Konto() {
   const { signIn, signUp, configured, resetPassword, updatePassword, recovery } = useAuth();
+  const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state as { from?: string })?.from || "/dashboard";
@@ -101,7 +103,7 @@ export default function Konto() {
         </h1>
         <p className="text-muted-foreground text-sm mb-6">
           {mode === "login"
-            ? "Melde dich an für Teilebörse & Mitgliederbereich."
+            ? (teileSichtbar ? "Melde dich an für Teilebörse & Mitgliederbereich." : "Melde dich an für den Mitgliederbereich.")
             : mode === "register"
             ? "Kostenlos registrieren — auch ohne Mitgliedschaft. Du siehst sofort, wie viel du als Mitglied sparen würdest."
             : mode === "vergessen"

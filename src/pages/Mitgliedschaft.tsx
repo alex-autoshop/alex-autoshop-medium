@@ -9,6 +9,7 @@ import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
 import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
+import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 
 const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
@@ -60,12 +61,25 @@ const FAQ = [
 export default function Mitgliedschaft() {
   const [abo, setAbo] = useState<AboArt>(DIENSTLEISTUNG_BUCHBAR ? "dienstleistung" : "produkt");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
+  const faq = FAQ.map((eintrag) => {
+    if (teileSichtbar) return eintrag;
+    if (eintrag.q === "Gilt die Mitgliedschaft nur in Wuppertal?") {
+      return { ...eintrag, a: "Nein — deutschlandweit. Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Die Mitgliedschaft gilt im Shop: dort ist der Versand mit aktiver bezahlter Mitgliedschaft (Level 1–3) kostenlos." };
+    }
+    if (eintrag.q === "Gilt der Rabatt auf alles?") {
+      return { ...eintrag, a: "Der Rabatt gilt im Shop auf Lack und Werkstattbedarf." };
+    }
+    return eintrag;
+  });
 
   return (
     <div>
       <Seo
         title="Mitgliedschaft – bis 40% Rabatt, deutschlandweit"
-        description="Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle. Monatlich kündbar."
+        description={teileSichtbar
+          ? "Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle. Monatlich kündbar."
+          : "Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Monatlich kündbar."}
       />
 
       <section className="section-dark py-12 sm:py-16">
@@ -124,7 +138,9 @@ export default function Mitgliedschaft() {
                   <a.icon className="w-5 h-5 text-primary" />
                 </span>
                 <span className="block font-display font-bold text-lg leading-snug">{a.titel}</span>
-                <span className="block text-sm text-muted-foreground mt-1 leading-relaxed">{a.text}</span>
+                <span className="block text-sm text-muted-foreground mt-1 leading-relaxed">
+                  {teileSichtbar ? a.text : a.text.replace(" Nicht in der Teilebörse.", "")}
+                </span>
                 <span className={cn(
                   "inline-block text-xs font-semibold mt-3",
                   aktiv ? "text-primary" : "text-muted-foreground"
@@ -151,7 +167,7 @@ export default function Mitgliedschaft() {
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl mb-6">Häufige Fragen</h2>
           <div className="space-y-3">
-            {FAQ.map((item, i) => (
+            {faq.map((item, i) => (
               <div key={item.q} className="card-tilt hover:translate-y-0 overflow-hidden">
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}

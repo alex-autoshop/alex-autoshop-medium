@@ -16,6 +16,8 @@
  *   GET  /api/yqcat?diag=1                    Konfig-/Erreichbarkeitstest
  */
 
+import { teileboerseDarf } from "../shared/teileboerse-zugang.js";
+
 export const config = { runtime: 'nodejs', maxDuration: 30 };
 
 const BASE = process.env.YQ_BASE || 'https://oem-api.yqservice.eu/restApi/v2';
@@ -133,6 +135,11 @@ async function callYq(action, body, language, timeoutMs = 25000) {
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return send(res, 200, { ok: true });
+  const zugang = await teileboerseDarf(req);
+  if (!zugang.ok) {
+    res.setHeader('X-Robots-Tag', 'noindex');
+    return send(res, zugang.status, { error: zugang.error });
+  }
 
   if (!herkunftErlaubt(req)) {
     return send(res, 403, { error: "Dieser Katalog ist nur über alex-autoshop.de erreichbar." });

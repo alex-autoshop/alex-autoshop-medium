@@ -1,3 +1,5 @@
+import { teileboerseDarf } from "../shared/teileboerse-zugang.js";
+
 export const config = { runtime: 'edge' };
 
 const PEG_BASE = "https://webservice.tecalliance.services/pegasus-3-0/services/TecdocToCatDLB.jsonEndpoint";
@@ -190,8 +192,15 @@ function staticSearch(query) {
 }
 
 export default async function handler(req) {
-  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type' };
+  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type, authorization' };
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
+  const zugang = await teileboerseDarf(req);
+  if (!zugang.ok) {
+    return new Response(JSON.stringify({ error: zugang.error }), {
+      status: zugang.status,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', ...cors },
+    });
+  }
 
   try {
     const { action, plate, vin, hsn, tsn, ktype, query, productGroupIds, mfrId, page = 1 } = await req.json();

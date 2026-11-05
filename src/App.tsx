@@ -8,6 +8,7 @@ import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NurAdmin } from "@/components/NurAdmin";
+import { TeileboerseTor } from "@/components/TeileboerseTor";
 import { CookieConsent } from "@/components/CookieConsent";
 
 const Home = lazy(() => import("@/pages/Home"));
@@ -121,9 +122,9 @@ export default function App() {
                         </ProtectedRoute>
                       }
                     />
-                    <Route path="/teile/:slug" element={<TeilArtikel />} />
-                    <Route path="/teileboerse/artikel" element={<TeilArtikel />} />
-                    <Route path="/teileboerse" element={<Teileportal />} />
+                    <Route path="/teile/:slug" element={<TeileboerseTor><TeilArtikel /></TeileboerseTor>} />
+                    <Route path="/teileboerse/artikel" element={<TeileboerseTor><TeilArtikel /></TeileboerseTor>} />
+                    <Route path="/teileboerse" element={<TeileboerseTor><Teileportal /></TeileboerseTor>} />
                     <Route path="/fahrzeugboerse" element={<NurAdmin><Fahrzeugmarkt /></NurAdmin>} />
                     <Route path="/fahrzeugboerse/:slug" element={<NurAdmin><FahrzeugDetail /></NurAdmin>} />
                     <Route path="/mieten" element={<NurAdmin><Mieten /></NurAdmin>} />

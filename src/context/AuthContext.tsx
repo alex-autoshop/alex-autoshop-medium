@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { teileboerseCookieSetzen } from "@/lib/teileboerseSichtbar";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, isAuthConfigured } from "@/lib/supabase";
 import { empfehlungLesen, empfehlungVergessen } from "@/lib/empfehlung";
@@ -125,6 +126,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    teileboerseCookieSetzen(session?.access_token, user?.email);
+  }, [session?.access_token, user?.email]);
 
   // Kam das Konto über einen Empfehlungslink? Dann den Werber eintragen
   // lassen — das macht der Server (app_metadata), nicht der Browser.

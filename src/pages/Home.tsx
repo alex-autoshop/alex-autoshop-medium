@@ -13,6 +13,7 @@ import { collections } from "@/lib/categories";
 
 const HAUPT_HANDLES = SHOP_CATEGORIES.map((c) => c.handle);
 import { SHOP_INFO } from "@/data/shopInfo";
+import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -45,6 +46,8 @@ const USPS = [
 export default function Home() {
   const { products, isLoading, error } = useProducts({ pageSize: 8 });
   const kategorieBilder = useCollectionPreviews(HAUPT_HANDLES);
+  const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
+  const usps = teileSichtbar ? USPS : USPS.filter((usp) => usp.title !== "Teile per Kennzeichen");
 
   return (
     <div>
@@ -89,7 +92,7 @@ export default function Home() {
       {/* USPs */}
       <section className="container py-14 sm:py-20">
         <div className="grid sm:grid-cols-3 gap-5">
-          {USPS.map((usp, i) => (
+          {usps.map((usp, i) => (
             <motion.div key={usp.title} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.1 }} className="card-tilt p-6 relative">
               <span className="absolute top-4 right-4 inline-flex items-center rounded-full bg-primary/10 text-primary text-xs font-semibold px-3 py-1 border border-primary/20">
                 {usp.badge}
@@ -156,7 +159,7 @@ export default function Home() {
             <h2 className="text-2xl sm:text-3xl mb-3">Ein Lieferant für deine ganze Werkstatt.</h2>
             <p className="text-muted-foreground">
               Lack und Werkstattbedarf im Shop — mit bis zu 40% Mitglieder-Rabatt.
-              Die Teilebörse hat einen Preis für alle. Monatlich kündbar, keine Mindestabnahme.
+              {teileSichtbar ? " Die Teilebörse hat einen Preis für alle." : ""} Monatlich kündbar, keine Mindestabnahme.
             </p>
           </motion.div>
           <MembershipCards />

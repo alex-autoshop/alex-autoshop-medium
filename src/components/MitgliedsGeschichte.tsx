@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Truck, Package } from "lucide-react";
 import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
+import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 
 const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
@@ -124,6 +125,7 @@ function Text({ schritt, titel, children }: { schritt: string; titel: string; ch
 
 export function MitgliedsGeschichte() {
   const ruhig = useReduced();
+  const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const { setzen, stand } = useFortschritt(7, ruhig);
   const p = stand.map(smooth);
 
@@ -232,7 +234,10 @@ export function MitgliedsGeschichte() {
 
       <Szene index={4} setzen={setzen}>
         <Text schritt="05" titel="Versand kostenlos für Mitglieder im Shop.">
-          <p>Mit bezahlter Mitgliedschaft. In der Teilebörse gilt ein Preis für alle, dort bleibt der Versand wie für jeden anderen.</p>
+          <p>
+            Mit bezahlter Mitgliedschaft.
+            {teileSichtbar ? " In der Teilebörse gilt ein Preis für alle, dort bleibt der Versand wie für jeden anderen." : ""}
+          </p>
         </Text>
         <div className="relative h-28 overflow-hidden rounded-2xl bg-white/5 border border-white/10">
           <div
