@@ -9,6 +9,8 @@
 
 import { ausTeileSlug, teilePfad, TEILE_BELIEBT } from "./shared/teile-pfad.js";
 import { markeFuerKunde } from "./shared/grosshaendler.js";
+import { leereTeileSitemap, teileboerseGeschlossenHtml, teileboerseOeffentlich } from "./shared/teileboerse-schalter.js";
+import { teileboerseDarf } from "./shared/teileboerse-zugang.js";
 
 const SITE = "https://www.alex-autoshop.de";
 
@@ -20,10 +22,10 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
-async function intercars(origin, nummer) {
+async function intercars(origin, nummer, kopf) {
   const r = await fetch(`${origin}/api/intercars`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(kopf || {}) },
     body: JSON.stringify({ action: "searchByIndex", index: nummer }),
   });
   if (!r.ok) throw new Error(`intercars ${r.status}`);
@@ -32,23 +34,23 @@ async function intercars(origin, nummer) {
   return liste.find((x) => x && (x.price || x.name)) || null;
 }
 
-async function katalog(origin, nummer) {
+async function katalog(origin, nummer, kopf) {
   const p = `/articles/search-by-article-no`;
   const q = new URLSearchParams({ p, articleNo: nummer, langId: "de" });
-  const r = await fetch(`${origin}/api/autoparts?${q}`);
+  const r = await fetch(`${origin}/api/autoparts?${q}`, { headers: kopf || {} });
   if (!r.ok) throw new Error(`katalog ${r.status}`);
   const data = await r.json();
   const liste = Array.isArray(data) ? data : data?.articles || [];
   return liste[0] || null;
 }
 
-async function teilFinden(origin, nummer) {
+async function teilFinden(origin, nummer, kopf) {
   let ic = null;
   let td = null;
   let fehler = 0;
-  try { ic = await intercars(origin, nummer); } catch { fehler += 1; }
+  try { ic = await intercars(origin, nummer, kopf); } catch { fehler += 1; }
   if (!ic) {
-    try { td = await katalog(origin, nummer); } catch { fehler += 1; }
+    try { td = await katalog(origin, nummer, kopf); } catch { fehler += 1; }
   }
   if (!ic && !td) return fehler === 2 ? { fehler: true } : null;
   const name = ic?.name || td?.description || td?.articleName || td?.genericArticleDescription || nummer;
@@ -132,25 +134,38 @@ function ersetzen(html, s) {
   return aus;
 }
 
-function htmlAntwort(html, status = 200) {
+function htmlAntwort(html, status = 200, privat = false) {
   return new Response(html, {
     status,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": status === 200 ? "public, max-age=0, s-maxage=3600" : "no-store",
+      "Cache-Control": privat || status !== 200 ? "private, no-store" : "public, max-age=0, s-maxage=3600",
+      ...(privat ? { "X-Robots-Tag": "noindex, nofollow" } : {}),
+    },
+  });
+}
+
+function geschlossen() {
+  return new Response(teileboerseGeschlossenHtml(), {
+    status: 503,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex, nofollow",
+      "Retry-After": "86400",
     },
   });
 }
 
 let sitemapCache = { bis: 0, xml: "" };
 
-async function sitemapTeile(origin) {
+async function sitemapTeile(origin, kopf) {
   const jetzt = Date.now();
   if (sitemapCache.xml && sitemapCache.bis > jetzt) return sitemapCache.xml;
   const urls = [];
   for (const eintrag of TEILE_BELIEBT) {
     try {
-      const teil = await teilFinden(origin, eintrag.nummer);
+      const teil = await teilFinden(origin, eintrag.nummer, kopf);
       if (!teil || teil.fehler || !teil.preis) continue;
       const loc = `${SITE}${teilePfad(teil.brand || eintrag.marke, teil.artNr || eintrag.nummer)}`;
       urls.push(`  <url><loc>${esc(loc)}</loc><priority>0.6</priority></url>`);
@@ -161,22 +176,57 @@ async function sitemapTeile(origin) {
   return xml;
 }
 
+function kopfWeiter(request) {
+  const extra = {};
+  const cookie = request.headers.get("cookie");
+  const auth = request.headers.get("authorization");
+  if (cookie) extra.cookie = cookie;
+  if (auth) extra.authorization = auth;
+  return extra;
+}
+
 export default async function middleware(request) {
   const url = new URL(request.url);
+  const offen = teileboerseOeffentlich();
+  const kopf = kopfWeiter(request);
+  let admin = false;
+  if (!offen) {
+    const zugang = await teileboerseDarf(request);
+    admin = zugang.ok === true;
+    if (!admin) {
+      if (url.pathname === "/sitemap-teile.xml") {
+        return new Response(leereTeileSitemap(), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/xml; charset=utf-8",
+            "Cache-Control": "no-store",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        });
+      }
+      return geschlossen();
+    }
+  }
+  const privat = !offen;
+
   if (url.pathname === "/sitemap-teile.xml") {
-    const xml = await sitemapTeile(url.origin);
+    const xml = await sitemapTeile(url.origin, kopf);
     return new Response(xml, {
       status: 200,
-      headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=0, s-maxage=3600" },
+      headers: {
+        "Content-Type": "application/xml; charset=utf-8",
+        "Cache-Control": privat ? "private, no-store" : "public, max-age=0, s-maxage=3600",
+        ...(privat ? { "X-Robots-Tag": "noindex, nofollow" } : {}),
+      },
     });
   }
 
   if (url.pathname === "/teileboerse/artikel") {
     const nr = (url.searchParams.get("nr") || "").trim();
-    if (!nr) return htmlAntwort("<!doctype html><title>Teil nicht gefunden</title><p>Keine Artikelnummer.</p>", 404);
-    const teil = await teilFinden(url.origin, nr);
-    if (teil?.fehler) return htmlAntwort("<!doctype html><title>Katalog gerade nicht erreichbar</title>", 503);
-    if (!teil) return htmlAntwort(`<!doctype html><title>Teil nicht gefunden</title><p>Die Nummer ${esc(nr)} ist nicht im Katalog.</p>`, 404);
+    if (!nr) return htmlAntwort("<!doctype html><title>Teil nicht gefunden</title><p>Keine Artikelnummer.</p>", 404, privat);
+    const teil = await teilFinden(url.origin, nr, kopf);
+    if (teil?.fehler) return htmlAntwort("<!doctype html><title>Katalog gerade nicht erreichbar</title>", 503, privat);
+    if (!teil) return htmlAntwort(`<!doctype html><title>Teil nicht gefunden</title><p>Die Nummer ${esc(nr)} ist nicht im Katalog.</p>`, 404, privat);
     const ziel = `${SITE}${teilePfad(teil.brand || "teil", teil.artNr || nr)}`;
     return Response.redirect(ziel, 301);
   }
@@ -184,19 +234,19 @@ export default async function middleware(request) {
   const teilPfad = url.pathname.match(/^\/teile\/([^/]+)$/);
   if (teilPfad) {
     const { nummer } = ausTeileSlug(teilPfad[1]);
-    if (!nummer) return htmlAntwort("<!doctype html><title>Teil nicht gefunden</title>", 404);
-    const teil = await teilFinden(url.origin, nummer);
-    if (teil?.fehler) return htmlAntwort("<!doctype html><title>Katalog gerade nicht erreichbar</title>", 503);
-    if (!teil) return htmlAntwort(`<!doctype html><title>Teil nicht gefunden</title><p>Die Nummer ${esc(nummer)} ist nicht im Katalog.</p>`, 404);
+    if (!nummer) return htmlAntwort("<!doctype html><title>Teil nicht gefunden</title>", 404, privat);
+    const teil = await teilFinden(url.origin, nummer, kopf);
+    if (teil?.fehler) return htmlAntwort("<!doctype html><title>Katalog gerade nicht erreichbar</title>", 503, privat);
+    if (!teil) return htmlAntwort(`<!doctype html><title>Teil nicht gefunden</title><p>Die Nummer ${esc(nummer)} ist nicht im Katalog.</p>`, 404, privat);
     const pfad = teilePfad(teil.brand || "teil", teil.artNr || nummer);
     const index = await fetch(new URL("/index.html", url.origin));
     const html = await index.text();
-    return htmlAntwort(ersetzen(html, produktHtml(teil, pfad)));
+    return htmlAntwort(ersetzen(html, produktHtml(teil, pfad)), 200, privat);
   }
 
   const index = await fetch(new URL("/index.html", url.origin));
   const html = await index.text();
-  return htmlAntwort(ersetzen(html, seiteListe()));
+  return htmlAntwort(ersetzen(html, seiteListe()), 200, privat);
 }
 
 export const config = {

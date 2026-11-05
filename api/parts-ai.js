@@ -1,4 +1,6 @@
 // Serverless — Vercel Node Runtime
+import { teileboerseDarf } from "../shared/teileboerse-zugang.js";
+
 export const config = { runtime: 'nodejs' };
 
 /**
@@ -95,6 +97,12 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.writeHead(200, CORS);
     res.end();
+    return;
+  }
+  const zugang = await teileboerseDarf(req);
+  if (!zugang.ok) {
+    res.writeHead(zugang.status, { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' });
+    res.end(JSON.stringify({ error: zugang.error }));
     return;
   }
   if (req.method !== 'POST') {

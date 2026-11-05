@@ -7,6 +7,7 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
 import { ADMIN_EMAILS } from "@/lib/inbox";
+import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 
@@ -182,7 +183,12 @@ export function Header() {
   const itemCount = useCartStore((s) => s.items.reduce((n, i) => n + i.quantity, 0));
   const { user, signOut } = useAuth();
   const istAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
-  const navPunkte = istAdmin ? [...NAV.slice(0, 3), ...NAV_ADMIN, ...NAV.slice(3)] : NAV;
+  const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
+  const navPunkte = NAV.flatMap((item) => {
+    if (item.to === "/teileboerse" && !teileSichtbar) return [];
+    if (item.to === "/laden" && istAdmin) return [...NAV_ADMIN, item];
+    return [item];
+  });
   const navigate = useNavigate();
 
   const handleLogout = async () => {

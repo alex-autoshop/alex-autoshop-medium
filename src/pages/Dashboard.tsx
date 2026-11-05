@@ -53,6 +53,7 @@ import { requestMembership, sendMessage, ADMIN_EMAILS } from "@/lib/inbox";
 import { MembershipCards } from "@/components/MembershipCards";
 import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
 import { cn } from "@/lib/utils";
+import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { HotlineCard } from "@/components/HotlineCard";
 
 type Tab = "overview" | "membership" | "shop" | "teileboerse" | "inbox" | "planner" | "orders" | "affiliate" | "profile" | "settings";
@@ -76,7 +77,8 @@ export default function Dashboard() {
   // Nachrichten sind fuer Mitglieder abgeschaltet — nur das Admin-Konto
   // sieht den Reiter, damit Mitgliedschafts-Anfragen weiter ankommen.
   const istAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
-  const sichtbareTabs = TABS.filter((t) => t.id !== "inbox" || istAdmin);
+  const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
+  const sichtbareTabs = TABS.filter((t) => (t.id !== "inbox" || istAdmin) && (t.id !== "teileboerse" || teileSichtbar));
   const gewuenschterTab = (params.get("tab") as Tab) || "overview";
   const initialTab = sichtbareTabs.some((t) => t.id === gewuenschterTab) ? gewuenschterTab : "overview";
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -165,7 +167,7 @@ export default function Dashboard() {
       {tab === "overview" && <Overview level={level} profile={profile} trialActive={trialActive} effectiveLevel={effectiveLevel} onTab={setTab} />}
       {tab === "membership" && <MitgliedschaftTab level={level} profile={profile} />}
       {tab === "shop" && <DashboardShop level={effectiveLevel} profile={profile} trialActive={trialActive} userId={user?.id} />}
-      {tab === "teileboerse" && (
+      {tab === "teileboerse" && teileSichtbar && (
         <div className="-mt-4">
           <Teileportal />
         </div>
@@ -347,10 +349,11 @@ function MitgliedschaftTab({ level, profile }: {
 }
 
 function CurrentModules({ level, profile }: { level: number; profile: import("@/context/AuthContext").CompanyProfile }) {
+  const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const modules = profile.membership_modules ?? ["Autoteile", "Lackfarben", "Lackmaterial"];
   const discounts = moduleDiscounts(level, modules);
   const moduleLabels: Record<MembershipModule, string> = {
-    Autoteile: "Autoteile (in der Teilebörse)",
+    Autoteile: teileSichtbar ? "Autoteile (in der Teilebörse)" : "Autoteile",
     Lackfarben: "Lackfarben (Wunschfarbe, Spraydose)",
     Lackmaterial: "Lackmaterial (Klarlack, Grundierung…)",
   };
@@ -652,6 +655,7 @@ function Planner() {
 }
 
 function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js").User | null; profile: import("@/context/AuthContext").CompanyProfile }) {
+  const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const referralCode  = profile.referral_code || user?.id?.slice(0, 8).toUpperCase() || "ALEX0000";
   const referralLink  = `https://www.alex-autoshop.de/mitgliedschaft?ref=${referralCode}`;
   const credit        = profile.affiliate_credit ?? 0;
@@ -702,7 +706,9 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
             {credit.toFixed(2).replace(".", ",")} €
           </p>
           <p className="text-xs text-muted-foreground mt-2">
-            Wird bei deiner nächsten Online-Bestellung in der Teilebörse automatisch verrechnet (im Warenkorb abwählbar).
+            {teileSichtbar
+              ? "Wird bei deiner nächsten Online-Bestellung in der Teilebörse automatisch verrechnet (im Warenkorb abwählbar). "
+              : ""}
             Für Lack oder den Einkauf im Laden: sag einfach Bescheid.
           </p>
         </div>

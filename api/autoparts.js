@@ -1,3 +1,5 @@
+import { teileboerseDarf } from "../shared/teileboerse-zugang.js";
+
 export const config = { runtime: 'edge' };
 
 /**
@@ -104,6 +106,13 @@ async function tryFetch(base, path, qs, method, bodyText, timeoutMs = 9000) {
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+  const zugang = await teileboerseDarf(req);
+  if (!zugang.ok) {
+    return new Response(JSON.stringify({ error: zugang.error }), {
+      status: zugang.status,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', ...CORS },
+    });
+  }
   if (req.method !== 'GET') {
     return new Response(JSON.stringify({ error: 'Nur GET.' }), {
       status: 405,

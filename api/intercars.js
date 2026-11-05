@@ -5,6 +5,7 @@
 export const config = { maxDuration: 25 };
 
 import { adminPruefen } from "./_admin.js";
+import { teileboerseDarf } from "../shared/teileboerse-zugang.js";
 import { createHmac } from "node:crypto";
 import { artikelVarianten } from "../shared/artikelnummer.js";
 import { verkaufspreis, basisAusEnv, spanneAusEnv, gruppenFaktor } from "../shared/aufschlag.js";
@@ -401,6 +402,13 @@ const CORS = {
 export default async function handler(req, res) {
   for (const [k, v] of Object.entries(CORS)) res.setHeader(k, v);
   if (req.method === "OPTIONS") { res.status(204).end(); return; }
+  const zugang = await teileboerseDarf(req);
+  if (!zugang.ok) {
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-Robots-Tag", "noindex");
+    res.status(zugang.status).json({ error: zugang.error });
+    return;
+  }
   // ── GET ?diag=1 — Token-Test via Browser/web_fetch ───────────────────────
   if (req.method === "GET") {
     const qs = new URLSearchParams(req.url?.split("?")[1] || "");
