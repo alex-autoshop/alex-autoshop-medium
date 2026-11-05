@@ -14,6 +14,7 @@ import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { useCartStore } from "@/stores/cartStore";
 import { PaintConfigurator } from "@/components/PaintConfigurator";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
+import { AboKnopf } from "@/components/AboKnopf";
 import { cn } from "@/lib/utils";
 
 // Produkte mit Farb-Konfigurator (Marke → System → Menge → Fahrzeug → Farbcode)
@@ -127,7 +128,18 @@ export default function ProductDetail() {
       </Link>
 
       <div className="grid md:grid-cols-2 gap-8 lg:gap-14">
-        <div className="card-tilt overflow-hidden hover:translate-y-0">
+        <div className="card-tilt overflow-hidden hover:translate-y-0 relative">
+          <AboKnopf
+            className="top-3 left-3"
+            produkt={{
+              id: product.id,
+              handle: product.handle,
+              titel: product.title,
+              preis: priceNum,
+              waehrung: price?.currencyCode ?? "EUR",
+              bild: img || undefined,
+            }}
+          />
           <div className="aspect-square bg-white">
             {img ? (
               <img src={img} alt={product.title} className="w-full h-full object-contain p-4" />

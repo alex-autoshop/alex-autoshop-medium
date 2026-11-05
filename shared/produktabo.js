@@ -120,6 +120,29 @@ export function listeNormalisieren(roh) {
 }
 
 /**
+ * Ein Einzelprodukt in die Abo-Liste. Die Stufe ist die gespeicherte
+ * Voreinstellung (sonst 15 %). Doppelte und volle Listen bleiben unverändert.
+ */
+export function aboListeErgaenzen(roh, produkt) {
+  const liste = listeNormalisieren(roh);
+  const id = String(produkt && produkt.id || "").trim();
+  const titel = String(produkt && produkt.titel || "").trim();
+  if (!id || !titel) return { ...liste, ergebnis: "leer" };
+  if (liste.produkte.some((p) => p && p.id === id)) return { ...liste, ergebnis: "schon" };
+  if (liste.produkte.length >= MAX_PRODUKTE) return { ...liste, ergebnis: "voll" };
+  const neu = {
+    id,
+    handle: String(produkt.handle || ""),
+    titel,
+    preis: Number(produkt.preis) > 0 ? Number(produkt.preis) : 0,
+    waehrung: String(produkt.waehrung || "EUR"),
+    bild: produkt.bild ? String(produkt.bild) : "",
+    rabatt: liste.standard,
+  };
+  return { standard: liste.standard, produkte: [...liste.produkte, neu], ergebnis: "neu" };
+}
+
+/**
  * Monatsbeitrag einer Position mit IHRER Stufe.
  * Einzelprodukt: fester Beitrag der Stufe. Mengen-Position (Lack): Anteil an der Ersparnis.
  */
