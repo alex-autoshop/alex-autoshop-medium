@@ -17,7 +17,7 @@
 export const config = { runtime: "edge" };
 
 import { mitgliedsbeitrag, rabattName, DIENSTLEISTUNG_BUCHBAR } from "../shared/mitgliedspreise.js";
-import { produktAboBeitrag } from "../shared/produktabo.js";
+import { aboListeGesamt } from "../shared/produktabo.js";
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
 const REF_OK = /^[A-Z0-9]{6,8}$/;
@@ -70,6 +70,79 @@ async function createStripeSession({ email, level, modules, price, paket, ref, t
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(`Stripe ${res.status}: ${JSON.stringify(data?.error || data).slice(0, 300)}`);
   return { url: data.url };
+}
+
+async function createProduktSession({ email, price, zeilen, positionen, ref }) {
+  const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
+  if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
+  const form = new URLSearchParams();
+  form.set("mode", "subscription");
+  form.set("customer_email", email);
+  form.set("success_url", `${BASE()}/mitgliedschaft?status=success&session_id={CHECKOUT_SESSION_ID}`);
+  form.set("cancel_url", `${BASE()}/mitgliedschaft?status=cancel`);
+  zeilen.forEach((z, i) => {
+    form.set(`line_items[${i}][quantity]`, "1");
+    form.set(`line_items[${i}][price_data][currency]`, "eur");
+    form.set(`line_items[${i}][price_data][recurring][interval]`, "month");
+    form.set(`line_items[${i}][price_data][unit_amount]`, String(Math.round(z.betrag * 100)));
+    form.set(`line_items[${i}][price_data][product_data][name]`, z.name);
+  });
+  form.set("metadata[email]", email);
+  form.set("metadata[abo]", "produkt");
+  form.set("metadata[price]", String(price));
+  form.set("metadata[positionen]", positionen);
+  form.set("subscription_data[metadata][email]", email);
+  form.set("subscription_data[metadata][abo]", "produkt");
+  form.set("subscription_data[metadata][price]", String(price));
+  form.set("subscription_data[metadata][positionen]", positionen);
+  if (ref) form.set("metadata[ref]", ref);
+  const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: form,
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(`Stripe ${res.status}: ${JSON.stringify(data?.error || data).slice(0, 300)}`);
+  return { url: data.url };
+}
+
+async function createProduktFlow({ email, price, paket, positionen }) {
+  const token = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
+  if (!/^(live|sandbox)_[A-Za-z0-9_-]{10,}$/.test(token)) return { fallback: true };
+  const host = token.startsWith("live_") ? "https://api.gocardless.com" : "https://api-sandbox.gocardless.com";
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "GoCardless-Version": "2015-07-06",
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  const brRes = await fetch(`${host}/billing_requests`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      billing_requests: {
+        mandate_request: { scheme: "sepa_core", currency: "EUR" },
+        metadata: { email, paket, positionen: String(positionen || "").slice(0, 200) },
+      },
+    }),
+  });
+  const br = await brRes.json().catch(() => null);
+  if (!brRes.ok) throw new Error(`GoCardless BR ${brRes.status}: ${JSON.stringify(br?.error || br).slice(0, 300)}`);
+  const flowRes = await fetch(`${host}/billing_request_flows`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      billing_request_flows: {
+        redirect_uri: `${BASE()}/mitgliedschaft?status=success&provider=gocardless`,
+        exit_uri: `${BASE()}/mitgliedschaft?status=cancel`,
+        prefilled_customer: { email },
+        links: { billing_request: br?.billing_requests?.id },
+      },
+    }),
+  });
+  const flow = await flowRes.json().catch(() => null);
+  if (!flowRes.ok) throw new Error(`GoCardless Flow ${flowRes.status}: ${JSON.stringify(flow?.error || flow).slice(0, 300)}`);
+  return { url: flow?.billing_request_flows?.authorisation_url };
 }
 
 // ── GoCardless: Billing Request + Flow (SEPA-Mandat) ─────────────────────────
@@ -140,24 +213,30 @@ export default async function handler(req) {
 
   // ── Produkt-Abo: eigener Weg. Die Dienstleistungs-Mitgliedschaft unten bleibt unberührt. ──
   if (aboTyp === "produkt") {
-    const anzahl = Array.isArray(produkte) ? produkte.length : 0;
-    const a = produktAboBeitrag({ rabatt, anzahl });
-    if (!a) return json({ error: "Unbekannte Rabattstufe oder leere Produktliste." }, 400);
-    // Der Browser-Preis dient nur zum Abgleich — gerechnet wird hier.
-    if (price !== undefined && Number(price) !== a.preis) {
-      return json({ error: "Der Preis hat sich gerade geändert — bitte die Seite neu laden.", preis: a.preis }, 409);
+    const liste = (Array.isArray(produkte) ? produkte : []).map((p) => ({
+      art: p?.art === "menge" || p?.einzelpreis != null ? "menge" : "einzel",
+      rabatt: p?.rabatt,
+      preis: p?.preis,
+      einzelpreis: p?.einzelpreis,
+      menge: p?.menge,
+      titel: String(p?.titel || p?.handle || "Produkt").slice(0, 80),
+    }));
+    const g = aboListeGesamt(liste);
+    if (!g) return json({ error: "Unbekannte Rabattstufe oder leere Produktliste." }, 400);
+    if (price !== undefined && Number(price) !== g.beitrag) {
+      return json({ error: "Der Preis hat sich gerade geändert — bitte die Seite neu laden.", preis: g.beitrag }, 409);
     }
-    const aboArg = {
-      email,
-      level: a.rabatt,
-      modules: [`${a.anzahl} Produkte`],
-      price: a.preis,
-      paket: [`P${a.rabatt}`, String(a.anzahl), String(a.preis)].join("|"),
-      ref: refAus(refRoh),
-      titel: `Alex Autoshop Produkt-Abo — ${a.anzahl} Produkte, ${a.rabatt} % Rabatt`,
-    };
+    const zeilen = liste.map((p, i) => ({
+      name: `${p.titel} · ${p.rabatt} %`,
+      betrag: g.zeilen[i].beitrag,
+    }));
+    const positionen = liste.map((p) => `${p.titel}:${p.rabatt}`).join(";").slice(0, 450);
+    const stufen = [...new Set(liste.map((p) => p.rabatt))].join(",");
+    const paket = ["Pmix", String(g.beitrag), stufen].join("|");
     try {
-      const r = method === "stripe" ? await createStripeSession(aboArg) : await createGoCardlessFlow(aboArg);
+      const r = method === "stripe"
+        ? await createProduktSession({ email, price: g.beitrag, zeilen, positionen, ref: refAus(refRoh) })
+        : await createProduktFlow({ email, price: g.beitrag, paket, positionen });
       if (r.fallback) return json({ fallback: true, reason: `${method} noch nicht konfiguriert` });
       if (!r.url) return json({ error: "Keine Checkout-URL erhalten" }, 502);
       return json({ url: r.url });

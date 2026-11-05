@@ -98,6 +98,68 @@ export function mengenPosition(pos) {
  *
  * @param {{ rabatt: number, einzelAnzahl: number, mengen: Array<{einzelpreis:number,menge:number}> }} liste
  */
+export function rabattGueltig(wert) {
+  return PRODUKT_ABO_PREISE[Math.floor(Number(wert))] !== undefined;
+}
+
+/**
+ * Alte Listen hatten EINE Stufe für alles (`rabatt`). Die wandert auf jedes
+ * Produkt. Neue Listen speichern `standard` nur als Voreinstellung für das
+ * nächste Produkt. Ohne gespeicherte Stufe gilt 15 %.
+ */
+export function listeNormalisieren(roh) {
+  const vorlage = Math.floor(Number(roh && (roh.standard != null ? roh.standard : roh.rabatt)));
+  const standard = rabattGueltig(vorlage) ? vorlage : 15;
+  const produkte = (Array.isArray(roh && roh.produkte) ? roh.produkte : [])
+    .slice(0, MAX_PRODUKTE)
+    .map((p) => {
+      const eigene = Math.floor(Number(p && p.rabatt));
+      return { ...p, rabatt: rabattGueltig(eigene) ? eigene : standard };
+    });
+  return { standard, produkte };
+}
+
+/**
+ * Monatsbeitrag einer Position mit IHRER Stufe.
+ * Einzelprodukt: fester Beitrag der Stufe. Mengen-Position (Lack): Anteil an der Ersparnis.
+ */
+export function beitragPosition(pos) {
+  const rabatt = Math.floor(Number(pos && pos.rabatt));
+  if (!rabattGueltig(rabatt)) return null;
+  const menge = pos && (pos.art === "menge" || pos.einzelpreis != null);
+  if (menge && pos.art !== "einzel") {
+    return mengenPosition({ einzelpreis: pos.einzelpreis, menge: pos.menge, rabatt });
+  }
+  const normal = Number(pos && pos.preis);
+  if (!Number.isFinite(normal) || normal < 0) return null;
+  const cent = (n) => Math.round(n * 100) / 100;
+  const mitglied = cent(normal * (1 - rabatt / 100));
+  return {
+    normal: cent(normal),
+    mitglied,
+    ersparnis: cent(normal - mitglied),
+    beitrag: PRODUKT_ABO_PREISE[rabatt],
+  };
+}
+
+/** Summe über eine Liste, in der jedes Produkt seine eigene Stufe hat. */
+export function aboListeGesamt(positionen) {
+  const liste = Array.isArray(positionen) ? positionen : [];
+  if (!liste.length || liste.length > MAX_PRODUKTE) return null;
+  const cent = (n) => Math.round(n * 100) / 100;
+  const zeilen = [];
+  let beitrag = 0;
+  let ersparnis = 0;
+  for (const p of liste) {
+    const z = beitragPosition(p);
+    if (!z) return null;
+    zeilen.push(z);
+    beitrag = cent(beitrag + z.beitrag);
+    ersparnis = cent(ersparnis + z.ersparnis);
+  }
+  return { beitrag, ersparnis, zeilen };
+}
+
 export function aboGesamt(liste) {
   const rabatt = Math.floor(Number(liste && liste.rabatt));
   const proProdukt = PRODUKT_ABO_PREISE[rabatt];

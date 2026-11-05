@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { empfehlungLesen } from "@/lib/empfehlung";
 import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
-  produktAboErsparnis, mengenPosition, aboGesamt,
+  mengenPosition, aboListeGesamt, listeNormalisieren, rabattGueltig,
 } from "../../shared/produktabo.js";
 import { WunschfarbenLeiste, MISCH_PRODUKTE, type MengenEintrag } from "@/components/WunschfarbenLeiste";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,7 @@ export interface AboProdukt {
   preis: number;
   waehrung: string;
   bild?: string;
+  rabatt: number;
 }
 
 /** Eine Zeile der Abo-Liste: entweder ein einzelnes Produkt oder eine
@@ -42,18 +43,36 @@ const STUFEN_TEXT: Record<number, string> = {
   40: "Höchstrabatt",
 };
 
-function liste_laden(): { rabatt: number; produkte: AboZeile[] } {
+function liste_laden(): { standard: number; produkte: AboZeile[] } {
   try {
     const roh = localStorage.getItem(SPEICHER);
-    if (!roh) return { rabatt: 28, produkte: [] };
-    const d = JSON.parse(roh);
-    return {
-      rabatt: ABO_RABATTE.includes(d?.rabatt) ? d.rabatt : 28,
-      produkte: Array.isArray(d?.produkte) ? d.produkte.slice(0, MAX_PRODUKTE) : [],
-    };
+    if (!roh) return { standard: 15, produkte: [] };
+    const n = listeNormalisieren(JSON.parse(roh));
+    return { standard: n.standard, produkte: n.produkte as unknown as AboZeile[] };
   } catch {
-    return { rabatt: 28, produkte: [] };
+    return { standard: 15, produkte: [] };
   }
+}
+
+function StufenWahl({ wert, onChange, label }: { wert: number; onChange: (n: number) => void; label: string }) {
+  return (
+    <div role="group" aria-label={label} className="inline-flex rounded-lg border border-border overflow-hidden">
+      {ABO_RABATTE.map((r) => (
+        <button
+          key={r}
+          type="button"
+          aria-pressed={wert === r}
+          onClick={() => onChange(r)}
+          className={cn(
+            "cursor-pointer px-2 py-1 text-[11px] font-semibold min-h-[32px]",
+            wert === r ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-primary/10"
+          )}
+        >
+          {r}%
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function alsAboProdukt(p: ShopifyProduct): AboProdukt {
@@ -65,6 +84,7 @@ function alsAboProdukt(p: ShopifyProduct): AboProdukt {
     preis: parseFloat(n.priceRange?.minVariantPrice?.amount ?? "0"),
     waehrung: n.priceRange?.minVariantPrice?.currencyCode ?? "EUR",
     bild: n.images?.edges?.[0]?.node?.url,
+    rabatt: 15,
   };
 }
 
@@ -74,7 +94,8 @@ const euro = (n: number) =>
 export function ProduktAbo() {
   const { user } = useAuth();
   const start = useMemo(liste_laden, []);
-  const [rabatt, setRabatt] = useState<number>(start.rabatt);
+  const [standard, setStandard] = useState<number>(start.standard);
+  const [wahl, setWahl] = useState<Record<string, number>>({});
   const [produkte, setProdukte] = useState<AboZeile[]>(start.produkte);
   const [suche, setSuche] = useState("");
   const [suchbegriff, setSuchbegriff] = useState("");
@@ -87,9 +108,9 @@ export function ProduktAbo() {
   // Auswahl überlebt einen Seitenwechsel — sonst ist die Arbeit weg
   useEffect(() => {
     try {
-      localStorage.setItem(SPEICHER, JSON.stringify({ rabatt, produkte }));
+      localStorage.setItem(SPEICHER, JSON.stringify({ standard, produkte }));
     } catch { /* privater Modus: dann eben nicht */ }
-  }, [rabatt, produkte]);
+  }, [standard, produkte]);
 
   // Suche erst abschicken, wenn der Kunde kurz aufhört zu tippen
   useEffect(() => {
@@ -102,16 +123,9 @@ export function ProduktAbo() {
     pageSize: 12,
   });
 
-  const einzelne = produkte.filter((p) => !istMenge(p)) as AboProdukt[];
-  const mengen = produkte.filter(istMenge);
-  const gesamt = aboGesamt({
-    rabatt,
-    einzelAnzahl: einzelne.length,
-    mengen: mengen.map((m) => ({ einzelpreis: m.einzelpreis, menge: m.menge })),
-  });
-  const summeNormal = einzelne.reduce((s, p) => s + p.preis, 0);
-  const ersparnis = produktAboErsparnis(summeNormal, rabatt) + (gesamt?.ersparnisMengen ?? 0);
-  const proProdukt = PRODUKT_ABO_PREISE[rabatt];
+  const gesamt = aboListeGesamt(produkte.map((p) => istMenge(p)
+    ? { art: "menge", rabatt: p.rabatt, einzelpreis: p.einzelpreis, menge: p.menge }
+    : { art: "einzel", rabatt: p.rabatt, preis: p.preis }));
 
   const drin = (id: string) => produkte.some((p) => p.id === id);
 
@@ -123,8 +137,13 @@ export function ProduktAbo() {
     return true;
   }
 
-  function hinzufuegen(p: ShopifyProduct) {
-    const neu = alsAboProdukt(p);
+  function stufeVon(id: string) {
+    const gewaehlt = wahl[id];
+    return rabattGueltig(gewaehlt) ? gewaehlt : standard;
+  }
+
+  function hinzufuegen(p: ShopifyProduct, stufe = standard) {
+    const neu = { ...alsAboProdukt(p), rabatt: stufe };
     if (drin(neu.id)) return;
     if (produkte.length >= MAX_PRODUKTE) {
       toast.error(`Mehr als ${MAX_PRODUKTE} Produkte gehen nicht — ruf uns an, dann machen wir es größer.`);
@@ -144,10 +163,9 @@ export function ProduktAbo() {
       const auswahl = {
         aboTyp: "produkt" as const,
         email: mail,
-        rabatt,
         produkte: produkte.map((p) => istMenge(p)
-          ? { id: p.id, handle: p.handle, titel: p.titel, variante: p.variante, lacksystem: p.lacksystem, menge: p.menge, einzelpreis: p.einzelpreis }
-          : { id: p.id, handle: p.handle, titel: p.titel }),
+          ? { art: "menge" as const, id: p.id, handle: p.handle, titel: p.titel, variante: p.variante, lacksystem: p.lacksystem, menge: p.menge, einzelpreis: p.einzelpreis, rabatt: p.rabatt }
+          : { art: "einzel" as const, id: p.id, handle: p.handle, titel: p.titel, preis: p.preis, rabatt: p.rabatt }),
         price: gesamt.beitrag,
         ref: empfehlungLesen() || undefined,
       };
@@ -189,7 +207,7 @@ export function ProduktAbo() {
       {/* Eingeklappt ganz oben, damit die Karte nicht unter der Produktliste verschwindet. */}
       <div className="max-w-3xl mx-auto mb-8">
         <WunschfarbenLeiste
-          rabatt={rabatt}
+          rabatt={15}
           oeffnen={farbeAuf}
           start={farbeStart}
           onHinzufuegen={(e) => {
@@ -207,16 +225,16 @@ export function ProduktAbo() {
       {/* ── Rabattstufe ───────────────────────────────────────────────── */}
       <div className="max-w-3xl mx-auto mb-8">
         <p className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-          Wie viel Rabatt willst du?
+          Standard für neue Produkte
         </p>
         <div className="grid grid-cols-3 gap-2.5 sm:gap-3" role="group" aria-label="Rabatt wählen">
           {ABO_RABATTE.map((r: number) => {
-            const aktiv = r === rabatt;
+            const aktiv = r === standard;
             return (
               <button
                 key={r}
                 type="button"
-                onClick={() => setRabatt(r)}
+                onClick={() => setStandard(r)}
                 aria-pressed={aktiv}
                 className={cn(
                   "rounded-2xl border-2 px-2 py-4 sm:px-4 sm:py-5 text-center transition-all duration-200 min-h-[100px]",
@@ -239,8 +257,7 @@ export function ProduktAbo() {
           })}
         </div>
         <p className="text-center text-xs text-muted-foreground mt-3">
-          Du zahlst pro Produkt in deiner Liste, nicht für den ganzen Shop. Monatlich kündbar,
-          Produkte jederzeit austauschbar.
+          Gilt nur für das nächste Produkt, das du hinzufügst. Jede Zeile in der Liste behält ihre eigene Stufe.
         </p>
       </div>
 
@@ -288,6 +305,7 @@ export function ProduktAbo() {
               const a = alsAboProdukt(p);
               const schon = drin(a.id);
               const misch = MISCH_PRODUKTE.find((m) => m.handle === a.handle);
+              const stufe = stufeVon(a.id);
               return (
                 <div key={a.id} className="flex items-center gap-3 rounded-xl border border-border p-2.5">
                   <div className="w-14 h-14 rounded-lg bg-secondary shrink-0 overflow-hidden">
@@ -309,14 +327,23 @@ export function ProduktAbo() {
                       {formatPrice(String(a.preis), a.waehrung)}
                     </p>
                     <p className="text-xs text-primary font-semibold leading-tight">
-                      als Mitglied {euro(a.preis * (1 - rabatt / 100))}
+                      als Mitglied {euro(a.preis * (1 - stufe / 100))}
                     </p>
+                    {!misch && (
+                      <div className="mt-1.5">
+                        <StufenWahl
+                          wert={stufe}
+                          label={`Rabatt für ${a.titel}`}
+                          onChange={(r) => setWahl((alt) => ({ ...alt, [a.id]: r }))}
+                        />
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"
                     onClick={() => {
                       if (misch) wunschOeffnen(a.handle);
-                      if (!schon) hinzufuegen(p);
+                      if (!schon) hinzufuegen(p, stufe);
                     }}
                     disabled={schon && !misch}
                     aria-label={
@@ -357,7 +384,11 @@ export function ProduktAbo() {
             ) : (
               <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
                 {produkte.map((p) => {
-                  const m = istMenge(p) ? mengenPosition({ einzelpreis: p.einzelpreis, menge: p.menge, rabatt }) : null;
+                  const m = istMenge(p)
+                    ? mengenPosition({ einzelpreis: p.einzelpreis, menge: p.menge, rabatt: p.rabatt })
+                    : null;
+                  const mitglied = m ? m.mitglied : (p as AboProdukt).preis * (1 - p.rabatt / 100);
+                  const beitrag = m ? m.beitrag : PRODUKT_ABO_PREISE[p.rabatt];
                   return (
                   <div key={p.id} className="flex items-center gap-3 rounded-xl bg-secondary/50 p-2.5">
                     <div className="w-12 h-12 rounded-lg bg-background shrink-0 overflow-hidden">
@@ -372,7 +403,7 @@ export function ProduktAbo() {
                           </p>
                           <p className="text-xs mt-0.5">
                             <span className="text-muted-foreground line-through mr-1.5">{euro(m.normal)}</span>
-                            <span className="text-primary font-bold">{euro(m.mitglied)}</span>
+                            <span className="text-primary font-bold">{euro(mitglied)}</span>
                           </p>
                         </>
                       ) : (
@@ -380,11 +411,17 @@ export function ProduktAbo() {
                           <span className="text-muted-foreground line-through mr-1.5">
                             {formatPrice(String((p as AboProdukt).preis), (p as AboProdukt).waehrung)}
                           </span>
-                          <span className="text-primary font-bold">
-                            {euro((p as AboProdukt).preis * (1 - rabatt / 100))}
-                          </span>
+                          <span className="text-primary font-bold">{euro(mitglied)}</span>
                         </p>
                       )}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <StufenWahl
+                          wert={p.rabatt}
+                          label={`Rabatt für ${p.titel}`}
+                          onChange={(r) => setProdukte((alt) => alt.map((x) => (x.id === p.id ? { ...x, rabatt: r } : x)))}
+                        />
+                        <span className="text-[11px] text-muted-foreground">{euro(beitrag)} / Monat</span>
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -411,13 +448,11 @@ export function ProduktAbo() {
               {euro(gesamt?.beitrag ?? 0)} <span className="text-base font-normal text-muted-foreground">/ Monat</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1.5">
-              {einzelne.length > 0 && <>{einzelne.length} × {euro(proProdukt)}</>}
-              {einzelne.length > 0 && mengen.length > 0 && " · "}
-              {mengen.length > 0 && <>{mengen.length} Mengen-Position{mengen.length === 1 ? "" : "en"}</>}
+              Summe der Stufen in der Liste. Jedes Produkt zählt einzeln.
             </p>
-            {ersparnis > 0 && (
+            {(gesamt?.ersparnis ?? 0) > 0 && (
               <p className="text-sm font-semibold text-red-600 mt-3">
-                Du sparst ca. {euro(ersparnis)} im Monat
+                Du sparst ca. {euro(gesamt?.ersparnis ?? 0)} beim nächsten Einkauf dieser Liste
               </p>
             )}
 

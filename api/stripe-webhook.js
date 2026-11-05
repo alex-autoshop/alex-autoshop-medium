@@ -12,7 +12,7 @@
 
 export const config = { runtime: "edge" };
 
-import { activateMembership } from "./_activate-membership.js";
+import { activateMembership, activateProduktAbo } from "./_activate-membership.js";
 import { shopifyMitgliedTag } from "./_shopify-order.js";
 import { positionenLesen, teileBestellung } from "./_teile-bestellung.js";
 import { EMPFEHLUNGS_PROZENT } from "../shared/empfehlung.js";
@@ -205,7 +205,13 @@ export default async function handler(req) {
   if (event.type === "checkout.session.completed") {
     const s = event.data?.object || {};
     const m = s.metadata || {};
-    if (m.email && m.level) {
+    if (m.email && m.abo === "produkt") {
+      const r = await activateProduktAbo({
+        email: m.email, price: m.price, stufen: m.positionen, positionen: m.positionen,
+        provider: "stripe", providerId: s.subscription || s.id,
+      });
+      console.log("[stripe-webhook] produkt-abo:", JSON.stringify(r));
+    } else if (m.email && m.level) {
       const r = await activateMembership({
         email: m.email, level: m.level, modules: m.modules, price: m.price,
         provider: "stripe", providerId: s.subscription || s.id, ref: m.ref || "",

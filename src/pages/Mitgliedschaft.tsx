@@ -1,13 +1,40 @@
 ﻿import { useState } from "react";
-import { Phone, MessageCircle, ChevronDown } from "lucide-react";
+import { Phone, MessageCircle, ChevronDown, ListChecks, BadgePercent, ShoppingBag, Wrench, PackageSearch } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { MembershipCards } from "@/components/MembershipCards";
 import { MembershipCalculator } from "@/components/MembershipCalculator";
 import { ProduktAbo } from "@/components/ProduktAbo";
 import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
-import { Wrench, PackageSearch } from "lucide-react";
+import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
+
+const euro = (n: number) =>
+  new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
+
+/** Katalogpreis Schleifpaste Perfect Heavy Cut 750 g, Stand 5.11.2026. */
+const BEISPIEL_NORMAL = 33;
+const BEISPIEL_RABATT = 40;
+const beispielMitglied = Math.round(BEISPIEL_NORMAL * (1 - BEISPIEL_RABATT / 100) * 100) / 100;
+const beispielErsparnis = Math.round((BEISPIEL_NORMAL - beispielMitglied) * 100) / 100;
+
+const SCHRITTE = [
+  {
+    titel: "Produkte auswählen",
+    text: "Such dir raus, was du regelmäßig brauchst.",
+    icon: ListChecks,
+  },
+  {
+    titel: "Rabattstufe wählen",
+    text: "Du wählst für jedes Produkt selbst, wie viel Rabatt du willst: 15 %, 28 % oder 40 %.",
+    icon: BadgePercent,
+  },
+  {
+    titel: "Bei jeder Bestellung sparen",
+    text: "Der Rabatt gilt genau auf die Produkte in deiner Liste. Jedes Mal.",
+    icon: ShoppingBag,
+  },
+];
 
 type AboArt = "dienstleistung" | "produkt";
 
@@ -64,18 +91,16 @@ export default function Mitgliedschaft() {
         description="Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle. Monatlich kündbar."
       />
 
-      <section className="section-dark py-16 sm:py-20">
+      <section className="section-dark py-12 sm:py-16">
         <div className="container text-center max-w-2xl mx-auto">
           <span className="inline-flex items-center gap-2 rounded-full bg-gold-bright/15 border border-gold-bright/30 text-gold-accent text-xs font-bold uppercase tracking-wide px-4 py-1.5 mb-5">
             🔥 Brandneu · Mitgliedschaft
           </span>
           <h1 className="text-3xl sm:text-5xl mb-4">
-            Dein Betrieb. <span className="text-gold-accent">Deine Konditionen.</span>
+            Dein Rabatt. <span className="text-gold-accent">Auf genau das, was du brauchst.</span>
           </h1>
-          <p className="text-white/65 text-lg">
-            Die Mitgliedschaft gilt im Shop: Rabatt auf Lack und Werkstattbedarf,
-            und kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle.
-            Monatlich kündbar, keine Mindestabnahme.
+          <p className="text-white/65 text-base sm:text-lg">
+            Du wählst für jedes Produkt selbst, wie viel Rabatt du willst. Ab {euro(PRODUKT_ABO_PREISE[15])} pro Produkt im Monat, bis zu 40 % auf genau diese Produkte. Plus kostenloser Versand im Shop.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             {["🇩🇪 Deutschlandweit verfügbar", "Für jeden abschließbar — Werkstatt wie privat", "Lieferung direkt zu dir"].map((t) => (
@@ -84,15 +109,44 @@ export default function Mitgliedschaft() {
               </span>
             ))}
           </div>
-          <div className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-white/80">
-            <span className="font-bold text-gold-accent">Nur 10 Gründungs-Plätze</span>
-            zu diesen Konditionen — danach werden die Beiträge angehoben.
+          <div className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-white/80 text-left">
+            <span className="font-bold text-gold-accent shrink-0">Nur 10 Gründungs-Plätze</span>
+            <span>zu diesen Konditionen — danach werden die Beiträge angehoben.</span>
           </div>
         </div>
       </section>
 
+      <section className="container pt-8 pb-2 sm:pt-10">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-xl sm:text-2xl mb-4">So funktioniert's</h2>
+          <ol className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {SCHRITTE.map((s, i) => (
+              <li key={s.titel} className="rounded-2xl border border-border bg-card p-4">
+                <span className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center mb-3">
+                  <s.icon className="w-5 h-5" aria-hidden="true" />
+                </span>
+                <p className="font-display font-bold leading-snug">{i + 1}. {s.titel}</p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{s.text}</p>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Beispiel</p>
+            <p className="text-sm mt-1 leading-relaxed">
+              Schleifpaste Perfect Heavy Cut, 750 g, auf 40 %: normal {euro(BEISPIEL_NORMAL)}, als Mitglied {euro(beispielMitglied)}. Das sind {euro(beispielErsparnis)} weniger bei dieser Bestellung, der Beitrag für dieses eine Produkt ist {euro(PRODUKT_ABO_PREISE[40])} im Monat. Ein anderes Produkt in derselben Liste kann 15 % haben.
+            </p>
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+            Monatlich kündbar. Keine Mindestabnahme. Produkte kannst du jederzeit tauschen.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            In der Teilebörse gilt ein Preis für alle.
+          </p>
+        </div>
+      </section>
+
       {/* ── Zwei Mitgliedschaften zur Auswahl ───────────────────────────── */}
-      <section className="container py-12 sm:py-16 -mt-8">
+      <section className="container pt-6 pb-12 sm:pb-16">
         <div className={cn(
           "grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto mb-10",
           !DIENSTLEISTUNG_BUCHBAR && "hidden"

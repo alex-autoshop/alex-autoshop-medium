@@ -16,7 +16,7 @@
 
 export const config = { runtime: "edge" };
 
-import { activateMembership } from "./_activate-membership.js";
+import { activateMembership, activateProduktAbo } from "./_activate-membership.js";
 import { shopifyMitgliedTag } from "./_shopify-order.js";
 import { positionenLesen, teileBestellung, teileBestellungBezahlt } from "./_teile-bestellung.js";
 import { EMPFEHLUNGS_PROZENT } from "../shared/empfehlung.js";
@@ -180,6 +180,39 @@ async function handleBillingRequestFulfilled(billingRequestId) {
   }
 
   const mandateId = br.links?.mandate_request_mandate;
+  if (String(meta.paket || "").startsWith("Pmix")) {
+    const teile = String(meta.paket).split("|");
+    const price = Number(teile[1]);
+    if (mandateId && price > 0) {
+      try {
+        await fetch(`${gcHost()}/subscriptions`, {
+          method: "POST",
+          headers: gcHeaders(),
+          body: JSON.stringify({
+            subscriptions: {
+              amount: Math.round(price * 100),
+              currency: "EUR",
+              interval_unit: "monthly",
+              name: "Alex Autoshop Produkt-Abo",
+              links: { mandate: mandateId },
+              metadata: { email: meta.email || "", paket: meta.paket, positionen: String(meta.positionen || "").slice(0, 200) },
+            },
+          }),
+        });
+      } catch (e) {
+        console.error("[gocardless-webhook] produkt-abo:", e.message);
+      }
+    }
+    if (meta.email) {
+      const r = await activateProduktAbo({
+        email: meta.email, price, stufen: teile[2] || "", positionen: meta.positionen || "",
+        provider: "gocardless", providerId: mandateId,
+      });
+      console.log("[gocardless-webhook] produkt-abo:", JSON.stringify(r));
+    }
+    return;
+  }
+
   const paket = paketAuspacken(meta);
   const price = paket.price;
 

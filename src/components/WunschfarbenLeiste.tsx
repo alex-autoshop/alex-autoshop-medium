@@ -3,7 +3,7 @@ import { Loader2, Plus, Minus, Palette, SprayCan, Pencil, Info, Lightbulb, Chevr
 import {
   storefrontApiRequest, STOREFRONT_PRODUCT_BY_HANDLE_QUERY, type ShopifyProduct,
 } from "@/lib/shopify";
-import { literAus, mischBedarf, guenstigsteKombi, mengenPosition } from "../../shared/produktabo.js";
+import { literAus, mischBedarf, guenstigsteKombi, mengenPosition, ABO_RABATTE } from "../../shared/produktabo.js";
 import { cn } from "@/lib/utils";
 
 /** Die drei Misch-Produkte. Preise und Gebinde kommen aus Shopify — hier steht
@@ -23,6 +23,8 @@ export interface MengenEintrag {
   variante: string;
   /** 1K, 2K oder egal — steht so auch in der Abo-Liste. */
   lacksystem: "1K" | "2K" | "egal";
+  /** Eigene Rabattstufe dieser Lack-Position, unabhängig von den anderen Produkten. */
+  rabatt: number;
   einzelpreis: number;
   menge: number;
   bild?: string;
@@ -72,6 +74,7 @@ export function WunschfarbenLeiste({
   const [laedt, setLaedt] = useState(true);
   const [anteilB, setAnteilB] = useState(0);      // Anteil der zweiten Marke in %
   const [system, setSystem] = useState<Lacksystem>("egal");
+  const [lackRabatt, setLackRabatt] = useState(15);
   const [bedarf, setBedarf] = useState(4);
 
   const eintrag = MISCH_PRODUKTE.find((m) => m.id === aktiv)!;
@@ -151,7 +154,7 @@ export function WunschfarbenLeiste({
     anteilB: markeB ? anteilB : 0,
     gebindeA: gebindeVon(markeA, sys),
     gebindeB: markeB ? gebindeVon(markeB, sys) : [],
-    rabatt,
+    rabatt: lackRabatt,
   });
   const liter1 = inLitern ? literFuer("1k") : null;
   const liter2 = inLitern ? literFuer("2k") : null;
@@ -182,7 +185,7 @@ export function WunschfarbenLeiste({
     ? Math.min(...(system === "egal" ? [stueckVon("1k"), stueckVon("2k")] : [stueckVon(system)]).filter(Number.isFinite))
     : 0;
   const stueckRechnung = !inLitern && Number.isFinite(stueckPreis) && stueckPreis > 0
-    ? mengenPosition({ einzelpreis: stueckPreis, menge: bedarf, rabatt })
+    ? mengenPosition({ einzelpreis: stueckPreis, menge: bedarf, rabatt: lackRabatt })
     : null;
 
   const rechnung = literRechnung ?? stueckRechnung;
@@ -210,6 +213,7 @@ export function WunschfarbenLeiste({
       variantId: gebindeGewaehlt[0]?.variantId ?? "",
       variante: beschreibung,
       lacksystem: systemText,
+      rabatt: lackRabatt,
       // Einzelpreis so wählen, dass Menge × Einzelpreis den Monatspreis ergibt
       einzelpreis: Math.round((rechnung.normal / Math.max(1, bedarf)) * 100) / 100,
       menge: bedarf,
@@ -330,6 +334,20 @@ export function WunschfarbenLeiste({
               </div>
             </div>
           )}
+
+          <div className="mb-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Dein Rabatt auf diesen Lack</p>
+            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Rabattstufe für den Lack">
+              {ABO_RABATTE.map((r) => (
+                <button key={r} type="button" aria-pressed={lackRabatt === r} onClick={() => setLackRabatt(r)}
+                  className={cn("cursor-pointer rounded-xl border-2 px-2 py-2 text-center",
+                    lackRabatt === r ? "border-primary bg-primary/15" : "border-border bg-card hover:border-primary/50")}>
+                  <span className="block text-sm font-bold">{r} %</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5">Nur dieser Lack. Jedes andere Produkt in der Liste hat seine eigene Stufe. Der Beitrag unten hängt an der Ersparnis dieser Menge.</p>
+          </div>
 
           {/* ── Monatsbedarf ─────────────────────────────────────────── */}
           <div className="mb-4">
