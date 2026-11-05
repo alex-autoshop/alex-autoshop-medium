@@ -48,8 +48,15 @@ function aufbauLabel(wert: string) {
 }
 
 export function WunschfarbenLeiste({
-  rabatt, onHinzufuegen,
-}: { rabatt: number; onHinzufuegen: (e: MengenEintrag) => void }) {
+  rabatt, onHinzufuegen, oeffnen = 0, start = "",
+}: {
+  rabatt: number;
+  onHinzufuegen: (e: MengenEintrag) => void;
+  /** Steigt, wenn die Leiste von außen aufgeklappt werden soll (z. B. Klick auf Wunschfarbe in der Produktliste). */
+  oeffnen?: number;
+  /** Produktart, die dabei aktiv sein soll: farbe, spray oder stift. */
+  start?: string;
+}) {
   const [offen, setOffen] = useState(false);
   const [aktiv, setAktiv] = useState<string>(MISCH_PRODUKTE[0].id);
   const [produkte, setProdukte] = useState<Record<string, Produkt | null>>({});
@@ -60,6 +67,13 @@ export function WunschfarbenLeiste({
 
   const eintrag = MISCH_PRODUKTE.find((m) => m.id === aktiv)!;
   const produkt = produkte[eintrag.handle];
+
+  useEffect(() => {
+    if (!oeffnen) return;
+    if (start && MISCH_PRODUKTE.some((m) => m.id === start)) setAktiv(start);
+    setOffen(true);
+    document.getElementById("farbe-nach-monatsbedarf-kopf")?.scrollIntoView({ block: "start" });
+  }, [oeffnen, start]);
 
   useEffect(() => {
     let weg = false;
@@ -164,10 +178,11 @@ export function WunschfarbenLeiste({
   }
 
   return (
-    <div className="card-tilt hover:translate-y-0 border-primary/40 bg-primary/5 overflow-hidden">
+    <div className="rounded-2xl border border-primary/40 bg-primary/5 shadow-card overflow-hidden">
       <button
+        id="farbe-nach-monatsbedarf-kopf"
         type="button"
-        className="w-full flex items-center gap-3 p-4 text-left"
+        className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
         aria-expanded={offen}
         aria-controls="farbe-nach-monatsbedarf"
         onClick={() => setOffen((v) => !v)}
@@ -193,7 +208,7 @@ export function WunschfarbenLeiste({
           const an = m.id === aktiv;
           return (
             <button key={m.id} type="button" onClick={() => setAktiv(m.id)} aria-pressed={an}
-              className={cn("rounded-xl border-2 px-2 py-3 text-center transition-all min-h-[68px]",
+              className={cn("cursor-pointer rounded-xl border-2 px-2 py-3 text-center transition-all min-h-[68px]",
                 an ? "border-primary bg-primary/15" : "border-border bg-card hover:border-primary/50")}>
               <m.icon className={cn("w-5 h-5 mx-auto mb-1", an ? "text-primary" : "text-muted-foreground")} />
               <span className="block text-xs font-semibold leading-tight">{m.label}</span>
@@ -247,7 +262,7 @@ export function WunschfarbenLeiste({
               <div className="flex gap-2 mt-2.5">
                 {[[0, markenName(markeA)], [50, "halbe/halbe"], [100, markenName(markeB)]].map(([w, t]) => (
                   <button key={String(w)} type="button" onClick={() => setAnteilB(Number(w))}
-                    className={cn("rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors",
+                    className={cn("cursor-pointer rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors",
                       anteilB === w ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/50")}>
                     {t}
                   </button>
@@ -266,7 +281,7 @@ export function WunschfarbenLeiste({
                   const an = aufbau === w;
                   return (
                     <button key={w} type="button" onClick={() => setAufbau(w)} aria-pressed={an}
-                      className={cn("rounded-xl border-2 px-3 py-2.5 text-left transition-all",
+                      className={cn("cursor-pointer rounded-xl border-2 px-3 py-2.5 text-left transition-all",
                         an ? "border-primary bg-primary/15" : "border-border bg-card hover:border-primary/50")}>
                       <span className="block text-sm font-semibold">{l.titel}</span>
                       {l.hinweis && <span className="block text-[11px] text-muted-foreground mt-0.5">{l.hinweis}</span>}
@@ -284,7 +299,7 @@ export function WunschfarbenLeiste({
             </p>
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => setBedarf((m) => Math.max(inLitern ? 0.5 : 1, +(m - (inLitern ? 0.5 : 1)).toFixed(2)))}
-                aria-label="Weniger" className="w-11 h-11 rounded-lg border border-border inline-flex items-center justify-center hover:border-primary">
+                aria-label="Weniger" className="cursor-pointer w-11 h-11 rounded-lg border border-border inline-flex items-center justify-center hover:border-primary">
                 <Minus className="w-4 h-4" />
               </button>
               <input
@@ -294,7 +309,7 @@ export function WunschfarbenLeiste({
                 className="input-base w-24 text-center tabular-nums"
               />
               <button type="button" onClick={() => setBedarf((m) => Math.min(999, +(m + (inLitern ? 0.5 : 1)).toFixed(2)))}
-                aria-label="Mehr" className="w-11 h-11 rounded-lg border border-border inline-flex items-center justify-center hover:border-primary">
+                aria-label="Mehr" className="cursor-pointer w-11 h-11 rounded-lg border border-border inline-flex items-center justify-center hover:border-primary">
                 <Plus className="w-4 h-4" />
               </button>
               <span className="text-sm font-semibold">{eintrag.einheit} im Monat</span>
@@ -361,7 +376,7 @@ export function WunschfarbenLeiste({
           )}
 
           <button type="button" onClick={insAbo} disabled={!rechnung}
-            className={cn("btn-primary w-full mt-4", !rechnung && "opacity-50 cursor-not-allowed")}>
+            className={cn("btn-primary cursor-pointer w-full mt-4", !rechnung && "opacity-50 cursor-not-allowed")}>
             <Plus className="w-5 h-5" /> In mein Abo
           </button>
 
