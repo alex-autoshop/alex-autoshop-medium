@@ -428,6 +428,8 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, u
   form.set("metadata[fahrzeug]", String(fahrzeug || "").slice(0, 200));
   form.set("metadata[vin]", String(vin || "").slice(0, 40));
   form.set("metadata[summe]", summe.toFixed(2));
+  form.set("metadata[versand]", Number(versand || 0).toFixed(2));
+  form.set("metadata[pfand]", Number(pfand || 0).toFixed(2));
   if (lieferung) {
     form.set("metadata[liefer_name]", lieferung.name.slice(0, 120));
     form.set("metadata[liefer_strasse]", lieferung.strasse.slice(0, 160));
@@ -496,8 +498,12 @@ async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId,
           typ: "teile",
           // GoCardless erlaubt höchstens 3 Metadaten-Felder.
           user_id: String(userId || ""),
-          positionen: [vin ? `FIN ${String(vin).slice(0, 20)}` : "", ...positionen.map((p) => `${p.quantity}x${p.articleNumber}`)]
-            .filter(Boolean).join("|").slice(0, 490),
+          positionen: [
+            vin ? `FIN ${String(vin).slice(0, 20)}` : "",
+            ...positionen.map((p) => `${p.quantity}x${p.articleNumber}@${Number(p.einzel).toFixed(2)}`),
+            `v:${Number(versand || 0).toFixed(2)}`,
+            `p:${Number(pfand || 0).toFixed(2)}`,
+          ].filter(Boolean).join("|").slice(0, 490),
         },
       },
     }),

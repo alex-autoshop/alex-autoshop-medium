@@ -14,6 +14,7 @@ export const config = { runtime: "edge" };
 
 import { activateMembership } from "./_activate-membership.js";
 import { shopifyMitgliedTag } from "./_shopify-order.js";
+import { positionenLesen, teileBestellung } from "./_teile-bestellung.js";
 import { EMPFEHLUNGS_PROZENT } from "../shared/empfehlung.js";
 
 // ── Teile-Zahlungen für die Zahlungsgrenze festhalten (nur Server) ──────────
@@ -176,6 +177,27 @@ export default async function handler(req) {
         });
         if (m.typ === "teile" && (bezahlt || fehl)) await provisionBuchen(s.id);
         if (m.typ === "teile" && (bezahlt || fehl)) await guthabenAbschliessen(s.id, bezahlt);
+        if (bezahlt) {
+          const gelesen = positionenLesen(m.positionen);
+          const addr = s.shipping_details?.address || s.customer_details?.address || {};
+          await teileBestellung({
+            externId: s.id,
+            anbieter: "stripe",
+            status: "bezahlt",
+            email: s.customer_details?.email || s.customer_email || "",
+            name: m.liefer_name || s.shipping_details?.name || s.customer_details?.name || "",
+            strasse: m.liefer_strasse || addr.line1 || "",
+            plz: m.liefer_plz || addr.postal_code || "",
+            ort: m.liefer_ort || addr.city || "",
+            positionen: gelesen.positionen,
+            warenwert: m.summe != null && m.summe !== "" ? Number(m.summe) : null,
+            versand: m.versand != null && m.versand !== "" ? Number(m.versand) : gelesen.versand,
+            pfand: m.pfand != null && m.pfand !== "" ? Number(m.pfand) : gelesen.pfand,
+            summe: Number(s.amount_total || 0) / 100,
+            fahrzeug: m.fahrzeug || "",
+            vin: m.vin || "",
+          });
+        }
       }
     }
   }

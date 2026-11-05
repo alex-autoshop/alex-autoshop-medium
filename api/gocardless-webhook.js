@@ -18,6 +18,7 @@ export const config = { runtime: "edge" };
 
 import { activateMembership } from "./_activate-membership.js";
 import { shopifyMitgliedTag } from "./_shopify-order.js";
+import { positionenLesen, teileBestellung, teileBestellungBezahlt } from "./_teile-bestellung.js";
 import { EMPFEHLUNGS_PROZENT } from "../shared/empfehlung.js";
 import { rabattName } from "../shared/mitgliedspreise.js";
 
@@ -141,13 +142,39 @@ async function handleBillingRequestFulfilled(billingRequestId) {
   if (meta.typ === "teile") {
     // Reserviertes Guthaben hing an der Anfrage — ab jetzt an der Zahlung
     if (br.links?.payment_request_payment) await guthabenUmhaengen(br.id, br.links.payment_request_payment);
+    const extern = br.links?.payment_request_payment || br.id;
     await zahlungSpeichern({
-      extern_id: br.links?.payment_request_payment || br.id,
+      extern_id: extern,
       anbieter: "gocardless",
       typ: "teile",
       user_id: istUuid(meta.user_id) ? meta.user_id : null,
       betrag: Number(br.payment_request?.amount || 0) / 100,
       status: "offen",
+    });
+    const gelesen = positionenLesen(meta.positionen);
+    let adresse = {};
+    const kundeId = br.links?.customer;
+    if (kundeId) {
+      const c = (await gcJson(`/customers/${kundeId}`))?.customers;
+      if (c) {
+        adresse = {
+          email: c.email || "",
+          name: [c.given_name, c.family_name].filter(Boolean).join(" "),
+          strasse: c.address_line1 || "",
+          plz: c.postal_code || "",
+          ort: c.city || "",
+        };
+      }
+    }
+    await teileBestellung({
+      externId: extern,
+      anbieter: "gocardless",
+      status: "offen",
+      ...adresse,
+      positionen: gelesen.positionen,
+      versand: gelesen.versand,
+      pfand: gelesen.pfand,
+      summe: Number(br.payment_request?.amount || 0) / 100,
     });
     return;
   }
@@ -277,7 +304,29 @@ export default async function handler(req) {
       // Teile-Zahlungen: erst eingezogen zählt sie für die Zahlungsgrenze
       if (ev.resource_type === "payments") {
         const id = ev.links?.payment;
-        if (["confirmed", "paid_out"].includes(ev.action)) { await zahlungStatus(id, "bezahlt"); await provisionBuchen(id); await guthabenAbschliessen(id, true); }
+        if (["confirmed", "paid_out"].includes(ev.action)) {
+          await zahlungStatus(id, "bezahlt");
+          await provisionBuchen(id);
+          await guthabenAbschliessen(id, true);
+          const pay = (await gcJson(`/payments/${id}`))?.payments;
+          const meta = pay?.metadata || {};
+          if (meta.typ === "teile" || meta.typ === "theke") {
+            const gelesen = positionenLesen(meta.positionen);
+            await teileBestellungBezahlt(id, {
+              anbieter: "gocardless",
+              positionen: gelesen.positionen,
+              versand: gelesen.versand,
+              pfand: gelesen.pfand,
+              summe: Number(pay?.amount || 0) / 100,
+            });
+          } else {
+            await teileBestellungBezahlt(id, {
+              anbieter: "gocardless",
+              nurWennDa: true,
+              summe: Number(pay?.amount || 0) / 100 || undefined,
+            });
+          }
+        }
         if (["failed", "cancelled", "charged_back", "late_failure_settled"].includes(ev.action)) {
           await zahlungStatus(id, "fehlgeschlagen");
           await provisionBuchen(id);
