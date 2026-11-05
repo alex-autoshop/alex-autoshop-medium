@@ -2,7 +2,7 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -73,13 +73,13 @@
     #aa-shell, #aa-shell * { font-family: system-ui, sans-serif; }
     #aa-cookies, #aa-cookies * { font-family: system-ui, sans-serif; }
     #aa-shell.aa-weg { visibility: hidden; pointer-events: none; }
-    .aa-head { display: flex; align-items: center; justify-content: space-between; height: 80px; padding: 0 1rem; background: #0D0D0D; color: #fff; border-bottom: 1px solid rgba(255,255,255,.1); }
+    .aa-head { display: flex; align-items: center; justify-content: space-between; height: calc(80px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) 1rem 0; background: #0D0D0D; color: #fff; border-bottom: 1px solid rgba(255,255,255,.1); }
     .aa-head img { height: 44px; width: auto; }
     .aa-nav { display: none; gap: 4px; }
     .aa-nav a, .aa-login { color: rgba(255,255,255,.75); text-decoration: none; font-weight: 600; font-size: 16px; padding: 12px; }
     .aa-login { border: 1px solid rgba(255,255,255,.2); border-radius: 8px; }
     @media (min-width: 1280px) {
-      .aa-head { height: 96px; }
+      .aa-head { height: calc(96px + env(safe-area-inset-top, 0px)); }
       .aa-head img { height: 56px; }
       .aa-nav { display: flex; }
     }

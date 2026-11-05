@@ -200,7 +200,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-night/95 backdrop-blur-md border-b border-white/10 text-white">
+      <header className="sticky top-0 z-40 bg-night/95 backdrop-blur-md border-b border-white/10 text-white pt-[env(safe-area-inset-top)]">
         <div className="container flex items-center justify-between h-20 sm:h-24 gap-2">
           <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)}>
             {/* Eng zugeschnittenes farbiges Logo (leerer Rand entfernt) fuer dunkle Navbar */}

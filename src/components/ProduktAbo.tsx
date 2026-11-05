@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
   Search, Plus, X, Loader2, CheckCircle, ShoppingBasket, Package,
@@ -22,6 +23,7 @@ import { AboAnmeldung } from "@/components/AboAnmeldung";
 import { AboProduktKatalog } from "@/components/AboProduktKatalog";
 import { AboVorschau } from "@/components/AboVorschau";
 import { aboBildStil } from "../../shared/abo-bildrahmen.js";
+import { AboLeisteMobil } from "@/components/AboLeisteMobil";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
  *  localStorage passt und auch ohne erneute Shop-Abfrage anzeigbar bleibt. */
@@ -121,6 +123,9 @@ export function ProduktAbo() {
   const [anmeldung, setAnmeldung] = useState(false);
   const [kategorie, setKategorie] = useState("alle");
   const [vorschau, setVorschau] = useState<ShopifyProduct | null>(null);
+  const [blatt, setBlatt] = useState(false);
+  const listeRef = useRef<HTMLDivElement>(null);
+  const [listeSichtbar, setListeSichtbar] = useState(false);
 
   // Auswahl überlebt einen Seitenwechsel — sonst ist die Arbeit weg
   useEffect(() => {
@@ -146,6 +151,33 @@ export function ProduktAbo() {
   }, [suche]);
 
   useEffect(() => { setKategorie("alle"); }, [suchbegriff]);
+
+  useEffect(() => {
+    const el = listeRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([eintrag]) => setListeSichtbar(eintrag.isIntersecting),
+      { threshold: 0, rootMargin: "0px 0px -72px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (produkte.length === 0) setBlatt(false);
+  }, [produkte.length]);
+
+  useEffect(() => {
+    if (!blatt) return;
+    const zu = (e: KeyboardEvent) => { if (e.key === "Escape") setBlatt(false); };
+    document.addEventListener("keydown", zu);
+    const vorher = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", zu);
+      document.body.style.overflow = vorher;
+    };
+  }, [blatt]);
 
   const { products: rohProdukte, isLoading, hasMore, fehler } = useVollerKatalog(suchbegriff);
   const products = useMemo(
@@ -225,7 +257,7 @@ export function ProduktAbo() {
   }
 
   return (
-    <div>
+    <div className={produkte.length > 0 ? "abo-unten" : undefined}>
       {/* Eingeklappt ganz oben, damit die Karte nicht unter der Produktliste verschwindet. */}
       <div className="max-w-3xl mx-auto mb-8">
         <WunschfarbenLeiste
@@ -391,7 +423,7 @@ export function ProduktAbo() {
         </div>
 
         {/* ── Abo-Liste und Rechner ───────────────────────────────────── */}
-        <div className="lg:sticky lg:top-28 space-y-4">
+        <div id="abo-liste" ref={listeRef} className="lg:sticky lg:top-28 space-y-4 scroll-mt-28">
           <div className="card-tilt hover:translate-y-0 p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h3 className="text-lg inline-flex items-center gap-2">
@@ -510,6 +542,98 @@ export function ProduktAbo() {
           </motion.div>
         </div>
       </div>
+      <AboLeisteMobil
+        produkte={produkte.map((p) => ({ id: p.id, titel: p.titel, bild: p.bild }))}
+        beitrag={gesamt?.beitrag ?? 0}
+        verdeckt={listeSichtbar || blatt}
+        onAnsehen={() => setBlatt(true)}
+      />
+      {blatt && createPortal(
+        <div className="lg:hidden fixed inset-0 z-[45] flex items-end">
+          <button type="button" className="absolute inset-0 bg-black/50" aria-label="Schließen" onClick={() => setBlatt(false)} />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="abo-blatt-titel"
+            className="relative flex max-h-[88vh] w-full flex-col rounded-t-3xl bg-background shadow-2xl"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + var(--abo-cookie, 0px))" }}
+          >
+            <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2">
+              <h3 id="abo-blatt-titel" className="text-lg inline-flex items-center gap-2">
+                <ShoppingBasket className="w-5 h-5 text-primary" /> Deine Abo-Liste
+              </h3>
+              <button
+                type="button"
+                onClick={() => setBlatt(false)}
+                aria-label="Abo-Liste schließen"
+                className="w-11 h-11 rounded-full border border-border inline-flex items-center justify-center"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-4 pb-4 space-y-3">
+              {produkte.map((p) => {
+                const m = istMenge(p)
+                  ? mengenPosition({ einzelpreis: p.einzelpreis, menge: p.menge, rabatt: p.rabatt })
+                  : null;
+                const beitrag = m ? m.beitrag : PRODUKT_ABO_PREISE[p.rabatt];
+                return (
+                  <div key={p.id} className="flex items-center gap-3 rounded-xl bg-secondary/50 p-2.5">
+                    <div className="w-12 h-12 rounded-lg bg-background shrink-0 overflow-hidden">
+                      {p.bild && <img src={p.bild} alt="" className="w-full h-full object-cover" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold leading-snug line-clamp-2">{p.titel}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{euro(beitrag)} / Monat</p>
+                      <div className="mt-1.5">
+                        <StufenWahl
+                          wert={p.rabatt}
+                          label={`Rabatt für ${p.titel}`}
+                          onChange={(r) => setProdukte((alt) => alt.map((x) => (x.id === p.id ? { ...x, rabatt: r } : x)))}
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setProdukte((alt) => alt.filter((x) => x.id !== p.id))}
+                      aria-label={`${p.titel} entfernen`}
+                      className="shrink-0 w-11 h-11 rounded-lg inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+              <form onSubmit={abschliessen} className="rounded-2xl border-2 border-primary/50 bg-primary/5 p-4 space-y-3">
+                <p className="font-display font-bold text-2xl tabular-nums leading-none">
+                  {euro(gesamt?.beitrag ?? 0)} <span className="text-base font-normal text-muted-foreground">/ Monat</span>
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["gocardless", "stripe"] as const).map((z) => (
+                    <button
+                      key={z} type="button" onClick={() => setZahlweg(z)} aria-pressed={zahlweg === z}
+                      className={cn(
+                        "rounded-lg border px-3 py-2 text-xs font-semibold min-h-11",
+                        zahlweg === z ? "border-primary bg-primary/10 text-primary" : "border-border"
+                      )}
+                    >
+                      {z === "gocardless" ? "SEPA-Lastschrift" : "Karte"}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="submit"
+                  disabled={laeuft || produkte.length === 0}
+                  className={cn("btn-primary w-full", (laeuft || produkte.length === 0) && "opacity-50 cursor-not-allowed")}
+                >
+                  {laeuft ? <><Loader2 className="w-5 h-5 animate-spin" /> Moment …</> : "Zahlungspflichtig bestellen"}
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
       <AboAnmeldung offen={anmeldung} onZu={() => setAnmeldung(false)} />
       {vorschau && (
         <AboVorschau
