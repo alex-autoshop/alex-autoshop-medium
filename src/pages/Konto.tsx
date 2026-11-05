@@ -14,8 +14,9 @@ export default function Konto() {
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state as { from?: string })?.from || "/dashboard";
-
-  const [mode, setMode] = useState<Modus>("login");
+  const [mode, setMode] = useState<Modus>(
+    () => ((location.state as { tab?: string } | null)?.tab === "register" ? "register" : "login"),
+  );
   /** Link zum Zurücksetzen ist raus — Hinweis statt Formular. */
   const [mailRaus, setMailRaus] = useState(false);
   const [password2, setPassword2] = useState("");
@@ -81,7 +82,9 @@ export default function Konto() {
             description: "Bitte bestätige den Link in deiner E-Mail, dann kannst du dich anmelden.",
           });
         } else {
-          toast.success("Konto erstellt!", { description: "Du kannst dich jetzt anmelden." });
+          toast.success("Konto erstellt!");
+          navigate(redirectTo);
+          return;
         }
         setMode("login");
       }

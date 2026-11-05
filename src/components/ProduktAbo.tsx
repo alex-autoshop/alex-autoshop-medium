@@ -16,6 +16,7 @@ import {
 import { WunschfarbenLeiste, MISCH_PRODUKTE, type MengenEintrag } from "@/components/WunschfarbenLeiste";
 import { cn } from "@/lib/utils";
 import { ABO_EREIGNIS, ABO_SPEICHER, aboListeLesen } from "@/lib/aboListe";
+import { AboAnmeldung } from "@/components/AboAnmeldung";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
  *  localStorage passt und auch ohne erneute Shop-Abfrage anzeigbar bleibt. */
@@ -92,11 +93,11 @@ export function ProduktAbo() {
   const [produkte, setProdukte] = useState<AboZeile[]>(start.produkte);
   const [suche, setSuche] = useState("");
   const [suchbegriff, setSuchbegriff] = useState("");
-  const [email, setEmail] = useState("");
   const [zahlweg, setZahlweg] = useState<"gocardless" | "stripe">("gocardless");
   const [laeuft, setLaeuft] = useState(false);
   const [farbeAuf, setFarbeAuf] = useState(0);
   const [farbeStart, setFarbeStart] = useState("");
+  const [anmeldung, setAnmeldung] = useState(false);
 
   // Auswahl überlebt einen Seitenwechsel — sonst ist die Arbeit weg
   useEffect(() => {
@@ -157,9 +158,10 @@ export function ProduktAbo() {
 
   async function abschliessen(e: React.FormEvent) {
     e.preventDefault();
-    const mail = (user?.email || email).trim().toLowerCase();
-    if (!mail) { toast.error("Bitte E-Mail-Adresse angeben."); return; }
     if (!gesamt) { toast.error("Leg zuerst mindestens ein Produkt in die Liste."); return; }
+    if (!user) { setAnmeldung(true); return; }
+    const mail = user.email?.trim().toLowerCase() || "";
+    if (!mail) { toast.error("Bitte E-Mail-Adresse angeben."); return; }
 
     setLaeuft(true);
     try {
@@ -197,7 +199,6 @@ export function ProduktAbo() {
       toast.success("Anfrage gesendet! 📬", {
         description: "Wir melden uns zur Zahlung. Deine Produktliste liegt bei uns.",
       });
-      if (!user) setEmail("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
@@ -460,13 +461,6 @@ export function ProduktAbo() {
             )}
 
             <form onSubmit={abschliessen} className="mt-5 space-y-3">
-              {!user && (
-                <input
-                  type="email" required className="input-base" value={email}
-                  onChange={(e) => setEmail(e.target.value)} placeholder="deine@email.de"
-                  aria-label="E-Mail-Adresse"
-                />
-              )}
               <div className="grid grid-cols-2 gap-2">
                 {(["gocardless", "stripe"] as const).map((z) => (
                   <button
@@ -496,6 +490,7 @@ export function ProduktAbo() {
           </motion.div>
         </div>
       </div>
+      <AboAnmeldung offen={anmeldung} onZu={() => setAnmeldung(false)} />
     </div>
   );
 }

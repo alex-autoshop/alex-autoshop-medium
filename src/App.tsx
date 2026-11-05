@@ -109,19 +109,7 @@ export default function App() {
                     <Route path="/shop/:category" element={<Shop />} />
                     <Route path="/kategorie/:handle" element={<Kategorie />} />
                     <Route path="/produkt/:handle" element={<ProductDetail />} />
-                    <Route
-                      path="/mitgliedschaft"
-                      element={
-                        <ProtectedRoute
-                          preview
-                          titel="Mitgliedschaften"
-                          unschaerfe={16}
-                          text={<>Stufen, Rabatte und Preise sehen<br />angemeldete Kunden. Konto ist gratis.</>}
-                        >
-                          <Mitgliedschaft />
-                        </ProtectedRoute>
-                      }
-                    />
+                    <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />
                     <Route path="/teile/:slug" element={<TeileboerseTor><TeilArtikel /></TeileboerseTor>} />
                     <Route path="/teileboerse/artikel" element={<TeileboerseTor><TeilArtikel /></TeileboerseTor>} />
                     <Route path="/teileboerse" element={<TeileboerseTor><Teileportal /></TeileboerseTor>} />

@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { MEMBERSHIP_LEVELS, type MembershipLevel } from "@/data/memberships";
 import { useAuth } from "@/context/AuthContext";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
+import { AboAnmeldung } from "@/components/AboAnmeldung";
 import { supabase } from "@/lib/supabase";
 import { empfehlungLesen } from "@/lib/empfehlung";
 import { mitgliedsbeitrag } from "../../shared/mitgliedspreise.js";
@@ -174,7 +175,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
   const [modules, setModules] = useState<string[]>(m.defaultModules ?? m.modules);
   const [wantFreePaint, setWantFreePaint] = useState(true);
   const [wantDetailing, setWantDetailing] = useState(true);
-  const [email, setEmail] = useState("");
+  const [anmeldung, setAnmeldung] = useState(false);
   const [payMethod, setPayMethod] = useState<"gocardless" | "stripe">("gocardless");
   const [loading, setLoading] = useState(false);
   const [trialLoading, setTrialLoading] = useState(false);
@@ -411,7 +412,8 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const mail = user?.email || email;
+    if (!user) { setAnmeldung(true); return; }
+    const mail = user.email || "";
     if (!mail) return toast.error("Bitte E-Mail angeben");
     setLoading(true);
     try {
@@ -467,7 +469,6 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
           description: "Wir melden uns zur Zahlung. Klick auf 'Zum Dashboard' in der Mail — du wirst automatisch eingeloggt.",
         });
       }
-      setEmail("");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error("Anfrage fehlgeschlagen", { description: msg });
@@ -775,16 +776,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
           </ul>
 
           <form onSubmit={submit} className="mt-auto space-y-2">
-            {!user && (
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="deine@email.de"
-                className="input-base"
-              />
-            )}
+            <AboAnmeldung offen={anmeldung} onZu={() => setAnmeldung(false)} />
             {/* Zahlungsart */}
             <div className="grid grid-cols-2 gap-2">
               {([
