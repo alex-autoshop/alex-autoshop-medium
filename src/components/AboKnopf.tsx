@@ -183,7 +183,7 @@ export function AboKnopf({ produkt, className, kurz = false }: {
             <ol className="space-y-2 text-sm leading-relaxed">
               <li>1. Du suchst dir die Produkte aus.</li>
               <li>2. Für jedes Produkt wählst du {STUFEN}.</li>
-              <li>3. Du sparst bei jeder Bestellung. Der Versand im Shop ist kostenlos.</li>
+              <li>3. Du sparst bei jeder Bestellung. Der Versand im Shop ist kostenlos – bei jeder Bestellung, auch für andere Produkte, nicht nur für Abo-Artikel.</li>
             </ol>
             <p className="mt-3 text-sm text-neutral-600">„{produkt.titel}“ liegt in deiner Abo-Liste.</p>
             <div className="mt-5 flex flex-col sm:flex-row gap-2">
