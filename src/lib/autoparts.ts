@@ -95,6 +95,7 @@ async function apPages(path: string, arrayKey: string): Promise<any[]> {
   const acc = pickArray(first, arrayKey);
   const pages = Number(first?.totalPages) || 1;
   if (pages <= 1) return acc;
+  // Höchstens 8 Seiten (die API liefert 100 je Seite). Mehr würde die Teilebörse ausbremsen.
   const rest = await Promise.all(
     Array.from({ length: Math.min(pages, 8) - 1 }, (_, i) =>
       ap(path, { page: i + 2 }).catch(() => null),
@@ -914,10 +915,10 @@ export async function apArticlesForVehicle(vehicleId: number, query: string): Pr
   const vehCatIds = await vehicleCategoryIds(vehicleId, query);
   if (vehCatIds.length) {
     const settled = await Promise.allSettled(
-      vehCatIds.map((cid) => ap(`/articles/list/type-id/${TYPE_PC}/vehicle-id/${vehicleId}/category-id/${cid}/lang-id/${LANG}`))
+      vehCatIds.map((cid) => apPages(`/articles/list/type-id/${TYPE_PC}/vehicle-id/${vehicleId}/category-id/${cid}/lang-id/${LANG}`, 'articles'))
     );
     const raw: any[] = [];
-    for (const s of settled) if (s.status === 'fulfilled') raw.push(...pickArray(s.value, 'articles'));
+    for (const s of settled) if (s.status === 'fulfilled') raw.push(...s.value);
     const seen = new Set<string>();
     const out = raw
       .map(toApArticle)
@@ -936,10 +937,10 @@ export async function apArticlesForVehicle(vehicleId: number, query: string): Pr
   const catIds = await apCategoryIds(query);
   if (!catIds.length) return [];
   const settled = await Promise.allSettled(
-    catIds.map((cid) => ap(`/articles/list/type-id/${TYPE_PC}/vehicle-id/${vehicleId}/category-id/${cid}/lang-id/${LANG}`))
+    catIds.map((cid) => apPages(`/articles/list/type-id/${TYPE_PC}/vehicle-id/${vehicleId}/category-id/${cid}/lang-id/${LANG}`, 'articles'))
   );
   const raw: any[] = [];
-  for (const s of settled) if (s.status === 'fulfilled') raw.push(...pickArray(s.value, 'articles'));
+  for (const s of settled) if (s.status === 'fulfilled') raw.push(...s.value);
   const seen = new Set<string>();
   const all = raw
     .map(toApArticle)
@@ -1125,9 +1126,9 @@ export async function apCategoryTree(vehicleId: number): Promise<ApCategoryNode[
 
 /** Artikel einer konkreten Kategorie-ID (ohne Relevanzfilter — exakte Gruppe). */
 export async function apArticlesByCategory(vehicleId: number, categoryId: number): Promise<ApArticle[]> {
-  const r = await ap(`/articles/list/type-id/${TYPE_PC}/vehicle-id/${vehicleId}/category-id/${categoryId}/lang-id/${LANG}`);
+  const liste = await apPages(`/articles/list/type-id/${TYPE_PC}/vehicle-id/${vehicleId}/category-id/${categoryId}/lang-id/${LANG}`, 'articles');
   const seen = new Set<string>();
-  return pickArray(r, 'articles').map(toApArticle)
+  return liste.map(toApArticle)
     .filter((a): a is ApArticle => !!a && !!a.articleNumber)
     .filter((a) => { const k = `${a.brand}::${a.articleNumber}`.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
 }
