@@ -1,7 +1,10 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { teileboerseCookieSetzen } from "@/lib/teileboerseSichtbar";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase, isAuthConfigured } from "@/lib/supabase";
+import type { Session, User, SupabaseClient } from "@supabase/supabase-js";
+
+function getSb(): Promise<SupabaseClient | null> {
+  return import("@/lib/supabase").then((m) => m.supabase);
+}
 import { empfehlungLesen, empfehlungVergessen } from "@/lib/empfehlung";
 import { empfehlungOffen } from "../../shared/empfehlung.js";
 
@@ -106,26 +109,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-      // Die gespeicherte Sitzung kann eine alte Stufe enthalten (z.B. direkt
-      // nach der Freischaltung). Einmal frisch vom Server holen.
-      if (data.session) {
-        supabase!.auth.getUser().then(({ data: frisch }) => { if (frisch.user) setUser(frisch.user); }).catch(() => {});
+    let stop = false;
+    let unsub = () => {};
+    getSb().then((supabase) => {
+      if (stop || !supabase) {
+        setLoading(false);
+        return;
       }
+      supabase.auth.getSession().then(({ data }) => {
+        if (stop) return;
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        setLoading(false);
+        if (data.session) {
+          supabase.auth.getUser().then(({ data: frisch }) => { if (!stop && frisch.user) setUser(frisch.user); }).catch(() => {});
+        }
+      });
+      const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+        setSession(s);
+        setUser(s?.user ?? null);
+        if (event === "PASSWORD_RECOVERY") setRecovery(true);
+      });
+      unsub = () => sub.subscription.unsubscribe();
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (event === "PASSWORD_RECOVERY") setRecovery(true);
-    });
-    return () => sub.subscription.unsubscribe();
+    return () => { stop = true; unsub(); };
   }, []);
 
   useEffect(() => {
@@ -135,14 +142,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Kam das Konto über einen Empfehlungslink? Dann den Werber eintragen
   // lassen — das macht der Server (app_metadata), nicht der Browser.
   useEffect(() => {
-    if (!user || !supabase || !empfehlungOffen()) return;
+    if (!user || !empfehlungOffen()) return;
     const code = empfehlungLesen();
     if (!code) return;
     const a = (user.app_metadata ?? {}) as Record<string, unknown>;
     if (a.referred_by || a.referred_by_id) { empfehlungVergessen(); return; }
     let lebt = true;
     (async () => {
-      const token = (await supabase!.auth.getSession()).data.session?.access_token;
+      const supabase = await getSb();
+      if (!supabase) return;
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
       if (!token) return;
       const r = await fetch("/api/empfehlung", {
         method: "POST",
@@ -153,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const d = await r.json().catch(() => null);
       empfehlungVergessen();
       if (lebt && d?.ergebnis === "ok") {
-        const { data } = await supabase!.auth.refreshSession();
+        const { data } = await supabase.auth.refreshSession();
         if (lebt && data.user) setUser(data.user);
       }
     })();
@@ -162,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   const signUp: AuthState["signUp"] = async (email, password, profile) => {
+    const supabase = await getSb();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -174,12 +184,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn: AuthState["signIn"] = async (email, password) => {
+    const supabase = await getSb();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return error ? { error: error.message } : {};
   };
 
   const signOut = async () => {
+    const supabase = await getSb();
     await supabase?.auth.signOut();
   };
 
@@ -190,6 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * abklopfen. Supabase antwortet deshalb auch bei Unbekannten mit "ok".
    */
   const resetPassword: AuthState["resetPassword"] = async (email) => {
+    const supabase = await getSb();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const ziel = `${window.location.origin}/konto?neues-passwort=1`;
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: ziel });
@@ -198,6 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Neues Passwort setzen — geht nur mit gültigem Link aus der E-Mail. */
   const updatePassword: AuthState["updatePassword"] = async (password) => {
+    const supabase = await getSb();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const { data, error } = await supabase.auth.updateUser({ password });
     if (error) return { error: error.message };
@@ -207,6 +221,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProfile: AuthState["updateProfile"] = async (profile) => {
+    const supabase = await getSb();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const { data, error } = await supabase.auth.updateUser({ data: profile });
     if (error) return { error: error.message };
@@ -221,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile: readProfile(user),
         loading,
-        configured: isAuthConfigured,
+        configured: true,
         signUp,
         signIn,
         signOut,

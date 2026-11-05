@@ -67,34 +67,88 @@
     }
     </script>
   <style>
-    #page-preloader {
-      position: fixed;
-      inset: 0;
-      background: #0d0d0d;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 99999;
-      transition: opacity 0.45s ease, visibility 0.45s ease;
+    html.aa-cookies-ok #aa-cookies { display: none !important; }
+    body { margin: 0; background: #FAF9F7; color: #1a1a1a; font-family: "DM Sans", "AA Fallback", system-ui, sans-serif; }
+    #aa-shell { background: #FAF9F7; }
+    .aa-head { display: flex; align-items: center; justify-content: space-between; height: 80px; padding: 0 1rem; background: #0D0D0D; color: #fff; border-bottom: 1px solid rgba(255,255,255,.1); }
+    .aa-head img { height: 44px; width: auto; }
+    .aa-nav { display: none; gap: 4px; }
+    .aa-nav a, .aa-login { color: rgba(255,255,255,.75); text-decoration: none; font-weight: 600; font-size: 16px; padding: 12px; }
+    .aa-login { border: 1px solid rgba(255,255,255,.2); border-radius: 8px; }
+    @media (min-width: 1280px) {
+      .aa-head { height: 96px; }
+      .aa-head img { height: 56px; }
+      .aa-nav { display: flex; }
     }
-    #page-preloader.fade-out {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
+    .aa-hero { background: #0D0D0D; color: #EDE9E3; padding: 5rem 1rem 4rem; text-align: left; }
+    .aa-hero.aa-hell { background: #FAF9F7; color: #1a1a1a; padding: 2rem 1rem 0.5rem; }
+    .aa-hell h1, .aa-hell .aa-lead { color: #1a1a1a; }
+    .aa-hero.aa-mitte { text-align: center; }
+    .aa-kicker { color: #f1eb5b; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 14px; margin: 0 0 1rem; }
+    .aa-hero h1 { font-family: Syne, "AA Fallback", system-ui, sans-serif; font-weight: 700; letter-spacing: -.03em; font-size: 2.25rem; line-height: 1.05; margin: 0 auto; max-width: 48rem; }
+    .aa-gold { color: #f1eb5b; }
+    .aa-lead { color: rgba(255,255,255,.65); font-size: 1.125rem; line-height: 1.6; max-width: 36rem; margin: 1.5rem 0 0; }
+    .aa-mitte .aa-lead, .aa-mitte h1 { margin-left: auto; margin-right: auto; }
+    .aa-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 2rem; max-width: 36rem; }
+    .aa-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 2rem; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 1.125rem; }
+    .aa-goldbtn { background: #f1eb5b; color: #0D0D0D; }
+    .aa-ghost { background: rgba(255,255,255,.1); color: #fff; }
+    @media (min-width: 640px) {
+      .aa-hero h1 { font-size: 3.75rem; }
+      .aa-actions { flex-direction: row; }
     }
-    #page-preloader img {
-      width: 130px;
-      animation: aa-pulse 1.6s ease-in-out infinite;
-    }
-    @keyframes aa-pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0.6; transform: scale(0.93); }
-    }
+    #aa-cookies { position: fixed; left: 0; right: 0; bottom: 0; z-index: 300; padding: 12px; }
+    #aa-cookies .aa-box { max-width: 48rem; margin: 0 auto; background: #fff; border: 1px solid #E5E2DB; border-radius: 16px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,.12); }
+    #aa-cookies h2 { font-size: 1.125rem; margin: 0 0 .25rem; }
+    #aa-cookies p { font-size: .875rem; color: #6b6b6b; margin: 0; line-height: 1.5; }
+    #aa-cookies a { color: #876308; font-weight: 600; }
+    #aa-cookies .aa-row { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
+    #aa-cookies button { min-height: 48px; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; }
+    #aa-cookies .aa-all { background: #f1eb5b; border: 0; }
+    #aa-cookies .aa-need { background: #fff; border: 2px solid rgba(13,13,13,.15); }
   </style>
+  <script>
+    try { if (localStorage.getItem("cookie-consent")) document.documentElement.classList.add("aa-cookies-ok"); } catch (e) {}
+    function aaCookies(wert) {
+      try { localStorage.setItem("cookie-consent", wert); } catch (e) {}
+      var el = document.getElementById("aa-cookies");
+      if (el) el.remove();
+      if (wert === "all") window.dispatchEvent(new Event("aa-consent-all"));
+    }
+  </script>
   </head>
   <body>
-    <div id="page-preloader">
-      <img src="/images/logo-cropped.png" alt="Alex Autoshop" />
+    <div id="aa-shell">
+      <header class="aa-head">
+        <a href="/"><img src="/images/logo-cropped.png" alt="Alex Autoshop" width="180" height="56"></a>
+        <nav class="aa-nav" aria-label="Hauptnavigation">
+          <a href="/shop">Shop</a>
+          <a href="/mitgliedschaft">Mitgliedschaft</a>
+          <a href="/laden">Laden &amp; Kontakt</a>
+        </nav>
+        <a class="aa-login" href="/konto">Login / Registrieren</a>
+      </header>
+      <div id="aa-hero" class="aa-hero">
+        <!--AA_HERO_START-->
+        <p class="aa-kicker">Fachgroßhandel in Wuppertal</p>
+        <h1>Alles für Lack, Karosserie <span class="aa-gold">&amp; Werkstatt.</span></h1>
+        <p class="aa-lead">Profi-Lackierprodukte, Autoteile und Werkstattmaterial — von Lackierern für Lackierer. Heute bestellt, schnell abholbereit in Wuppertal.</p>
+        <div class="aa-actions">
+          <a class="aa-goldbtn" href="/shop">Zum Shop</a>
+          <a class="aa-ghost" href="/mitgliedschaft">Bis 40% Rabatt sichern</a>
+        </div>
+        <!--AA_HERO_END-->
+      </div>
+    </div>
+    <div id="aa-cookies">
+      <div class="aa-box">
+        <h2>Cookies &amp; Datenschutz</h2>
+        <p>Wir verwenden notwendige Cookies, damit die Seite funktioniert (z.&nbsp;B. Warenkorb und Login). Wenn du alle akzeptierst, laden wir Google Analytics. Ein Meta-Pixel setzen wir nicht. Details stehen in der <a href="/datenschutz">Datenschutzerklärung</a>.</p>
+        <div class="aa-row">
+          <button type="button" class="aa-all" onclick="aaCookies('all')">Alle akzeptieren</button>
+          <button type="button" class="aa-need" onclick="aaCookies('necessary')">Nur notwendige</button>
+        </div>
+      </div>
     </div>
     <div id="root"></div>
     <div id="google_translate_element" style="display: none"></div>
