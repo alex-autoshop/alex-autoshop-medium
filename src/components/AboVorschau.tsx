@@ -93,7 +93,7 @@ export function AboVorschau({
             </div>
           )}
         </div>
-        <div className="p-5 space-y-3">
+        <div className="p-5 flex flex-col gap-4">
           <h2 id="abo-vorschau-titel" className="font-display text-xl sm:text-2xl leading-snug pr-8">
             {n.title}
           </h2>

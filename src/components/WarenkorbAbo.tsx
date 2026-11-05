@@ -60,14 +60,14 @@ export function WarenkorbAboZeile({
   };
 
   return (
-    <div className="mt-2 space-y-1.5">
+    <div className="mt-3 flex flex-col gap-4">
       {rechnung && (
         <p className="text-xs text-foreground">
           Als Mitglied: {formatPrice(String(rechnung.mitglied), waehrung)}{" "}
           <span className="text-primary font-semibold">(du sparst {formatPrice(String(rechnung.ersparnis), waehrung)})</span>
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-4">
         <div role="group" aria-label={`Rabatt für ${produkt.titel}`} className="inline-flex rounded-lg border border-border overflow-hidden">
           {ABO_RABATTE.map((r) => (
             <button

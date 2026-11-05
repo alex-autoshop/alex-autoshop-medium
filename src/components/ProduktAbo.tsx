@@ -322,10 +322,10 @@ export function ProduktAbo() {
                 const misch = MISCH_PRODUKTE.find((m) => m.handle === a.handle);
                 const stufe = stufeVon(a.id);
                 return (
-                  <div className="h-full flex flex-col rounded-xl border border-border p-2.5 bg-card">
+                  <div className="h-full w-full flex flex-col rounded-xl border border-border p-2.5 bg-card">
                     <button
                       type="button"
-                      className="aspect-square rounded-lg bg-white overflow-hidden mb-2 cursor-pointer active:scale-[0.98] transition-transform"
+                      className="aspect-square rounded-lg bg-white overflow-hidden mb-3 cursor-pointer active:scale-[0.98] transition-transform"
                       onClick={() => setVorschau(p)}
                       aria-haspopup="dialog"
                       aria-label={`Vorschau: ${a.titel}`}
@@ -334,46 +334,50 @@ export function ProduktAbo() {
                     </button>
                     <button
                       type="button"
-                      className="text-sm font-semibold leading-snug line-clamp-2 text-left min-h-[2.5rem] cursor-pointer hover:text-primary"
+                      className="text-sm font-semibold leading-5 line-clamp-2 h-10 overflow-hidden text-left cursor-pointer hover:text-primary"
                       onClick={() => setVorschau(p)}
                     >
                       {a.titel}
                     </button>
-                    <p className="text-xs text-muted-foreground mt-1 line-through">
-                      {formatPrice(String(a.preis), a.waehrung)}
-                    </p>
-                    <p className="text-xs text-primary font-semibold leading-tight">
-                      als Mitglied {euro(a.preis * (1 - stufe / 100))}
-                    </p>
-                    {!misch && (
-                      <div className="mt-1.5">
+                    <div className="mt-auto pt-3 flex flex-col gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground line-through">
+                          {formatPrice(String(a.preis), a.waehrung)}
+                        </p>
+                        <p className="text-xs text-primary font-semibold leading-tight">
+                          als Mitglied {euro(a.preis * (1 - stufe / 100))}
+                        </p>
+                      </div>
+                      {misch ? (
+                        <div className="h-8" aria-hidden="true" />
+                      ) : (
                         <StufenWahl
                           wert={stufe}
                           label={`Rabatt für ${a.titel}`}
                           onChange={(r) => setWahl((alt) => ({ ...alt, [a.id]: r }))}
                         />
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (misch) wunschOeffnen(a.handle);
-                        if (!schon) hinzufuegen(p, stufe);
-                      }}
-                      disabled={schon && !misch}
-                      aria-label={
-                        misch ? `${a.titel} konfigurieren` :
-                        schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`
-                      }
-                      className={cn(
-                        "mt-auto pt-2 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors min-h-11",
-                        schon && !misch
-                          ? "bg-secondary text-muted-foreground cursor-default"
-                          : "bg-primary text-primary-foreground hover:brightness-95 cursor-pointer"
                       )}
-                    >
-                      {schon && misch ? "Öffnen" : schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (misch) wunschOeffnen(a.handle);
+                          if (!schon) hinzufuegen(p, stufe);
+                        }}
+                        disabled={schon && !misch}
+                        aria-label={
+                          misch ? `${a.titel} konfigurieren` :
+                          schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`
+                        }
+                        className={cn(
+                          "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors min-h-11",
+                          schon && !misch
+                            ? "bg-secondary text-muted-foreground cursor-default"
+                            : "bg-primary text-primary-foreground hover:brightness-95 cursor-pointer"
+                        )}
+                      >
+                        {schon && misch ? "Öffnen" : schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
+                      </button>
+                    </div>
                   </div>
                 );
               }}
