@@ -139,7 +139,7 @@ export function BrandMarquee() {
             Unsere Partner
           </p>
           <h2 className="text-3xl md:text-5xl font-black tracking-tight text-white">
-            Die besten <span className="text-gold-accent">Marken.</span>
+            Diese <span className="text-gold-accent">Marken.</span>
             <br />
             <span className="text-white/40 text-2xl md:text-3xl font-semibold">Alle bei uns erhältlich.</span>
           </h2>

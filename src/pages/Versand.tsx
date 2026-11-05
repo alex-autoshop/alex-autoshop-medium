@@ -1,6 +1,7 @@
 import { Truck, Zap, Package, MapPin, Clock, CheckCircle2, Star, Info } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { DHL_EUR, VERSAND_FREI_AB } from "../../shared/versand.js";
+import { teileboerseOeffentlich } from "../../shared/teileboerse-schalter.js";
 
 const FREE_THRESHOLD = VERSAND_FREI_AB;
 const DHL_RATE = DHL_EUR;
@@ -22,11 +23,15 @@ function ShippingBadge({ label, highlight = false }: { label: string; highlight?
 }
 
 export default function Versand() {
+  const teile = teileboerseOeffentlich();
+  const dhl = `${DHL_RATE.toFixed(2).replace(".", ",")} €`;
   return (
     <>
       <Seo
         title="Versand & Lieferung"
-        description="Versandkosten bei Alex Autoshop: Teilebörse 7,49 € DHL für alle, frei ab 150 €. Im Shop ist der Versand für Mitglieder kostenlos."
+        description={teile
+          ? `Versandkosten bei Alex Autoshop: Teilebörse ${dhl} DHL für alle, frei ab ${FREE_THRESHOLD} €. Im Shop ist der Versand für Mitglieder kostenlos.`
+          : `Versandkosten bei Alex Autoshop: DHL ${dhl}, frei ab ${FREE_THRESHOLD} €. Mit bezahlter Mitgliedschaft ist der Versand im Shop kostenlos.`}
       />
 
       <div className="max-w-3xl mx-auto px-4 py-12 space-y-10">
@@ -51,8 +56,8 @@ export default function Versand() {
             <p className="font-semibold text-sm">Mitgliedschaft gilt im Shop</p>
             <p className="text-muted-foreground text-sm mt-0.5">
               Mit aktiver bezahlter Mitgliedschaft (Level 1–3) ist der Versand im Shop kostenlos,
-              auch unter {FREE_THRESHOLD} €. In der Teilebörse zahlt jeder {DHL_RATE.toFixed(2).replace(".", ",")} € DHL,
-              frei ab {FREE_THRESHOLD} €. Die Teststunde ist kein kostenloser Shop-Versand.
+              auch unter {FREE_THRESHOLD} €.
+              {teile ? ` Sonst zahlt jeder ${dhl} DHL, frei ab ${FREE_THRESHOLD} €.` : ` Ohne Mitgliedschaft kostet DHL ${dhl}, frei ab ${FREE_THRESHOLD} €.`}
             </p>
           </div>
         </div>
@@ -74,12 +79,12 @@ export default function Versand() {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <p className="font-bold text-lg">{DHL_RATE.toFixed(2).replace(".", ",")} €</p>
+                <p className="font-bold text-lg">{dhl}</p>
                 <p className="text-xs text-muted-foreground">pauschal</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
-              <ShippingBadge label="Teilebörse: für alle gleich" highlight />
+              <ShippingBadge label={teile ? "Teilebörse: für alle gleich" : "Ohne Mitgliedschaft"} highlight />
               <ShippingBadge label="Ab 150 € kostenlos" highlight />
               <ShippingBadge label="Shop: Mitglieder gratis" />
               <ShippingBadge label="Sendungsverfolgung inklusive" />
@@ -184,25 +189,29 @@ export default function Versand() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
+                {teile && (
+                  <>
+                    <tr>
+                      <td className="py-2.5 pr-4 font-medium">Teilebörse, alle Kunden</td>
+                      <td className="py-2.5 pr-4 text-muted-foreground">Warenwert &lt; 150 €</td>
+                      <td className="py-2.5 text-muted-foreground">{dhl} DHL</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 pr-4 font-medium">Teilebörse, alle Kunden</td>
+                      <td className="py-2.5 pr-4 text-muted-foreground">Warenwert ≥ 150 €</td>
+                      <td className="py-2.5 font-semibold text-primary">Kostenlos ✓</td>
+                    </tr>
+                  </>
+                )}
                 <tr>
-                  <td className="py-2.5 pr-4 font-medium">Teilebörse, alle Kunden</td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">Warenwert &lt; 150 €</td>
-                  <td className="py-2.5 text-muted-foreground">{DHL_RATE.toFixed(2).replace(".", ",")} € DHL</td>
-                </tr>
-                <tr>
-                  <td className="py-2.5 pr-4 font-medium">Teilebörse, alle Kunden</td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">Warenwert ≥ 150 €</td>
-                  <td className="py-2.5 font-semibold text-primary">Kostenlos ✓</td>
-                </tr>
-                <tr>
-                  <td className="py-2.5 pr-4 font-medium">Online-Shop, Mitglied Level 1–3</td>
+                  <td className="py-2.5 pr-4 font-medium">Online-Shop, bezahlte Mitgliedschaft</td>
                   <td className="py-2.5 pr-4 text-muted-foreground">Jede Shop-Bestellung</td>
                   <td className="py-2.5 font-semibold text-primary">Kostenlos ✓</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 pr-4 font-medium">Online-Shop ohne Mitgliedschaft</td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">Wie die Teilebörse</td>
-                  <td className="py-2.5 text-muted-foreground">{DHL_RATE.toFixed(2).replace(".", ",")} €, frei ab 150 €</td>
+                  <td className="py-2.5 pr-4 text-muted-foreground">DHL innerhalb Deutschlands</td>
+                  <td className="py-2.5 text-muted-foreground">{dhl}, frei ab 150 €</td>
                 </tr>
               </tbody>
             </table>
@@ -237,12 +246,13 @@ export default function Versand() {
           <div className="border-t border-border pt-6 space-y-3">
             <p>
               <strong className="text-foreground">Liefergebiet:</strong> Paketversand deutschlandweit.
-              Österreich und Schweiz auf Anfrage (+49 202 82690). Die Kasse der Teilebörse
-              bietet DHL innerhalb Deutschlands oder Abholung an. Dieselben Sätze stehen in den AGB.
+              Österreich und Schweiz auf Anfrage (+49 202 82690). Zur Wahl stehen DHL innerhalb
+              Deutschlands oder Abholung. Dieselben Sätze stehen in den AGB.
             </p>
             <p>
-              <strong className="text-foreground">Batteriepfand:</strong> für Starterbatterien in der
-              Teilebörse 7,50 € je Stück. Einen Altteilpfand berechnen wir nicht.
+              <strong className="text-foreground">Batteriepfand:</strong> für Starterbatterien
+              7,50 € je Stück, wenn beim Kauf keine Starter-Altbatterie zurückgegeben wird.
+              Einen Altteilpfand berechnen wir nicht.
             </p>
             <p>
               <strong className="text-foreground">Gefahrgut & Sperrgut:</strong> Lacke, Spraydosen

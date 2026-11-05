@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 export function ProtectedRoute({
   children,
   preview,
-  titel = "Teilebörse",
+  titel = "Mitgliederbereich",
   unschaerfe = 7,
   text = (
     <>

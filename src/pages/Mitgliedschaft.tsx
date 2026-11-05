@@ -66,7 +66,7 @@ const FAQ = [
   },
   {
     q: "Für wen lohnt sich welcher Rabatt?",
-    a: "Platzhalter",
+    a: `Pro Produkt und Monat: ${euro(PRODUKT_ABO_PREISE[15])} bei 15 %, ${euro(PRODUKT_ABO_PREISE[28])} bei 28 %, ${euro(PRODUKT_ABO_PREISE[40])} bei 40 %. Die Stufe lohnt sich, sobald der Rabatt auf den Einkauf dieses Produkts den Beitrag übersteigt.`,
   },
 ];
 
@@ -93,12 +93,6 @@ export default function Mitgliedschaft() {
   const [abo, setAbo] = useState<AboArt>(DIENSTLEISTUNG_BUCHBAR ? "dienstleistung" : "produkt");
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const faq = FAQ.map((eintrag) => {
-    if (eintrag.q === "Für wen lohnt sich welcher Rabatt?") {
-      return {
-        ...eintrag,
-        a: `Pro Produkt und Monat: ${euro(PRODUKT_ABO_PREISE[15])} bei 15 %, ${euro(PRODUKT_ABO_PREISE[28])} bei 28 %, ${euro(PRODUKT_ABO_PREISE[40])} bei 40 %. Die Stufe lohnt sich, sobald der Rabatt auf den Einkauf dieses Produkts den Beitrag übersteigt.`,
-      };
-    }
     if (teileSichtbar) return eintrag;
     if (eintrag.q === "Gilt die Mitgliedschaft nur in Wuppertal?") {
       return { ...eintrag, a: "Nein — deutschlandweit. Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Die Mitgliedschaft gilt im Shop: dort ist der Versand mit aktiver bezahlter Mitgliedschaft (Level 1–3) kostenlos." };
@@ -147,10 +141,6 @@ export default function Mitgliedschaft() {
                 {t}
               </span>
             ))}
-          </div>
-          <div className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-white/80 text-left">
-            <span className="font-bold text-gold-accent shrink-0">Nur 10 Gründungs-Plätze</span>
-            <span>zu diesen Konditionen — danach werden die Beiträge angehoben.</span>
           </div>
         </div>
       </section>

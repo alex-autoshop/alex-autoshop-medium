@@ -61,12 +61,12 @@ type Tab = "overview" | "membership" | "shop" | "teileboerse" | "inbox" | "plann
 const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
   { id: "membership", label: "Mitgliedschaft", icon: BadgePercent },
-  { id: "shop", label: "B2B Shop", icon: ShoppingBag },
+  { id: "shop", label: "Shop", icon: ShoppingBag },
   { id: "teileboerse", label: "Teilebörse", icon: Car },
   { id: "inbox", label: "Nachrichten", icon: InboxIcon },
   { id: "planner", label: "Materialplaner", icon: ClipboardCheck },
   { id: "orders", label: "Bestellungen", icon: ClipboardList },
-  { id: "affiliate", label: "Affiliate", icon: Users2 },
+  { id: "affiliate", label: "Empfehlen", icon: Users2 },
   { id: "profile", label: "Firmendaten", icon: Building2 },
   { id: "settings", label: "Einstellungen", icon: Settings },
 ];
@@ -236,7 +236,7 @@ function Overview({ level, profile, trialActive, effectiveLevel, onTab }: {
         <div className="card-tilt hover:translate-y-0 p-6 sm:col-span-2 flex flex-col justify-center">
           <h2 className="text-lg mb-2">Mehr sparen?</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Im Tab „B2B Shop" siehst du deine Netto-Mitgliederpreise und bestellst direkt mit Menge.
+            Im Tab „Shop" siehst du deine Netto-Mitgliederpreise und bestellst direkt mit Menge.
             Mitglied wirst du in 5 Minuten — telefonisch oder im Laden.
           </p>
           <div className="flex gap-3 flex-wrap">
@@ -420,7 +420,7 @@ function DashboardShop({ level, profile, trialActive, userId }: { level: number;
       {/* B2B-Profi-Header */}
       <div className="section-dark rounded-2xl p-5 sm:p-6 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl">B2B Shop</h2>
+          <h2 className="text-xl sm:text-2xl">Shop</h2>
           <p className="text-white/65 text-sm mt-1">
             {discount > 0 ? (
               <>
@@ -719,8 +719,8 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
 
       {/* Referral-Link */}
       <div className="card-tilt hover:translate-y-0 p-6">
-        <h3 className="text-base font-semibold mb-1">Dein persönlicher Referral-Link</h3>
-        <p className="text-sm text-muted-foreground mb-3">Teile diesen Link mit jedem Lackierer, Karosseriebetrieb oder Aufbereiter den du kennst:</p>
+        <h3 className="text-base font-semibold mb-1">Dein persönlicher Empfehlungslink</h3>
+        <p className="text-sm text-muted-foreground mb-3">Teile diesen Link mit jedem Lackierer, Karosseriebetrieb oder Aufbereiter, den du kennst:</p>
         <div className="flex gap-2">
           <code className="flex-1 bg-secondary/60 border border-border rounded-lg px-3 py-2.5 text-sm font-mono text-muted-foreground truncate">
             {referralLink}
@@ -741,7 +741,7 @@ function AffiliateTab({ user, profile }: { user: import("@supabase/supabase-js")
               step: "1",
               icon: <Users2 className="w-4 h-4 text-primary" />,
               title: "Link teilen",
-              desc: "Schick deinen Referral-Link an Lackier-Kollegen, Karosseriebetriebe oder Aufbereiter. Per WhatsApp, Instagram, oder einfach im Gespräch.",
+              desc: "Schick deinen Empfehlungslink an Lackier-Kollegen, Karosseriebetriebe oder Aufbereiter. Per WhatsApp, Instagram oder einfach im Gespräch.",
             },
             {
               step: "2",
@@ -1248,7 +1248,7 @@ function ProfileForm() {
           <Car className="w-4 h-4 text-primary" /> Meine Projektautos
         </label>
         <p className="text-xs text-muted-foreground mb-3">
-          Im AI-Materialplaner mit einem Tipp wählbar — inklusive Farbcode.
+          Im Materialplaner mit einem Tipp wählbar — inklusive Farbcode.
         </p>
         {vehicles.length === 0 && (
           <p className="text-sm text-muted-foreground mb-3">Noch keine Fahrzeuge — füg unten dein erstes Projektauto hinzu.</p>

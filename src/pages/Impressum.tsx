@@ -1,6 +1,11 @@
-﻿
+﻿import { Seo } from "@/components/Seo";
+
 const Impressum = () => (
   <div>
+    <Seo
+      title="Impressum"
+      description="Impressum von Alex Autoshop, Alexander Haritopoulos, Handelstraße 64, 42277 Wuppertal."
+    />
     <article className="prose-legal">
       <h1>Impressum</h1>
 

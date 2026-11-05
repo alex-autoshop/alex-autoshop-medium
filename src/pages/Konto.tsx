@@ -183,7 +183,7 @@ export default function Konto() {
                   <Car className="w-4 h-4 text-primary" /> Deine Projekt-Fahrzeuge (optional)
                 </p>
                 <p className="text-xs text-muted-foreground mb-2">
-                  Einmal einpflegen — im AI-Materialplaner wählst du sie später mit einem Tipp aus.
+                  Einmal einpflegen — im Materialplaner wählst du sie später mit einem Tipp aus.
                 </p>
                 {vehicles.map((v, i) => (
                   <div key={i} className="rounded-lg border border-border p-2.5 mb-2 space-y-2">
