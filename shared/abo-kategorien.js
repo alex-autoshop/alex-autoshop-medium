@@ -5,6 +5,17 @@
  * Alles andere behält den echten Produkttyp. Ohne Typ: Zubehör.
  */
 
+const KONFIGURATOR = new Set([
+  "farben-mix",
+  "individuelle-spraydose-erstellen",
+  "individuellen-lackstift-bestellen-20ml",
+]);
+
+/** Die drei Misch-Produkte gehören in die Lackierer-Karte, nicht in die Produktreihen. */
+export function istAboKonfigurator(handle) {
+  return KONFIGURATOR.has(String(handle || "").toLowerCase());
+}
+
 const FEST = {
   wunschfarben: "Wunschfarben",
   spraydosen: "Spraydosen",

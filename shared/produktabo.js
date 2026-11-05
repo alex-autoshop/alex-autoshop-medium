@@ -11,6 +11,8 @@
 // Server gleich funktioniert.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { istAboKonfigurator } from "./abo-kategorien.js";
+
 /** Monatsbeitrag je Produkt, nach gewählter Rabattstufe. */
 export const PRODUKT_ABO_PREISE = {
   15: 1,
@@ -112,6 +114,7 @@ export function listeNormalisieren(roh) {
   const standard = rabattGueltig(vorlage) ? vorlage : 15;
   const produkte = (Array.isArray(roh && roh.produkte) ? roh.produkte : [])
     .slice(0, MAX_PRODUKTE)
+    .filter((p) => p && (p.art === "menge" || !istAboKonfigurator(p.handle)))
     .map((p) => {
       const eigene = Math.floor(Number(p && p.rabatt));
       return { ...p, rabatt: rabattGueltig(eigene) ? eigene : standard };
@@ -128,6 +131,7 @@ export function aboListeErgaenzen(roh, produkt) {
   const id = String(produkt && produkt.id || "").trim();
   const titel = String(produkt && produkt.titel || "").trim();
   if (!id || !titel) return { ...liste, ergebnis: "leer" };
+  if (produkt.art !== "menge" && istAboKonfigurator(produkt.handle)) return { ...liste, ergebnis: "konfigurator" };
   if (liste.produkte.some((p) => p && p.id === id)) return { ...liste, ergebnis: "schon" };
   if (liste.produkte.length >= MAX_PRODUKTE) return { ...liste, ergebnis: "voll" };
   const eigene = Math.floor(Number(produkt && produkt.rabatt));

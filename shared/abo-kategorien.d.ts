@@ -1,3 +1,5 @@
+export function istAboKonfigurator(handle?: string | null): boolean;
+
 export function aboKategorie(produkt: {
   handle?: string;
   productType?: string;
