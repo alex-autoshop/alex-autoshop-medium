@@ -128,18 +128,7 @@ export default function ProductDetail() {
       </Link>
 
       <div className="grid md:grid-cols-2 gap-8 lg:gap-14">
-        <div className="card-tilt overflow-hidden hover:translate-y-0 relative">
-          <AboKnopf
-            className="top-3 left-3"
-            produkt={{
-              id: product.id,
-              handle: product.handle,
-              titel: product.title,
-              preis: priceNum,
-              waehrung: price?.currencyCode ?? "EUR",
-              bild: img || undefined,
-            }}
-          />
+        <div className="card-tilt overflow-hidden hover:translate-y-0">
           <div className="aspect-square bg-white">
             {img ? (
               <img src={img} alt={product.title} className="w-full h-full object-contain p-4" />
@@ -153,7 +142,20 @@ export default function ProductDetail() {
           <h1 className="text-2xl sm:text-3xl leading-tight mb-6">{product.title}</h1>
 
           {CONFIGURATOR_HANDLES.has(handle ?? "") ? (
-            <PaintConfigurator product={product} />
+            <>
+              <PaintConfigurator product={product} />
+              <AboKnopf
+                className="mt-3"
+                produkt={{
+                  id: product.id,
+                  handle: product.handle,
+                  titel: product.title,
+                  preis: priceNum,
+                  waehrung: price?.currencyCode ?? "EUR",
+                  bild: img || undefined,
+                }}
+              />
+            </>
           ) : (
           <>
           <p className="text-3xl font-bold">
@@ -213,6 +215,17 @@ export default function ProductDetail() {
               {selectedVariant?.availableForSale ? "In den Warenkorb" : "Nicht verfügbar"}
             </button>
           </div>
+          <AboKnopf
+            className="mt-3"
+            produkt={{
+              id: product.id,
+              handle: product.handle,
+              titel: product.title,
+              preis: priceNum,
+              waehrung: price?.currencyCode ?? "EUR",
+              bild: img || undefined,
+            }}
+          />
 
           <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-5">
             <p className="font-display font-bold mb-3">Mitgliederpreise</p>

@@ -24,10 +24,10 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
    * Karten wurde der Knopf am Kartenrand abgeschnitten. Jetzt misst die Karte
    * sich selbst: zu eng → Knopf kommt unter den Mengenwähler.
    */
-  const reihe = useRef<HTMLDivElement | null>(null);
+  const spalte = useRef<HTMLDivElement | null>(null);
   const [breite, setBreite] = useState(999);
   useEffect(() => {
-    const el = reihe.current;
+    const el = spalte.current;
     if (!el || typeof ResizeObserver === "undefined") return;
     const beobachter = new ResizeObserver(([e]) => setBreite(e.contentRect.width));
     beobachter.observe(el);
@@ -63,22 +63,17 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
     setQty(1);
   };
 
-  return (
-    <div className="card-tilt overflow-hidden flex flex-col relative">
-      <Suspense fallback={null}>
-        <AboKnopf
-          className="top-2 left-2"
-          produkt={{
-            id: node.id,
-            handle: node.handle,
-            titel: node.title,
-            preis: basePrice,
-            waehrung: cur,
-            bild: img || undefined,
-          }}
-        />
-      </Suspense>
+  const aboProdukt = {
+    id: node.id,
+    handle: node.handle,
+    titel: node.title,
+    preis: basePrice,
+    waehrung: cur,
+    bild: img || undefined,
+  };
 
+  return (
+    <div className="card-tilt overflow-hidden flex flex-col h-full">
       <Link to={`/produkt/${node.handle}`} className="block group">
         <div className="aspect-square bg-white overflow-hidden">
           {img ? (
@@ -89,7 +84,7 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
         </div>
       </Link>
 
-      <div className="p-4 flex flex-col flex-1 gap-2">
+      <div ref={spalte} className="p-4 flex flex-col flex-1 gap-2">
         <Link to={`/produkt/${node.handle}`}>
           <p className="font-semibold text-sm leading-snug line-clamp-2 min-h-[2.5rem] hover:text-primary transition-colors">
             {node.title}
@@ -140,9 +135,9 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
         )}
 
         {/* Menge + Hinzufügen */}
-        <div className="mt-auto pt-1">
+        <div className="mt-auto pt-1 flex flex-col gap-2">
           {firstVariant?.availableForSale && !multiple ? (
-            <div ref={reihe} className={cn("flex gap-2", eng ? "flex-col" : "flex-row items-center")}>
+            <div className={cn("flex gap-2", eng ? "flex-col" : "flex-row items-center")}>
               <div className={cn("flex items-center border border-border rounded-lg shrink-0", eng ? "justify-between" : "w-fit")}>
                 <button onClick={() => setQty((q) => Math.max(1, q - 1))} className={cn("h-9 flex items-center justify-center hover:bg-secondary rounded-l-lg", knapp && !eng ? "w-8" : "w-9")} aria-label="weniger">
                   <Minus className="w-3.5 h-3.5" />
@@ -165,6 +160,9 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
               Varianten wählen
             </Link>
           )}
+          <Suspense fallback={<div className="min-h-12" />}>
+            <AboKnopf produkt={aboProdukt} kurz={breite < 220} />
+          </Suspense>
         </div>
       </div>
     </div>
