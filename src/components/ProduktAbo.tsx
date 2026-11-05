@@ -21,6 +21,7 @@ import { ABO_EREIGNIS, ABO_SPEICHER, aboListeLesen } from "@/lib/aboListe";
 import { AboAnmeldung } from "@/components/AboAnmeldung";
 import { AboProduktKatalog } from "@/components/AboProduktKatalog";
 import { AboVorschau } from "@/components/AboVorschau";
+import { aboBildStil } from "../../shared/abo-bildrahmen.js";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
  *  localStorage passt und auch ohne erneute Shop-Abfrage anzeigbar bleibt. */
@@ -325,7 +326,15 @@ export function ProduktAbo() {
                       aria-haspopup="dialog"
                       aria-label={`Vorschau: ${a.titel}`}
                     >
-                      {a.bild && <img src={a.bild} alt="" className="w-full h-full object-contain" loading="lazy" />}
+                      {a.bild && (
+                        <img
+                          src={a.bild}
+                          alt=""
+                          className="w-full h-full object-contain object-center"
+                          style={aboBildStil(a.handle)}
+                          loading="lazy"
+                        />
+                      )}
                     </button>
                     <button
                       type="button"

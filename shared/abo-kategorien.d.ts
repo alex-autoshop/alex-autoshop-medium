@@ -7,6 +7,8 @@ export function aboKategorie(produkt: {
 
 export function aboKategorieLabel(id: string): string;
 
-export function aboGruppen<T extends { handle?: string; productType?: string }>(
+export function aboReiheOrdnen<T extends { title?: string; titel?: string }>(produkte: T[] | null | undefined): T[];
+
+export function aboGruppen<T extends { handle?: string; productType?: string; title?: string; titel?: string }>(
   liste: T[] | null | undefined,
 ): Array<{ id: string; label: string; produkte: T[] }>;
