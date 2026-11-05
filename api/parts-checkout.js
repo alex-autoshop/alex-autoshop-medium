@@ -45,6 +45,7 @@
 
 import { adminPruefen } from "./_admin.js";
 import { versandkosten, pfandBetrag, DHL_EUR, VERSAND_FREI_AB } from "../shared/versand.js";
+import { markeFuerKunde } from "../shared/grosshaendler.js";
 
 const BASE = () => (process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de").replace(/\/+$/, "");
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co";
@@ -631,7 +632,7 @@ export default async function handler(req, res) {
           articleNumber: artNr,
           quantity: menge,
           name: p.name || String(i?.name || ""),
-          brand: p.brand,
+          brand: markeFuerKunde(p.brand),
           listenpreis: p.price,
           einzel,
         };

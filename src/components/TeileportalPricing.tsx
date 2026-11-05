@@ -105,7 +105,7 @@ export function DeliveryBadge({
             naechsterTag ? "bg-green-500" : deliveryDays === 2 ? "bg-yellow-500" : "bg-amber-500"
           )}
         />
-        {naechsterTag ? "1 Werktag · Inter Cars" : `${deliveryForecast(deliveryDays)} · ${deliveryDays} Werktage`}
+        {naechsterTag ? "1 Werktag" : `${deliveryForecast(deliveryDays)} · ${deliveryDays} Werktage`}
       </span>
     );
   }
@@ -117,7 +117,7 @@ export function DeliveryBadge({
           <Truck className="w-3.5 h-3.5" /> Lieferzeit auf Anfrage
         </span>
         <p className="text-[11px] text-muted-foreground leading-snug">
-          Lieferzeit steht fest, sobald Inter Cars ein Datum nennt.
+          Lieferzeit steht fest, sobald ein Lieferdatum vorliegt.
         </p>
       </div>
     );
@@ -143,7 +143,7 @@ export function DeliveryBadge({
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
           </span>
         )}
-        {is1day ? "1 Werktag · Inter Cars" : `${deliveryForecast(deliveryDays)} · ${deliveryDays} Werktage`}
+        {is1day ? "1 Werktag" : `${deliveryForecast(deliveryDays)} · ${deliveryDays} Werktage`}
       </span>
 
       {/* Werktage-Badge */}

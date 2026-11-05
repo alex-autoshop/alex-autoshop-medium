@@ -6,6 +6,8 @@
 
 import { istBildAdresse } from '@/lib/partImages';
 import { artikelVarianten } from '../../shared/artikelnummer.js';
+import { istGleicheArtikelart, kategorieIstTreffer } from '../../shared/suchrelevanz.js';
+import { markeFuerKunde } from '../../shared/grosshaendler.js';
 
 const LANG = 1;      // Deutsch
 const COUNTRY = 63;  // Deutschland
@@ -126,7 +128,7 @@ function toApArticle(a: any, i: number): ApArticle | null {
   if (!a || typeof a !== 'object') return null;
   const articleNumber = String(first(a.articleNumber, a.articleNo, a.artNr, a.number, a.dataSupplierArticleNumber) || '');
   const name = String(first(a.description, a.articleProductName, a.productName, a.genericArticleDescription, a.articleName, a.name) || 'Artikel');
-  const brand = String(first(a.brandName, a.supplierName, a.mfrName, a.brand, a.dataSupplierName) || '');
+  const brand = markeFuerKunde(String(first(a.brandName, a.supplierName, a.mfrName, a.brand, a.dataSupplierName) || ''));
   const oemRaw = first(a.oemNumbers, a.oemNo, a.oeNumbers, a.oem) || [];
   const oeNumbers = (Array.isArray(oemRaw) ? oemRaw : [oemRaw])
     .map((o: any) => (typeof o === 'string' ? o : first(o?.oemDisplayNo, o?.oemNumber, o?.articleNumber, o?.number, o?.oeNumber)))
@@ -824,23 +826,28 @@ async function apCategoryIds(query: string): Promise<number[]> {
         `/category/search-for-the-commodity-group-tree-by-description/type-id/${TYPE_PC}/lang-id/${LANG}/search-text/${encodeURIComponent(term)}`
       );
       // Baum: { "Name": { categoryId, categoryName, level, productId, children: { "Name": {...} } } }
-      const hits: Array<{ id: number; level: number; leaf: boolean }> = [];
-      const walk = (node: any) => {
+      const hits: Array<{ id: number; level: number; leaf: boolean; name: string }> = [];
+      const walk = (node: any, key = "") => {
         if (!node || typeof node !== 'object') return;
-        if (Array.isArray(node)) return node.forEach(walk);
+        if (Array.isArray(node)) return node.forEach((n) => walk(n, ""));
         const id = Number(node.categoryId);
         const children = node.children;
-        const childVals = children && typeof children === 'object' ? Object.values(children) : [];
-        if (id) hits.push({ id, level: Number(node.level) || 0, leaf: childVals.length === 0 });
-        if (childVals.length) childVals.forEach(walk);
+        const name = String(node.categoryName || node.name || key || "");
+        const childEntries = children && typeof children === 'object' && !Array.isArray(children)
+          ? Object.entries(children) : [];
+        if (id) hits.push({ id, level: Number(node.level) || 0, leaf: childEntries.length === 0, name });
+        for (const [k, v] of childEntries) walk(v, k);
         if (node.categoryId === undefined && !children) {
-          for (const v of Object.values(node)) { if (v && typeof v === 'object') walk(v); }
+          for (const [k, v] of Object.entries(node)) { if (v && typeof v === 'object') walk(v, k); }
         }
       };
       walk(tree);
-      // Tiefste Knoten zuerst (spezifischste Produktgruppen), Blätter bevorzugt
-      hits.sort((a, b) => (Number(b.leaf) - Number(a.leaf)) || (b.level - a.level));
-      const ids = [...new Set(hits.map((h) => h.id))].slice(0, 3);
+      // Nur Kategorien, deren Name die gesuchte Artikelart ist. Die tiefsten
+      // Blätter eines Oberbegriffs (Glühkerze, Impulsgeber) sind kein Treffer
+      // für "Zündkerzen".
+      const passend = hits.filter((h) => kategorieIstTreffer(h.name, term) || kategorieIstTreffer(h.name, normalizedQuery));
+      passend.sort((a, b) => (Number(b.leaf) - Number(a.leaf)) || (b.level - a.level));
+      const ids = [...new Set(passend.map((h) => h.id))].slice(0, 3);
       if (ids.length > 0) return ids; // gefunden → zurückgeben, sonst nächsten Begriff versuchen
     } catch {
       // Nächsten Begriff probieren
@@ -879,7 +886,7 @@ async function vehicleCategoryIds(vehicleId: number, query: string): Promise<num
 
   // Original UND Synonym prüfen (z.B. "ventilgummi" → "Ventilschaftabdichtung")
   const terms = [...new Set([stemTerm(query), stemTerm(normalizeSearchQuery(query))])].filter(Boolean);
-  const scored: Array<{ id: number; score: number; len: number }> = [];
+  const scored: Array<{ id: number; score: number; len: number; name: string }> = [];
   for (const { name, id } of flat) {
     const c = stemTerm(name);
     if (!c) continue;
@@ -896,7 +903,7 @@ async function vehicleCategoryIds(vehicleId: number, query: string): Promise<num
       else if (c.includes(q) && q.length >= 4) best = Math.max(best, 60);
       else if (q.includes(c) && c.length >= 5) best = Math.max(best, 50);
     }
-    if (best > 0) scored.push({ id, score: best, len: name.length });
+    if (best > 0) scored.push({ id, score: best, len: name.length, name });
   }
   // Gleicher Score → kürzerer Name gewinnt (das ist die präzisere Kategorie:
   // "Ruß-/Partikelfilter" statt "Regeneration Ruß-/Partikelfilter").
@@ -904,9 +911,13 @@ async function vehicleCategoryIds(vehicleId: number, query: string): Promise<num
   // "Ölfilter" trifft auch die Obergruppe "Filter" (Score 50). Die würde Luft-,
   // Kraftstofffilter und den DPF mit in die Liste ziehen. Bei einem klaren
   // Treffer bleiben nur die engen Kategorien.
-  const top = scored[0]?.score || 0;
-  const min = top >= 85 ? 80 : 0;
-  return [...new Set(scored.filter((s) => s.score >= min).map((s) => s.id))].slice(0, 3);
+  // "Zündkerzen" teilt sich mit "Zünd-/Glühanlage" nur die Silbe "Zünd"
+  // (Score 70). Das würde Glühkerzen und Impulsgeber in die Liste ziehen.
+  // Deshalb zählen nur Kategorien, deren Name wirklich die Artikelart ist.
+  const normQuery = normalizeSearchQuery(query);
+  const treffend = scored.filter((s) => kategorieIstTreffer(s.name, query) || kategorieIstTreffer(s.name, normQuery));
+  treffend.sort((a, b) => b.score - a.score || a.len - b.len);
+  return [...new Set(treffend.map((s) => s.id))].slice(0, 3);
 }
 
 /** Alle passenden Artikel für Fahrzeug + Suchbegriff — mit Bildern, alle Marken. */
@@ -929,8 +940,10 @@ export async function apArticlesForVehicle(vehicleId: number, query: string): Pr
         seen.add(k);
         return true;
       });
-    // KEIN Relevanzfilter: die Kategorie wurde bereits über den Namen gematcht.
-    if (out.length) return out;
+    // Auch eine namensgleiche Kategorie kann Nachbarteile enthalten
+    // (Obergruppe). Nur die gesuchte Artikelart zurückgeben.
+    const eng = out.filter((a) => istGleicheArtikelart(a.name, a.category, query) || istGleicheArtikelart(a.name, a.category, normalizeSearchQuery(query)));
+    if (eng.length) return eng;
   }
 
   // 2) Fallback: globale Kategoriebaum-Suche (unscharf → Relevanzfilter nötig)
@@ -951,26 +964,11 @@ export async function apArticlesForVehicle(vehicleId: number, query: string): Pr
       seen.add(k);
       return true;
     });
-  // Relevanz: Produktname muss zum Suchbegriff (oder normalisierten Synonym) passen
-  const clean = (x: string) => x.toLowerCase()
-    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
-    .replace(/[^a-z0-9]/g, '');
-  const q = clean(query);
-  const qNorm = clean(normalizeSearchQuery(query));
-  const stem = q.length > 5 ? q.slice(0, q.length - 2) : q;
-  const stemNorm = qNorm.length > 5 ? qNorm.slice(0, qNorm.length - 2) : qNorm;
-  const relevant = all.filter((a) => {
-    const n = clean(`${a.name} ${a.category || ''}`);
-    // Original-Query im Artikelnamen?
-    if (n.includes(q) || n.includes(stem)) return true;
-    // Normalisierter Begriff (z.B. "ventilschaftdichtung" für "ventilgummi") im Artikelnamen?
-    if (n.includes(qNorm) || n.includes(stemNorm)) return true;
-    // Erste 6 Zeichen des Artikelnamens im Query? (z.B. "ventil" in "ventilgummi")
-    if (q.includes(clean(a.name).slice(0, 6))) return true;
-    // Erste 6 Zeichen des normalisierten Queries im Artikelnamen?
-    if (n.includes(qNorm.slice(0, 6))) return true;
-    return false;
-  });
+  // Nur die gesuchte Artikelart. Ein Treffer über die Obergruppe
+  // ("Zünd-/Glühanlage") darf Glühkerze und Sensoren nicht durchlassen,
+  // bloß weil die Kategorie im Text vorkommt.
+  const qNorm = normalizeSearchQuery(query);
+  const relevant = all.filter((a) => istGleicheArtikelart(a.name, a.category, query) || istGleicheArtikelart(a.name, a.category, qNorm));
   // KEIN Fallback auf `all`: lieber leer zurückgeben (loadParts probiert dann
   // Inter Cars / Nummernsuche) als unpassende Teile (z.B. Ölwannen bei "Bremse").
   return relevant;

@@ -5,9 +5,8 @@ import { cn } from "@/lib/utils";
 /**
  * Leiste unter der Teilebörse.
  *
- * Angezeigt wird nur, was der Code wirklich tut: TecDoc-Katalog und ein
- * Großhändler (Inter Cars) für Preis und Bestand. Kein Preisvergleich,
- * keine weiteren Quellen. Fremde Logos bleiben tabu.
+ * TecDoc-Katalog, Live-Preise und Bestand, Abholung in Wuppertal.
+ * Der Name der Bezugsquelle bleibt unsichtbar. Fremde Logos bleiben tabu.
  */
 
 export interface PartnerEntry {
@@ -17,9 +16,8 @@ export interface PartnerEntry {
 
 const FAKTEN: PartnerEntry[] = [
   { name: "TecDoc-Katalog", note: "Fahrzeug und Teilenummer" },
-  { name: "Inter Cars", note: "eine Bezugsquelle" },
-  { name: "Live-Bestand", note: "von Inter Cars" },
-  { name: "Live-Preise", note: "von Inter Cars" },
+  { name: "Live-Bestand", note: "sofort abgefragt" },
+  { name: "Live-Preise", note: "ein Preis für alle" },
   { name: "Abholung", note: "Wuppertal, Handelstraße" },
 ];
 
@@ -58,11 +56,11 @@ export function PartnerStrip({ className }: { className?: string }) {
         <div className="flex items-center justify-center gap-2 mb-1">
           <Truck className="w-4 h-4 text-primary" />
           <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            Preise und Bestand von Inter Cars
+            Preise und Bestand live
           </p>
         </div>
         <p className="text-center text-xs text-muted-foreground mb-4">
-          Der Teilekatalog kommt von TecDoc. Preis und Lagerbestand fragen wir bei Inter Cars ab — eine Quelle, kein Vergleich mit anderen Händlern.
+          Der Teilekatalog kommt von TecDoc. Preis und Lagerbestand sind live — eine Quelle, kein Vergleich mit anderen Händlern.
         </p>
 
         <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">

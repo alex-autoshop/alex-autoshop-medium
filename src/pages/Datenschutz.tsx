@@ -128,7 +128,7 @@ const Datenschutz = () => (
       <h2>14. Weitere Empfänger</h2>
       <p>
         Kartenzahlung in der Teilebörse läuft über Stripe, SEPA-Lastschrift über GoCardless.
-        Teile- und Katalogdaten kommen von Inter Cars und TecDoc-Datenanbietern. E-Mails
+        Teile- und Katalogdaten kommen von unserem Teilegroßhandel und von TecDoc-Datenanbietern. E-Mails
         (Bestellbestätigung, Widerruf, Kündigung) versenden wir über Resend, sofern ein
         Versandschlüssel hinterlegt ist. Google Analytics und ein Meta-Pixel laden nur, wenn
         du „Alle akzeptieren“ wählst; das Pixel nur zusätzlich, wenn eine echte Pixel-ID

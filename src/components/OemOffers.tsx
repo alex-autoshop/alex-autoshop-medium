@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, ShoppingBag, X, Tag, PackageSearch } from "lucide-react";
 import { apArticlesByNumber, type ApArticle } from "@/lib/autoparts";
-import { icPriceLookup } from "@/lib/intercarsGateway";
+import { icPriceLookup } from "@/lib/livePreis";
 import { DeliveryBadge, PriceBlock, useMembership, eur } from "@/components/TeileportalPricing";
 import { cn } from "@/lib/utils";
 
