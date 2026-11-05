@@ -57,7 +57,9 @@ function liste_laden(): { standard: number; produkte: AboZeile[] } {
   return { standard: n.standard, produkte: n.produkte as unknown as AboZeile[] };
 }
 
-function StufenWahl({ wert, onChange, label }: { wert: number; onChange: (n: number) => void; label: string }) {
+function StufenWahl({ wert, onChange, label, knapp = false }: {
+  wert: number; onChange: (n: number) => void; label: string; knapp?: boolean;
+}) {
   return (
     <div role="group" aria-label={label} className="flex w-full rounded-lg border border-border overflow-hidden">
       {ABO_RABATTE.map((r) => (
@@ -67,7 +69,8 @@ function StufenWahl({ wert, onChange, label }: { wert: number; onChange: (n: num
           aria-pressed={wert === r}
           onClick={() => onChange(r)}
           className={cn(
-            "flex-1 basis-0 min-w-0 cursor-pointer px-1 py-1 text-[11px] font-semibold min-h-[32px] text-center",
+            "flex-1 basis-0 min-w-0 cursor-pointer px-1 text-[11px] font-semibold text-center",
+            knapp ? "min-h-10 py-1" : "min-h-[32px] py-1",
             wert === r ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-primary/10"
           )}
         >
@@ -333,7 +336,7 @@ export function ProduktAbo() {
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start [&>*]:min-w-0">
         <div className="space-y-6 min-w-0">
         {/* ── Produkte suchen und hinzufügen ──────────────────────────── */}
-        <div className="card-tilt hover:translate-y-0 p-5 sm:p-6">
+        <div className="card-tilt hover:translate-y-0 p-3 sm:p-4 lg:p-5">
           <h3 className="text-lg mb-1">Produkte auswählen</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Such dir die Artikel heraus, die du regelmäßig brauchst.
@@ -376,10 +379,10 @@ export function ProduktAbo() {
                 const schon = drin(a.id);
                 const stufe = stufeVon(a.id);
                 return (
-                  <div className="h-full w-full flex flex-col rounded-xl border border-border p-2.5 bg-card">
+                  <div className="h-full w-full flex flex-col rounded-lg border border-border p-1.5 lg:p-2 bg-card">
                     <button
                       type="button"
-                      className="aspect-square rounded-lg bg-white overflow-hidden mb-3 cursor-pointer active:scale-[0.98] transition-transform"
+                      className="aspect-[4/3] rounded-md bg-white overflow-hidden mb-1.5 cursor-pointer active:scale-[0.98] transition-transform"
                       onClick={() => setVorschau(p)}
                       aria-haspopup="dialog"
                       aria-label={`Vorschau: ${a.titel}`}
@@ -396,23 +399,24 @@ export function ProduktAbo() {
                     </button>
                     <button
                       type="button"
-                      className="text-sm font-semibold leading-5 line-clamp-2 h-10 overflow-hidden text-left cursor-pointer hover:text-primary"
+                      className="text-xs lg:text-sm font-semibold leading-4 line-clamp-2 h-10 overflow-hidden text-left cursor-pointer hover:text-primary"
                       onClick={() => setVorschau(p)}
                     >
                       {a.titel}
                     </button>
-                    <div className="mt-auto pt-3 flex flex-col gap-4">
+                    <div className="mt-auto pt-1.5 flex flex-col gap-1.5">
                       {a.preis > 0 && (
                         <div>
-                          <p className="text-xs text-muted-foreground line-through">
+                          <p className="text-[11px] text-muted-foreground line-through leading-tight">
                             {formatPrice(String(a.preis), a.waehrung)}
                           </p>
-                          <p className="text-xs text-primary font-semibold leading-tight">
+                          <p className="text-[11px] lg:text-xs text-primary font-semibold leading-tight">
                             als Mitglied {euro(a.preis * (1 - stufe / 100))}
                           </p>
                         </div>
                       )}
                       <StufenWahl
+                        knapp
                         wert={stufe}
                         label={`Rabatt für ${a.titel}`}
                         onChange={(r) => setWahl((alt) => ({ ...alt, [a.id]: r }))}
@@ -423,13 +427,13 @@ export function ProduktAbo() {
                         disabled={schon}
                         aria-label={schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`}
                         className={cn(
-                          "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors min-h-11",
+                          "inline-flex items-center justify-center gap-1 rounded-lg px-2 text-[11px] lg:text-xs font-semibold transition-colors min-h-10 whitespace-nowrap",
                           schon
                             ? "bg-secondary text-muted-foreground cursor-default"
                             : "bg-primary text-primary-foreground hover:brightness-95 cursor-pointer"
                         )}
                       >
-                        {schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
+                        {schon ? <><CheckCircle className="w-3.5 h-3.5" /> drin</> : <><Plus className="w-3.5 h-3.5" /> Hinzufügen</>}
                       </button>
                     </div>
                   </div>

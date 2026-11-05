@@ -18,13 +18,35 @@ function schieben(el: HTMLDivElement | null, richtung: number) {
   });
 }
 
-function Reihe({ titel, kinder }: { titel: string; kinder: ReactNode }) {
+function Reihe({
+  titel,
+  anzahl,
+  onAlle,
+  kinder,
+}: {
+  titel: string;
+  anzahl: number;
+  onAlle?: () => void;
+  kinder: ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <section aria-label={titel} className="relative">
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <h4 className="text-sm font-semibold">{titel}</h4>
-        <div className="hidden md:flex lg:hidden gap-1">
+      <div className="flex items-end justify-between gap-2 mb-1.5">
+        <h4 className="text-lg lg:text-base font-bold leading-tight min-w-0">
+          {titel}
+          <span className="ml-1.5 text-sm font-semibold text-muted-foreground tabular-nums"> {anzahl}</span>
+        </h4>
+        {onAlle && (
+          <button
+            type="button"
+            onClick={onAlle}
+            className="shrink-0 text-sm font-semibold text-primary min-h-10 px-1"
+          >
+            Alle ansehen
+          </button>
+        )}
+        <div className="hidden md:flex lg:hidden gap-1 shrink-0">
           <button
             type="button"
             className="w-11 h-11 rounded-full border border-border bg-card inline-flex items-center justify-center hover:border-primary"
@@ -45,7 +67,7 @@ function Reihe({ titel, kinder }: { titel: string; kinder: ReactNode }) {
       </div>
       <div
         ref={ref}
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-pl-1 pb-1 items-stretch no-scrollbar lg:grid lg:grid-cols-3 lg:overflow-visible lg:snap-none lg:pb-0 xl:grid-cols-4"
+        className="flex gap-2 overflow-x-auto snap-x snap-mandatory scroll-pl-1 pb-0.5 items-stretch no-scrollbar lg:grid lg:grid-cols-3 lg:overflow-visible lg:snap-none lg:pb-0 lg:gap-2.5 xl:grid-cols-5"
       >
         {kinder}
       </div>
@@ -70,7 +92,7 @@ export function AboProduktKatalog<T extends AboKatalogProdukt>({
 
   return (
     <div>
-      <div className="sticky top-20 sm:top-24 z-20 -mx-5 sm:-mx-6 px-5 sm:px-6 py-2 bg-card/95 backdrop-blur-sm border-b border-border/60">
+      <div className="sticky top-20 sm:top-24 z-20 -mx-3 sm:-mx-4 lg:-mx-5 px-3 sm:px-4 lg:px-5 py-2 bg-card/95 backdrop-blur-sm border-b border-border/60">
         <div role="tablist" aria-label="Produktkategorien" className="flex gap-2 overflow-x-auto no-scrollbar">
           {chips.map((chip) => {
             const aktiv = kategorie === chip.id;
@@ -96,13 +118,18 @@ export function AboProduktKatalog<T extends AboKatalogProdukt>({
       {sichtbar.length === 0 ? (
         <p className="text-sm text-muted-foreground py-6">In dieser Kategorie ist nichts dabei.</p>
       ) : (
-        <div className="space-y-5 pt-4">
+        <div className="space-y-3 pt-2">
           {sichtbar.map((gruppe) => (
-            <Reihe key={gruppe.id} titel={gruppe.label} kinder={
+            <Reihe
+              key={gruppe.id}
+              titel={gruppe.label}
+              anzahl={gruppe.produkte.length}
+              onAlle={kategorie === "alle" ? () => onKategorie(gruppe.id) : undefined}
+              kinder={
               gruppe.produkte.map((produkt) => (
                 <div
                   key={produkt.id || produkt.handle || gruppe.id}
-                  className="snap-start shrink-0 w-[78%] max-w-[17rem] self-stretch flex lg:w-auto lg:max-w-none lg:shrink"
+                  className="snap-start shrink-0 w-[40%] self-stretch flex lg:w-auto lg:shrink"
                 >
                   {karte(produkt)}
                 </div>
