@@ -361,8 +361,10 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
   // der Server beim Reservieren — hier steht die Vorschau.
   const [guthabenNutzen, setGuthabenNutzen] = useState(true);
   const [abholung, setAbholung] = useState(false);
+  const [lieferung, setLieferung] = useState({ name: "", strasse: "", plz: "", ort: "" });
   const [agbOk, setAgbOk] = useState(false);
   const holtAb = !!theke || abholung;
+  const lieferungOk = holtAb || [lieferung.name, lieferung.strasse, lieferung.ort].every((s) => s.trim().length > 1) && /^\d{5}$/.test(lieferung.plz.trim());
   const versand = versandkosten({ summe: subtotal, abholung: holtAb });
   const pfand = pfandBetrag(mitPreis.map((i) => ({ name: `${i.name} ${i.brand}`, menge: i.quantity })));
   const brutto = Math.round((subtotal + versand + pfand.betrag) * 100) / 100;
@@ -406,6 +408,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
           vin: vehicleVin,
           guthaben: anrechnung > 0,
           abholung: holtAb,
+          ...(!holtAb ? { lieferung } : {}),
           items: items.map((i) => ({
             articleNumber: i.articleNumber,
             brand: i.brand,
@@ -537,6 +540,14 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                       </span>
                       <span className="tabular-nums">0,00 €</span>
                     </label>
+                    {!holtAb && (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <input className="col-span-2 rounded-lg border border-border bg-background px-2 py-1.5 text-xs" placeholder="Name" aria-label="Name" value={lieferung.name} onChange={(e) => setLieferung({ ...lieferung, name: e.target.value })} />
+                        <input className="col-span-2 rounded-lg border border-border bg-background px-2 py-1.5 text-xs" placeholder="Straße und Hausnummer" aria-label="Straße" value={lieferung.strasse} onChange={(e) => setLieferung({ ...lieferung, strasse: e.target.value })} />
+                        <input className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs" placeholder="PLZ" aria-label="PLZ" inputMode="numeric" value={lieferung.plz} onChange={(e) => setLieferung({ ...lieferung, plz: e.target.value })} />
+                        <input className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs" placeholder="Ort" aria-label="Ort" value={lieferung.ort} onChange={(e) => setLieferung({ ...lieferung, ort: e.target.value })} />
+                      </div>
+                    )}
                     <p className="text-[10.5px] text-muted-foreground leading-snug">
                       DHL {DHL_EUR.toFixed(2).replace(".", ",")} € für alle, kostenlos ab {VERSAND_FREI_AB} €. Die Mitgliedschaft gilt im Shop, nicht in der Teilebörse.
                       Lieferung im Umkreis und Versand nach Österreich oder in die Schweiz auf Anfrage.
@@ -622,17 +633,17 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                         className="btn-primary w-full gap-2 disabled:opacity-60">
                         {zahlt === "stripe"
                           ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
-                          : <><CreditCard className="w-4 h-4" /> {eur(zuZahlen)} bezahlen</>}
+                          : <span className="inline-flex flex-col items-center leading-tight"><span>Zahlungspflichtig bestellen</span><span className="text-[11px] font-normal">{eur(zuZahlen)} per Karte</span></span>}
                       </button>
                     )}
                     {sepaDa && (
-                      <button onClick={() => bezahlen("gocardless")} disabled={zahlt !== "" || !agbOk}
+                      <button onClick={() => bezahlen("gocardless")} disabled={zahlt !== "" || !agbOk || !lieferungOk}
                         className={karteDa
                           ? "w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-secondary disabled:opacity-60"
                           : "btn-primary w-full gap-2 disabled:opacity-60"}>
                         {zahlt === "gocardless"
                           ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
-                          : <><Landmark className="w-4 h-4" /> {karteDa ? "Per SEPA-Lastschrift" : `${eur(zuZahlen)} per SEPA-Lastschrift`}</>}
+                          : <span className="inline-flex flex-col items-center leading-tight"><span>Zahlungspflichtig bestellen</span><span className="text-[11px] font-normal">{eur(zuZahlen)} per SEPA</span></span>}
                       </button>
                     )}
                     {!allPriced && (
