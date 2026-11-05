@@ -47,6 +47,15 @@ export declare function listeNormalisieren(roh: {
   produkte?: Array<Record<string, unknown>>;
 } | null): { standard: number; produkte: Array<Record<string, unknown> & { rabatt: number }> };
 
+export declare function aboListeErgaenzen(
+  roh: { rabatt?: number; standard?: number; produkte?: Array<Record<string, unknown>> } | null,
+  produkt: { id?: string; handle?: string; titel?: string; preis?: number; waehrung?: string; bild?: string }
+): {
+  standard: number;
+  produkte: Array<Record<string, unknown> & { rabatt: number }>;
+  ergebnis: "neu" | "schon" | "voll" | "leer";
+};
+
 export declare function beitragPosition(pos: {
   art?: string;
   rabatt: number;

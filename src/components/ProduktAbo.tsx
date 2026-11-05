@@ -11,10 +11,11 @@ import { supabase } from "@/lib/supabase";
 import { empfehlungLesen } from "@/lib/empfehlung";
 import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
-  mengenPosition, aboListeGesamt, listeNormalisieren, rabattGueltig,
+  mengenPosition, aboListeGesamt, rabattGueltig,
 } from "../../shared/produktabo.js";
 import { WunschfarbenLeiste, MISCH_PRODUKTE, type MengenEintrag } from "@/components/WunschfarbenLeiste";
 import { cn } from "@/lib/utils";
+import { ABO_EREIGNIS, ABO_SPEICHER, aboListeLesen } from "@/lib/aboListe";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
  *  localStorage passt und auch ohne erneute Shop-Abfrage anzeigbar bleibt. */
@@ -35,8 +36,6 @@ export type AboZeile = AboProdukt | MengenEintrag;
 
 const istMenge = (z: AboZeile): z is MengenEintrag => (z as MengenEintrag).art === "menge";
 
-const SPEICHER = "alex-produktabo-v1";
-
 const STUFEN_TEXT: Record<number, string> = {
   15: "Einstieg",
   28: "Für laufende Betriebe",
@@ -44,14 +43,8 @@ const STUFEN_TEXT: Record<number, string> = {
 };
 
 function liste_laden(): { standard: number; produkte: AboZeile[] } {
-  try {
-    const roh = localStorage.getItem(SPEICHER);
-    if (!roh) return { standard: 15, produkte: [] };
-    const n = listeNormalisieren(JSON.parse(roh));
-    return { standard: n.standard, produkte: n.produkte as unknown as AboZeile[] };
-  } catch {
-    return { standard: 15, produkte: [] };
-  }
+  const n = aboListeLesen();
+  return { standard: n.standard, produkte: n.produkte as unknown as AboZeile[] };
 }
 
 function StufenWahl({ wert, onChange, label }: { wert: number; onChange: (n: number) => void; label: string }) {
@@ -108,9 +101,19 @@ export function ProduktAbo() {
   // Auswahl überlebt einen Seitenwechsel — sonst ist die Arbeit weg
   useEffect(() => {
     try {
-      localStorage.setItem(SPEICHER, JSON.stringify({ standard, produkte }));
+      localStorage.setItem(ABO_SPEICHER, JSON.stringify({ standard, produkte }));
     } catch { /* privater Modus: dann eben nicht */ }
   }, [standard, produkte]);
+
+  useEffect(() => {
+    const neu = () => {
+      const geladen = liste_laden();
+      setStandard(geladen.standard);
+      setProdukte(geladen.produkte);
+    };
+    window.addEventListener(ABO_EREIGNIS, neu);
+    return () => window.removeEventListener(ABO_EREIGNIS, neu);
+  }, []);
 
   // Suche erst abschicken, wenn der Kunde kurz aufhört zu tippen
   useEffect(() => {
