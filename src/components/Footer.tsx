@@ -69,7 +69,7 @@ export function Footer() {
       {/* untere Leiste */}
       <div className="border-t border-white/10">
         <div className="container py-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/40">
-          <span>© {new Date().getFullYear()} Alex Autoshop — {SHOP_INFO.owner}. Alle Rechte vorbehalten.</span>
+          <span>© {new Date().getFullYear()} Alex Autoshop. Alle Rechte vorbehalten.</span>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Link
               to="/widerruf#vertrag-widerrufen"
