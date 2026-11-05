@@ -123,17 +123,22 @@ function Text({ schritt, titel, children }: { schritt: string; titel: string; ch
   );
 }
 
-export function MitgliedsGeschichte() {
-  const ruhig = useReduced();
+export function MitgliedsGeschichte({ onDurch, seo = false }: { onDurch?: () => void; seo?: boolean }) {
+  const ruhig = useReduced() || seo;
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const { setzen, stand } = useFortschritt(7, ruhig);
   const p = stand.map(smooth);
+
+  useEffect(() => {
+    if (seo || !onDurch) return;
+    if (stand[6] > 0.85) onDurch();
+  }, [seo, onDurch, stand]);
 
   const preisJetzt = BEISPIEL.normal + (mitglied - BEISPIEL.normal) * p[3];
   const stufeAn = Math.min(2, Math.floor(p[2] * 2.999));
 
   return (
-    <div className="mitglied-story">
+    <div className={seo ? "sr-only" : "mitglied-story"}>
       <Szene index={0} setzen={setzen}>
         <Text schritt="01" titel="Du kaufst jeden Monat dasselbe — und zahlst jedes Mal den vollen Preis.">
           <p>Dieselbe Tube, derselbe Preis. Monat für Monat.</p>

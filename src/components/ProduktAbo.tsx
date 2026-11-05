@@ -84,6 +84,13 @@ function alsAboProdukt(p: ShopifyProduct): AboProdukt {
   };
 }
 
+function katalogHinweis(anzahl: number, suche: boolean, laedt: boolean) {
+  const kern = suche
+    ? (anzahl === 1 ? "1 Treffer" : `${anzahl} Treffer`)
+    : (anzahl === 1 ? "1 Produkt im Shop" : `${anzahl} Produkte im Shop`);
+  return laedt ? `${kern}, weitere werden geladen` : `${kern}.`;
+}
+
 const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
 
@@ -276,7 +283,7 @@ export function ProduktAbo() {
           <p className="text-sm text-muted-foreground mb-4">
             Such dir die Artikel heraus, die du regelmäßig brauchst.
             {products.length > 0 && (
-              <span className="block mt-1">{products.length} Produkte{hasMore || isLoading ? ", weitere werden geladen" : " im Shop"}.</span>
+              <span className="block mt-1">{katalogHinweis(products.length, !!suchbegriff, hasMore || isLoading)}</span>
             )}
           </p>
 
