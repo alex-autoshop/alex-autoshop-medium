@@ -21,6 +21,8 @@ export interface MengenEintrag {
   titel: string;
   variantId: string;
   variante: string;
+  /** 1K, 2K oder egal — steht so auch in der Abo-Liste. */
+  lacksystem: "1K" | "2K" | "egal";
   einzelpreis: number;
   menge: number;
   bild?: string;
@@ -39,12 +41,19 @@ function markenName(name: string) {
   return String(name || "").replace(/\s*\([^)]*\)/g, "").trim();
 }
 
-/** Aufbau-Bezeichnungen in die Sprache des Lackierers übersetzen. */
-function aufbauLabel(wert: string) {
+type Lacksystem = "1k" | "2k" | "egal";
+
+const LACKSYSTEME: { id: Lacksystem; titel: string; hinweis: string; kuerzel: "1K" | "2K" | "egal" }[] = [
+  { id: "1k", titel: "1K-Lack", hinweis: "Basislack, Klarlack kommt separat drüber", kuerzel: "1K" },
+  { id: "2k", titel: "2K-Lack", hinweis: "Lack mit Härter, ohne extra Klarlack", kuerzel: "2K" },
+  { id: "egal", titel: "Egal – 1K oder 2K", hinweis: "Wir nehmen, was für deinen Farbton verfügbar und am günstigsten ist", kuerzel: "egal" },
+];
+
+function systemKlasse(wert: string): "1k" | "2k" | "" {
   const t = wert.toLowerCase();
-  if (t.startsWith("1k")) return { titel: "Nur Basislack", hinweis: "Klarlack kommt separat drüber" };
-  if (t.startsWith("2k")) return { titel: "Mit Klarlack", hinweis: "Basislack und Klarlack zusammen" };
-  return { titel: wert, hinweis: "" };
+  if (t.startsWith("1k")) return "1k";
+  if (t.startsWith("2k")) return "2k";
+  return "";
 }
 
 export function WunschfarbenLeiste({
@@ -62,7 +71,7 @@ export function WunschfarbenLeiste({
   const [produkte, setProdukte] = useState<Record<string, Produkt | null>>({});
   const [laedt, setLaedt] = useState(true);
   const [anteilB, setAnteilB] = useState(0);      // Anteil der zweiten Marke in %
-  const [aufbau, setAufbau] = useState<string>("");
+  const [system, setSystem] = useState<Lacksystem>("egal");
   const [bedarf, setBedarf] = useState(4);
 
   const eintrag = MISCH_PRODUKTE.find((m) => m.id === aktiv)!;
@@ -112,15 +121,17 @@ export function WunschfarbenLeiste({
   );
 
   useEffect(() => {
-    setAufbau(aufbauten[0] ?? "");
+    setSystem("egal");
     setAnteilB(0);
     setBedarf(inLitern ? 4 : 10);
-  }, [aktiv, aufbauten.length, inLitern]);
+  }, [aktiv, inLitern]);
 
-  /** Gebinde einer Marke beim gewählten Aufbau. */
-  const gebindeVon = (marke: string) =>
-    varianten
-      .filter((v) => (!marke || wertVon(v, "Hersteller") === marke) && (!aufbau || wertVon(v, "Komponenten") === aufbau))
+  /** Gebinde einer Marke für 1K oder 2K. Fehlt die Sorte, gilt dieselbe Preisbasis. */
+  const gebindeVon = (marke: string, sys: "1k" | "2k") => {
+    const einerMarke = varianten.filter((v) => !marke || wertVon(v, "Hersteller") === marke);
+    const passend = einerMarke.filter((v) => systemKlasse(wertVon(v, "Komponenten")) === sys);
+    const basis = passend.length ? passend : einerMarke;
+    return basis
       .map((v) => ({
         label: wertVon(v, "Menge") || v.title,
         liter: literAus(wertVon(v, "Menge")) ?? 0,
@@ -128,20 +139,47 @@ export function WunschfarbenLeiste({
         variantId: v.id,
       }))
       .filter((g) => g.preis > 0);
+  };
+
+  const systemText = LACKSYSTEME.find((s) => s.id === system)!.kuerzel;
 
   const markeA = marken[0] ?? "";
   const markeB = marken[1] ?? "";
-  const gebindeA = gebindeVon(markeA);
-  const gebindeB = markeB ? gebindeVon(markeB) : [];
+
+  const literFuer = (sys: "1k" | "2k") => mischBedarf({
+    bedarfLiter: bedarf,
+    anteilB: markeB ? anteilB : 0,
+    gebindeA: gebindeVon(markeA, sys),
+    gebindeB: markeB ? gebindeVon(markeB, sys) : [],
+    rabatt,
+  });
+  const liter1 = inLitern ? literFuer("1k") : null;
+  const liter2 = inLitern ? literFuer("2k") : null;
+  const guenstiger = (a: typeof liter1, b: typeof liter1) => {
+    if (!a) return b;
+    if (!b) return a;
+    return a.normal <= b.normal ? a : b;
+  };
 
   // ── Rechnung ──────────────────────────────────────────────────────────────
-  const literRechnung = inLitern
-    ? mischBedarf({ bedarfLiter: bedarf, anteilB: markeB ? anteilB : 0, gebindeA, gebindeB, rabatt })
-    : null;
+  // 1K nur die 1K-Gebinde, 2K die 2K-Gebinde (sonst dieselbe Basis),
+  // Egal = der günstigere der beiden.
+  const literRechnung = !inLitern ? null
+    : system === "1k" ? liter1
+    : system === "2k" ? liter2
+    : guenstiger(liter1, liter2);
 
+  const stueckVon = (sys: "1k" | "2k") => {
+    const liste = [
+      ...gebindeVon(markeA, sys),
+      ...(anteilB === 100 && markeB ? gebindeVon(markeB, sys) : []),
+    ];
+    const preise = liste.map((g) => g.preis).filter(Number.isFinite);
+    return preise.length ? Math.min(...preise) : Number.NaN;
+  };
   // Stückware (Dose, Stift): nur die billigste passende Variante × Anzahl
   const stueckPreis = !inLitern
-    ? Math.min(...[...gebindeA, ...(anteilB === 100 ? gebindeB : [])].map((g) => g.preis).filter(Number.isFinite))
+    ? Math.min(...(system === "egal" ? [stueckVon("1k"), stueckVon("2k")] : [stueckVon(system)]).filter(Number.isFinite))
     : 0;
   const stueckRechnung = !inLitern && Number.isFinite(stueckPreis) && stueckPreis > 0
     ? mengenPosition({ einzelpreis: stueckPreis, menge: bedarf, rabatt })
@@ -157,19 +195,21 @@ export function WunschfarbenLeiste({
           markeB && anteilB > 0 && anteilB < 100
             ? `${100 - anteilB} % ${markenName(markeA)} · ${anteilB} % ${markenName(markeB)}`
             : anteilB === 100 ? markenName(markeB) : markenName(markeA),
-          aufbau ? aufbauLabel(aufbau).titel : "",
+          systemText,
           `${zahl(bedarf)} L / Monat`,
         ].filter(Boolean).join(" · ")
-      : [anteilB === 100 && markeB ? markenName(markeB) : markenName(markeA), aufbau ? aufbauLabel(aufbau).titel : "", `${bedarf} ${eintrag.einheit} / Monat`]
+      : [anteilB === 100 && markeB ? markenName(markeB) : markenName(markeA), systemText, `${bedarf} ${eintrag.einheit} / Monat`]
           .filter(Boolean).join(" · ");
 
+    const gebindeGewaehlt = gebindeVon(markeA, system === "2k" ? "2k" : "1k");
     onHinzufuegen({
       art: "menge",
-      id: `${produkt.handle}::${anteilB}::${aufbau}::${inLitern ? "L" : "S"}`,
+      id: `${produkt.handle}::${anteilB}::${system}::${inLitern ? "L" : "S"}`,
       handle: produkt.handle,
       titel: produkt.title,
-      variantId: gebindeA[0]?.variantId ?? "",
+      variantId: gebindeGewaehlt[0]?.variantId ?? "",
       variante: beschreibung,
+      lacksystem: systemText,
       // Einzelpreis so wählen, dass Menge × Einzelpreis den Monatspreis ergibt
       einzelpreis: Math.round((rechnung.normal / Math.max(1, bedarf)) * 100) / 100,
       menge: bedarf,
@@ -271,20 +311,19 @@ export function WunschfarbenLeiste({
             </div>
           )}
 
-          {/* ── Lackaufbau statt 1K/2K ──────────────────────────────── */}
-          {aufbauten.length > 1 && (
+          {/* ── Lacksystem: 1K, 2K oder das Günstigste ─────────────── */}
+          {(inLitern || aufbauten.length > 0) && (
             <div className="mb-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Lackaufbau</p>
-              <div className="grid sm:grid-cols-2 gap-2">
-                {aufbauten.map((w) => {
-                  const l = aufbauLabel(w);
-                  const an = aufbau === w;
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Lacksystem</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="group" aria-label="Lacksystem wählen">
+                {LACKSYSTEME.map((s) => {
+                  const an = system === s.id;
                   return (
-                    <button key={w} type="button" onClick={() => setAufbau(w)} aria-pressed={an}
+                    <button key={s.id} type="button" onClick={() => setSystem(s.id)} aria-pressed={an}
                       className={cn("cursor-pointer rounded-xl border-2 px-3 py-2.5 text-left transition-all",
                         an ? "border-primary bg-primary/15" : "border-border bg-card hover:border-primary/50")}>
-                      <span className="block text-sm font-semibold">{l.titel}</span>
-                      {l.hinweis && <span className="block text-[11px] text-muted-foreground mt-0.5">{l.hinweis}</span>}
+                      <span className="block text-sm font-semibold">{s.titel}</span>
+                      <span className="block text-[11px] text-muted-foreground mt-0.5">{s.hinweis}</span>
                     </button>
                   );
                 })}
@@ -326,7 +365,7 @@ export function WunschfarbenLeiste({
                   </p>
                   {literRechnung.literA > 0 && (
                     <p className="flex justify-between gap-3">
-                      <span>{markeA} {zahl(literRechnung.literA)} L</span>
+                      <span>{markenName(markeA)} {zahl(literRechnung.literA)} L</span>
                       <span className="text-muted-foreground text-right">
                         {literRechnung.teilA.teile.map((t) => `${t.anzahl}× ${t.label}`).join(" + ") || "—"}
                       </span>
@@ -334,7 +373,7 @@ export function WunschfarbenLeiste({
                   )}
                   {literRechnung.literB > 0 && (
                     <p className="flex justify-between gap-3">
-                      <span>{markeB} {zahl(literRechnung.literB)} L</span>
+                      <span>{markenName(markeB)} {zahl(literRechnung.literB)} L</span>
                       <span className="text-muted-foreground text-right">
                         {literRechnung.teilB.teile.map((t) => `${t.anzahl}× ${t.label}`).join(" + ") || "—"}
                       </span>

@@ -146,7 +146,7 @@ export function ProduktAbo() {
         email: mail,
         rabatt,
         produkte: produkte.map((p) => istMenge(p)
-          ? { id: p.id, handle: p.handle, titel: p.titel, variante: p.variante, menge: p.menge, einzelpreis: p.einzelpreis }
+          ? { id: p.id, handle: p.handle, titel: p.titel, variante: p.variante, lacksystem: p.lacksystem, menge: p.menge, einzelpreis: p.einzelpreis }
           : { id: p.id, handle: p.handle, titel: p.titel }),
         price: gesamt.beitrag,
         ref: empfehlungLesen() || undefined,
