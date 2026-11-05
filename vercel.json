@@ -17,6 +17,7 @@
     { "source": "/mitgliedschaft", "destination": "/index.html" },
     { "source": "/teileboerse", "destination": "/index.html" },
     { "source": "/teileboerse/:path*", "destination": "/index.html" },
+    { "source": "/teile/:slug", "destination": "/index.html" },
     { "source": "/fahrzeugboerse", "destination": "/index.html" },
     { "source": "/fahrzeugboerse/:path*", "destination": "/index.html" },
     { "source": "/fahrzeugmarkt", "destination": "/index.html" },
