@@ -195,6 +195,13 @@ font[style] {
   }
 }
 
+/* Mobile Abo-Leiste: die letzten „Hinzufügen"-Knöpfe bleiben über der Leiste. */
+@media (max-width: 1023px) {
+  .abo-unten {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px) + var(--abo-cookie, 0px));
+  }
+}
+
 /* Barrierefreiheit: Nutzer mit reduzierter Bewegung bekommen keine Animationen */
 @media (prefers-reduced-motion: reduce) {
   *,
