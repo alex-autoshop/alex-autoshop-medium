@@ -32,7 +32,7 @@ const USPS = [
     icon: Wrench,
     title: "Teile per Kennzeichen",
     text: "Kennzeichen eingeben, Fahrzeug erkannt, passende Teile finden — im Teilebörse.",
-    badge: "Neu · in Beta",
+    badge: "Neu",
   },
   {
     icon: BadgePercent,

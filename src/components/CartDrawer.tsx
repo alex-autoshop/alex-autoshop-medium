@@ -650,7 +650,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             <div>
               <h3 className="text-lg font-bold">Weiterleitung zum Checkout</h3>
               <p className="text-sm text-muted-foreground mt-2">
-                Sie werden zu unserem sicheren Shopify-Checkout weitergeleitet.
+                Sie werden zu unserem sicheren Checkout weitergeleitet.
               </p>
               <p className="text-xs text-primary mt-3 font-mono font-semibold">
                 shop.alex-autoshop.de
