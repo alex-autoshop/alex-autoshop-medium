@@ -65,6 +65,15 @@ const LIMIT_NEU = () => zahlEnv("ZAHLUNG_LIMIT_NEU", 500);
 const LIMIT_STAMM = () => zahlEnv("ZAHLUNG_LIMIT_STAMM", 5000);
 const STAMM_AB_TAGEN = 5;
 
+function lieferadresse(roh) {
+  const name = String(roh?.name || "").trim().slice(0, 120);
+  const strasse = String(roh?.strasse || "").trim().slice(0, 160);
+  const plz = String(roh?.plz || "").replace(/\s/g, "");
+  const ort = String(roh?.ort || "").trim().slice(0, 80);
+  if (name.length < 2 || strasse.length < 2 || !/^\d{5}$/.test(plz) || ort.length < 2) return null;
+  return { name, strasse, plz, ort };
+}
+
 const euro = (x) =>
   new Intl.NumberFormat("de-DE", {
     style: "currency", currency: "EUR", maximumFractionDigits: Number.isInteger(x) ? 0 : 2,
@@ -331,7 +340,7 @@ async function preisHolen(articleNumber, brand, origin) {
 }
 
 // ── Stripe: Einmalzahlung ────────────────────────────────────────────────────
-async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, userId, guthaben = 0, versand = 0, pfand = 0, pfandStueck = 0 }) {
+async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, userId, guthaben = 0, versand = 0, pfand = 0, pfandStueck = 0, lieferung = null }) {
   const key = stripeKey();
   if (!key) return { fallback: true };
 
@@ -419,6 +428,12 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, u
   form.set("metadata[fahrzeug]", String(fahrzeug || "").slice(0, 200));
   form.set("metadata[vin]", String(vin || "").slice(0, 40));
   form.set("metadata[summe]", summe.toFixed(2));
+  if (lieferung) {
+    form.set("metadata[liefer_name]", lieferung.name.slice(0, 120));
+    form.set("metadata[liefer_strasse]", lieferung.strasse.slice(0, 160));
+    form.set("metadata[liefer_plz]", lieferung.plz);
+    form.set("metadata[liefer_ort]", lieferung.ort.slice(0, 80));
+  }
   if (guthaben > 0) form.set("metadata[guthaben]", guthaben.toFixed(2));
   form.set(
     "metadata[positionen]",
@@ -454,7 +469,7 @@ async function stripeStatus(sessionId) {
 }
 
 // ── GoCardless: einmalige SEPA-Zahlung ───────────────────────────────────────
-async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId, guthaben = 0, versand = 0, pfand = 0 }) {
+async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId, guthaben = 0, versand = 0, pfand = 0, lieferung = null }) {
   const token = gcToken();
   if (!token) return { fallback: true };
   const host = gcHost(token);
@@ -489,6 +504,27 @@ async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId,
   });
   const br = await brRes.json().catch(() => null);
   if (!brRes.ok) throw new Error(`GoCardless BR ${brRes.status}: ${JSON.stringify(br?.error || br).slice(0, 300)}`);
+  const brId = br?.billing_requests?.id;
+  if (lieferung && brId) {
+    const teile = lieferung.name.split(/\s+/);
+    const given = teile.shift() || lieferung.name;
+    const family = teile.join(" ") || given;
+    await fetch(`${host}/billing_requests/${brId}/actions/collect_customer_details`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        data: {
+          customer: { email: email || undefined, given_name: given, family_name: family, country_code: "DE" },
+          customer_billing_detail: {
+            address_line1: lieferung.strasse,
+            city: lieferung.ort,
+            postal_code: lieferung.plz,
+            country_code: "DE",
+          },
+        },
+      }),
+    }).catch((e) => console.error("[gocardless] adresse:", String(e?.message || e).slice(0, 160)));
+  }
 
   const flowRes = await fetch(`${host}/billing_request_flows`, {
     method: "POST",
@@ -498,13 +534,13 @@ async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId,
         redirect_uri: `${BASE()}/teileboerse?zahlung=ok&anbieter=gocardless`,
         exit_uri: `${BASE()}/teileboerse?zahlung=abbruch`,
         ...(email ? { prefilled_customer: { email } } : {}),
-        links: { billing_request: br?.billing_requests?.id },
+        links: { billing_request: brId },
       },
     }),
   });
   const flow = await flowRes.json().catch(() => null);
   if (!flowRes.ok) throw new Error(`GoCardless Flow ${flowRes.status}: ${JSON.stringify(flow?.error || flow).slice(0, 300)}`);
-  return { url: flow?.billing_request_flows?.authorisation_url, externId: br?.billing_requests?.id };
+  return { url: flow?.billing_request_flows?.authorisation_url, externId: brId };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -534,7 +570,7 @@ export default async function handler(req, res) {
     return send(res, 400, { error: "Ungültige Anfrage." });
   }
   if (!body || typeof body !== "object") return send(res, 400, { error: "Ungültige Anfrage." });
-  const { items, method, email: emailAusFormular, vehicleLabel, vin, theke: thekeRoh, sessionId, guthaben: guthabenWunsch, abholung: abholungRoh } = body;
+  const { items, method, email: emailAusFormular, vehicleLabel, vin, theke: thekeRoh, sessionId, guthaben: guthabenWunsch, abholung: abholungRoh, lieferung: lieferungRoh } = body;
 
   // ── Ladenverkauf: nur Alex. Geprüft wird VOR allem anderen. ─────────────────
   let theke = null;
@@ -611,6 +647,10 @@ export default async function handler(req, res) {
     // Versand und Pfand rechnet der Server. Der Browser darf den Betrag nicht
     // selbst festlegen. An der Theke nimmt der Kunde die Ware mit.
     const abholung = !!theke || abholungRoh === true;
+    const lieferung = abholung ? null : lieferadresse(lieferungRoh);
+    if (method === "gocardless" && !abholung && !lieferung) {
+      return send(res, 400, { error: "Für den DHL-Versand brauchen wir Name, Straße, PLZ und Ort." });
+    }
     const versand = versandkosten({ summe, abholung });
     const pfand = pfandBetrag(positionen.map((p) => ({ name: `${p.name || ""} ${p.brand || ""}`, menge: p.quantity })));
     const brutto = rund2(summe + versand + pfand.betrag);
@@ -658,7 +698,7 @@ export default async function handler(req, res) {
 
     const arg = {
       positionen, summe, email, fahrzeug: vehicleLabel, vin, theke, userId, guthaben,
-      versand, pfand: pfand.betrag, pfandStueck: pfand.stueck,
+      versand, pfand: pfand.betrag, pfandStueck: pfand.stueck, lieferung,
     };
     let ergebnis;
     try {
