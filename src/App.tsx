@@ -1,9 +1,7 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Navigate, useParams } from "react-router-dom";
 import { empfehlungMerken } from "@/lib/empfehlung";
 import { empfehlungOffen } from "../shared/empfehlung.js";
-import { Toaster } from "sonner";
-import { MotionConfig } from "framer-motion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
@@ -12,6 +10,7 @@ import { NurAdmin } from "@/components/NurAdmin";
 import { TeileboerseTor } from "@/components/TeileboerseTor";
 import { CookieConsent } from "@/components/CookieConsent";
 
+const Toaster = lazy(() => import("sonner").then((m) => ({ default: m.Toaster })));
 const Home = lazy(() => import("@/pages/Home"));
 const Shop = lazy(() => import("@/pages/Shop"));
 const Kategorie = lazy(() => import("@/pages/Kategorie"));
@@ -87,11 +86,26 @@ function AltesFahrzeug() {
   return <Navigate to={`/fahrzeugboerse/${slug ?? ""}`} replace />;
 }
 
+function SchaleWeg() {
+  useLayoutEffect(() => {
+    const weg = () => {
+      if (document.querySelector("#root h1")) document.getElementById("aa-shell")?.remove();
+    };
+    weg();
+    const root = document.getElementById("root");
+    if (!root) return;
+    const beobachter = new MutationObserver(weg);
+    beobachter.observe(root, { childList: true, subtree: true });
+    return () => beobachter.disconnect();
+  }, []);
+  return null;
+}
+
 export default function App() {
   return (
-    <MotionConfig reducedMotion="user">
     <BrowserRouter>
       <AuthProvider>
+        <SchaleWeg />
         <ScrollToTop />
         <EmpfehlungMerken />
         <Suspense fallback={<PageFallback />}>
@@ -158,9 +172,10 @@ export default function App() {
             } />
           </Routes>
         </Suspense>
-        <Toaster position="top-center" richColors />
+        <Suspense fallback={null}>
+          <Toaster position="top-center" richColors />
+        </Suspense>
       </AuthProvider>
     </BrowserRouter>
-    </MotionConfig>
   );
 }
