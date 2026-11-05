@@ -125,7 +125,23 @@ const Datenschutz = () => (
         Nordrhein-Westfalen (LDI NRW), Kavalleriestraße 2-4, 40213 Düsseldorf.
       </p>
 
-      <h2>14. Kontakt in Datenschutzfragen</h2>
+      <h2>14. Weitere Empfänger</h2>
+      <p>
+        Kartenzahlung in der Teilebörse läuft über Stripe, SEPA-Lastschrift über GoCardless.
+        Teile- und Katalogdaten kommen von Inter Cars und TecDoc-Datenanbietern. E-Mails
+        (Bestellbestätigung, Widerruf, Kündigung) versenden wir über Resend, sofern ein
+        Versandschlüssel hinterlegt ist. Google Analytics und ein Meta-Pixel laden nur, wenn
+        du „Alle akzeptieren“ wählst; das Pixel nur zusätzlich, wenn eine echte Pixel-ID
+        gesetzt ist. Die Auswahl kannst du über „Cookie-Einstellungen“ im Fuß der Seite
+        zurücknehmen.
+      </p>
+      <p>
+        <strong>Widerspruch (Art. 21 DSGVO):</strong> Sie können einer Verarbeitung, die auf
+        berechtigten Interessen beruht, jederzeit widersprechen — per E-Mail an
+        info@alex-autoshop.de.
+      </p>
+
+      <h2>15. Kontakt in Datenschutzfragen</h2>
       <p>
         E-Mail: info@alex-autoshop.de<br />
         Post: Alex Autoshop, Handelstraße 64, 42277 Wuppertal

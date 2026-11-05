@@ -27,6 +27,11 @@ export function metaPixelId(): string {
   return /^\d{15,16}$/.test(id) ? id : "";
 }
 
+export function einwilligungZuruecksetzen() {
+  try { localStorage.removeItem(CONSENT_KEY); } catch { /* privat */ }
+  window.location.reload();
+}
+
 export function einwilligungLesen(): "all" | "necessary" | null {
   try {
     const v = localStorage.getItem(CONSENT_KEY);

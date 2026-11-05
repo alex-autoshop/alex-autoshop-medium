@@ -1,4 +1,5 @@
-﻿import { motion } from "framer-motion";
+﻿import { useState } from "react";
+import { motion } from "framer-motion";
 import { MapPin, Phone, Clock, MessageCircle, Zap, Shield, Users, Navigation } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { BrandMarquee } from "@/components/BrandMarquee";
@@ -23,6 +24,7 @@ const VALUES = [
 ];
 
 export default function Laden() {
+  const [karte, setKarte] = useState(false);
   return (
     <div>
       <Seo
@@ -105,15 +107,21 @@ export default function Laden() {
             </div>
           </div>
 
-          <div className="card-tilt hover:translate-y-0 overflow-hidden min-h-[320px]">
-            <iframe
-              src={SHOP_INFO.mapsEmbedUrl}
-              title="Alex Autoshop auf Google Maps"
-              className="w-full h-full min-h-[320px] border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
-            />
+          <div className="card-tilt hover:translate-y-0 overflow-hidden min-h-[320px] flex items-center justify-center bg-secondary">
+            {karte ? (
+              <iframe
+                src={SHOP_INFO.mapsEmbedUrl}
+                title="Alex Autoshop auf Google Maps"
+                className="w-full h-full min-h-[320px] border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            ) : (
+              <button type="button" onClick={() => setKarte(true)} className="btn-primary">
+                <MapPin className="w-4 h-4" /> Karte laden
+              </button>
+            )}
           </div>
         </div>
       </section>
