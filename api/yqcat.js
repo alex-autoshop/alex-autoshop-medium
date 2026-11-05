@@ -60,6 +60,29 @@ const CACHE_SECONDS = {
   getAllParts: 3600,
 };
 
+const FENSTER_MS = 10 * 60 * 1000;
+const MAX_JE_IP = 40;
+const aufrufe = new Map();
+
+function herkunftErlaubt(req) {
+  const site = String(req.headers["sec-fetch-site"] || "");
+  if (site === "same-origin" || site === "same-site") return true;
+  const roh = String(req.headers.origin || req.headers.referer || "");
+  if (!roh) return false;
+  let host = "";
+  try { host = new URL(roh).hostname.toLowerCase(); } catch { return false; }
+  if (host === "alex-autoshop.de" || host === "www.alex-autoshop.de" || host === "localhost" || host === "127.0.0.1") return true;
+  return host.endsWith(".vercel.app");
+}
+
+function zuViele(ip) {
+  const jetzt = Date.now();
+  const liste = (aufrufe.get(ip) || []).filter((t) => jetzt - t < FENSTER_MS);
+  liste.push(jetzt);
+  aufrufe.set(ip, liste);
+  return liste.length > MAX_JE_IP;
+}
+
 function send(res, status, obj, cacheSec) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -110,6 +133,14 @@ async function callYq(action, body, language, timeoutMs = 25000) {
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return send(res, 200, { ok: true });
+
+  if (!herkunftErlaubt(req)) {
+    return send(res, 403, { error: "Dieser Katalog ist nur über alex-autoshop.de erreichbar." });
+  }
+  const ip = String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "").split(",")[0].trim() || "?";
+  if (zuViele(ip)) {
+    return send(res, 429, { error: "Zu viele Katalog-Anfragen. Bitte kurz warten." });
+  }
 
   const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
   const action = url.searchParams.get('action') || '';
