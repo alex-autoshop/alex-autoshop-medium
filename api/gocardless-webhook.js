@@ -19,7 +19,7 @@ export const config = { runtime: "edge" };
 import { activateMembership, activateProduktAbo } from "./_activate-membership.js";
 import { shopifyMitgliedTag } from "./_shopify-order.js";
 import { positionenLesen, teileBestellung, teileBestellungBezahlt } from "./_teile-bestellung.js";
-import { EMPFEHLUNGS_PROZENT } from "../shared/empfehlung.js";
+import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from "../shared/empfehlung.js";
 import { rabattName } from "../shared/mitgliedspreise.js";
 
 // ── Teile-Zahlungen für die Zahlungsgrenze festhalten (nur Server) ──────────
@@ -44,6 +44,7 @@ async function zahlungSpeichern(zeile) {
 // automatisch seinen Anteil. Einmal je Zahlung (SQL prüft das), bei einer
 // geplatzten Zahlung wird die Gutschrift wieder abgezogen.
 async function provisionBuchen(externId) {
+  if (!empfehlungOffen()) return;
   const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!svc || !externId) return;
   const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/provision_buchen`, {

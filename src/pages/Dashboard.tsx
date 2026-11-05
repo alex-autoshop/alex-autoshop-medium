@@ -41,7 +41,7 @@ import Teileportal from "@/pages/Teileportal";
 import { useProducts } from "@/hooks/useProducts";
 import { useAuth, type Vehicle } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { EMPFEHLUNGS_PROZENT, provisionFuer } from "../../shared/empfehlung.js";
+import { EMPFEHLUNGS_PROZENT, provisionFuer, empfehlungSichtbar } from "../../shared/empfehlung.js";
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useCartStore } from "@/stores/cartStore";
 import { getOrders, type Order } from "@/lib/orders";
@@ -78,8 +78,10 @@ export default function Dashboard() {
   // sieht den Reiter, damit Mitgliedschafts-Anfragen weiter ankommen.
   const istAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
-  const sichtbareTabs = TABS.filter((t) => (t.id !== "inbox" || istAdmin) && (t.id !== "teileboerse" || teileSichtbar));
+  const empfehlungAn = empfehlungSichtbar(user?.email);
+  const sichtbareTabs = TABS.filter((t) => (t.id !== "inbox" || istAdmin) && (t.id !== "teileboerse" || teileSichtbar) && (t.id !== "affiliate" || empfehlungAn));
   const gewuenschterTab = (params.get("tab") as Tab) || "overview";
+  const empfehlungZu = gewuenschterTab === "affiliate" && !empfehlungAn;
   const initialTab = sichtbareTabs.some((t) => t.id === gewuenschterTab) ? gewuenschterTab : "overview";
   const [tab, setTab] = useState<Tab>(initialTab);
 
@@ -107,13 +109,23 @@ export default function Dashboard() {
         recipient: user.id,
         type: "system",
         title: "💳 Bankdaten hinterlegen — mehr Vorteile!",
-        body: "Hinterlege deine IBAN einmalig in den Einstellungen und schalte Express-Kauf frei: bestelle ohne Umweg über PayPal, direkt per SEPA vom Bankkonto. Außerdem: Lieferung auf Rechnung (Wuppertal), schnellere Abwicklung und Affiliate-Auszahlung. Einstellungen → Dashboard → ⚙️ Einstellungen.",
+        body: "Hinterlege deine IBAN einmalig in den Einstellungen und schalte Express-Kauf frei: bestelle ohne Umweg über PayPal, direkt per SEPA vom Bankkonto. Außerdem: Lieferung auf Rechnung (Wuppertal) und schnellere Abwicklung. Einstellungen → Dashboard → ⚙️ Einstellungen.",
       });
       localStorage.setItem(key, "1");
     }, 3000);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  if (empfehlungZu) {
+    return (
+      <div className="container py-16 max-w-xl">
+        <Seo title="Seite nicht verfügbar" description="Diese Seite ist derzeit nicht verfügbar." noindex />
+        <h1 className="text-3xl mb-3">Diese Seite ist derzeit nicht verfügbar.</h1>
+        <Link to="/dashboard" className="text-primary font-semibold underline">Zum Mitgliederbereich</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8 sm:py-12">
@@ -904,7 +916,8 @@ function Orders() {
 }
 
 function PaymentSettings() {
-  const { profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
+  const empfehlungAn = empfehlungSichtbar(user?.email);
   const [iban, setIban] = useState(profile.iban || "");
   const [bic, setBic] = useState(profile.bic || "");
   const [accountHolder, setAccountHolder] = useState(profile.account_holder || "");
@@ -1155,11 +1168,11 @@ function PaymentSettings() {
               title: "🚚 Lieferung auf Rechnung (Wuppertal)",
               desc: "Ware kommt zuerst, Zahlung 14 Tage später per Überweisung. Nur für Wuppertal (PLZ 42xxx).",
             },
-            {
+            ...(empfehlungAn ? [{
               icon: <TrendingUp className="w-4 h-4 text-primary" />,
               title: "💸 Affiliate-Guthaben auszahlen",
               desc: "Dein Guthaben aus Empfehlungen kann direkt auf dein Bankkonto ausgezahlt werden.",
-            },
+            }] : []),
             {
               icon: <ShieldCheck className="w-4 h-4 text-primary" />,
               title: "🔒 Reibungslose Geschäftsabwicklung",

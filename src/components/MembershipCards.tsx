@@ -20,6 +20,7 @@ import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { AboAnmeldung } from "@/components/AboAnmeldung";
 import { supabase } from "@/lib/supabase";
 import { empfehlungLesen } from "@/lib/empfehlung";
+import { empfehlungOffen } from "../../shared/empfehlung.js";
 import { mitgliedsbeitrag } from "../../shared/mitgliedspreise.js";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { cn } from "@/lib/utils";
@@ -433,7 +434,7 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
         price: beitrag?.preis ?? price,
         freePaint: beitrag?.freePaint ?? true,
         aufbereitung: beitrag?.aufbereitung ?? false,
-        ref: empfehlungLesen() || undefined,
+        ref: empfehlungOffen() ? empfehlungLesen() || undefined : undefined,
       };
 
       // 1) Echte Zahlung versuchen (Stripe-Abo bzw. GoCardless-SEPA)

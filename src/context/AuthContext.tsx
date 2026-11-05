@@ -3,6 +3,7 @@ import { teileboerseCookieSetzen } from "@/lib/teileboerseSichtbar";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase, isAuthConfigured } from "@/lib/supabase";
 import { empfehlungLesen, empfehlungVergessen } from "@/lib/empfehlung";
+import { empfehlungOffen } from "../../shared/empfehlung.js";
 
 // Projekt-Fahrzeug des Kunden — wird in Supabase user_metadata gespeichert.
 export interface Vehicle {
@@ -134,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Kam das Konto über einen Empfehlungslink? Dann den Werber eintragen
   // lassen — das macht der Server (app_metadata), nicht der Browser.
   useEffect(() => {
-    if (!user || !supabase) return;
+    if (!user || !supabase || !empfehlungOffen()) return;
     const code = empfehlungLesen();
     if (!code) return;
     const a = (user.app_metadata ?? {}) as Record<string, unknown>;

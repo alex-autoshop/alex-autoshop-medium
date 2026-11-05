@@ -9,6 +9,7 @@ import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { empfehlungLesen } from "@/lib/empfehlung";
+import { empfehlungOffen } from "../../shared/empfehlung.js";
 import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
   mengenPosition, aboListeGesamt, rabattGueltig,
@@ -182,7 +183,7 @@ export function ProduktAbo() {
           ? { art: "menge" as const, id: p.id, handle: p.handle, titel: p.titel, variante: p.variante, lacksystem: p.lacksystem, menge: p.menge, einzelpreis: p.einzelpreis, rabatt: p.rabatt }
           : { art: "einzel" as const, id: p.id, handle: p.handle, titel: p.titel, preis: p.preis, rabatt: p.rabatt }),
         price: gesamt.beitrag,
-        ref: empfehlungLesen() || undefined,
+        ref: empfehlungOffen() ? empfehlungLesen() || undefined : undefined,
       };
 
       // 1) Echte Zahlung versuchen — gleicher Weg wie bei der Dienstleistungs-Mitgliedschaft

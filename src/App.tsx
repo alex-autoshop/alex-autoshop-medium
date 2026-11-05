@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Navigate, useParams } from "react-router-dom";
 import { empfehlungMerken } from "@/lib/empfehlung";
+import { empfehlungOffen } from "../shared/empfehlung.js";
 import { Toaster } from "sonner";
 import { MotionConfig } from "framer-motion";
 import { Header } from "@/components/Header";
@@ -70,7 +71,7 @@ function ScrollToTop() {
  *  der Werber später auf dem Server. */
 function EmpfehlungMerken() {
   const { search } = useLocation();
-  useEffect(() => { empfehlungMerken(search); }, [search]);
+  useEffect(() => { if (empfehlungOffen()) empfehlungMerken(search); }, [search]);
   return null;
 }
 
