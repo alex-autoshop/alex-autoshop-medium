@@ -330,8 +330,8 @@ function MitgliedschaftTab({ level, profile }: {
           <div className="rounded-xl border border-primary/40 bg-primary/5 p-5">
             <p className="font-semibold mb-1">Aktuell gibt es das Produkt-Abo</p>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-              Du suchst dir die Produkte aus, die du regelmäßig brauchst, und bekommst genau
-              darauf deinen Rabatt — ab 0,50 € pro Produkt und Monat.
+              Du suchst dir die Produkte aus, die du regelmäßig brauchst, und wählst für jedes
+              selbst 15 %, 28 % oder 40 %. Der Beitrag ist die Summe dieser Stufen.
             </p>
             <Link to="/mitgliedschaft" className="btn-primary text-sm">Produkt-Abo ansehen →</Link>
           </div>

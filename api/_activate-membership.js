@@ -5,7 +5,7 @@
 // 2) markiert den Shopify-Kunden mit dem Tag "mitglied" (Versand im Shop).
 // 3) legt die Mitgliedschaft als echte Shopify-Bestellung an (Betrag sichtbar).
 
-import { createShopifyOrder, shopifyMitgliedTag } from "./_shopify-order.js";
+import { createShopifyOrder, shopifyMitgliedTag, shopifyAboStufen } from "./_shopify-order.js";
 import { internSignatur } from "./_intern.js";
 import { rabattName } from "../shared/mitgliedspreise.js";
 
@@ -69,5 +69,40 @@ export async function activateMembership(meta) {
     results.errors.push(`shopify: ${String(e.message).slice(0, 160)}`);
   }
 
+  return results;
+}
+
+/**
+ * Produkt-Abo: jede Position hat ihre Stufe. Wir setzen das Versand-Tag
+ * "mitglied" und die Stufen-Tags abo-15 / abo-28 / abo-40.
+ * membership_level (1–3) bleibt unangetastet, damit bestehende Mitglieder
+ * ihren einen Shop-Rabatt behalten.
+ */
+export async function activateProduktAbo(meta) {
+  const email = String(meta.email || "").trim().toLowerCase();
+  const price = Number(meta.price);
+  const stufen = String(meta.stufen || "")
+    .split(/[,;]/)
+    .map((s) => {
+      const teile = String(s).split(":");
+      return Math.floor(Number(teile[teile.length - 1]));
+    })
+    .filter((n) => [15, 28, 40].includes(n));
+  const results = { email, price, shopifyTag: null, aboTags: null, errors: [] };
+  try {
+    const tag = await shopifyMitgliedTag(email, true);
+    results.shopifyTag = tag?.aktion || tag?.grund || null;
+    if (tag && tag.ok === false) results.errors.push(`shopify-tag: ${tag.grund || "fehler"}`);
+  } catch (e) {
+    results.errors.push(`shopify-tag: ${String(e?.message || e).slice(0, 160)}`);
+  }
+  try {
+    const stufe = await shopifyAboStufen(email, stufen);
+    results.aboTags = stufe?.tags || stufe?.grund || null;
+    if (stufe && stufe.ok === false) results.errors.push(`abo-stufen: ${stufe.grund || "fehler"}`);
+  } catch (e) {
+    results.errors.push(`abo-stufen: ${String(e?.message || e).slice(0, 160)}`);
+  }
+  console.log("[mitglied] produkt-abo", email, "stufen", stufen.join(","), "positionen", String(meta.positionen || "").slice(0, 300));
   return results;
 }

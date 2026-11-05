@@ -20,6 +20,7 @@ export const config = { runtime: 'edge' };
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { mitgliedsbeitrag, MODULE } from '../shared/mitgliedspreise.js';
+import { aboListeGesamt } from '../shared/produktabo.js';
 import { internPruefen } from './_intern.js';
 import { EMPFEHLUNGS_PROZENT } from '../shared/empfehlung.js';
 
@@ -537,6 +538,48 @@ export default async function handler(req) {
   let body;
   try { body = await req.json(); }
   catch { return jsonError('Ungültiger Request-Body', 400); }
+
+  if (body?.aboTyp === "produkt") {
+    const emailP = String(body.email || "").trim().toLowerCase();
+    if (!EMAIL_OK.test(emailP)) return jsonError("Bitte eine gültige E-Mail-Adresse angeben.", 400);
+    if (!RESEND_API_KEY) return jsonError("RESEND_API_KEY nicht konfiguriert", 503);
+    const liste = (Array.isArray(body.produkte) ? body.produkte : []).map((p) => ({
+      art: p?.art === "menge" || p?.einzelpreis != null ? "menge" : "einzel",
+      rabatt: p?.rabatt,
+      preis: p?.preis,
+      einzelpreis: p?.einzelpreis,
+      menge: p?.menge,
+      titel: String(p?.titel || p?.handle || "Produkt"),
+    }));
+    const g = aboListeGesamt(liste);
+    if (!g) return jsonError("Unbekannte Rabattstufe oder leere Produktliste.", 400);
+    const zeilen = liste.map((p, i) => `<tr><td style="padding:6px 0;border-bottom:1px solid #222;">${p.titel}</td><td style="padding:6px 0;border-bottom:1px solid #222;text-align:right;">${p.rabatt} %</td><td style="padding:6px 0;border-bottom:1px solid #222;text-align:right;">${g.zeilen[i].beitrag.toFixed(2).replace(".", ",")} €</td></tr>`).join("");
+    const html = `<p>Deine Abo-Liste, jede Position mit eigener Stufe. Summe ${g.beitrag.toFixed(2).replace(".", ",")} € im Monat.</p><table width="100%">${zeilen}</table>`;
+    const mail = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: [emailP],
+        subject: "Dein Produkt-Abo — Stufen je Produkt",
+        html,
+      }),
+    });
+    if (!mail.ok) return jsonError(`Resend Fehler: ${await mail.text()}`, 502);
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: ["alexanderharitopoulos@gmail.com"],
+        subject: `Produkt-Abo: ${emailP}`,
+        html,
+      }),
+    }).catch(() => {});
+    return new Response(JSON.stringify({ ok: true, preis: g.beitrag }), {
+      status: 200, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    });
+  }
 
   const { email: emailRoh, level: levelRoh, modules: modulesRoh = [], price: priceRoh, freePaint, aufbereitung, ref: refRoh } = body || {};
   const email = String(emailRoh || '').trim().toLowerCase();

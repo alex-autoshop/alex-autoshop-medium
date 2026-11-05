@@ -168,4 +168,49 @@ export async function shopifyMitgliedTag(email, aktiv) {
   }
 }
 
+const ABO_STUFEN = [15, 28, 40];
+
+/**
+ * Markiert, welche Rabattstufen in der Abo-Liste vorkommen (abo-15, abo-28, abo-40).
+ * Das Tag "mitglied" (kostenloser Versand) bleibt unberührt.
+ * Ein automatischer Rabatt je Produkt im Shop entsteht dadurch noch nicht —
+ * den muss man im Shopify-Admin an diese Tags hängen.
+ */
+export async function shopifyAboStufen(email, stufen) {
+  const mail = String(email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return { ok: false, grund: "email" };
+  if (!shopifyConfigured()) {
+    console.warn("[shopify] SHOPIFY_ADMIN_TOKEN fehlt — Abo-Stufen übersprungen");
+    return { ok: false, grund: "token" };
+  }
+  const gewollt = [...new Set((Array.isArray(stufen) ? stufen : []).map((n) => Math.floor(Number(n))))]
+    .filter((n) => ABO_STUFEN.includes(n))
+    .map((n) => `abo-${n}`);
+  try {
+    const data = await shopifyGraphQL(CUSTOMERS_BY_EMAIL, { query: `email:${JSON.stringify(mail)}` });
+    const treffer = (data?.customers?.edges || [])
+      .map((e) => e?.node)
+      .filter((n) => n?.id && String(n.email || "").trim().toLowerCase() === mail);
+    if (!treffer.length) return { ok: true, aktion: "kein-kunde", tags: gewollt };
+    for (const node of treffer) {
+      const tags = Array.isArray(node.tags) ? node.tags.map(String) : [];
+      const dazu = gewollt.filter((t) => !tags.some((x) => x.toLowerCase() === t));
+      const weg = tags.filter((t) => /^abo-(15|28|40)$/i.test(t) && !gewollt.includes(t.toLowerCase()));
+      if (dazu.length) {
+        const mut = await shopifyGraphQL(TAGS_ADD, { id: node.id, tags: dazu });
+        if (mut?.tagsAdd?.userErrors?.length) throw new Error(JSON.stringify(mut.tagsAdd.userErrors));
+      }
+      if (weg.length) {
+        const mut = await shopifyGraphQL(TAGS_REMOVE, { id: node.id, tags: weg });
+        if (mut?.tagsRemove?.userErrors?.length) throw new Error(JSON.stringify(mut.tagsRemove.userErrors));
+      }
+    }
+    return { ok: true, aktion: "gesetzt", tags: gewollt };
+  } catch (e) {
+    const grund = String(e?.message || e).slice(0, 200);
+    console.error("[shopify] abo-stufen:", grund);
+    return { ok: false, grund };
+  }
+}
+
 export { shopifyConfigured };

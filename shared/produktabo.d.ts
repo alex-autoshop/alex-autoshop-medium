@@ -39,6 +39,30 @@ export declare function mengenPosition(pos: {
   rabatt: number;
 }): MengenRechnung | null;
 
+export declare function rabattGueltig(wert: number | string): boolean;
+
+export declare function listeNormalisieren(roh: {
+  rabatt?: number;
+  standard?: number;
+  produkte?: Array<Record<string, unknown>>;
+} | null): { standard: number; produkte: Array<Record<string, unknown> & { rabatt: number }> };
+
+export declare function beitragPosition(pos: {
+  art?: string;
+  rabatt: number;
+  preis?: number;
+  einzelpreis?: number;
+  menge?: number;
+}): MengenRechnung | null;
+
+export declare function aboListeGesamt(positionen: Array<{
+  art?: string;
+  rabatt: number;
+  preis?: number;
+  einzelpreis?: number;
+  menge?: number;
+}>): { beitrag: number; ersparnis: number; zeilen: MengenRechnung[] } | null;
+
 export declare function aboGesamt(liste: {
   rabatt: number;
   einzelAnzahl: number;
