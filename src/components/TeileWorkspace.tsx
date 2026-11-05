@@ -457,6 +457,16 @@ function OfferPanel({
   );
 }
 
+const MARKE_RANG = ["bosch", "trw", "ate", "textar", "brembo", "mann-filter", "mann", "mahle", "sachs", "luk", "valeo", "hella", "ngk", "febi", "meyle"];
+function markeRang(brand: string) {
+  const b = brand.toLowerCase();
+  const i = MARKE_RANG.findIndex((m) => b.includes(m));
+  return i < 0 ? 50 : i;
+}
+function hatBestand(a: WorkArticle) {
+  return a.deliveryDays != null || /stück|lager|vorrat|>\s*0/i.test(a.availability || "");
+}
+
 /* ───────────────────────── Arbeitsfläche ───────────────────────── */
 
 export function TeileWorkspace({
@@ -489,17 +499,34 @@ export function TeileWorkspace({
   oemDrawingSlot?: (oeNumbers: string[], name: string) => React.ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [ohnePreisOffen, setOhnePreisOffen] = useState(false);
+  useEffect(() => { setOhnePreisOffen(false); }, [articles]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const listRef = useRef<HTMLDivElement>(null);
 
+  const { haupt, ohnePreis } = useMemo(() => {
+    const preisDa = articles.some((a) => a.price != null);
+    const haupt = preisDa ? articles.filter((a) => a.price != null) : articles;
+    const ohnePreis = preisDa ? articles.filter((a) => a.price == null) : [];
+    haupt.sort((a, b) => {
+      const bestand = Number(hatBestand(b)) - Number(hatBestand(a));
+      if (bestand) return bestand;
+      const rang = markeRang(a.brand) - markeRang(b.brand);
+      if (rang) return rang;
+      return (a.price ?? 0) - (b.price ?? 0);
+    });
+    return { haupt, ohnePreis };
+  }, [articles]);
+  const liste = ohnePreisOffen ? [...haupt, ...ohnePreis] : haupt;
+
   // Immer eine Auswahl haben — sonst steht die rechte Spalte leer herum.
   useEffect(() => {
-    if (articles.length === 0) { setSelectedId(null); return; }
-    if (!selectedId || !articles.some((a) => key(a) === selectedId)) {
-      setSelectedId(key(articles[0]));
+    if (liste.length === 0) { setSelectedId(null); return; }
+    if (!selectedId || !liste.some((a) => key(a) === selectedId)) {
+      setSelectedId(key(liste[0]));
     }
-  }, [articles, selectedId]);
+  }, [liste, selectedId]);
 
   const selected = useMemo(
     () => articles.find((a) => key(a) === selectedId) ?? articles[0],
@@ -527,14 +554,14 @@ export function TeileWorkspace({
     const onKey = (e: KeyboardEvent) => {
       const tag = (document.activeElement?.tagName || "").toLowerCase();
       if (tag === "input" || tag === "textarea" || tag === "select") return;
-      if (articles.length === 0) return;
-      const i = articles.findIndex((a) => key(a) === selectedId);
+      if (liste.length === 0) return;
+      const i = liste.findIndex((a) => key(a) === selectedId);
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        pick(articles[Math.min(articles.length - 1, i + 1)]);
+        pick(liste[Math.min(liste.length - 1, i + 1)]);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        pick(articles[Math.max(0, i - 1)]);
+        pick(liste[Math.max(0, i - 1)]);
       } else if (e.key === "Enter" && selected) {
         e.preventDefault();
         onAddToCart(selected, 1);
@@ -542,7 +569,7 @@ export function TeileWorkspace({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [articles, selectedId, selected, onAddToCart]);
+  }, [liste, selectedId, selected, onAddToCart]);
 
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_410px] min-[1800px]:grid-cols-[220px_minmax(0,1fr)_410px] lg:gap-4 lg:items-start">
@@ -561,7 +588,7 @@ export function TeileWorkspace({
         <div className="rounded-xl border border-border bg-card overflow-hidden">
 
           <div ref={listRef} className="divide-y divide-border/60 max-h-[calc(100vh-220px)] overflow-y-auto" role="listbox">
-            {articles.map((a) => (
+            {liste.map((a) => (
               <TeileZeile
                 key={key(a)}
                 a={a}
@@ -574,16 +601,26 @@ export function TeileWorkspace({
                 vehicleLabel={vehicleLabel}
               />
             ))}
-            {articles.length === 0 && (
+            {liste.length === 0 && (
               <p className="text-center text-sm text-muted-foreground py-12">
                 Keine Treffer — Filter zurücksetzen oder anders suchen.
               </p>
             )}
           </div>
+          {ohnePreis.length > 0 && (
+            <button
+              type="button"
+              className="w-full px-4 py-3 text-sm font-semibold text-left border-t border-border hover:bg-secondary"
+              aria-expanded={ohnePreisOffen}
+              onClick={() => setOhnePreisOffen((v) => !v)}
+            >
+              {ohnePreisOffen ? "Artikel ohne Preis ausblenden" : `Weitere Artikel ohne Preis anzeigen (${ohnePreis.length})`}
+            </button>
+          )}
         </div>
 
         {/* Tastatur-Hinweis — Profis bedienen so am schnellsten */}
-        {articles.length > 1 && (
+        {liste.length > 1 && (
           <p className="hidden lg:flex items-center gap-2 mt-2 text-[11px] text-muted-foreground/70">
             <kbd className="px-1 py-0.5 rounded border border-border"><ArrowUp className="w-2.5 h-2.5" /></kbd>
             <kbd className="px-1 py-0.5 rounded border border-border"><ArrowDown className="w-2.5 h-2.5" /></kbd>
