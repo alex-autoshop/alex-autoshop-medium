@@ -222,7 +222,7 @@ export function WunschfarbenLeiste({
   }
 
   return (
-    <div className="rounded-2xl border border-primary/40 bg-primary/5 shadow-card overflow-hidden">
+    <div className="lack-rahmen rounded-2xl shadow-card overflow-hidden">
       <button
         id="farbe-nach-monatsbedarf-kopf"
         type="button"
