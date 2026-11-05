@@ -23,6 +23,8 @@ import { AboAnmeldung } from "@/components/AboAnmeldung";
 import { AboProduktKatalog } from "@/components/AboProduktKatalog";
 import { AboVorschau } from "@/components/AboVorschau";
 import { aboBildStil } from "../../shared/abo-bildrahmen.js";
+import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
+import { BaldVerfuegbar, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
 import { AboLeisteMobil } from "@/components/AboLeisteMobil";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
@@ -378,6 +380,8 @@ export function ProduktAbo() {
                 const a = alsAboProdukt(p);
                 const schon = drin(a.id);
                 const stufe = stufeVon(a.id);
+                const gefahr = gefahrstoffVonKnoten(p.node);
+                const gesperrt = kaufGesperrt(gefahr);
                 return (
                   <div className="h-full w-full flex flex-col rounded-lg border border-border p-1.5 lg:p-2 bg-card">
                     <button
@@ -404,6 +408,7 @@ export function ProduktAbo() {
                     >
                       {a.titel}
                     </button>
+                    {gefahr.ist && !gesperrt && <div className="mt-1"><GefahrstoffKompakt g={gefahr} /></div>}
                     <div className="mt-auto pt-1.5 flex flex-col gap-1.5">
                       {a.preis > 0 && (
                         <div>
@@ -421,7 +426,7 @@ export function ProduktAbo() {
                         label={`Rabatt für ${a.titel}`}
                         onChange={(r) => setWahl((alt) => ({ ...alt, [a.id]: r }))}
                       />
-                      <button
+                      {gesperrt ? <BaldVerfuegbar /> : <button
                         type="button"
                         onClick={() => { if (!schon) hinzufuegen(p, stufe); }}
                         disabled={schon}
@@ -434,7 +439,7 @@ export function ProduktAbo() {
                         )}
                       >
                         {schon ? <><CheckCircle className="w-3.5 h-3.5" /> drin</> : <><Plus className="w-3.5 h-3.5" /> Hinzufügen</>}
-                      </button>
+                      </button>}
                     </div>
                   </div>
                 );

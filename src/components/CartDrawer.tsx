@@ -9,6 +9,7 @@ import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useAuth } from "@/context/AuthContext";
 import { discountForLevel } from "@/data/memberships";
 import { versandkosten, VERSAND_FREI_AB } from "../../shared/versand.js";
+import { gefahrstoffVonKnoten } from "../../shared/gefahrstoff.js";
 import { mitgliedZeile } from "../../shared/produktabo.js";
 import { aboEinzelMerken } from "@/lib/aboListe";
 import { useAboListe, WarenkorbAboSumme, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
@@ -148,11 +149,16 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const navigate = useNavigate();
 
   const [placing, setPlacing] = useState(false);
+  const [alterBestaetigt, setAlterBestaetigt] = useState(false);
   const [confirmed, setConfirmed] = useState<ConfirmedOrder | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const total = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
+  const gefahren = items.map((i) => gefahrstoffVonKnoten(i.product.node)).filter((g) => g.ist);
+  const mindestalter = gefahren.reduce((m, g) => Math.max(m, g.mindestalter || 0), 0);
+  const gefahrgut = gefahren.filter((g) => g.unNr);
+  const kasseZu = mindestalter > 0 && !alterBestaetigt;
   const currency = items[0]?.price.currencyCode ?? "EUR";
   const discount = user ? discountForLevel(profile.membership_level) : 0;
   const memberSaving = total * (discount / 100);
@@ -590,10 +596,31 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   </div>
                 )}
 
+                {mindestalter > 0 && (
+                  <label className="flex items-start gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={alterBestaetigt}
+                      onChange={(e) => setAlterBestaetigt(e.target.checked)}
+                    />
+                    <span>Ich bestätige, dass ich mindestens {mindestalter} Jahre alt bin.</span>
+                  </label>
+                )}
+                {gefahrgut.length > 0 && (
+                  <div className="rounded-lg border border-border bg-secondary/60 p-3 text-sm space-y-1">
+                    <p className="font-semibold">Gefahrgut im Warenkorb</p>
+                    {gefahrgut.map((g) => (
+                      <p key={g.unNr}>{g.unNr}{g.versandHinweis ? ` — ${g.versandHinweis}` : ""}</p>
+                    ))}
+                  </div>
+                )}
+
                 {/* ── 1. NORMALER ONLINE-CHECKOUT ── */}
                 <button
                   onClick={handleOnlineCheckout}
-                  className="btn-gold-bright w-full text-base font-bold gap-2"
+                  disabled={kasseZu}
+                  className="btn-gold-bright w-full text-base font-bold gap-2 disabled:opacity-50"
                 >
                   <CreditCard className="w-5 h-5" />
                   Jetzt kaufen (Kreditkarte / PayPal)
@@ -604,7 +631,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   hasIban ? (
                     <button
                       onClick={handleExpressOrder}
-                      disabled={placing}
+                      disabled={placing || kasseZu}
                       className="btn-outline w-full gap-2 disabled:opacity-60 border-primary/40 hover:border-primary"
                     >
                       <Zap className="w-4 h-4 text-primary" />
@@ -651,7 +678,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 ) : isWuppertal ? (
                   <button
                     onClick={handleInvoiceOrder}
-                    disabled={placing}
+                    disabled={placing || kasseZu}
                     className="btn-dark w-full gap-2 text-sm"
                   >
                     <Truck className="w-4 h-4" />

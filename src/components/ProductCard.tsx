@@ -11,6 +11,8 @@ import { useCartStore } from "@/stores/cartStore";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { cn } from "@/lib/utils";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
+import { BaldVerfuegbar, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
+import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
 
 export function ProductCard({ product, priority = false }: { product: ShopifyProduct; priority?: boolean }) {
   const addItem = useCartStore((s) => s.addItem);
@@ -45,6 +47,8 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
   const cur = base.currencyCode;
   const firstVariant = node.variants?.edges?.[0]?.node;
   const multiple = (node.variants?.edges?.length ?? 0) > 1;
+  const gefahr = gefahrstoffVonKnoten(node);
+  const gesperrt = kaufGesperrt(gefahr);
 
   const topLevel = MEMBERSHIP_LEVELS[MEMBERSHIP_LEVELS.length - 1];
   const maxSavePerPiece = basePrice * (topLevel.discountPercent / 100);
@@ -90,6 +94,7 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
             {node.title}
           </p>
         </Link>
+        {gefahr.ist && !gesperrt && <GefahrstoffKompakt g={gefahr} />}
 
         {/* Grundpreis */}
         <div>
@@ -136,7 +141,9 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
 
         {/* Menge + Hinzufügen */}
         <div className="mt-auto pt-1 flex flex-col gap-2">
-          {firstVariant?.availableForSale && !multiple ? (
+          {gesperrt ? (
+            <BaldVerfuegbar />
+          ) : firstVariant?.availableForSale && !multiple ? (
             <div className={cn("flex gap-2", eng ? "flex-col" : "flex-row items-center")}>
               <div className={cn("flex items-center border border-border rounded-lg shrink-0", eng ? "justify-between" : "w-fit")}>
                 <button onClick={() => setQty((q) => Math.max(1, q - 1))} className={cn("h-9 flex items-center justify-center hover:bg-secondary rounded-l-lg", knapp && !eng ? "w-8" : "w-9")} aria-label="weniger">
@@ -160,9 +167,11 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
               Varianten wählen
             </Link>
           )}
-          <Suspense fallback={<div className="min-h-12" />}>
-            <AboKnopf produkt={aboProdukt} kurz={breite < 220} />
-          </Suspense>
+          {!gesperrt && (
+            <Suspense fallback={<div className="min-h-12" />}>
+              <AboKnopf produkt={aboProdukt} kurz={breite < 220} />
+            </Suspense>
+          )}
         </div>
       </div>
     </div>
