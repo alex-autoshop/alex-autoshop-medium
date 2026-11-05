@@ -9,6 +9,9 @@ import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useAuth } from "@/context/AuthContext";
 import { discountForLevel } from "@/data/memberships";
 import { versandkosten, VERSAND_FREI_AB } from "../../shared/versand.js";
+import { mitgliedZeile } from "../../shared/produktabo.js";
+import { aboEinzelMerken } from "@/lib/aboListe";
+import { useAboListe, WarenkorbAboSumme, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
 import { recordOrder, type OrderItem } from "@/lib/orders";
 import { sendMessage } from "@/lib/inbox";
 import { AuthModal } from "@/components/AuthModal";
@@ -153,6 +156,44 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const currency = items[0]?.price.currencyCode ?? "EUR";
   const discount = user ? discountForLevel(profile.membership_level) : 0;
   const memberSaving = total * (discount / 100);
+  const aboListe = useAboListe();
+  const [aboWahl, setAboWahl] = useState<Record<string, number>>({});
+
+  const aboDrin = (id: string) => aboListe.produkte.some((p) => p.id === id && p.art !== "menge");
+  const aboStufe = (id: string) => {
+    const zeile = aboListe.produkte.find((p) => p.id === id && p.art !== "menge");
+    return zeile ? zeile.rabatt : (aboWahl[id] ?? aboListe.standard);
+  };
+  const aboProdukt = (item: (typeof items)[number]) => {
+    const node = item.product.node;
+    return {
+      id: node.id,
+      handle: node.handle,
+      titel: node.title,
+      preis: parseFloat(item.price.amount),
+      waehrung: item.price.currencyCode,
+      bild: node.images?.edges?.[0]?.node?.url || PRODUCT_IMAGES[node.handle] || undefined,
+    };
+  };
+  const fehlendeInsAbo = () => {
+    const gesehen = new Set<string>();
+    let dazu = 0;
+    let voll = false;
+    for (const item of items) {
+      const id = item.product.node.id;
+      if (gesehen.has(id) || aboDrin(id)) continue;
+      gesehen.add(id);
+      const erg = aboEinzelMerken({ ...aboProdukt(item), rabatt: aboStufe(id) });
+      if (erg === "voll") { voll = true; break; }
+      if (erg === "neu") dazu += 1;
+    }
+    return { dazu, voll };
+  };
+  const aboErsparnis = Math.round(items.reduce((summe, item) => {
+    const zeile = mitgliedZeile(parseFloat(item.price.amount), item.quantity, aboStufe(item.product.node.id));
+    return summe + (zeile?.ersparnis ?? 0);
+  }, 0) * 100) / 100;
+  const allesImAbo = items.length > 0 && items.every((item) => aboDrin(item.product.node.id));
 
   // Shopify-Shop: bezahlte Mitgliedschaft (Level 1–3) versendet kostenlos.
   // Die Teilebörse nutzt shared/versand.js ohne diesen Nachlass.
@@ -465,10 +506,30 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
+                        <WarenkorbAboZeile
+                          produkt={aboProdukt(item)}
+                          menge={item.quantity}
+                          stufe={aboStufe(item.product.node.id)}
+                          drin={aboDrin(item.product.node.id)}
+                          onStufe={(rabatt) => setAboWahl((alt) => ({ ...alt, [item.product.node.id]: rabatt }))}
+                        />
                       </div>
                     </div>
                   );
                 })
+              )}
+              {items.length > 0 && (
+                <WarenkorbAboSumme
+                  betrag={aboErsparnis}
+                  waehrung={currency}
+                  allesDrin={allesImAbo}
+                  onAlle={() => {
+                    const { dazu, voll } = fehlendeInsAbo();
+                    if (voll) toast.error("Die Abo-Liste ist voll.");
+                    else if (dazu > 0) toast.success("Warenkorb in die Abo-Liste gelegt");
+                  }}
+                  onZurMitgliedschaft={() => { fehlendeInsAbo(); onClose(); }}
+                />
               )}
             </div>
 

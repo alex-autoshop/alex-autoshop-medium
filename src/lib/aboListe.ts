@@ -1,4 +1,4 @@
-import { aboListeErgaenzen, listeNormalisieren } from "../../shared/produktabo.js";
+import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, listeNormalisieren } from "../../shared/produktabo.js";
 
 export const ABO_SPEICHER = "alex-produktabo-v1";
 export const ABO_EREIGNIS = "alex-abo-liste";
@@ -23,15 +23,35 @@ export function aboListeLesen() {
   }
 }
 
-export function aboProduktMerken(produkt: AboMerkProdukt) {
+function schreiben(standard: number, produkte: unknown[]) {
+  try {
+    localStorage.setItem(ABO_SPEICHER, JSON.stringify({ standard, produkte }));
+  } catch { /* privater Modus */ }
+  window.dispatchEvent(new Event(ABO_EREIGNIS));
+}
+
+export function aboProduktMerken(produkt: AboMerkProdukt & { rabatt?: number }) {
   const bisher = aboListeLesen();
   const neu = aboListeErgaenzen(bisher, produkt);
-  if (neu.ergebnis === "neu") {
-    try {
-      localStorage.setItem(ABO_SPEICHER, JSON.stringify({ standard: neu.standard, produkte: neu.produkte }));
-    } catch { /* privater Modus */ }
-    window.dispatchEvent(new Event(ABO_EREIGNIS));
+  if (neu.ergebnis === "neu") schreiben(neu.standard, neu.produkte);
+  return neu.ergebnis;
+}
+
+export function aboEinzelMerken(produkt: AboMerkProdukt & { rabatt: number }) {
+  const bisher = aboListeLesen();
+  const neu = aboListeErgaenzen(bisher, produkt);
+  if (neu.ergebnis === "neu") schreiben(neu.standard, neu.produkte);
+  else if (neu.ergebnis === "schon") {
+    const aktualisiert = aboEinzelAktualisieren(neu, produkt);
+    if (aktualisiert.ergebnis === "neu") schreiben(aktualisiert.standard, aktualisiert.produkte);
   }
+  return neu.ergebnis;
+}
+
+export function aboEinzelLoeschen(id: string) {
+  const bisher = aboListeLesen();
+  const neu = aboEinzelEntfernen(bisher, id);
+  if (neu.ergebnis === "weg") schreiben(neu.standard, neu.produkte);
   return neu.ergebnis;
 }
 

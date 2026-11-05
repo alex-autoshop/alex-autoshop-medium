@@ -49,12 +49,36 @@ export declare function listeNormalisieren(roh: {
 
 export declare function aboListeErgaenzen(
   roh: { rabatt?: number; standard?: number; produkte?: Array<Record<string, unknown>> } | null,
-  produkt: { id?: string; handle?: string; titel?: string; preis?: number; waehrung?: string; bild?: string }
+  produkt: { id?: string; handle?: string; titel?: string; preis?: number; waehrung?: string; bild?: string; rabatt?: number }
 ): {
   standard: number;
   produkte: Array<Record<string, unknown> & { rabatt: number }>;
   ergebnis: "neu" | "schon" | "voll" | "leer";
 };
+
+export declare function aboEinzelAktualisieren(
+  roh: { rabatt?: number; standard?: number; produkte?: Array<Record<string, unknown>> } | null,
+  produkt: { id?: string; rabatt?: number; preis?: number }
+): {
+  standard: number;
+  produkte: Array<Record<string, unknown> & { rabatt: number }>;
+  ergebnis: "neu" | "schon" | "leer";
+};
+
+export declare function aboEinzelEntfernen(
+  roh: { rabatt?: number; standard?: number; produkte?: Array<Record<string, unknown>> } | null,
+  id: string
+): {
+  standard: number;
+  produkte: Array<Record<string, unknown> & { rabatt: number }>;
+  ergebnis: "weg" | "schon" | "leer";
+};
+
+export declare function mitgliedZeile(
+  einzel: number,
+  menge: number,
+  rabatt: number
+): { normal: number; mitglied: number; ersparnis: number; rabatt: number } | null;
 
 export declare function beitragPosition(pos: {
   art?: string;
