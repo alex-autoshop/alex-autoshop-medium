@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
-import { BrowserRouter, Routes, Route, useLocation, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigationType, Navigate, useParams } from "react-router-dom";
 import { empfehlungMerken } from "@/lib/empfehlung";
 import { empfehlungOffen } from "../shared/empfehlung.js";
 import { Header } from "@/components/Header";
@@ -42,8 +42,17 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const AdminChat = lazy(() => import("@/pages/AdminChat"));
 
 function ScrollToTop() {
-  const { pathname, hash } = useLocation();
+  const { pathname, hash, state } = useLocation();
+  const navigationType = useNavigationType();
   useEffect(() => {
+    // Shop stellt Position und Filter selbst wieder her. Ein Sprung nach oben
+    // würde die Lackierbedarf-Ansicht wie einen frischen Einstieg aussehen lassen.
+    const shopPfad = pathname === "/shop" || pathname.startsWith("/shop/") || pathname.startsWith("/kategorie/");
+    const shopZurueck = shopPfad && (
+      navigationType === "POP"
+      || Boolean((state as { shopZurueck?: boolean } | null)?.shopZurueck)
+    );
+    if (shopZurueck && !hash) return;
     if (!hash) {
       window.scrollTo(0, 0);
       return;
@@ -64,6 +73,9 @@ function ScrollToTop() {
     };
     suchen();
     return () => window.clearTimeout(id);
+    // navigationType/state nur beim Pfadwechsel lesen. Filter ändern die Query
+    // per replace — das darf die Scrollposition nicht nach oben werfen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, hash]);
   return null;
 }

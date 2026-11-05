@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { shopZurueckZiel } from "../../shared/shop-zustand.js";
 import { ShoppingCart, Minus, Plus, ChevronLeft, Store } from "lucide-react";
 import { toast } from "sonner";
 import { Seo } from "@/components/Seo";
@@ -18,6 +19,20 @@ import { AboKnopf } from "@/components/AboKnopf";
 import { BaldVerfuegbar, GefahrstoffBlock, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
 import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
 import { cn } from "@/lib/utils";
+import { EmpfohleneProdukte } from "@/components/EmpfohleneProdukte";
+
+function ZurueckZumShop({ className, mitPfeil = false }: { className?: string; mitPfeil?: boolean }) {
+  const ziel = useMemo(() => shopZurueckZiel(), []);
+  return (
+    <Link
+      to={{ pathname: ziel.pathname, search: ziel.search }}
+      state={{ shopZurueck: true }}
+      className={className}
+    >
+      {mitPfeil && <ChevronLeft className="w-4 h-4" />} Zurück zum Shop
+    </Link>
+  );
+}
 
 // Produkte mit Farb-Konfigurator (Marke → System → Menge → Fahrzeug → Farbcode)
 const CONFIGURATOR_HANDLES = new Set([
@@ -100,7 +115,7 @@ export default function ProductDetail() {
     return (
       <div className="container py-24 text-center">
         <h1 className="text-2xl mb-4">Produkt nicht gefunden</h1>
-        <Link to="/shop" className="btn-primary">Zurück zum Shop</Link>
+        <ZurueckZumShop className="btn-primary" />
       </div>
     );
   }
@@ -128,9 +143,10 @@ export default function ProductDetail() {
     <div className="container py-8 sm:py-12">
       <Seo title={product.title} description={product.description?.slice(0, 155)} jsonLd={jsonLd} />
 
-      <Link to="/shop" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-6 min-h-[44px]">
-        <ChevronLeft className="w-4 h-4" /> Zurück zum Shop
-      </Link>
+      <ZurueckZumShop
+        mitPfeil
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-6 min-h-[44px]"
+      />
 
       <div className="grid md:grid-cols-2 gap-8 lg:gap-14">
         <div className="card-tilt overflow-hidden hover:translate-y-0">
@@ -276,6 +292,8 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      <EmpfohleneProdukte produkt={product} />
     </div>
   );
 }

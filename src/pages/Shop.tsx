@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, useRef } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Palette, Droplets, Layers, Pipette, FlaskConical,
@@ -23,9 +23,11 @@ import {
 } from "@/lib/categories";
 import { brandOf, brandRank } from "@/lib/marken";
 import {
-  ShopFilters, ActiveFilterChips, EMPTY_FILTERS, productPrice, productAvailable,
+  ShopFilters, ActiveFilterChips, productPrice, productAvailable,
   type ShopFilterState,
 } from "@/components/ShopFilters";
+import { shopZustandSchreiben, sucheAusZustand, zustandAusSuche } from "../../shared/shop-zustand.js";
+import { useShopKontextMerken } from "@/lib/shopRueckkehr";
 import { cn } from "@/lib/utils";
 
 // Eigene-Farbe-Konfiguratoren: ganz oben, wenn man den Shop betritt.
@@ -299,15 +301,29 @@ export default function Shop() {
   const { category: rawCategory } = useParams();
   const legacyTarget = rawCategory ? legacyCategoryRedirect(rawCategory) : undefined;
   const category = legacyTarget ? undefined : rawCategory;
-  const [search, setSearch] = useState("");
-  const [submittedSearch, setSubmittedSearch] = useState("");
+  const [params, setParams] = useSearchParams();
+  // Kategorie bleibt im Pfad (/shop/lackierbedarf-alle). Marke, Art, Preis,
+  // Suche und Sortierung stehen in der Query, damit Zurück und der
+  // Browser-Zurück nicht auf der Wunschfarben-Ansicht landen.
+  const ausUrl = useMemo(() => zustandAusSuche(params.toString()), [params]);
+  const filters: ShopFilterState = useMemo(() => ({
+    brands: ausUrl.brands,
+    tags: ausUrl.tags,
+    priceMax: ausUrl.priceMax,
+    onlyAvailable: ausUrl.onlyAvailable,
+  }), [ausUrl]);
+  const sortMode = ausUrl.sort as SortMode;
+  const submittedSearch = ausUrl.q;
+  const [search, setSearch] = useState(ausUrl.q);
+  const qGemerk = useRef(ausUrl.q);
+  if (qGemerk.current !== ausUrl.q) {
+    qGemerk.current = ausUrl.q;
+    setSearch(ausUrl.q);
+  }
   const [shopMode, setShopMode] = useState<ShopMode>('standard');
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sidebar-Filter, Sortierung und Spaltenzahl
-  const [filters, setFilters] = useState<ShopFilterState>(EMPTY_FILTERS);
-  const [sortMode, setSortMode] = useState<SortMode>("empfohlen");
   const [columns, setColumns] = useState<4 | 5 | 6>(() => {
     const saved = Number(typeof window !== "undefined" ? localStorage.getItem("shop:cols") : 0);
     return saved === 4 || saved === 5 || saved === 6 ? (saved as 4 | 5 | 6) : 5;
@@ -318,19 +334,36 @@ export default function Shop() {
     try { localStorage.setItem("shop:cols", String(c)); } catch { /* egal */ }
   };
 
-  // Kategorie-/Suchwechsel setzt die Filter zurück — sonst steht man vor 0 Treffern.
-  useEffect(() => { setFilters(EMPTY_FILTERS); }, [category, submittedSearch]);
+  const schreibe = useCallback((next: ShopFilterState & { q: string; sort: SortMode }) => {
+    const suche = sucheAusZustand(next);
+    const aktuell = sucheAusZustand(zustandAusSuche(window.location.search));
+    if (suche === aktuell) return;
+    shopZustandSchreiben({ pathname: window.location.pathname, search: suche, scroll: window.scrollY });
+    setParams(new URLSearchParams(suche.startsWith("?") ? suche.slice(1) : ""), { replace: true });
+  }, [setParams]);
+
+  const setFilters = (f: ShopFilterState) => {
+    schreibe({ ...f, q: submittedSearch, sort: sortMode });
+  };
+
+  // Neue Suche setzt die Facetten zurück — sonst bleibt man bei 0 Treffern.
+  useEffect(() => {
+    if (search.trim() === submittedSearch) return;
+    const t = window.setTimeout(() => {
+      schreibe({
+        brands: [],
+        tags: [],
+        priceMax: null,
+        onlyAvailable: false,
+        q: search.trim(),
+        sort: sortMode,
+      });
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [search, submittedSearch, sortMode, schreibe]);
 
   const activeCategory = category ? getCategoryBySlug(category) : undefined;
   const parentCategory = category ? getParentCategory(category) : undefined;
-
-  // Live search — debounced 300ms
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSubmittedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   // Keyboard shortcut: "/" focuses search
   useEffect(() => {
@@ -363,6 +396,8 @@ export default function Shop() {
     pageSize: 250,
     loadAll: true,
   });
+
+  useShopKontextMerken(!isLoading);
 
   // Featured konfigurator products
   const [featured, setFeatured] = useState<ShopifyProduct[]>([]);
@@ -526,7 +561,14 @@ export default function Shop() {
                   transition={{ duration: 0.15 }}
                   onClick={() => {
                     setSearch("");
-                    setSubmittedSearch("");
+                    schreibe({
+                      brands: [],
+                      tags: [],
+                      priceMax: null,
+                      onlyAvailable: false,
+                      q: "",
+                      sort: sortMode,
+                    });
                     inputRef.current?.focus();
                   }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
@@ -746,7 +788,7 @@ export default function Shop() {
             <span className="hidden sm:inline">Sortiert nach:</span>
             <select
               value={sortMode}
-              onChange={(e) => setSortMode(e.target.value as SortMode)}
+              onChange={(e) => schreibe({ ...filters, q: submittedSearch, sort: e.target.value as SortMode })}
               className="h-9 rounded-lg border border-border bg-card px-2.5 text-sm text-foreground focus:outline-none focus:border-primary/60"
             >
               {(Object.keys(SORT_LABELS) as SortMode[]).map((k) => (
