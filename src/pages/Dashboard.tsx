@@ -269,9 +269,7 @@ function Overview({ level, profile, trialActive, effectiveLevel, onTab }: {
   );
 }
 
-/** Eigener Dashboard-Tab: Stufe waehlen, wechseln, Module sehen.
- *  Die oeffentliche Seite /mitgliedschaft ist nur noch fuer angemeldete
- *  Kunden lesbar — hier drin ist sie fuer Mitglieder immer erreichbar. */
+/** Eigener Dashboard-Tab: Stufe waehlen, wechseln, Module sehen. */
 function MitgliedschaftTab({ level, profile }: {
   level: number;
   profile: import("@/context/AuthContext").CompanyProfile;
