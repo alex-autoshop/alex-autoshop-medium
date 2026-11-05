@@ -36,6 +36,8 @@ export interface AboProdukt {
   waehrung: string;
   bild?: string;
   rabatt: number;
+  /** true, wenn die Varianten verschiedene Preise haben — dann „ab …“. */
+  ab?: boolean;
 }
 
 /** Eine Zeile der Abo-Liste: entweder ein einzelnes Produkt oder eine
@@ -76,26 +78,50 @@ function StufenWahl({ wert, onChange, label }: { wert: number; onChange: (n: num
   );
 }
 
-function positiverPreis(p: ShopifyProduct): number {
+/** Kleinster Variantenpreis über 0, wie auf der Produktkarte. „ab“, wenn sie auseinanderliegen. */
+function preisLage(p: ShopifyProduct): { preis: number; ab: boolean } {
   const betraege = (p.node.variants?.edges ?? [])
     .map((e) => parseFloat(e.node.price?.amount ?? ""))
     .filter((n) => Number.isFinite(n) && n > 0);
-  if (betraege.length) return Math.min(...betraege);
+  if (betraege.length) {
+    const min = Math.min(...betraege);
+    const max = Math.max(...betraege);
+    return { preis: min, ab: max - min > 0.009 };
+  }
   const min = parseFloat(p.node.priceRange?.minVariantPrice?.amount ?? "");
-  return Number.isFinite(min) && min > 0 ? min : 0;
+  return { preis: Number.isFinite(min) && min > 0 ? min : 0, ab: false };
 }
 
 function alsAboProdukt(p: ShopifyProduct): AboProdukt {
   const n = p.node;
+  const lage = preisLage(p);
   return {
     id: n.id,
     handle: n.handle,
     titel: n.title,
-    preis: positiverPreis(p),
+    preis: lage.preis,
+    ab: lage.ab,
     waehrung: n.priceRange?.minVariantPrice?.currencyCode ?? "EUR",
     bild: n.images?.edges?.[0]?.node?.url,
     rabatt: 15,
   };
+}
+
+/** Dieselbe Rechnung wie „als Mitglied“ auf der Karte: Normalpreis × (1 − Stufe). */
+function AboPreis({ normal, mitglied, ab, rabatt, beitrag }: {
+  normal: number; mitglied: number; ab?: boolean; rabatt: number; beitrag: number;
+}) {
+  const vor = ab ? "ab " : "";
+  return (
+    <div className="mt-0.5">
+      <p className="text-xs leading-snug">
+        <span className="text-muted-foreground line-through">{vor}{euro(normal)}</span>
+        {" "}
+        <span className="font-semibold text-primary">Dein Preis {vor}{euro(mitglied)} ({rabatt} %)</span>
+      </p>
+      <p className="text-[11px] text-muted-foreground">Abo: {euro(beitrag)} / Monat</p>
+    </div>
+  );
 }
 
 function katalogHinweis(anzahl: number, suche: boolean, laedt: boolean) {
@@ -452,31 +478,24 @@ export function ProduktAbo() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold leading-snug line-clamp-2">{p.titel}</p>
-                      {istMenge(p) && m ? (
-                        <>
-                          <p className="text-[11px] text-muted-foreground leading-tight">
-                            {p.variante} · {p.menge}× / Monat
-                          </p>
-                          <p className="text-xs mt-0.5">
-                            <span className="text-muted-foreground line-through mr-1.5">{euro(m.normal)}</span>
-                            <span className="text-primary font-bold">{euro(mitglied)}</span>
-                          </p>
-                        </>
-                      ) : (
-                        <p className="text-xs mt-0.5">
-                          <span className="text-muted-foreground line-through mr-1.5">
-                            {formatPrice(String((p as AboProdukt).preis), (p as AboProdukt).waehrung)}
-                          </span>
-                          <span className="text-primary font-bold">{euro(mitglied)}</span>
+                      {istMenge(p) && (
+                        <p className="text-[11px] text-muted-foreground leading-tight">
+                          {p.variante} · {p.menge}× / Monat
                         </p>
                       )}
-                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <AboPreis
+                        normal={m ? m.normal : (p as AboProdukt).preis}
+                        mitglied={mitglied}
+                        ab={!m && (p as AboProdukt).ab}
+                        rabatt={p.rabatt}
+                        beitrag={beitrag}
+                      />
+                      <div className="mt-1.5">
                         <StufenWahl
                           wert={p.rabatt}
                           label={`Rabatt für ${p.titel}`}
                           onChange={(r) => setProdukte((alt) => alt.map((x) => (x.id === p.id ? { ...x, rabatt: r } : x)))}
                         />
-                        <span className="text-[11px] text-muted-foreground">{euro(beitrag)} / Monat</span>
                       </div>
                     </div>
                     <button
@@ -499,7 +518,7 @@ export function ProduktAbo() {
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border-2 border-primary/50 bg-primary/5 p-5 sm:p-6"
           >
-            <p className="text-sm text-muted-foreground">Du zahlst</p>
+            <p className="text-sm text-muted-foreground">Monatlich gesamt</p>
             <p className="font-display font-bold text-3xl tabular-nums leading-none mt-1">
               {euro(gesamt?.beitrag ?? 0)} <span className="text-base font-normal text-muted-foreground">/ Monat</span>
             </p>
@@ -545,6 +564,7 @@ export function ProduktAbo() {
       <AboLeisteMobil
         produkte={produkte.map((p) => ({ id: p.id, titel: p.titel, bild: p.bild }))}
         beitrag={gesamt?.beitrag ?? 0}
+        mitglied={gesamt ? Math.round(gesamt.zeilen.reduce((s, z) => s + z.mitglied, 0) * 100) / 100 : 0}
         verdeckt={listeSichtbar || blatt}
         onAnsehen={() => setBlatt(true)}
       />
@@ -584,7 +604,16 @@ export function ProduktAbo() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold leading-snug line-clamp-2">{p.titel}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{euro(beitrag)} / Monat</p>
+                      {istMenge(p) && (
+                        <p className="text-[11px] text-muted-foreground leading-tight">{p.variante}</p>
+                      )}
+                      <AboPreis
+                        normal={m ? m.normal : (p as AboProdukt).preis}
+                        mitglied={m ? m.mitglied : (p as AboProdukt).preis * (1 - p.rabatt / 100)}
+                        ab={!m && (p as AboProdukt).ab}
+                        rabatt={p.rabatt}
+                        beitrag={beitrag}
+                      />
                       <div className="mt-1.5">
                         <StufenWahl
                           wert={p.rabatt}
@@ -605,6 +634,7 @@ export function ProduktAbo() {
                 );
               })}
               <form onSubmit={abschliessen} className="rounded-2xl border-2 border-primary/50 bg-primary/5 p-4 space-y-3">
+                <p className="text-sm text-muted-foreground">Monatlich gesamt</p>
                 <p className="font-display font-bold text-2xl tabular-nums leading-none">
                   {euro(gesamt?.beitrag ?? 0)} <span className="text-base font-normal text-muted-foreground">/ Monat</span>
                 </p>
