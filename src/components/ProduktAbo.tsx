@@ -13,7 +13,7 @@ import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
   produktAboErsparnis, mengenPosition, aboGesamt,
 } from "../../shared/produktabo.js";
-import { WunschfarbenLeiste, type MengenEintrag } from "@/components/WunschfarbenLeiste";
+import { WunschfarbenLeiste, MISCH_PRODUKTE, type MengenEintrag } from "@/components/WunschfarbenLeiste";
 import { cn } from "@/lib/utils";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
@@ -81,6 +81,8 @@ export function ProduktAbo() {
   const [email, setEmail] = useState("");
   const [zahlweg, setZahlweg] = useState<"gocardless" | "stripe">("gocardless");
   const [laeuft, setLaeuft] = useState(false);
+  const [farbeAuf, setFarbeAuf] = useState(0);
+  const [farbeStart, setFarbeStart] = useState("");
 
   // Auswahl überlebt einen Seitenwechsel — sonst ist die Arbeit weg
   useEffect(() => {
@@ -112,6 +114,14 @@ export function ProduktAbo() {
   const proProdukt = PRODUKT_ABO_PREISE[rabatt];
 
   const drin = (id: string) => produkte.some((p) => p.id === id);
+
+  function wunschOeffnen(handle: string) {
+    const m = MISCH_PRODUKTE.find((x) => x.handle === handle);
+    if (!m) return false;
+    setFarbeStart(m.id);
+    setFarbeAuf((n) => n + 1);
+    return true;
+  }
 
   function hinzufuegen(p: ShopifyProduct) {
     const neu = alsAboProdukt(p);
@@ -176,6 +186,24 @@ export function ProduktAbo() {
 
   return (
     <div>
+      {/* Eingeklappt ganz oben, damit die Karte nicht unter der Produktliste verschwindet. */}
+      <div className="max-w-3xl mx-auto mb-8">
+        <WunschfarbenLeiste
+          rabatt={rabatt}
+          oeffnen={farbeAuf}
+          start={farbeStart}
+          onHinzufuegen={(e) => {
+            if (produkte.some((p) => p.id === e.id)) {
+              setProdukte((alt) => alt.map((p) => (p.id === e.id && istMenge(p) ? { ...p, menge: p.menge + e.menge } : p)));
+              toast.success("Menge erhöht");
+              return;
+            }
+            if (produkte.length >= MAX_PRODUKTE) { toast.error("Liste ist voll — ruf uns an."); return; }
+            setProdukte((alt) => [...alt, e]);
+          }}
+        />
+      </div>
+
       {/* ── Rabattstufe ───────────────────────────────────────────────── */}
       <div className="max-w-3xl mx-auto mb-8">
         <p className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
@@ -259,13 +287,24 @@ export function ProduktAbo() {
             {products.map((p) => {
               const a = alsAboProdukt(p);
               const schon = drin(a.id);
+              const misch = MISCH_PRODUKTE.find((m) => m.handle === a.handle);
               return (
                 <div key={a.id} className="flex items-center gap-3 rounded-xl border border-border p-2.5">
                   <div className="w-14 h-14 rounded-lg bg-secondary shrink-0 overflow-hidden">
                     {a.bild && <img src={a.bild} alt="" className="w-full h-full object-cover" loading="lazy" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold leading-snug line-clamp-2">{a.titel}</p>
+                    {misch ? (
+                      <button
+                        type="button"
+                        className="text-sm font-semibold leading-snug line-clamp-2 text-left cursor-pointer hover:text-primary"
+                        onClick={() => wunschOeffnen(a.handle)}
+                      >
+                        {a.titel}
+                      </button>
+                    ) : (
+                      <p className="text-sm font-semibold leading-snug line-clamp-2">{a.titel}</p>
+                    )}
                     <p className="text-xs text-muted-foreground mt-0.5 line-through">
                       {formatPrice(String(a.preis), a.waehrung)}
                     </p>
@@ -275,35 +314,29 @@ export function ProduktAbo() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => hinzufuegen(p)}
-                    disabled={schon}
-                    aria-label={schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`}
+                    onClick={() => {
+                      if (misch) wunschOeffnen(a.handle);
+                      if (!schon) hinzufuegen(p);
+                    }}
+                    disabled={schon && !misch}
+                    aria-label={
+                      misch ? `${a.titel} konfigurieren` :
+                      schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`
+                    }
                     className={cn(
                       "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors min-h-[40px]",
-                      schon ? "bg-secondary text-muted-foreground cursor-default"
-                            : "bg-primary text-primary-foreground hover:brightness-95"
+                      schon && !misch
+                        ? "bg-secondary text-muted-foreground cursor-default"
+                        : "bg-primary text-primary-foreground hover:brightness-95 cursor-pointer"
                     )}
                   >
-                    {schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
+                    {schon && misch ? "Öffnen" : schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
                   </button>
                 </div>
               );
             })}
           </div>
         </div>
-
-        <WunschfarbenLeiste
-          rabatt={rabatt}
-          onHinzufuegen={(e) => {
-            if (produkte.some((p) => p.id === e.id)) {
-              setProdukte((alt) => alt.map((p) => (p.id === e.id && istMenge(p) ? { ...p, menge: p.menge + e.menge } : p)));
-              toast.success("Menge erhöht");
-              return;
-            }
-            if (produkte.length >= MAX_PRODUKTE) { toast.error("Liste ist voll — ruf uns an."); return; }
-            setProdukte((alt) => [...alt, e]);
-          }}
-        />
         </div>
 
         {/* ── Abo-Liste und Rechner ───────────────────────────────────── */}
