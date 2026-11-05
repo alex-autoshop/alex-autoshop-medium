@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useShopKontextMerken } from "@/lib/shopRueckkehr";
 import { ChevronRight, PackageOpen, ArrowRight, X } from "lucide-react";
 import { brandOf, brandRank } from "@/lib/marken";
 import { Seo } from "@/components/Seo";
@@ -59,6 +60,7 @@ export default function Kategorie() {
 
   const treffer = findCategory(handle);
   const { products, isLoading, error, notFound, hasNextPage } = useCollectionProducts(handle, sort);
+  useShopKontextMerken(!isLoading);
 
   // Markenfilter: ?marke=Mipa,FRIZ — Marke kommt aus Titel/Handle (siehe @/lib/marken)
   const gewaehlteMarken = useMemo(
