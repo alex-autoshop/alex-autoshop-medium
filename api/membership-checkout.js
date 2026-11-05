@@ -18,10 +18,15 @@ export const config = { runtime: "edge" };
 
 import { mitgliedsbeitrag, rabattName, DIENSTLEISTUNG_BUCHBAR } from "../shared/mitgliedspreise.js";
 import { aboListeGesamt } from "../shared/produktabo.js";
+import { empfehlungSichtbar } from "../shared/empfehlung.js";
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
 const REF_OK = /^[A-Z0-9]{6,8}$/;
-const refAus = (x) => { const r = String(x || "").trim().toUpperCase(); return REF_OK.test(r) ? r : ""; };
+const refAus = (email, x) => {
+  if (!empfehlungSichtbar(email)) return "";
+  const r = String(x || "").trim().toUpperCase();
+  return REF_OK.test(r) ? r : "";
+};
 
 const BASE = () => process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de";
 
@@ -235,7 +240,7 @@ export default async function handler(req) {
     const paket = ["Pmix", String(g.beitrag), stufen].join("|");
     try {
       const r = method === "stripe"
-        ? await createProduktSession({ email, price: g.beitrag, zeilen, positionen, ref: refAus(refRoh) })
+        ? await createProduktSession({ email, price: g.beitrag, zeilen, positionen, ref: refAus(email, refRoh) })
         : await createProduktFlow({ email, price: g.beitrag, paket, positionen });
       if (r.fallback) return json({ fallback: true, reason: `${method} noch nicht konfiguriert` });
       if (!r.url) return json({ error: "Keine Checkout-URL erhalten" }, 502);
@@ -270,7 +275,7 @@ export default async function handler(req) {
     b.freePaint ? "farbe" : "ohneFarbe",
     b.aufbereitung ? "aufb" : "ohneAufb",
   ].join("|");
-  const arg = { email, level: b.level, modules: b.module, price: b.preis, paket, ref: refAus(refRoh) };
+  const arg = { email, level: b.level, modules: b.module, price: b.preis, paket, ref: refAus(email, refRoh) };
 
   try {
     const result = method === "stripe"

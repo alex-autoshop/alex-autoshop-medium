@@ -22,7 +22,7 @@ export const config = { runtime: 'edge' };
 import { mitgliedsbeitrag, MODULE } from '../shared/mitgliedspreise.js';
 import { aboListeGesamt } from '../shared/produktabo.js';
 import { internPruefen } from './_intern.js';
-import { EMPFEHLUNGS_PROZENT } from '../shared/empfehlung.js';
+import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from '../shared/empfehlung.js';
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
 const REF_OK = /^[A-Z0-9]{6,8}$/;
@@ -775,23 +775,24 @@ export default async function handler(req) {
     }),
   }).catch(e => console.error('Admin notification failed (non-fatal):', e?.message));
 
-  // ── Email 2: Affiliate Upsell (10 Minuten später via Resend scheduled_at) ─
-  const affiliateAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-  const r2 = await fetch('https://api.resend.com/emails', {
-    method:  'POST',
-    headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from:         FROM_EMAIL,
-      reply_to:     REPLY_TO,
-      to:           [email],
-      subject:      `💸 Dein Referral-Link — verdiene ${EMPFEHLUNGS_PROZENT} % vom Umsatz deiner Kollegen`,
-      html:         buildAffiliateEmail({ email, level, memberNo, referralCode }),
-      scheduled_at: affiliateAt,
-    }),
-  });
-  // Affiliate-Email-Fehler ist nicht kritisch — nur loggen
-  if (!r2.ok) {
-    console.error('Affiliate email scheduling failed:', await r2.text());
+  // ── Email 2: Affiliate Upsell, nur solange das Programm offen ist ─
+  if (empfehlungOffen()) {
+    const affiliateAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const r2 = await fetch('https://api.resend.com/emails', {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from:         FROM_EMAIL,
+        reply_to:     REPLY_TO,
+        to:           [email],
+        subject:      `💸 Dein Referral-Link — verdiene ${EMPFEHLUNGS_PROZENT} % vom Umsatz deiner Kollegen`,
+        html:         buildAffiliateEmail({ email, level, memberNo, referralCode }),
+        scheduled_at: affiliateAt,
+      }),
+    });
+    if (!r2.ok) {
+      console.error('Affiliate email scheduling failed:', await r2.text());
+    }
   }
 
   return new Response(

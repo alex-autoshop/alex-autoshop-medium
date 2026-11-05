@@ -14,6 +14,8 @@
  * Vercel-Env: SUPABASE_SERVICE_ROLE_KEY (bereits gesetzt)
  */
 
+import { empfehlungSichtbar } from "../shared/empfehlung.js";
+
 export const config = { runtime: "nodejs", maxDuration: 10 };
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co").replace(/\/+$/, "");
@@ -44,6 +46,9 @@ export default async function handler(req, res) {
     if (!me.ok) return send(res, 401, { error: "Sitzung abgelaufen." });
     const user = await me.json();
     if (!user?.id) return send(res, 401, { error: "Bitte anmelden." });
+    if (!empfehlungSichtbar(user.email)) {
+      return send(res, 404, { error: "Diese Seite ist derzeit nicht verfügbar." });
+    }
 
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/werber_zuordnen`, {
       method: "POST",
