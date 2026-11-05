@@ -108,7 +108,7 @@ export function AboVorschau({
             ))}
           </ul>
           {!misch && (
-            <div role="group" aria-label={`Rabatt für ${n.title}`} className="inline-flex rounded-lg border border-border overflow-hidden">
+            <div role="group" aria-label={`Rabatt für ${n.title}`} className="flex w-full rounded-lg border border-border overflow-hidden">
               {ABO_RABATTE.map((r) => (
                 <button
                   key={r}
@@ -116,7 +116,7 @@ export function AboVorschau({
                   aria-pressed={stufe === r}
                   onClick={() => onStufe(r)}
                   className={cn(
-                    "min-h-11 min-w-11 px-3 text-sm font-semibold",
+                    "flex-1 basis-0 min-w-0 min-h-11 px-1 text-sm font-semibold text-center",
                     stufe === r ? "bg-primary text-primary-foreground" : "bg-white hover:bg-primary/10"
                   )}
                 >

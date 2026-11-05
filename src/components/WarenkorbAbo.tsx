@@ -68,7 +68,7 @@ export function WarenkorbAboZeile({
         </p>
       )}
       <div className="flex flex-wrap items-center gap-4">
-        <div role="group" aria-label={`Rabatt für ${produkt.titel}`} className="inline-flex rounded-lg border border-border overflow-hidden">
+        <div role="group" aria-label={`Rabatt für ${produkt.titel}`} className="flex w-full rounded-lg border border-border overflow-hidden">
           {ABO_RABATTE.map((r) => (
             <button
               key={r}
@@ -76,7 +76,7 @@ export function WarenkorbAboZeile({
               aria-pressed={stufe === r}
               onClick={() => waehlen(r)}
               className={cn(
-                "min-h-11 min-w-11 px-2 text-xs font-semibold",
+                "flex-1 basis-0 min-w-0 min-h-11 px-1 text-xs font-semibold text-center",
                 stufe === r ? "bg-primary text-primary-foreground" : "bg-card hover:bg-primary/10"
               )}
             >
