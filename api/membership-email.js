@@ -315,7 +315,7 @@ function buildOnboardingEmail({ email, password, level, modules, price, memberNo
     <table width="100%" cellpadding="0" cellspacing="0" style="background:${B.surfaceAlt};border:1px solid ${B.border};border-radius:12px;">
       <tr><td style="padding:20px 22px;">
         <p style="color:${B.gold};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px;font-family:${B.fontBody};">Online — Kreditkarte / PayPal</p>
-        <p style="color:${B.textMuted};font-size:13px;margin:0 0 14px;font-family:${B.fontBody};">Direkt über unseren Shopify Checkout:</p>
+        <p style="color:${B.textMuted};font-size:13px;margin:0 0 14px;font-family:${B.fontBody};">Direkt über unseren Checkout:</p>
         <table cellpadding="0" cellspacing="0">
           <tr><td style="background:${B.night};border:1px solid ${B.border};border-radius:8px;padding:10px 20px;">
             <a href="${SHOP_URL}" style="color:#fff;font-size:13px;font-weight:700;text-decoration:none;font-family:${B.fontBody};">Zum sicheren Checkout →</a>

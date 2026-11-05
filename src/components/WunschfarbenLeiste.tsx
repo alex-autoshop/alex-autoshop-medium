@@ -9,9 +9,9 @@ import { cn } from "@/lib/utils";
 /** Die drei Misch-Produkte. Preise und Gebinde kommen aus Shopify — hier steht
  *  nur, welches Produkt gemeint ist, damit nichts doppelt gepflegt wird. */
 export const MISCH_PRODUKTE = [
-  { id: "farbe", handle: "farben-mix",                             label: "Wunschfarbe", icon: Palette,  einheit: "Liter" },
-  { id: "spray", handle: "individuelle-spraydose-erstellen",       label: "Spraydose",   icon: SprayCan, einheit: "Dosen" },
-  { id: "stift", handle: "individuellen-lackstift-bestellen-20ml", label: "Lackstift",   icon: Pencil,   einheit: "Stifte" },
+  { id: "farbe", handle: "farben-mix",                             label: "Wunschfarbe", knopf: "Wunschfarben", icon: Palette,  einheit: "Liter" },
+  { id: "spray", handle: "individuelle-spraydose-erstellen",       label: "Spraydose",   knopf: "Spraydosen",   icon: SprayCan, einheit: "Dosen" },
+  { id: "stift", handle: "individuellen-lackstift-bestellen-20ml", label: "Lackstift",   knopf: "Lackstifte",   icon: Pencil,   einheit: "Stifte" },
 ] as const;
 
 export interface MengenEintrag {
@@ -251,7 +251,7 @@ export function WunschfarbenLeiste({
               className={cn("cursor-pointer rounded-xl border-2 px-2 py-3 text-center transition-all min-h-[68px]",
                 an ? "border-primary bg-primary/15" : "border-border bg-card hover:border-primary/50")}>
               <m.icon className={cn("w-5 h-5 mx-auto mb-1", an ? "text-primary" : "text-muted-foreground")} />
-              <span className="block text-xs font-semibold leading-tight">{m.label}</span>
+              <span className="block text-[11px] sm:text-xs font-semibold leading-tight">{m.knopf}</span>
             </button>
           );
         })}

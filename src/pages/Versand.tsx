@@ -26,7 +26,7 @@ export default function Versand() {
     <>
       <Seo
         title="Versand & Lieferung"
-        description="Versandkosten bei Alex Autoshop: Teilebörse 7,49 € DHL für alle, frei ab 150 €. Im Shopify-Shop ist der Versand für Mitglieder kostenlos."
+        description="Versandkosten bei Alex Autoshop: Teilebörse 7,49 € DHL für alle, frei ab 150 €. Im Shop ist der Versand für Mitglieder kostenlos."
       />
 
       <div className="max-w-3xl mx-auto px-4 py-12 space-y-10">
@@ -48,9 +48,9 @@ export default function Versand() {
             <Star className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <p className="font-semibold text-sm">Mitgliedschaft gilt im Shopify-Shop</p>
+            <p className="font-semibold text-sm">Mitgliedschaft gilt im Shop</p>
             <p className="text-muted-foreground text-sm mt-0.5">
-              Mit aktiver bezahlter Mitgliedschaft (Level 1–3) ist der Versand im Shopify-Shop kostenlos,
+              Mit aktiver bezahlter Mitgliedschaft (Level 1–3) ist der Versand im Shop kostenlos,
               auch unter {FREE_THRESHOLD} €. In der Teilebörse zahlt jeder {DHL_RATE.toFixed(2).replace(".", ",")} € DHL,
               frei ab {FREE_THRESHOLD} €. Die Teststunde ist kein kostenloser Shop-Versand.
             </p>
@@ -195,12 +195,12 @@ export default function Versand() {
                   <td className="py-2.5 font-semibold text-primary">Kostenlos ✓</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 pr-4 font-medium">Shopify-Shop, Mitglied Level 1–3</td>
+                  <td className="py-2.5 pr-4 font-medium">Online-Shop, Mitglied Level 1–3</td>
                   <td className="py-2.5 pr-4 text-muted-foreground">Jede Shop-Bestellung</td>
                   <td className="py-2.5 font-semibold text-primary">Kostenlos ✓</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 pr-4 font-medium">Shopify-Shop ohne Mitgliedschaft</td>
+                  <td className="py-2.5 pr-4 font-medium">Online-Shop ohne Mitgliedschaft</td>
                   <td className="py-2.5 pr-4 text-muted-foreground">Wie die Teilebörse</td>
                   <td className="py-2.5 text-muted-foreground">{DHL_RATE.toFixed(2).replace(".", ",")} €, frei ab 150 €</td>
                 </tr>

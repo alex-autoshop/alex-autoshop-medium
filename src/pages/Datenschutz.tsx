@@ -43,14 +43,15 @@ const Datenschutz = () => (
         Framework.
       </p>
 
-      <h2>5. Shop &amp; Bezahlung (Shopify)</h2>
+      <h2>5. Shop &amp; Bezahlung</h2>
       <p>
-        Für Produktkatalog, Warenkorb und Kaufabwicklung nutzen wir Shopify (Shopify International
-        Ltd., Victoria Buildings, 1-2 Haddington Road, Dublin 4, Irland). Bei einer Bestellung
-        werden die dafür erforderlichen Daten (Bestelldaten, Liefer- und Rechnungsadresse,
-        Zahlungsinformationen) durch Shopify bzw. den jeweiligen Zahlungsdienstleister (z.&nbsp;B.
-        Shopify Payments, PayPal, Klarna) verarbeitet. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.
-        Details: <a href="https://www.shopify.com/de/legal/datenschutz" target="_blank" rel="noopener noreferrer">Shopify-Datenschutzerklärung</a>.
+        Für Produktkatalog, Warenkorb und Kaufabwicklung im Online-Shop nutzen wir einen
+        Shop-Dienstleister (Shopify International Ltd., Victoria Buildings, 1-2 Haddington Road,
+        Dublin 4, Irland). Bei einer Bestellung werden die dafür erforderlichen Daten
+        (Bestelldaten, Liefer- und Rechnungsadresse, Zahlungsinformationen) durch diesen
+        Dienstleister bzw. den jeweiligen Zahlungsdienstleister (z.&nbsp;B. Karte, PayPal, Klarna)
+        verarbeitet. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.
+        Details: <a href="https://www.shopify.com/de/legal/datenschutz" target="_blank" rel="noopener noreferrer">Datenschutzerklärung des Shop-Dienstleisters</a>.
       </p>
 
       <h2>6. Kundenkonto &amp; Datenbank (Supabase)</h2>

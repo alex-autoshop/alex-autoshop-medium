@@ -15,7 +15,7 @@ const ABOS: { id: AboArt; titel: string; text: string; icon: typeof Wrench }[] =
   {
     id: "dienstleistung",
     titel: "Dienstleistungs-Mitgliedschaft",
-    text: "Rabatt im Shopify-Shop, dazu Lieferung, Gratis-Farbe, Farbfehlerschutz und Aufbereitung. Nicht in der Teilebörse.",
+    text: "Rabatt im Shop, dazu Lieferung, Gratis-Farbe, Farbfehlerschutz und Aufbereitung. Nicht in der Teilebörse.",
     icon: Wrench,
   },
   {
@@ -29,7 +29,7 @@ const ABOS: { id: AboArt; titel: string; text: string; icon: typeof Wrench }[] =
 const FAQ = [
   {
     q: "Gilt die Mitgliedschaft nur in Wuppertal?",
-    a: "Nein — deutschlandweit. Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Die Mitgliedschaft gilt im Shopify-Shop: dort ist der Versand mit aktiver bezahlter Mitgliedschaft (Level 1–3) kostenlos. In der Teilebörse gilt ein Preis für alle, und DHL kostet 7,49 €, frei ab 150 € Warenwert — auch für Mitglieder.",
+    a: "Nein — deutschlandweit. Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Die Mitgliedschaft gilt im Shop: dort ist der Versand mit aktiver bezahlter Mitgliedschaft (Level 1–3) kostenlos. In der Teilebörse gilt ein Preis für alle, und DHL kostet 7,49 €, frei ab 150 € Warenwert — auch für Mitglieder.",
   },
   {
     q: "Wie werde ich Mitglied?",
@@ -41,7 +41,7 @@ const FAQ = [
   },
   {
     q: "Gilt der Rabatt auf alles?",
-    a: "Der Rabatt gilt im Shopify-Shop auf Lack und Werkstattbedarf. In der Teilebörse gibt es keine Mitgliedspreise und keinen Mitglieds-Versand: dort zahlt jeder denselben Preis, DHL 7,49 €, frei ab 150 €.",
+    a: "Der Rabatt gilt im Shop auf Lack und Werkstattbedarf. In der Teilebörse gibt es keine Mitgliedspreise und keinen Mitglieds-Versand: dort zahlt jeder denselben Preis, DHL 7,49 €, frei ab 150 €.",
   },
   {
     q: "Kann ich den Rabatt später ändern?",
@@ -61,19 +61,19 @@ export default function Mitgliedschaft() {
     <div>
       <Seo
         title="Mitgliedschaft – bis 40% Rabatt, deutschlandweit"
-        description="Mitgliedschaft im Shopify-Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle. Monatlich kündbar."
+        description="Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle. Monatlich kündbar."
       />
 
       <section className="section-dark py-16 sm:py-20">
         <div className="container text-center max-w-2xl mx-auto">
           <span className="inline-flex items-center gap-2 rounded-full bg-gold-bright/15 border border-gold-bright/30 text-gold-accent text-xs font-bold uppercase tracking-wide px-4 py-1.5 mb-5">
-            🔥 Brandneu · Mitgliedschaft in Beta
+            🔥 Brandneu · Mitgliedschaft
           </span>
           <h1 className="text-3xl sm:text-5xl mb-4">
             Dein Betrieb. <span className="text-gold-accent">Deine Konditionen.</span>
           </h1>
           <p className="text-white/65 text-lg">
-            Die Mitgliedschaft gilt im Shopify-Shop: Rabatt auf Lack und Werkstattbedarf,
+            Die Mitgliedschaft gilt im Shop: Rabatt auf Lack und Werkstattbedarf,
             und kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle.
             Monatlich kündbar, keine Mindestabnahme.
           </p>
