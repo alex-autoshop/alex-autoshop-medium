@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Minus, Plus, ChevronDown } from "lucide-react";
-import { AboKnopf } from "@/components/AboKnopf";
+import { ShopBild } from "@/components/ShopBild";
+
+const AboKnopf = lazy(() => import("@/components/AboKnopf").then((m) => ({ default: m.AboKnopf })));
 import { toast } from "sonner";
 import { type ShopifyProduct, formatPrice } from "@/lib/shopify";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
@@ -10,7 +12,7 @@ import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { cn } from "@/lib/utils";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
 
-export function ProductCard({ product }: { product: ShopifyProduct }) {
+export function ProductCard({ product, priority = false }: { product: ShopifyProduct; priority?: boolean }) {
   const addItem = useCartStore((s) => s.addItem);
   const [qty, setQty] = useState(1);
   const [showPrices, setShowPrices] = useState(false);
@@ -63,22 +65,24 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
 
   return (
     <div className="card-tilt overflow-hidden flex flex-col relative">
-      <AboKnopf
-        className="top-2 left-2"
-        produkt={{
-          id: node.id,
-          handle: node.handle,
-          titel: node.title,
-          preis: basePrice,
-          waehrung: cur,
-          bild: img || undefined,
-        }}
-      />
+      <Suspense fallback={null}>
+        <AboKnopf
+          className="top-2 left-2"
+          produkt={{
+            id: node.id,
+            handle: node.handle,
+            titel: node.title,
+            preis: basePrice,
+            waehrung: cur,
+            bild: img || undefined,
+          }}
+        />
+      </Suspense>
 
       <Link to={`/produkt/${node.handle}`} className="block group">
         <div className="aspect-square bg-white overflow-hidden">
           {img ? (
-            <img src={img} alt={node.title} loading="lazy" className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
+            <ShopBild src={img} alt={node.title} priority={priority} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Kein Bild</div>
           )}
@@ -87,9 +91,9 @@ export function ProductCard({ product }: { product: ShopifyProduct }) {
 
       <div className="p-4 flex flex-col flex-1 gap-2">
         <Link to={`/produkt/${node.handle}`}>
-          <h3 className="font-semibold text-sm leading-snug line-clamp-2 min-h-[2.5rem] hover:text-primary transition-colors">
+          <p className="font-semibold text-sm leading-snug line-clamp-2 min-h-[2.5rem] hover:text-primary transition-colors">
             {node.title}
-          </h3>
+          </p>
         </Link>
 
         {/* Grundpreis */}

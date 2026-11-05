@@ -10,6 +10,7 @@ import { SHOP_CATEGORIES, kategoriePfad } from "@/lib/shopCategories";
 import { useCollectionPreviews } from "@/hooks/useCollectionPreviews";
 
 import { collections } from "@/lib/categories";
+import { ShopBild } from "@/components/ShopBild";
 
 const HAUPT_HANDLES = SHOP_CATEGORIES.map((c) => c.handle);
 import { SHOP_INFO } from "@/data/shopInfo";
@@ -123,10 +124,11 @@ export default function Home() {
                 <Link to={kategoriePfad(col.handle)} className="card-tilt overflow-hidden group block">
                   <div className="aspect-[4/3] overflow-hidden bg-secondary flex items-center justify-center">
                     {bild ? (
-                      <img
+                      <ShopBild
                         src={bild}
-                        alt={col.label}
-                        loading="lazy"
+                        alt=""
+                        priority={i === 0}
+                        sizes="(min-width: 1024px) 30vw, 46vw"
                         className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (

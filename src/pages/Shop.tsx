@@ -625,6 +625,16 @@ export default function Shop() {
       )}
 
       {/* Eigene Farbe konfigurieren */}
+      {showFeatured && featured.length === 0 && (
+        <div className="mb-10 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5" aria-hidden="true">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-border overflow-hidden">
+              <div className="aspect-square bg-secondary" />
+              <div className="h-52" />
+            </div>
+          ))}
+        </div>
+      )}
       {showFeatured && featured.length > 0 && (
         <section className="mb-10">
           <div className="flex items-center gap-2 mb-4">
@@ -642,7 +652,7 @@ export default function Shop() {
       )}
 
       {/* ── Einkaufsmodus-Selector ────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-5 py-3 px-3 sm:px-4 rounded-xl border border-border bg-card/60">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-5 min-h-[52px] py-3 px-3 sm:px-4 rounded-xl border border-border bg-card/60">
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 shrink-0">
           Einkaufsmodus
         </span>
@@ -760,7 +770,7 @@ export default function Shop() {
             return (
               <div key={handle} className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-border bg-card hover:border-primary/30 transition-all">
                 {p.node.images?.edges?.[0]?.node?.url && (
-                  <img src={p.node.images.edges[0].node.url} alt={title}
+                  <img src={p.node.images.edges[0].node.url} alt="" width={40} height={40}
                     className="w-10 h-10 object-contain rounded-lg bg-white border border-border/50 p-0.5 shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
@@ -811,6 +821,7 @@ export default function Shop() {
         hasNextPage={hasNextPage}
         onLoadMore={loadMore}
         columns={columns}
+        fenster={24}
       />
       )}
         </div>{/* Ende Hauptspalte */}

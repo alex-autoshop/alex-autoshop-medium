@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { type ShopifyProduct } from "@/lib/shopify";
 import { ProductCard } from "@/components/ProductCard";
 
@@ -9,6 +10,8 @@ interface ProductGridProps {
   onLoadMore?: () => void;
   /** Produkte pro Zeile auf grossen Bildschirmen (4, 5 oder 6). */
   columns?: 4 | 5 | 6;
+  /** Nur so viele Karten zeichnen, der Rest kommt auf Knopfdruck. */
+  fenster?: number;
 }
 
 // Feste Klassen, damit Tailwind sie beim Build findet (kein String-Zusammenbau!).
@@ -20,17 +23,24 @@ const COLS: Record<4 | 5 | 6, string> = {
 
 function SkeletonCard() {
   return (
-    <div className="card-tilt overflow-hidden animate-pulse">
+    <div className="card-tilt overflow-hidden">
       <div className="aspect-square bg-secondary" />
       <div className="p-4 space-y-2">
-        <div className="h-4 bg-secondary rounded w-3/4" />
-        <div className="h-4 bg-secondary rounded w-1/2" />
+        <div className="h-10 bg-secondary rounded" />
+        <div className="h-7 bg-secondary rounded w-1/2" />
+        <div className="h-10 bg-secondary rounded" />
       </div>
     </div>
   );
 }
 
-export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMore, columns = 5 }: ProductGridProps) {
+export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMore, columns = 5, fenster }: ProductGridProps) {
+  const schluessel = `${fenster ?? 0}:${products.length}:${products[0]?.node.id ?? ""}:${products[products.length - 1]?.node.id ?? ""}`;
+  const [sichtbar, setSichtbar] = useState(fenster ?? products.length);
+  useEffect(() => {
+    setSichtbar(fenster ?? products.length);
+  }, [schluessel, fenster, products.length]);
+  const gezeigt = fenster ? products.slice(0, sichtbar) : products;
   if (error) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -42,13 +52,20 @@ export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMor
   return (
     <div>
       <div className={`grid ${COLS[columns]} gap-3 sm:gap-4 items-start`}>
-        {products.map((p) => (
-          <ProductCard key={p.node.id} product={p} />
+        {gezeigt.map((p, i) => (
+          <ProductCard key={p.node.id} product={p} priority={i < 2} />
         ))}
         {isLoading && Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={`s-${i}`} />)}
       </div>
       {!isLoading && products.length === 0 && (
         <p className="text-center py-12 text-muted-foreground">Keine Produkte gefunden.</p>
+      )}
+      {fenster && sichtbar < products.length && (
+        <div className="flex justify-center mt-8">
+          <button type="button" onClick={() => setSichtbar((n) => n + fenster)} className="btn-outline">
+            Weitere Produkte zeigen
+          </button>
+        </div>
       )}
       {hasNextPage && !isLoading && onLoadMore && (
         <div className="flex justify-center mt-8">

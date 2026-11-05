@@ -13,7 +13,7 @@
     --card: 0 0% 100%;
     --card-foreground: 0 0% 10%;
 
-    --primary: 43 89% 38%;           /* #B8860B — dunkles Gold, AA auf Weiß */
+    --primary: 43 89% 28%;           /* dunkleres Gold, Kontrast auf Weiß über 4,5:1 */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 40 21% 94%;         /* #F3F1EC */
@@ -31,6 +31,16 @@
 
     --radius: 0.75rem;
   }
+}
+
+/* Fallback mit ähnlicher Breite, damit der Schriftwechsel nicht die Zeilen verschiebt. */
+@font-face {
+  font-family: "AA Fallback";
+  src: local("Arial");
+  size-adjust: 105%;
+  ascent-override: 92%;
+  descent-override: 24%;
+  line-gap-override: 0%;
 }
 
 @layer base {
