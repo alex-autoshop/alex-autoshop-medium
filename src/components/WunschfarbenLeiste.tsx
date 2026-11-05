@@ -322,7 +322,14 @@ export function WunschfarbenLeiste({
                     <button key={s.id} type="button" onClick={() => setSystem(s.id)} aria-pressed={an}
                       className={cn("cursor-pointer rounded-xl border-2 px-3 py-2.5 text-left transition-all",
                         an ? "border-primary bg-primary/15" : "border-border bg-card hover:border-primary/50")}>
-                      <span className="block text-sm font-semibold">{s.titel}</span>
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-sm font-semibold">{s.titel}</span>
+                        {s.id === "2k" && (
+                          <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-primary">
+                            Bevorzugt
+                          </span>
+                        )}
+                      </span>
                       <span className="block text-[11px] text-muted-foreground mt-0.5">{s.hinweis}</span>
                     </button>
                   );
