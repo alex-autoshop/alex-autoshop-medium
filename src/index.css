@@ -65,6 +65,16 @@
 /* Lange Wörter in Überschriften nur unterhalb von sm (640px) umbrechen.
    Weiche Trennstriche im Text (z.B. Geschäfts-bedingungen) haben Vorrang,
    sonst bricht das Wort, statt die Seite zu verbreitern. Desktop bleibt unverändert. */
+@media (max-height: 520px) {
+  .story-szene { height: auto; }
+  .story-kleben { position: static; min-height: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-szene { height: auto; }
+  .story-kleben { position: static; min-height: 0; }
+}
+
 @media (max-width: 639px) {
   h1, h2, h3, h4, h5, h6 {
     overflow-wrap: break-word;

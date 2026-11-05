@@ -223,7 +223,7 @@ export function ProduktAbo() {
       </div>
 
       {/* ── Rabattstufe ───────────────────────────────────────────────── */}
-      <div className="max-w-3xl mx-auto mb-8">
+      <div id="abo-stufen" className="max-w-3xl mx-auto mb-8 scroll-mt-24">
         <p className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
           Standard für neue Produkte
         </p>
