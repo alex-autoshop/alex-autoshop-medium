@@ -14,7 +14,8 @@ import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
   mengenPosition, aboListeGesamt, rabattGueltig,
 } from "../../shared/produktabo.js";
-import { WunschfarbenLeiste, MISCH_PRODUKTE, type MengenEintrag } from "@/components/WunschfarbenLeiste";
+import { WunschfarbenLeiste, type MengenEintrag } from "@/components/WunschfarbenLeiste";
+import { istAboKonfigurator } from "../../shared/abo-kategorien.js";
 import { cn } from "@/lib/utils";
 import { ABO_EREIGNIS, ABO_SPEICHER, aboListeLesen } from "@/lib/aboListe";
 import { AboAnmeldung } from "@/components/AboAnmeldung";
@@ -72,13 +73,22 @@ function StufenWahl({ wert, onChange, label }: { wert: number; onChange: (n: num
   );
 }
 
+function positiverPreis(p: ShopifyProduct): number {
+  const betraege = (p.node.variants?.edges ?? [])
+    .map((e) => parseFloat(e.node.price?.amount ?? ""))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (betraege.length) return Math.min(...betraege);
+  const min = parseFloat(p.node.priceRange?.minVariantPrice?.amount ?? "");
+  return Number.isFinite(min) && min > 0 ? min : 0;
+}
+
 function alsAboProdukt(p: ShopifyProduct): AboProdukt {
   const n = p.node;
   return {
     id: n.id,
     handle: n.handle,
     titel: n.title,
-    preis: parseFloat(n.priceRange?.minVariantPrice?.amount ?? "0"),
+    preis: positiverPreis(p),
     waehrung: n.priceRange?.minVariantPrice?.currencyCode ?? "EUR",
     bild: n.images?.edges?.[0]?.node?.url,
     rabatt: 15,
@@ -136,21 +146,17 @@ export function ProduktAbo() {
 
   useEffect(() => { setKategorie("alle"); }, [suchbegriff]);
 
-  const { products, isLoading, hasMore, fehler } = useVollerKatalog(suchbegriff);
+  const { products: rohProdukte, isLoading, hasMore, fehler } = useVollerKatalog(suchbegriff);
+  const products = useMemo(
+    () => rohProdukte.filter((p) => !istAboKonfigurator(p.node.handle)),
+    [rohProdukte],
+  );
 
   const gesamt = aboListeGesamt(produkte.map((p) => istMenge(p)
     ? { art: "menge", rabatt: p.rabatt, einzelpreis: p.einzelpreis, menge: p.menge }
     : { art: "einzel", rabatt: p.rabatt, preis: p.preis }));
 
   const drin = (id: string) => produkte.some((p) => p.id === id);
-
-  function wunschOeffnen(handle: string) {
-    const m = MISCH_PRODUKTE.find((x) => x.handle === handle);
-    if (!m) return false;
-    setFarbeStart(m.id);
-    setFarbeAuf((n) => n + 1);
-    return true;
-  }
 
   function stufeVon(id: string) {
     const gewaehlt = wahl[id];
@@ -320,7 +326,6 @@ export function ProduktAbo() {
                 const p = eintrag.quelle;
                 const a = alsAboProdukt(p);
                 const schon = drin(a.id);
-                const misch = MISCH_PRODUKTE.find((m) => m.handle === a.handle);
                 const stufe = stufeVon(a.id);
                 return (
                   <div className="h-full w-full flex flex-col rounded-xl border border-border p-2.5 bg-card">
@@ -341,42 +346,34 @@ export function ProduktAbo() {
                       {a.titel}
                     </button>
                     <div className="mt-auto pt-3 flex flex-col gap-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground line-through">
-                          {formatPrice(String(a.preis), a.waehrung)}
-                        </p>
-                        <p className="text-xs text-primary font-semibold leading-tight">
-                          als Mitglied {euro(a.preis * (1 - stufe / 100))}
-                        </p>
-                      </div>
-                      {misch ? (
-                        <div className="h-8" aria-hidden="true" />
-                      ) : (
-                        <StufenWahl
-                          wert={stufe}
-                          label={`Rabatt für ${a.titel}`}
-                          onChange={(r) => setWahl((alt) => ({ ...alt, [a.id]: r }))}
-                        />
+                      {a.preis > 0 && (
+                        <div>
+                          <p className="text-xs text-muted-foreground line-through">
+                            {formatPrice(String(a.preis), a.waehrung)}
+                          </p>
+                          <p className="text-xs text-primary font-semibold leading-tight">
+                            als Mitglied {euro(a.preis * (1 - stufe / 100))}
+                          </p>
+                        </div>
                       )}
+                      <StufenWahl
+                        wert={stufe}
+                        label={`Rabatt für ${a.titel}`}
+                        onChange={(r) => setWahl((alt) => ({ ...alt, [a.id]: r }))}
+                      />
                       <button
                         type="button"
-                        onClick={() => {
-                          if (misch) wunschOeffnen(a.handle);
-                          if (!schon) hinzufuegen(p, stufe);
-                        }}
-                        disabled={schon && !misch}
-                        aria-label={
-                          misch ? `${a.titel} konfigurieren` :
-                          schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`
-                        }
+                        onClick={() => { if (!schon) hinzufuegen(p, stufe); }}
+                        disabled={schon}
+                        aria-label={schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`}
                         className={cn(
                           "inline-flex items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors min-h-11",
-                          schon && !misch
+                          schon
                             ? "bg-secondary text-muted-foreground cursor-default"
                             : "bg-primary text-primary-foreground hover:brightness-95 cursor-pointer"
                         )}
                       >
-                        {schon && misch ? "Öffnen" : schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
+                        {schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
                       </button>
                     </div>
                   </div>
@@ -521,11 +518,9 @@ export function ProduktAbo() {
           produkt={vorschau}
           stufe={stufeVon(vorschau.node.id)}
           schon={drin(vorschau.node.id)}
-          misch={!!MISCH_PRODUKTE.find((m) => m.handle === vorschau.node.handle)}
+          misch={false}
           onStufe={(r) => setWahl((alt) => ({ ...alt, [vorschau.node.id]: r }))}
           onHinzu={() => {
-            const misch = MISCH_PRODUKTE.find((m) => m.handle === vorschau.node.handle);
-            if (misch) wunschOeffnen(vorschau.node.handle);
             if (!drin(vorschau.node.id)) hinzufuegen(vorschau, stufeVon(vorschau.node.id));
           }}
           onZu={() => setVorschau(null)}

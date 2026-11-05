@@ -27,3 +27,15 @@ test("eine alte globale Stufe wandert auf jedes Produkt", () => {
   assert.equal(n.produkte[1].rabatt, 40);
   assert.equal(listeNormalisieren(null).standard, 15);
 });
+
+test("die drei Wunschfarben-Konfiguratoren fallen aus der Einzel-Liste, Mengen bleiben", () => {
+  const n = listeNormalisieren({
+    standard: 15,
+    produkte: [
+      { id: "1", handle: "farben-mix", art: "einzel", titel: "Wunschfarbe", preis: 0, rabatt: 15 },
+      { id: "2", handle: "farben-mix", art: "menge", titel: "Wunschfarbe", einzelpreis: 20, menge: 4, rabatt: 15 },
+      { id: "3", handle: "schleifpaste", art: "einzel", titel: "Paste", preis: 33, rabatt: 15 },
+    ],
+  });
+  assert.deepEqual(n.produkte.map((p) => p.id), ["2", "3"]);
+});
