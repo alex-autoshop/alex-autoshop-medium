@@ -54,7 +54,7 @@ function liste_laden(): { standard: number; produkte: AboZeile[] } {
 
 function StufenWahl({ wert, onChange, label }: { wert: number; onChange: (n: number) => void; label: string }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex rounded-lg border border-border overflow-hidden">
+    <div role="group" aria-label={label} className="flex w-full rounded-lg border border-border overflow-hidden">
       {ABO_RABATTE.map((r) => (
         <button
           key={r}
@@ -62,7 +62,7 @@ function StufenWahl({ wert, onChange, label }: { wert: number; onChange: (n: num
           aria-pressed={wert === r}
           onClick={() => onChange(r)}
           className={cn(
-            "cursor-pointer px-2 py-1 text-[11px] font-semibold min-h-[32px]",
+            "flex-1 basis-0 min-w-0 cursor-pointer px-1 py-1 text-[11px] font-semibold min-h-[32px] text-center",
             wert === r ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-primary/10"
           )}
         >

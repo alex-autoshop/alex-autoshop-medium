@@ -337,12 +337,12 @@ export function WunschfarbenLeiste({
 
           <div className="mb-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Dein Rabatt auf diesen Lack</p>
-            <div className="grid grid-cols-3 gap-2" role="group" aria-label="Rabattstufe für den Lack">
+            <div className="flex w-full rounded-lg border border-border overflow-hidden" role="group" aria-label="Rabattstufe für den Lack">
               {ABO_RABATTE.map((r) => (
                 <button key={r} type="button" aria-pressed={lackRabatt === r} onClick={() => setLackRabatt(r)}
-                  className={cn("cursor-pointer rounded-xl border-2 px-2 py-2 text-center",
-                    lackRabatt === r ? "border-primary bg-primary/15" : "border-border bg-card hover:border-primary/50")}>
-                  <span className="block text-sm font-bold">{r} %</span>
+                  className={cn("flex-1 basis-0 min-w-0 cursor-pointer min-h-11 px-1 py-2 text-center text-sm font-bold",
+                    lackRabatt === r ? "bg-primary text-primary-foreground" : "bg-card hover:bg-primary/10")}>
+                  {r} %
                 </button>
               ))}
             </div>
