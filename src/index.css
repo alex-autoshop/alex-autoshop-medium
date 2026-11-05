@@ -174,27 +174,6 @@ font[style] {
 }
 .abo-puls { animation: abo-glanz 1.1s ease-out 1; }
 
-/* Auf Geräten mit Maus zeigt der Knopf das Wort erst bei Hover oder Fokus.
-   Auf Touch bleibt „+ Abo“ sichtbar. */
-.abo-pill .abo-text {
-  max-width: 4.5rem;
-  padding-left: 0.25rem;
-  transition: max-width 0.2s ease, opacity 0.2s ease;
-}
-@media (hover: hover) and (pointer: fine) {
-  .abo-pill .abo-text {
-    max-width: 0;
-    opacity: 0;
-    padding-left: 0;
-  }
-  .abo-pill:hover .abo-text,
-  .abo-pill:focus-visible .abo-text {
-    max-width: 4.5rem;
-    opacity: 1;
-    padding-left: 0.25rem;
-  }
-}
-
 /* Mobile Abo-Leiste: die letzten „Hinzufügen"-Knöpfe bleiben über der Leiste. */
 @media (max-width: 1023px) {
   .abo-unten {

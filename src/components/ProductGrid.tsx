@@ -51,7 +51,7 @@ export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMor
 
   return (
     <div>
-      <div className={`grid ${COLS[columns]} gap-3 sm:gap-4 items-start`}>
+      <div className={`grid ${COLS[columns]} gap-3 sm:gap-4 items-stretch`}>
         {gezeigt.map((p, i) => (
           <ProductCard key={p.node.id} product={p} priority={i < 2} />
         ))}

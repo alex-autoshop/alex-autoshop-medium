@@ -26,7 +26,12 @@ function ruhigeBewegung() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-export function AboKnopf({ produkt, className }: { produkt: AboMerkProdukt; className?: string }) {
+export function AboKnopf({ produkt, className, kurz = false }: {
+  produkt: AboMerkProdukt;
+  className?: string;
+  /** Schmale Karte: nur „+ Abo“ statt des langen Textes. */
+  kurz?: boolean;
+}) {
   const { user, profile } = useAuth();
   const mitglied = !!user && (profile.membership_level ?? 0) >= 1;
   const knopf = useRef<HTMLButtonElement>(null);
@@ -130,18 +135,21 @@ export function AboKnopf({ produkt, className }: { produkt: AboMerkProdukt; clas
         ref={knopf}
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); klick(); }}
-        aria-label="Zum Produkt-Abo hinzufügen"
+        aria-label={drin ? "Im Abo" : "Zum Produkt-Abo hinzufügen"}
         aria-describedby={hinweis ? hinweisId : undefined}
+        aria-pressed={drin}
         className={cn(
-          "abo-pill absolute z-10 inline-flex items-center justify-center rounded-full border px-2 min-h-11 min-w-11",
-          "bg-night/92 text-gold-bright border-gold-bright/50 shadow-card",
-          "hover:border-gold-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-bright",
+          "inline-flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-primary bg-card px-2 min-h-12",
+          "text-sm font-semibold text-primary hover:bg-primary/10 active:scale-[0.98]",
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
           puls && "abo-puls",
           className
         )}
       >
-        {gerade || drin ? <Check className="w-4 h-4 shrink-0" aria-hidden="true" /> : <BadgePercent className="w-4 h-4 shrink-0" aria-hidden="true" />}
-        <span className="abo-text overflow-hidden whitespace-nowrap text-xs font-bold" aria-hidden="true">{drin ? "Drin" : "+ Abo"}</span>
+        {gerade || drin
+          ? <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
+          : <BadgePercent className="w-4 h-4 shrink-0" aria-hidden="true" />}
+        <span className="truncate">{drin || gerade ? "Im Abo ✓" : kurz ? "+ Abo" : "Zum Abo hinzufügen"}</span>
       </button>
 
       {hinweis && createPortal(
