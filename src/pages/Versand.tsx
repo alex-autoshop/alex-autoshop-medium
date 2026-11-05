@@ -246,8 +246,9 @@ export default function Versand() {
             </p>
             <p>
               <strong className="text-foreground">Gefahrgut & Sperrgut:</strong> Lacke, Spraydosen
-              und Verdünner werden gemäß ADR-Vorschriften versendet. Für Sperrgut können
-              Aufschläge entstehen — wir informieren dich vorab.
+              und Verdünner versenden wir nach den ADR-Vorschriften. Einen Zuschlag, der erst
+              nach der Bestellung dazukommt, gibt es nicht. Passt etwas nicht in den genannten
+              Versand, sagen wir das vor der Bestellung.
             </p>
             <p>
               <strong className="text-foreground">Teillieferungen:</strong> Wenn Artikel getrennt
@@ -262,6 +263,21 @@ export default function Versand() {
               wirst du aktiv per WhatsApp oder E-Mail informiert.
             </p>
           </div>
+        </div>
+
+        <div id="entsorgung" className="rounded-xl border border-border bg-card p-5 space-y-3 text-sm">
+          <h2 className="text-lg font-semibold">Rücknahme und Entsorgung</h2>
+          <p className="text-muted-foreground">
+            <strong className="text-foreground">Starterbatterien:</strong> Altbatterien nehmen wir
+            im Laden zurück (Handelstraße 64, 42277 Wuppertal). Das Pfand von 7,50 € je
+            Starterbatterie erstatten wir bei Rückgabe, die Rechnung bitte mitbringen.
+          </p>
+          <p className="text-muted-foreground">
+            <strong className="text-foreground">Altöl:</strong> Verbrennungs- und Getriebeöl aus
+            dem privaten Ölwechsel kannst du bei uns im Laden abgeben. Die Annahmestelle nennen
+            wir auf Nachfrage auch, wenn der Behälter gerade voll ist. Altöl gehört nicht in den
+            Ausguss.
+          </p>
         </div>
 
       </div>
