@@ -89,7 +89,7 @@ function AltesFahrzeug() {
 function SchaleWeg() {
   useLayoutEffect(() => {
     const weg = () => {
-      if (document.querySelector("#root h1")) document.getElementById("aa-shell")?.remove();
+      if (document.querySelector("#root h1")) document.getElementById("aa-shell")?.classList.add("aa-weg");
     };
     weg();
     const root = document.getElementById("root");

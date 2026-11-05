@@ -69,7 +69,10 @@
   <style>
     html.aa-cookies-ok #aa-cookies { display: none !important; }
     body { margin: 0; background: #FAF9F7; color: #1a1a1a; font-family: "DM Sans", "AA Fallback", system-ui, sans-serif; }
-    #aa-shell { background: #FAF9F7; }
+    #aa-shell { position: absolute; left: 0; right: 0; top: 0; z-index: 20; background: #FAF9F7; }
+    #aa-shell, #aa-shell * { font-family: system-ui, sans-serif; }
+    #aa-cookies, #aa-cookies * { font-family: system-ui, sans-serif; }
+    #aa-shell.aa-weg { visibility: hidden; pointer-events: none; }
     .aa-head { display: flex; align-items: center; justify-content: space-between; height: 80px; padding: 0 1rem; background: #0D0D0D; color: #fff; border-bottom: 1px solid rgba(255,255,255,.1); }
     .aa-head img { height: 44px; width: auto; }
     .aa-nav { display: none; gap: 4px; }
