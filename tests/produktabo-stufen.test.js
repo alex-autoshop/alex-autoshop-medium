@@ -14,7 +14,7 @@ test("jede Position behält ihre Stufe, der Beitrag ist die Summe", () => {
   assert.equal(g.zeilen[1].mitglied, 19.8);
   // 20 € normal, 28 % → 14,40 Mitglied, Ersparnis 5,60, Beitrag max(1, 1,12) = 1,12
   assert.equal(g.zeilen[2].beitrag, 1.12);
-  assert.equal(g.beitrag, 3.62);
+  assert.equal(g.beitrag, 5.12);
 });
 
 test("eine alte globale Stufe wandert auf jedes Produkt", () => {

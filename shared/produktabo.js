@@ -13,9 +13,9 @@
 
 /** Monatsbeitrag je Produkt, nach gewählter Rabattstufe. */
 export const PRODUKT_ABO_PREISE = {
-  15: 0.5,
-  28: 1,
-  40: 2,
+  15: 1,
+  28: 2,
+  40: 3,
 };
 
 /**

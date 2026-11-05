@@ -1,4 +1,8 @@
 import { Link } from "react-router-dom";
+import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
+
+const euro = (n: number) =>
+  new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
 
 const AGB = () => (
   <div>
@@ -84,7 +88,7 @@ const AGB = () => (
       <h3>11. Mitgliedschaft und Produkt-Abo</h3>
       <p><strong>Vertragsschluss:</strong> Sie wählen Rabattstufe und Module, sehen den Monatsbeitrag und schließen den Vertrag mit dem Klick auf „Zahlungspflichtig buchen“ und Abschluss der Zahlung bzw. Erteilung des SEPA-Mandats.</p>
       <p><strong>Laufzeit und Kündigung:</strong> Mitgliedschaft und Produkt-Abo laufen auf unbestimmte Zeit, eine Mindestlaufzeit gibt es nicht. Beide Seiten können jederzeit zum Ende des laufenden Abrechnungsmonats kündigen. Sie können über die Schaltfläche <Link to="/kuendigen">„Verträge hier kündigen“</Link>, per E-Mail an info@alex-autoshop.de oder per Brief kündigen. Das Recht zur außerordentlichen Kündigung bleibt unberührt.</p>
-      <p><strong>Beitrag:</strong> Der Monatsbeitrag ist monatlich im Voraus fällig und wird per Karte (Stripe) oder SEPA-Lastschrift (GoCardless) eingezogen. Eine Erhöhung des Beitrags kündigen wir mindestens sechs Wochen vorher in Textform an; sie wird nur wirksam, wenn Sie ihr zustimmen. Stimmen Sie nicht zu, läuft der Vertrag zum bisherigen Beitrag weiter, und beide Seiten können ihn wie oben kündigen.</p>
+      <p><strong>Beitrag:</strong> Der Monatsbeitrag ist monatlich im Voraus fällig und wird per Karte oder SEPA-Lastschrift eingezogen. Beim Produkt-Abo kostet jedes Produkt {euro(PRODUKT_ABO_PREISE[15])} im Monat für 15 %, {euro(PRODUKT_ABO_PREISE[28])} für 28 % und {euro(PRODUKT_ABO_PREISE[40])} für 40 %. Eine Erhöhung des Beitrags kündigen wir mindestens sechs Wochen vorher in Textform an; sie wird nur wirksam, wenn Sie ihr zustimmen. Stimmen Sie nicht zu, läuft der Vertrag zum bisherigen Beitrag weiter, und beide Seiten können ihn wie oben kündigen.</p>
       <p><strong>Leistung:</strong> Der Rabatt und der kostenlose Versand gelten im Online-Shop (Lack und Werkstattbedarf) für eine bezahlte Mitgliedschaft der Stufe 1–3, auf den regulären Verkaufspreis, nicht zusätzlich auf Aktionspreise. In der Teilebörse gilt ein Preis für alle. DHL kostet dort 7,49 € und ist ab 150 € Warenwert frei, auch für Mitglieder. Abholung in Wuppertal ist kostenlos.</p>
 
       <hr />

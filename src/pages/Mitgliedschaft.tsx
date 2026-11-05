@@ -1,15 +1,27 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Phone, MessageCircle, ChevronDown, Wrench, PackageSearch } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { MembershipCards } from "@/components/MembershipCards";
 import { MembershipCalculator } from "@/components/MembershipCalculator";
 import { ProduktAbo } from "@/components/ProduktAbo";
 import { MitgliedsGeschichte } from "@/components/MitgliedsGeschichte";
+import { useAuth } from "@/context/AuthContext";
 import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
 import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
+
+const GESCHICHTE = "alex-mitglied-geschichte";
+let geschichteMontiert = 0;
+
+function geschichteGesehen() {
+  try { return localStorage.getItem(GESCHICHTE) === "1"; } catch { return false; }
+}
+
+function geschichteMerken() {
+  try { localStorage.setItem(GESCHICHTE, "1"); } catch { /* privat */ }
+}
 
 const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
@@ -54,15 +66,39 @@ const FAQ = [
   },
   {
     q: "Für wen lohnt sich welcher Rabatt?",
-    a: "Faustregel: 15 % lohnen sich ab ca. 330 € Material-Einkauf pro Monat, 28 % ab ca. 900 € — je mehr du einkaufst, desto stärker ziehen 40 %. Am genausten siehst du es im Rechner oben.",
+    a: "Platzhalter",
   },
 ];
 
 export default function Mitgliedschaft() {
-  const [abo, setAbo] = useState<AboArt>(DIENSTLEISTUNG_BUCHBAR ? "dienstleistung" : "produkt");
+  const { user, profile, loading } = useAuth();
+  const mitglied = !!user && (profile.membership_level ?? 0) >= 1;
+  const [wieder, setWieder] = useState(false);
+  const zeigen = wieder || (!loading && !mitglied && !geschichteGesehen());
+
+  useEffect(() => {
+    if (!zeigen) return;
+    geschichteMontiert += 1;
+    const weg = () => geschichteMerken();
+    window.addEventListener("pagehide", weg);
+    return () => {
+      geschichteMontiert -= 1;
+      window.removeEventListener("pagehide", weg);
+      window.setTimeout(() => {
+        if (geschichteMontiert === 0) weg();
+      }, 0);
+    };
+  }, [zeigen]);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [abo, setAbo] = useState<AboArt>(DIENSTLEISTUNG_BUCHBAR ? "dienstleistung" : "produkt");
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const faq = FAQ.map((eintrag) => {
+    if (eintrag.q === "Für wen lohnt sich welcher Rabatt?") {
+      return {
+        ...eintrag,
+        a: `Pro Produkt und Monat: ${euro(PRODUKT_ABO_PREISE[15])} bei 15 %, ${euro(PRODUKT_ABO_PREISE[28])} bei 28 %, ${euro(PRODUKT_ABO_PREISE[40])} bei 40 %. Die Stufe lohnt sich, sobald der Rabatt auf den Einkauf dieses Produkts den Beitrag übersteigt.`,
+      };
+    }
     if (teileSichtbar) return eintrag;
     if (eintrag.q === "Gilt die Mitgliedschaft nur in Wuppertal?") {
       return { ...eintrag, a: "Nein — deutschlandweit. Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Die Mitgliedschaft gilt im Shop: dort ist der Versand mit aktiver bezahlter Mitgliedschaft (Level 1–3) kostenlos." };
@@ -80,6 +116,18 @@ export default function Mitgliedschaft() {
         description={teileSichtbar
           ? "Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle. Monatlich kündbar."
           : "Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Monatlich kündbar."}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "OfferCatalog",
+          name: "Produkt-Abo",
+          itemListElement: ([15, 28, 40] as const).map((stufe) => ({
+            "@type": "Offer",
+            name: `Produkt-Abo ${stufe} %`,
+            priceCurrency: "EUR",
+            price: PRODUKT_ABO_PREISE[stufe].toFixed(2),
+            description: `${stufe} % Rabatt, ${euro(PRODUKT_ABO_PREISE[stufe])} pro Produkt im Monat`,
+          })),
+        }}
       />
 
       <section className="section-dark py-12 sm:py-16">
@@ -107,7 +155,22 @@ export default function Mitgliedschaft() {
         </div>
       </section>
 
-      <MitgliedsGeschichte />
+      {zeigen ? (
+        <MitgliedsGeschichte onDurch={geschichteMerken} />
+      ) : (
+        <>
+          <div className="container pt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setWieder(true)}
+              className="text-sm font-semibold text-primary underline underline-offset-2 min-h-11"
+            >
+              So funktioniert's ansehen
+            </button>
+          </div>
+          <MitgliedsGeschichte seo />
+        </>
+      )}
 
       {/* ── Zwei Mitgliedschaften zur Auswahl ───────────────────────────── */}
       <section className="container pt-6 pb-12 sm:pb-16">
