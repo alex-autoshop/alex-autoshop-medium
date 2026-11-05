@@ -45,7 +45,7 @@ function Reihe({ titel, kinder }: { titel: string; kinder: ReactNode }) {
       </div>
       <div
         ref={ref}
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-pl-1 pb-1 no-scrollbar lg:grid lg:grid-cols-3 lg:overflow-visible lg:snap-none lg:pb-0 xl:grid-cols-4"
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-pl-1 pb-1 items-stretch no-scrollbar lg:grid lg:grid-cols-3 lg:overflow-visible lg:snap-none lg:pb-0 xl:grid-cols-4"
       >
         {kinder}
       </div>
@@ -102,7 +102,7 @@ export function AboProduktKatalog<T extends AboKatalogProdukt>({
               gruppe.produkte.map((produkt) => (
                 <div
                   key={produkt.id || produkt.handle || gruppe.id}
-                  className="snap-start shrink-0 w-[78%] max-w-[17rem] lg:w-auto lg:max-w-none lg:shrink"
+                  className="snap-start shrink-0 w-[78%] max-w-[17rem] self-stretch flex lg:w-auto lg:max-w-none lg:shrink"
                 >
                   {karte(produkt)}
                 </div>
