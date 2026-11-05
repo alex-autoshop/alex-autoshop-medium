@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Search, Plus, X, Loader2, CheckCircle, ShoppingBasket, Info, Package,
+  Search, Plus, X, Loader2, CheckCircle, ShoppingBasket, Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProducts } from "@/hooks/useProducts";
@@ -17,6 +17,7 @@ import { WunschfarbenLeiste, MISCH_PRODUKTE, type MengenEintrag } from "@/compon
 import { cn } from "@/lib/utils";
 import { ABO_EREIGNIS, ABO_SPEICHER, aboListeLesen } from "@/lib/aboListe";
 import { AboAnmeldung } from "@/components/AboAnmeldung";
+import { AboProduktKatalog } from "@/components/AboProduktKatalog";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
  *  localStorage passt und auch ohne erneute Shop-Abfrage anzeigbar bleibt. */
@@ -98,6 +99,7 @@ export function ProduktAbo() {
   const [farbeAuf, setFarbeAuf] = useState(0);
   const [farbeStart, setFarbeStart] = useState("");
   const [anmeldung, setAnmeldung] = useState(false);
+  const [kategorie, setKategorie] = useState("alle");
 
   // Auswahl überlebt einen Seitenwechsel — sonst ist die Arbeit weg
   useEffect(() => {
@@ -122,9 +124,12 @@ export function ProduktAbo() {
     return () => clearTimeout(t);
   }, [suche]);
 
+  useEffect(() => { setKategorie("alle"); }, [suchbegriff]);
+
   const { products, isLoading } = useProducts({
     query: suchbegriff ? `title:*${suchbegriff}* OR tag:*${suchbegriff}*` : "",
-    pageSize: 12,
+    pageSize: suchbegriff ? 24 : 50,
+    loadAll: !suchbegriff,
   });
 
   const gesamt = aboListeGesamt(produkte.map((p) => istMenge(p)
@@ -285,16 +290,9 @@ export function ProduktAbo() {
             />
           </label>
 
-          {isLoading && suchbegriff && (
+          {isLoading && products.length === 0 && (
             <p className="flex items-center gap-2 text-sm text-muted-foreground py-6 justify-center">
-              <Loader2 className="w-4 h-4 animate-spin" /> Suche läuft …
-            </p>
-          )}
-
-          {!suchbegriff && (
-            <p className="flex items-start gap-2 text-sm text-muted-foreground py-6">
-              <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              Tipp dein Produkt ein — zum Beispiel „Klarlack" oder den Markennamen.
+              <Loader2 className="w-4 h-4 animate-spin" /> Produkte werden geladen …
             </p>
           )}
 
@@ -304,30 +302,34 @@ export function ProduktAbo() {
             </p>
           )}
 
-          <div className="space-y-2.5">
-            {products.map((p) => {
-              const a = alsAboProdukt(p);
-              const schon = drin(a.id);
-              const misch = MISCH_PRODUKTE.find((m) => m.handle === a.handle);
-              const stufe = stufeVon(a.id);
-              return (
-                <div key={a.id} className="flex items-center gap-3 rounded-xl border border-border p-2.5">
-                  <div className="w-14 h-14 rounded-lg bg-secondary shrink-0 overflow-hidden">
-                    {a.bild && <img src={a.bild} alt="" className="w-full h-full object-cover" loading="lazy" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
+          {products.length > 0 && (
+            <AboProduktKatalog
+              produkte={products.map((p) => ({ ...p.node, quelle: p }))}
+              kategorie={kategorie}
+              onKategorie={setKategorie}
+              karte={(eintrag) => {
+                const p = eintrag.quelle;
+                const a = alsAboProdukt(p);
+                const schon = drin(a.id);
+                const misch = MISCH_PRODUKTE.find((m) => m.handle === a.handle);
+                const stufe = stufeVon(a.id);
+                return (
+                  <div className="h-full flex flex-col rounded-xl border border-border p-2.5 bg-card">
+                    <div className="aspect-square rounded-lg bg-white overflow-hidden mb-2">
+                      {a.bild && <img src={a.bild} alt="" className="w-full h-full object-contain" loading="lazy" />}
+                    </div>
                     {misch ? (
                       <button
                         type="button"
-                        className="text-sm font-semibold leading-snug line-clamp-2 text-left cursor-pointer hover:text-primary"
+                        className="text-sm font-semibold leading-snug line-clamp-2 text-left min-h-[2.5rem] cursor-pointer hover:text-primary"
                         onClick={() => wunschOeffnen(a.handle)}
                       >
                         {a.titel}
                       </button>
                     ) : (
-                      <p className="text-sm font-semibold leading-snug line-clamp-2">{a.titel}</p>
+                      <p className="text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem]">{a.titel}</p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-0.5 line-through">
+                    <p className="text-xs text-muted-foreground mt-1 line-through">
                       {formatPrice(String(a.preis), a.waehrung)}
                     </p>
                     <p className="text-xs text-primary font-semibold leading-tight">
@@ -342,31 +344,36 @@ export function ProduktAbo() {
                         />
                       </div>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (misch) wunschOeffnen(a.handle);
+                        if (!schon) hinzufuegen(p, stufe);
+                      }}
+                      disabled={schon && !misch}
+                      aria-label={
+                        misch ? `${a.titel} konfigurieren` :
+                        schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`
+                      }
+                      className={cn(
+                        "mt-auto pt-2 inline-flex items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-colors min-h-11",
+                        schon && !misch
+                          ? "bg-secondary text-muted-foreground cursor-default"
+                          : "bg-primary text-primary-foreground hover:brightness-95 cursor-pointer"
+                      )}
+                    >
+                      {schon && misch ? "Öffnen" : schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (misch) wunschOeffnen(a.handle);
-                      if (!schon) hinzufuegen(p, stufe);
-                    }}
-                    disabled={schon && !misch}
-                    aria-label={
-                      misch ? `${a.titel} konfigurieren` :
-                      schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`
-                    }
-                    className={cn(
-                      "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors min-h-[40px]",
-                      schon && !misch
-                        ? "bg-secondary text-muted-foreground cursor-default"
-                        : "bg-primary text-primary-foreground hover:brightness-95 cursor-pointer"
-                    )}
-                  >
-                    {schon && misch ? "Öffnen" : schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                );
+              }}
+            />
+          )}
+          {isLoading && products.length > 0 && (
+            <p className="flex items-center gap-2 text-xs text-muted-foreground pt-3">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Weitere Produkte …
+            </p>
+          )}
         </div>
         </div>
 
