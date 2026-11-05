@@ -1,9 +1,10 @@
 ﻿import { useState } from "react";
-import { Phone, MessageCircle, ChevronDown, ListChecks, BadgePercent, ShoppingBag, Wrench, PackageSearch } from "lucide-react";
+import { Phone, MessageCircle, ChevronDown, Wrench, PackageSearch } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { MembershipCards } from "@/components/MembershipCards";
 import { MembershipCalculator } from "@/components/MembershipCalculator";
 import { ProduktAbo } from "@/components/ProduktAbo";
+import { MitgliedsGeschichte } from "@/components/MitgliedsGeschichte";
 import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
 import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
@@ -11,30 +12,6 @@ import { cn } from "@/lib/utils";
 
 const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
-
-/** Katalogpreis Schleifpaste Perfect Heavy Cut 750 g, Stand 5.11.2026. */
-const BEISPIEL_NORMAL = 33;
-const BEISPIEL_RABATT = 40;
-const beispielMitglied = Math.round(BEISPIEL_NORMAL * (1 - BEISPIEL_RABATT / 100) * 100) / 100;
-const beispielErsparnis = Math.round((BEISPIEL_NORMAL - beispielMitglied) * 100) / 100;
-
-const SCHRITTE = [
-  {
-    titel: "Produkte auswählen",
-    text: "Such dir raus, was du regelmäßig brauchst.",
-    icon: ListChecks,
-  },
-  {
-    titel: "Rabattstufe wählen",
-    text: "Du wählst für jedes Produkt selbst, wie viel Rabatt du willst: 15 %, 28 % oder 40 %.",
-    icon: BadgePercent,
-  },
-  {
-    titel: "Bei jeder Bestellung sparen",
-    text: "Der Rabatt gilt genau auf die Produkte in deiner Liste. Jedes Mal.",
-    icon: ShoppingBag,
-  },
-];
 
 type AboArt = "dienstleistung" | "produkt";
 
@@ -116,34 +93,7 @@ export default function Mitgliedschaft() {
         </div>
       </section>
 
-      <section className="container pt-8 pb-2 sm:pt-10">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-xl sm:text-2xl mb-4">So funktioniert's</h2>
-          <ol className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {SCHRITTE.map((s, i) => (
-              <li key={s.titel} className="rounded-2xl border border-border bg-card p-4">
-                <span className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center mb-3">
-                  <s.icon className="w-5 h-5" aria-hidden="true" />
-                </span>
-                <p className="font-display font-bold leading-snug">{i + 1}. {s.titel}</p>
-                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{s.text}</p>
-              </li>
-            ))}
-          </ol>
-          <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Beispiel</p>
-            <p className="text-sm mt-1 leading-relaxed">
-              Schleifpaste Perfect Heavy Cut, 750 g, auf 40 %: normal {euro(BEISPIEL_NORMAL)}, als Mitglied {euro(beispielMitglied)}. Das sind {euro(beispielErsparnis)} weniger bei dieser Bestellung, der Beitrag für dieses eine Produkt ist {euro(PRODUKT_ABO_PREISE[40])} im Monat. Ein anderes Produkt in derselben Liste kann 15 % haben.
-            </p>
-          </div>
-          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-            Monatlich kündbar. Keine Mindestabnahme. Produkte kannst du jederzeit tauschen.
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            In der Teilebörse gilt ein Preis für alle.
-          </p>
-        </div>
-      </section>
+      <MitgliedsGeschichte />
 
       {/* ── Zwei Mitgliedschaften zur Auswahl ───────────────────────────── */}
       <section className="container pt-6 pb-12 sm:pb-16">
