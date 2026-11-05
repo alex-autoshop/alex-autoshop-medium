@@ -45,7 +45,7 @@ type Lacksystem = "1k" | "2k" | "egal";
 
 const LACKSYSTEME: { id: Lacksystem; titel: string; hinweis: string; kuerzel: "1K" | "2K" | "egal" }[] = [
   { id: "1k", titel: "1K-Lack", hinweis: "Basislack, Klarlack kommt separat drüber", kuerzel: "1K" },
-  { id: "2k", titel: "2K-Lack", hinweis: "Lack mit Härter, ohne extra Klarlack", kuerzel: "2K" },
+  { id: "2k", titel: "2K-Lack immer bevorzugt", hinweis: "Lack mit Härter, ohne extra Klarlack", kuerzel: "2K" },
   { id: "egal", titel: "Egal – 1K oder 2K", hinweis: "Wir nehmen, was für deinen Farbton verfügbar und am günstigsten ist", kuerzel: "egal" },
 ];
 
@@ -322,14 +322,7 @@ export function WunschfarbenLeiste({
                     <button key={s.id} type="button" onClick={() => setSystem(s.id)} aria-pressed={an}
                       className={cn("cursor-pointer rounded-xl border-2 px-3 py-2.5 text-left transition-all",
                         an ? "border-primary bg-primary/15" : "border-border bg-card hover:border-primary/50")}>
-                      <span className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-sm font-semibold">{s.titel}</span>
-                        {s.id === "2k" && (
-                          <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-primary">
-                            Bevorzugt
-                          </span>
-                        )}
-                      </span>
+                      <span className="block text-sm font-semibold">{s.titel}</span>
                       <span className="block text-[11px] text-muted-foreground mt-0.5">{s.hinweis}</span>
                     </button>
                   );
