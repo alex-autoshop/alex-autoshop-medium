@@ -289,13 +289,13 @@ export function ProduktAbo() {
           </p>
 
           <label className="relative block mb-5">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <span className="sr-only">Produkte suchen</span>
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <input
               className="input-base pl-10"
               placeholder="Klarlack, Härter, Mikrofasertuch …"
               value={suche}
               onChange={(e) => setSuche(e.target.value)}
-              aria-label="Produkte suchen"
             />
           </label>
 

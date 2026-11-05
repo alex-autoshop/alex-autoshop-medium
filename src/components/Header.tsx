@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut, ChevronDown } from "lucide-react";
 import { SHOP_CATEGORIES, kategoriePfad } from "@/lib/shopCategories";
 import { useCartStore } from "@/stores/cartStore";
-import { CartDrawer } from "@/components/CartDrawer";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
 import { ADMIN_EMAILS } from "@/lib/inbox";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
+
+const CartDrawer = lazy(() => import("@/components/CartDrawer").then((m) => ({ default: m.CartDrawer })));
 
 type NavPunkt = { to: string; label: string; href?: string; beta?: boolean };
 
@@ -203,7 +204,7 @@ export function Header() {
         <div className="container flex items-center justify-between h-20 sm:h-24 gap-2">
           <Link to="/" className="flex items-center shrink-0" onClick={() => setMobileOpen(false)}>
             {/* Eng zugeschnittenes farbiges Logo (leerer Rand entfernt) fuer dunkle Navbar */}
-            <img src="/images/logo-cropped.png" alt="Alex Autoshop" className="h-11 sm:h-14 w-auto" />
+            <img src="/images/logo-cropped.png" alt="Alex Autoshop" width={180} height={56} className="h-11 sm:h-14 w-auto" />
           </Link>
 
           <nav className="hidden xl:flex items-center gap-0.5">
@@ -372,7 +373,11 @@ export function Header() {
         )}
       </header>
 
-      <CartDrawer open={cartOpen} onClose={closeCart} />
+      {cartOpen && (
+        <Suspense fallback={null}>
+          <CartDrawer open={cartOpen} onClose={closeCart} />
+        </Suspense>
+      )}
     </>
   );
 }

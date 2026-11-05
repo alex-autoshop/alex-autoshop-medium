@@ -231,7 +231,7 @@ export default function Kategorie() {
           text={<>In dieser Kategorie gibt es keine Produkte von {gewaehlteMarken.join(", ")}. <button type="button" onClick={() => setMarken([])} className="text-primary underline">Filter zurücksetzen</button></>}
         />
       ) : (
-        <ProductGrid products={sichtbar} isLoading={isLoading && products.length === 0} />
+        <ProductGrid products={sichtbar} isLoading={isLoading && products.length === 0} fenster={24} />
       )}
     </div>
   );

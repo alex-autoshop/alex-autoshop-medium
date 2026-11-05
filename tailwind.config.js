@@ -42,8 +42,8 @@ export default {
         },
       },
       fontFamily: {
-        display: ["Syne", "system-ui", "sans-serif"],
-        body: ["'DM Sans'", "system-ui", "sans-serif"],
+        display: ["Syne", "AA Fallback", "system-ui", "sans-serif"],
+        body: ["'DM Sans'", "AA Fallback", "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
