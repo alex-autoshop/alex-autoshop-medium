@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard, Truck } from "lucide-react";
-import { toast } from "sonner";
+import { Toaster, toast } from "sonner";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
@@ -383,6 +383,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             role="dialog"
             aria-label="Warenkorb"
           >
+            <Toaster id="warenkorb" position="bottom-center" offset={{ bottom: "5.75rem" }} mobileOffset={{ bottom: "5.75rem" }} richColors duration={3200} />
             <div className="flex items-center justify-between p-4 border-b border-border">
               <h2 className="text-xl">{confirmed ? "Bestellung bestätigt" : "Warenkorb"}</h2>
               <button
@@ -415,7 +416,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 <div className="mt-4 w-full max-w-xs text-left space-y-1.5">
                   {confirmed.items.map((item, i) => (
                     <div key={i} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground line-clamp-1">{item.title} × {item.quantity}</span>
+                      <span lang="de" className="text-muted-foreground [overflow-wrap:anywhere] hyphens-auto">{item.title} × {item.quantity}</span>
                       <span className="font-semibold ml-2 shrink-0">
                         {formatPrice(String(parseFloat(item.price.amount) * item.quantity), item.price.currencyCode)}
                       </span>
@@ -489,8 +490,8 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                           {img && <img src={img} alt="" className="w-full h-full object-contain" loading="lazy" />}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline gap-2">
-                            <p lang="de" className="text-sm font-semibold leading-tight line-clamp-1 flex-1 min-w-0" title={node.title}>{node.title}</p>
+                          <div className="flex items-start gap-2">
+                            <p lang="de" className="text-[13px] sm:text-sm font-semibold leading-[1.25] sm:leading-snug [overflow-wrap:anywhere] hyphens-auto flex-1 min-w-0">{node.title}</p>
                             <p className="text-sm font-bold shrink-0 tabular-nums">
                               {aboAktiv && aboDrin(node.id) && (
                                 <span className="text-muted-foreground line-through font-medium text-xs mr-1">{formatPrice(item.price.amount, item.price.currencyCode)}</span>
@@ -510,6 +511,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                             stufe={aboStufe(node.id)}
                             drin={aboDrin(node.id)}
                             onStufe={(rabatt) => setAboWahl((alt) => ({ ...alt, [node.id]: rabatt }))}
+                            toasterId="warenkorb"
                           />
                         </div>
                       </div>
@@ -528,8 +530,8 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                       type="button"
                       onClick={() => {
                         const { dazu, voll } = fehlendeInsAbo();
-                        if (voll) toast.error("Die Abo-Liste ist voll.");
-                        else if (dazu > 0) toast.success("Warenkorb in die Abo-Liste gelegt");
+                        if (voll) toast.error("Die Abo-Liste ist voll.", { toasterId: "warenkorb" });
+                        else if (dazu > 0) toast.success("Warenkorb in die Abo-Liste gelegt", { toasterId: "warenkorb" });
                       }}
                       className="text-xs font-semibold text-primary underline"
                     >
