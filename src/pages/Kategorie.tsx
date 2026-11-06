@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useShopKontextMerken } from "@/lib/shopRueckkehr";
-import { ChevronRight, PackageOpen, ArrowRight, X } from "lucide-react";
-import { brandOf, brandRank } from "@/lib/marken";
+import { ChevronRight, PackageOpen, ArrowRight } from "lucide-react";
+import { brandOf, markenZaehlen } from "@/lib/marken";
+import { MarkenLeiste } from "@/components/MarkenLeiste";
 import { Seo } from "@/components/Seo";
 import { ProductGrid } from "@/components/ProductGrid";
 import { useCollectionProducts } from "@/hooks/useCollectionProducts";
@@ -67,16 +68,7 @@ export default function Kategorie() {
     () => (params.get("marke") ?? "").split(",").map((m) => m.trim()).filter(Boolean),
     [params]
   );
-  const marken = useMemo(() => {
-    const zaehler = new Map<string, { name: string; anzahl: number; rang: number }>();
-    for (const p of products) {
-      const name = brandOf(p);
-      const e = zaehler.get(name);
-      if (e) e.anzahl++;
-      else zaehler.set(name, { name, anzahl: 1, rang: name === "Sonstige" ? 9999 : brandRank(p) });
-    }
-    return [...zaehler.values()].sort((a, b) => a.rang - b.rang || a.name.localeCompare(b.name, "de"));
-  }, [products]);
+  const marken = useMemo(() => markenZaehlen(products), [products]);
   const sichtbar = useMemo(
     () => (gewaehlteMarken.length ? products.filter((p) => gewaehlteMarken.includes(brandOf(p))) : products),
     [products, gewaehlteMarken]
@@ -109,8 +101,6 @@ export default function Kategorie() {
     else next.delete("marke");
     setParams(next, { replace: true });
   };
-  const toggleMarke = (m: string) =>
-    setMarken(gewaehlteMarken.includes(m) ? gewaehlteMarken.filter((x) => x !== m) : [...gewaehlteMarken, m]);
 
   const setSort = (v: CollectionSort) => {
     const next = new URLSearchParams(params);
@@ -159,38 +149,14 @@ export default function Kategorie() {
       )}
 
       {/* Markenfilter */}
-      {marken.length > 1 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Nach Marke filtern">
-          <span className="text-sm font-semibold mr-1">Marke:</span>
-          {marken.map((m) => {
-            const aktiv = gewaehlteMarken.includes(m.name);
-            return (
-              <button
-                key={m.name}
-                type="button"
-                onClick={() => toggleMarke(m.name)}
-                aria-pressed={aktiv}
-                className={cn(
-                  "inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-lg border text-sm transition-colors",
-                  aktiv
-                    ? "bg-night text-white border-night"
-                    : "bg-card border-border hover:border-primary/60"
-                )}
-              >
-                {m.name}
-                <span className={cn("text-xs tabular-nums", aktiv ? "text-white/70" : "text-muted-foreground")}>{m.anzahl}</span>
-              </button>
-            );
-          })}
-          {gewaehlteMarken.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setMarken([])}
-              className="inline-flex items-center gap-1 min-h-[36px] px-2 text-sm font-semibold text-primary hover:underline"
-            >
-              <X className="w-4 h-4" /> Marken zurücksetzen
-            </button>
-          )}
+      {marken.length > 0 && (
+        <div className="mb-4">
+          <MarkenLeiste
+            marken={marken}
+            wert={gewaehlteMarken.length === 1 ? gewaehlteMarken[0] : ""}
+            onWahl={(name) => setMarken(name ? [name] : [])}
+            label="Nach Marke filtern"
+          />
         </div>
       )}
 
