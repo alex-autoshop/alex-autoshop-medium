@@ -64,43 +64,37 @@ export function WarenkorbAboZeile({
   };
 
   return (
-    <div className="mt-3 flex flex-col gap-4">
-      {rechnung && rechnung.ersparnis > 0 && (
-        <p className="text-xs text-foreground">
-          Mit Abo sparst du <span className="text-primary font-semibold">{formatPrice(String(rechnung.ersparnis), waehrung)}</span>
-        </p>
-      )}
-      <div className="flex flex-wrap items-center gap-4">
-        <div role="group" aria-label={`Rabatt für ${produkt.titel}`} className="flex w-full rounded-lg border border-border overflow-hidden">
-          {ABO_RABATTE.map((r) => (
-            <button
-              key={r}
-              type="button"
-              aria-pressed={stufe === r}
-              onClick={() => waehlen(r)}
-              className={cn(
-                "flex-1 basis-0 min-w-0 min-h-11 px-1 text-xs font-semibold text-center",
-                stufe === r ? "bg-primary text-primary-foreground" : "bg-card hover:bg-primary/10"
-              )}
-            >
-              {r} %
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          aria-pressed={drin}
-          onClick={umschalten}
-          className={cn(
-            "min-h-11 px-3 rounded-lg border text-xs font-semibold",
-            drin
-              ? "border-primary bg-primary/15 text-primary"
-              : "border-border bg-card hover:border-primary hover:text-primary"
-          )}
-        >
-          {drin ? <span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" aria-hidden="true" /> Im Abo</span> : "Ins Abo"}
-        </button>
+    <div className="mt-1 flex items-center gap-1 min-w-0">
+      <div role="group" aria-label={`Rabatt für ${produkt.titel}`} className="flex shrink-0 rounded-full border border-border overflow-hidden">
+        {ABO_RABATTE.map((r) => (
+          <button
+            key={r}
+            type="button"
+            aria-pressed={stufe === r}
+            onClick={() => waehlen(r)}
+            className={cn(
+              "min-h-8 px-2 text-[11px] font-bold tabular-nums",
+              stufe === r ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
+            )}
+          >
+            {r}
+          </button>
+        ))}
       </div>
+      {rechnung && rechnung.ersparnis > 0 && (
+        <span className="text-[11px] font-semibold text-primary truncate">−{formatPrice(String(rechnung.ersparnis), waehrung)}</span>
+      )}
+      <button
+        type="button"
+        aria-pressed={drin}
+        onClick={umschalten}
+        className={cn(
+          "ml-auto shrink-0 min-h-8 px-2 rounded-full text-[11px] font-semibold",
+          drin ? "text-primary" : "text-muted-foreground"
+        )}
+      >
+        {drin ? <span className="inline-flex items-center gap-0.5"><Check className="w-3 h-3" aria-hidden="true" /> Im Abo</span> : "Ins Abo"}
+      </button>
     </div>
   );
 }
@@ -122,11 +116,12 @@ export function useAboAktiv() {
   return aktiv;
 }
 
-/** Abschluss über den Kauf-Buttons. Der Monatsbeitrag kommt aus der Abo-Liste, die Ersparnis aus dieser Bestellung. */
+/** Kompakter Abo-Streifen. Zahlweg und der zahlungspflichtige Text erst im zweiten Schritt. */
 export function AboKasse({ ersparnis }: { ersparnis: number }) {
   const liste = useAboListe();
   const { user } = useAuth();
   const [zahlweg, setZahlweg] = useState<Zahlweg>("gocardless");
+  const [zahlen, setZahlen] = useState(false);
   const [laeuft, setLaeuft] = useState(false);
   const [anmeldung, setAnmeldung] = useState(false);
   const [anfrage, setAnfrage] = useState(false);
@@ -134,6 +129,12 @@ export function AboKasse({ ersparnis }: { ersparnis: number }) {
   if (!liste.produkte.length || !gesamt) return null;
   const anzahl = liste.produkte.length;
   const titel = anzahl === 1 ? "1 Produkt" : `${anzahl} Produkte`;
+
+  const oeffnen = () => {
+    const mail = user?.email?.trim().toLowerCase() || "";
+    if (!user || !mail) { setAnmeldung(true); return; }
+    setZahlen(true);
+  };
 
   const starten = async () => {
     const mail = user?.email?.trim().toLowerCase() || "";
@@ -159,45 +160,47 @@ export function AboKasse({ ersparnis }: { ersparnis: number }) {
   };
 
   return (
-    <div className="rounded-xl border border-primary/40 bg-primary/10 p-3 space-y-2">
+    <div className="py-3 space-y-2">
       <p className="text-sm font-semibold leading-snug">
-        Dein Abo: {titel} · {euro(gesamt.beitrag)}/Monat · du sparst {euro(ersparnis)} pro Bestellung
+        Abo: {titel} · {euro(gesamt.beitrag)}/Monat · spart {euro(ersparnis)}
       </p>
-      <div className="grid grid-cols-2 gap-2">
-        {(["gocardless", "stripe"] as const).map((z) => (
-          <button
-            key={z}
-            type="button"
-            aria-pressed={zahlweg === z}
-            onClick={() => setZahlweg(z)}
-            className={cn(
-              "min-h-10 rounded-lg border px-2 text-xs font-semibold",
-              zahlweg === z ? "border-primary bg-card text-primary" : "border-border bg-card/70"
-            )}
-          >
-            {z === "gocardless" ? "SEPA-Lastschrift" : "Karte"}
+      {!zahlen ? (
+        <button type="button" onClick={oeffnen} className="btn-primary w-full text-sm min-h-11">
+          Abo abschließen
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            {(["gocardless", "stripe"] as const).map((z) => (
+              <button
+                key={z}
+                type="button"
+                aria-pressed={zahlweg === z}
+                onClick={() => setZahlweg(z)}
+                className={cn(
+                  "min-h-10 rounded-lg border px-2 text-xs font-semibold",
+                  zahlweg === z ? "border-primary bg-primary/10 text-primary" : "border-border bg-card"
+                )}
+              >
+                {z === "gocardless" ? "SEPA-Lastschrift" : "Karte"}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={starten} disabled={laeuft} className="btn-primary w-full text-sm min-h-11 disabled:opacity-60">
+            {laeuft ? <Loader2 className="w-4 h-4 animate-spin" /> : `Abo zahlungspflichtig abschließen – ${euro(gesamt.beitrag)}/Monat`}
           </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={starten}
-        disabled={laeuft}
-        className="btn-primary w-full text-sm disabled:opacity-60"
-      >
-        {laeuft ? <Loader2 className="w-4 h-4 animate-spin" /> : user
-          ? `Abo zahlungspflichtig abschließen – ${euro(gesamt.beitrag)}/Monat`
-          : `Anmelden und Abo abschließen – ${euro(gesamt.beitrag)}/Monat`}
-      </button>
-      <p className="text-[11px] text-muted-foreground leading-relaxed">
-        Keine Mindestlaufzeit, monatlich zum Monatsende kündbar über{" "}
-        <Link to="/kuendigen" className="underline">Verträge hier kündigen</Link>.
-        Der Rabatt gilt für diese Shop-Produkte, nicht in der Teilebörse.
-        {anfrage ? " Die Online-Zahlung ist noch nicht freigeschaltet — wir melden uns zur Liste." : ""}
-      </p>
-      <p className="text-[11px] text-muted-foreground">
-        Stufe je Produkt: 15 % für {euro(PRODUKT_ABO_PREISE[15])}, 28 % für {euro(PRODUKT_ABO_PREISE[28])}, 40 % für {euro(PRODUKT_ABO_PREISE[40])} im Monat.
-      </p>
+        </div>
+      )}
+      <details className="text-[11px] text-muted-foreground">
+        <summary className="cursor-pointer">Details</summary>
+        <p className="mt-1 leading-relaxed">
+          Keine Mindestlaufzeit, monatlich zum Monatsende kündbar über{" "}
+          <Link to="/kuendigen" className="underline">Verträge hier kündigen</Link>.
+          Der Rabatt gilt für diese Shop-Produkte, nicht in der Teilebörse.
+          Stufe je Produkt: 15 % für {euro(PRODUKT_ABO_PREISE[15])}, 28 % für {euro(PRODUKT_ABO_PREISE[28])}, 40 % für {euro(PRODUKT_ABO_PREISE[40])} im Monat.
+          {anfrage ? " Die Online-Zahlung ist noch nicht freigeschaltet — wir melden uns zur Liste." : ""}
+        </p>
+      </details>
       <AboAnmeldung offen={anmeldung} onZu={() => setAnmeldung(false)} />
     </div>
   );
