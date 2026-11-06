@@ -3,7 +3,7 @@ import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Palette, Droplets, Layers, Pipette, FlaskConical,
-  ChevronDown, X, Check, SlidersHorizontal, LayoutGrid, Rows3,
+  ChevronDown, X, Check, SlidersHorizontal,
 } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { ProductGrid } from "@/components/ProductGrid";
@@ -328,7 +328,6 @@ export default function Shop() {
     const saved = Number(typeof window !== "undefined" ? localStorage.getItem("shop:cols") : 0);
     return saved === 4 || saved === 5 || saved === 6 ? (saved as 4 | 5 | 6) : 5;
   });
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const setCols = (c: 4 | 5 | 6) => {
     setColumns(c);
     try { localStorage.setItem("shop:cols", String(c)); } catch { /* egal */ }
@@ -504,9 +503,13 @@ export default function Shop() {
       {/* Sentinel for IntersectionObserver */}
       <div ref={stickyRef} className="h-px -mt-px" />
 
-      <div className="lg:grid lg:grid-cols-[264px_minmax(0,1fr)] lg:gap-7 lg:items-start">
-        {/* ── Sidebar: Kategorien, Marken, Produktart, Preis ────────────── */}
-        <aside className="hidden lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pb-4">
+      {/* Filter links — auch auf dem Handy, ohne Extra-Klick auf „Filter“.
+          Die Spalte ist schmal und sticky, die Produkte bleiben daneben. */}
+      <div className="grid grid-cols-[clamp(7.25rem,34vw,11rem)_minmax(0,1fr)] gap-2 sm:gap-4 items-start lg:grid-cols-[264px_minmax(0,1fr)] lg:gap-7">
+        <aside
+          aria-label="Filter"
+          className="sticky top-20 sm:top-24 min-w-0 max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100dvh-6.5rem)] lg:max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-y-contain pb-4"
+        >
           <ShopFilters
             products={gridProducts}
             brandOf={brandOf}
@@ -534,7 +537,7 @@ export default function Shop() {
             : "shadow-[0_2px_12px_rgba(0,0,0,0.08)]",
         )}>
           {/* Search input */}
-          <div className="relative flex-1 group">
+          <div className="relative flex-1 min-w-0 group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
             <input
               ref={inputRef}
@@ -596,8 +599,10 @@ export default function Shop() {
             </AnimatePresence>
           </div>
 
-          {/* Category dropdown */}
-          <CategoryDropdown activeCategory={activeCategory} activeSlug={category} />
+          {/* Kategorien-Menü. Unter sm steht dieselbe Liste in der linken Spalte. */}
+          <div className="hidden sm:block shrink-0">
+            <CategoryDropdown activeCategory={activeCategory} activeSlug={category} />
+          </div>
         </div>{/* end card row */}
 
 
@@ -643,7 +648,7 @@ export default function Shop() {
       {/* Schnellzugriff: Klarlack · Härter · Wunschfarbe · Verdünnung */}
       {showFeatured && (
         <section className="mb-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               { slug: "klarlack-produkte", label: "Klarlack", sub: "2K HS & Express", icon: <Layers className="w-7 h-7" />, color: "from-blue-500/20 to-blue-400/5" },
               { slug: "haerter", label: "Härter", sub: "Standard · Fast · Slow", icon: <FlaskConical className="w-7 h-7" />, color: "from-amber-500/20 to-amber-400/5" },
@@ -668,7 +673,7 @@ export default function Shop() {
 
       {/* Eigene Farbe konfigurieren */}
       {showFeatured && featured.length === 0 && (
-        <div className="mb-10 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5" aria-hidden="true">
+        <div className="mb-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5" aria-hidden="true">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-border overflow-hidden">
               <div className="aspect-square bg-secondary" />
@@ -683,7 +688,7 @@ export default function Shop() {
             <Palette className="w-5 h-5 text-primary" />
             <h2 className="text-xl sm:text-2xl">Eigene Farbe konfigurieren</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-5 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 items-start">
             {featured.map((p) => (
               <ProductCard key={p.node.id} product={p} />
             ))}
@@ -698,7 +703,7 @@ export default function Shop() {
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 shrink-0">
           Einkaufsmodus
         </span>
-        <div className="flex w-full sm:w-auto items-center rounded-lg border border-border bg-secondary/40 p-0.5 gap-0.5">
+        <div className="flex flex-wrap w-full sm:w-auto items-center rounded-lg border border-border bg-secondary/40 p-0.5 gap-0.5">
           {([
             { id: 'standard', label: 'Standard' },
             { id: 'schnell',  label: 'Schnellbestellung' },
@@ -756,14 +761,6 @@ export default function Shop() {
             <span className="text-muted-foreground font-normal"> von {gridProducts.length}</span>
           )}
         </p>
-
-        <button
-          type="button"
-          onClick={() => setMobileFiltersOpen(true)}
-          className="lg:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:border-primary/50 transition-colors"
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" /> Filter
-        </button>
 
         <div className="ml-auto flex items-center gap-3">
           {/* Spaltenzahl — wie bei den grossen Katalogen */}
@@ -864,47 +861,11 @@ export default function Shop() {
         onLoadMore={loadMore}
         columns={columns}
         fenster={24}
+        nebenFilter
       />
       )}
         </div>{/* Ende Hauptspalte */}
       </div>{/* Ende Layout-Grid */}
-
-      {/* ── Filter als Overlay auf dem Handy ────────────────────────────── */}
-      {mobileFiltersOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
-            onClick={() => setMobileFiltersOpen(false)}
-          />
-          <div className="absolute inset-y-0 left-0 w-[88%] max-w-[360px] bg-background border-r border-border overflow-y-auto p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-bold">Filter</p>
-              <button
-                type="button"
-                onClick={() => setMobileFiltersOpen(false)}
-                className="w-9 h-9 rounded-lg border border-border flex items-center justify-center"
-                aria-label="Filter schliessen"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <ShopFilters
-              products={gridProducts}
-              brandOf={brandOf}
-              filters={filters}
-              onChange={setFilters}
-              activeSlug={category}
-            />
-            <button
-              type="button"
-              onClick={() => setMobileFiltersOpen(false)}
-              className="btn-primary w-full mt-4"
-            >
-              {sortedGridProducts.length} Produkte anzeigen
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

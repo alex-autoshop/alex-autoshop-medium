@@ -65,13 +65,13 @@ function Section({
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between py-3 text-left"
       >
-        <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+        <span className="min-w-0 text-[10px] lg:text-[11px] font-bold uppercase tracking-wide lg:tracking-widest text-muted-foreground">
           {title}
           {count ? <span className="ml-1.5 text-muted-foreground/50 font-semibold">{count}</span> : null}
         </span>
         <ChevronDown
           className={cn(
-            "w-4 h-4 text-muted-foreground transition-transform duration-200",
+            "w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-200",
             open && "rotate-180"
           )}
         />
@@ -96,8 +96,9 @@ function CheckRow({
     <button
       type="button"
       onClick={onToggle}
+      title={label}
       className={cn(
-        "w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-left text-sm transition-colors",
+        "w-full flex items-center gap-1.5 lg:gap-2.5 px-1 lg:px-2 py-2 lg:py-1.5 rounded-lg text-left text-[13px] lg:text-sm transition-colors",
         active ? "bg-primary/10 text-foreground" : "hover:bg-secondary/70 text-muted-foreground"
       )}
     >
@@ -113,7 +114,7 @@ function CheckRow({
           </svg>
         )}
       </span>
-      <span className={cn("flex-1 truncate", active && "font-semibold")}>{label}</span>
+      <span className={cn("flex-1 min-w-0 leading-snug line-clamp-2", active && "font-semibold")}>{label}</span>
       <span className="text-[11px] tabular-nums text-muted-foreground/60 shrink-0">{count}</span>
     </button>
   );
@@ -173,13 +174,15 @@ export function ShopFilters({
     filters.brands.length + filters.tags.length + (filters.priceMax ? 1 : 0) + (filters.onlyAvailable ? 1 : 0);
 
   return (
-    <div className="text-sm">
-      {/* Kategorien */}
-      <div className="rounded-2xl border border-border bg-card p-4 mb-4">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2.5">
+    <div className="text-sm flex flex-col min-w-0">
+      {/* Kategorien. Auf dem Handy unter den Filtern, damit Marke ohne
+          Scrollen in der linken Spalte steht. Ab lg bleibt die bisherige
+          Reihenfolge: erst Kategorien, dann Filter. */}
+      <div className="order-2 lg:order-1 rounded-2xl border border-border bg-card p-2.5 sm:p-4 mb-3 lg:mb-4">
+        <p className="text-[10px] lg:text-[11px] font-bold uppercase tracking-wide lg:tracking-widest text-muted-foreground mb-2.5">
           Kategorien
         </p>
-        <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+        <div className="space-y-3 lg:max-h-[420px] lg:overflow-y-auto lg:pr-1">
           {navCategories.map((group) => {
             const children = group.children ?? [];
             const groupHref = group.slug ? `/shop/${group.slug}` : null;
@@ -189,8 +192,9 @@ export function ShopFilters({
                 {groupHref && children.length === 0 ? (
                   <Link
                     to={groupHref}
+                    title={group.label}
                     className={cn(
-                      "block px-2 py-1 rounded-md text-[13px] font-semibold transition-colors",
+                      "block px-1.5 lg:px-2 py-1.5 lg:py-1 rounded-md text-[12px] lg:text-[13px] font-semibold leading-snug break-words transition-colors",
                       groupActive
                         ? "bg-primary/10 text-foreground"
                         : "text-foreground/80 hover:bg-secondary/70 hover:text-foreground"
@@ -201,8 +205,9 @@ export function ShopFilters({
                 ) : groupHref ? (
                   <Link
                     to={groupHref}
+                    title={group.label}
                     className={cn(
-                      "block text-[11px] font-semibold mb-1 px-2 py-1 rounded-md transition-colors",
+                      "block text-[11px] font-semibold leading-snug break-words mb-1 px-1.5 lg:px-2 py-1 rounded-md transition-colors",
                       groupActive
                         ? "bg-primary/10 text-foreground"
                         : "text-foreground/70 hover:bg-secondary/70 hover:text-foreground"
@@ -211,7 +216,7 @@ export function ShopFilters({
                     {group.label}
                   </Link>
                 ) : (
-                  <p className="text-[11px] font-semibold text-foreground/70 mb-1 px-2">{group.label}</p>
+                  <p className="text-[11px] font-semibold leading-snug break-words text-foreground/70 mb-1 px-1.5 lg:px-2">{group.label}</p>
                 )}
                 {children.length > 0 && (
                   <div className="space-y-0.5">
@@ -223,8 +228,9 @@ export function ShopFilters({
                         <Link
                           key={c.slug ?? href}
                           to={href}
+                          title={c.label}
                           className={cn(
-                            "block px-2 py-1 rounded-md text-[13px] transition-colors",
+                            "block px-1.5 lg:px-2 py-1.5 lg:py-1 rounded-md text-[12px] lg:text-[13px] leading-snug break-words transition-colors",
                             active
                               ? "bg-primary/10 text-foreground font-semibold"
                               : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
@@ -242,9 +248,9 @@ export function ShopFilters({
         </div>
       </div>
 
-      {/* Filter */}
-      <div className="rounded-2xl border border-border bg-card px-4 pb-1">
-        <div className="flex items-center justify-between pt-4 pb-1">
+      {/* Filter — auf schmalen Screens zuerst, links neben den Produkten. */}
+      <div className="order-1 lg:order-2 rounded-2xl border border-border bg-card px-2.5 sm:px-4 pb-1 mb-3 lg:mb-0">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-3 lg:pt-4 pb-1">
           <p className="text-sm font-bold">Filter</p>
           {activeCount > 0 && (
             <button
@@ -258,7 +264,7 @@ export function ShopFilters({
         </div>
 
         <Section title="Marke" count={brands.length}>
-          <div className="max-h-[280px] overflow-y-auto pr-1 space-y-0.5">
+          <div className="lg:max-h-[280px] lg:overflow-y-auto lg:pr-1 space-y-0.5">
             {brands.map(([b, n]) => (
               <CheckRow
                 key={b}
@@ -276,7 +282,7 @@ export function ShopFilters({
 
         {tags.length > 0 && (
           <Section title="Produktart" count={tags.length}>
-            <div className="max-h-[260px] overflow-y-auto pr-1 space-y-0.5">
+            <div className="lg:max-h-[260px] lg:overflow-y-auto lg:pr-1 space-y-0.5">
               {tags.map(([t, n]) => (
                 <CheckRow
                   key={t}
@@ -291,14 +297,14 @@ export function ShopFilters({
         )}
 
         <Section title="Preis bis">
-          <div className="flex flex-wrap gap-1.5 px-1">
+          <div className="flex flex-wrap gap-1 px-0.5 lg:gap-1.5 lg:px-1">
             {PRICE_STEPS.map((v) => (
               <button
                 key={v}
                 type="button"
                 onClick={() => onChange({ ...filters, priceMax: filters.priceMax === v ? null : v })}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors",
+                  "px-2 py-1 lg:px-2.5 rounded-lg border text-[11px] lg:text-xs font-semibold transition-colors",
                   filters.priceMax === v
                     ? "border-primary bg-primary/10 text-foreground"
                     : "border-border bg-secondary/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"
