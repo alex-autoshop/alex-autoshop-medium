@@ -1,0 +1,6 @@
+{
+  "buildCommand": "node assemble.mjs",
+  "installCommand": "node -e \"process.exit(0)\"",
+  "outputDirectory": "public",
+  "framework": null
+}

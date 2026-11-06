@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { erfuellungGesperrt, PRODUKTIONS_SUPABASE_REF } from "../shared/zahlungs-isolation.js";
+import { readdir } from "node:fs/promises";
+import { erfuellungGesperrt, PRODUKTIONS_SUPABASE_REF, LIVE_SHOP_PROJECT_ID } from "../shared/zahlungs-isolation.js";
 import { activateMembership } from "../api/_activate-membership.js";
 import membershipCheckout from "../api/membership-checkout.js";
 import membershipEmail from "../api/membership-email.js";
@@ -20,6 +21,9 @@ const ENV_KEYS = [
   "GOCARDLESS_WEBHOOK_SECRET",
   "GOCARDLESS_ENVIRONMENT",
   "SHOPIFY_ADMIN_TOKEN",
+  "VERCEL_PROJECT_ID",
+  "ZAHLUNG_WEBHOOK_HOST",
+  "SUPABASE_SERVICE_ROLE_KEY",
 ];
 
 const vorherEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
@@ -65,11 +69,18 @@ test("Zahlungs-Erfüllung auf der Vorschau", { concurrency: false }, async (t) =
 
   await t.test("Produktion bleibt offen, Vorschau auf die Livedatenbank ist zu", () => {
     envLeeren();
-    assert.equal(erfuellungGesperrt(), false);
+    assert.equal(erfuellungGesperrt(), true, "ohne Live-Projekt keine Produktionsdatenbank");
 
     process.env.VERCEL_ENV = "production";
     process.env.VITE_SUPABASE_URL = `https://${PRODUKTIONS_SUPABASE_REF}.supabase.co`;
+    assert.equal(erfuellungGesperrt(), true);
+
+    process.env.VERCEL_PROJECT_ID = LIVE_SHOP_PROJECT_ID;
     assert.equal(erfuellungGesperrt(), false);
+
+    process.env.VERCEL_PROJECT_ID = "prj_webhook_host_test";
+    assert.equal(erfuellungGesperrt(), true, "ein anderes Projekt darf die Livedatenbank nicht beschreiben");
+    process.env.VERCEL_PROJECT_ID = LIVE_SHOP_PROJECT_ID;
 
     process.env.VERCEL_ENV = "preview";
     assert.equal(erfuellungGesperrt(), true);
@@ -218,6 +229,7 @@ test("Zahlungs-Erfüllung auf der Vorschau", { concurrency: false }, async (t) =
     const secret = "whsec_test_isolation";
     process.env.STRIPE_WEBHOOK_SECRET = secret;
     process.env.VERCEL_ENV = "production";
+    process.env.VERCEL_PROJECT_ID = LIVE_SHOP_PROJECT_ID;
     delete process.env.SHOPIFY_ADMIN_TOKEN;
     const raw = JSON.stringify({
       id: "evt_test_prod",
@@ -239,6 +251,43 @@ test("Zahlungs-Erfüllung auf der Vorschau", { concurrency: false }, async (t) =
     } finally {
       globalThis.fetch = original;
     }
+  });
+
+  await t.test("Webhook-Host ruft die Freischaltung nicht auf der Live-Seite auf", async () => {
+    envLeeren();
+    process.env.ZAHLUNG_WEBHOOK_HOST = "1";
+    process.env.VERCEL_ENV = "production";
+    process.env.VERCEL_PROJECT_ID = "prj_webhook_host_test";
+    process.env.SUPABASE_URL = "https://testprojekt.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service_role_test_nicht_echt";
+    process.env.PUBLIC_BASE_URL = "https://alex-autoshop-webhooks.vercel.app";
+    const urls = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+      urls.push(String(url));
+      return new Response("{}", { status: 200 });
+    };
+    try {
+      const frei = await activateMembership({ email: "isolation@example.com", level: 1, modules: [], price: 19, provider: "stripe" });
+      assert.notEqual(frei.gesperrt, true);
+      assert.equal(frei.membershipEmail, true);
+      assert.equal(urls.some((u) => u.includes("alex-autoshop.de")), false);
+      assert.equal(urls.some((u) => u.includes(PRODUKTIONS_SUPABASE_REF)), false);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  await t.test("Webhook-Host veröffentlicht nur die zwei Signatur-Routen", async () => {
+    const routen = (await readdir(new URL("../hosts/test-webhooks/api/", import.meta.url))).sort();
+    assert.deepEqual(routen, ["gocardless-webhook.js", "stripe-webhook.js"]);
+    await import("../hosts/test-webhooks/assemble.mjs");
+    const lib = await readdir(new URL("../hosts/test-webhooks/lib/", import.meta.url));
+    assert.equal(lib.includes("admin-members.js"), false);
+    assert.equal(lib.includes("parts-checkout.js"), false);
+    assert.equal(lib.includes("membership-checkout.js"), false);
+    assert.ok(lib.includes("stripe-webhook.js"));
+    assert.ok(lib.includes("gocardless-webhook.js"));
   });
 
   await t.test("Teile-Kasse schreibt auf der Vorschau nicht nach Supabase", () => {

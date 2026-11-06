@@ -590,7 +590,10 @@ export default async function handler(req) {
   const { email: emailRoh, level: levelRoh, modules: modulesRoh = [], price: priceRoh, freePaint, aufbereitung, ref: refRoh } = body || {};
   const email = String(emailRoh || '').trim().toLowerCase();
   if (!EMAIL_OK.test(email)) return jsonError('Bitte eine gültige E-Mail-Adresse angeben.', 400);
-  if (!RESEND_API_KEY)  return jsonError('RESEND_API_KEY nicht konfiguriert', 500);
+  // Live-Shop bleibt bei fehlendem Mail-Key stehen, bevor ein Konto entsteht.
+  // Der Webhook-Host darf die Testdatenbank beschreiben, ohne eine Mail zu schicken.
+  const webhookHost = String(process.env.ZAHLUNG_WEBHOOK_HOST || "") === "1";
+  if (!RESEND_API_KEY && !webhookHost) return jsonError('RESEND_API_KEY nicht konfiguriert', 500);
 
   const intern = await internPruefen(req, 'membership-email', email, String(levelRoh));
   let level, modules, price;
@@ -736,6 +739,13 @@ export default async function handler(req) {
     } catch (e) {
       console.error('Supabase (non-fatal):', e?.message);
     }
+  }
+
+  // Webhook-Host ohne Mail-Key: Konto und Anfrage stehen, es geht keine Mail raus.
+  if (!RESEND_API_KEY) {
+    return new Response(JSON.stringify({ ok: true, mail: "aus" }), {
+      status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
   }
 
   // ── Email 1: Onboarding (sofort) ──────────────────────────────────────────

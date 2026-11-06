@@ -33,14 +33,18 @@ export async function activateMembership(meta) {
   try {
     // Signiert: nur so akzeptiert membership-email die Werte aus der Zahlung
     // (und legt ohne Missbrauchsbremse Konto + Mails an).
-    const r = await fetch(`${BASE()}/api/membership-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-intern": await internSignatur("membership-email", email, String(level)),
-      },
-      body: JSON.stringify({ email, level, modules, price, paid: true, provider, ref: meta.ref || "" }),
-    });
+    // Der öffentliche Webhook-Host hat keinen Shop und darf die SSO-geschützte
+    // Live-Seite nicht aufrufen. Er ruft denselben Handler im Prozess auf.
+    const payload = JSON.stringify({ email, level, modules, price, paid: true, provider, ref: meta.ref || "" });
+    const headers = {
+      "Content-Type": "application/json",
+      "x-intern": await internSignatur("membership-email", email, String(level)),
+    };
+    const r = String(process.env.ZAHLUNG_WEBHOOK_HOST || "") === "1"
+      ? await (await import("./membership-email.js")).default(new Request("https://webhook-host.internal/api/membership-email", {
+          method: "POST", headers, body: payload,
+        }))
+      : await fetch(`${BASE()}/api/membership-email`, { method: "POST", headers, body: payload });
     results.membershipEmail = r.ok;
     if (!r.ok) results.errors.push(`membership-email ${r.status}`);
   } catch (e) {
