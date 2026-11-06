@@ -23,6 +23,7 @@ import { mitgliedsbeitrag, MODULE } from '../shared/mitgliedspreise.js';
 import { aboListeGesamt } from '../shared/produktabo.js';
 import { internPruefen } from './_intern.js';
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from '../shared/empfehlung.js';
+import { erfuellungGesperrt } from '../shared/zahlungs-isolation.js';
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
 const REF_OK = /^[A-Z0-9]{6,8}$/;
@@ -534,6 +535,11 @@ export default async function handler(req) {
     });
   }
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+
+  // Vorschau teilt sich die Produktionsdatenbank. Keine Anfrage, kein Konto, keine Mail.
+  if (erfuellungGesperrt()) {
+    return jsonError("Diese Vorschau legt keine Mitgliedschaft an. Dafür braucht es eine eigene Testdatenbank.", 409);
+  }
 
   let body;
   try { body = await req.json(); }

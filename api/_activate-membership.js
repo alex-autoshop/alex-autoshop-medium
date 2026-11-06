@@ -8,6 +8,7 @@
 import { createShopifyOrder, shopifyMitgliedTag, shopifyAboStufen } from "./_shopify-order.js";
 import { internSignatur } from "./_intern.js";
 import { rabattName } from "../shared/mitgliedspreise.js";
+import { erfuellungGesperrt } from "../shared/zahlungs-isolation.js";
 
 const BASE = () => process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de";
 
@@ -15,6 +16,9 @@ const BASE = () => process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de";
  * @param {Object} meta  { email, level, modules(string[]|string), price, provider, providerId, ref }
  */
 export async function activateMembership(meta) {
+  if (erfuellungGesperrt()) {
+    return { gesperrt: true, email: String(meta?.email || ""), shopifyOrder: null, shopifyTag: null, errors: [] };
+  }
   const email = String(meta.email || "").trim().toLowerCase();
   const level = Number(meta.level);
   const price = Number(meta.price);
@@ -79,6 +83,9 @@ export async function activateMembership(meta) {
  * ihren einen Shop-Rabatt behalten.
  */
 export async function activateProduktAbo(meta) {
+  if (erfuellungGesperrt()) {
+    return { gesperrt: true, email: String(meta?.email || ""), shopifyTag: null, aboTags: null, errors: [] };
+  }
   const email = String(meta.email || "").trim().toLowerCase();
   const price = Number(meta.price);
   const stufen = String(meta.stufen || "")
