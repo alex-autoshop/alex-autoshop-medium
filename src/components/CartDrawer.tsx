@@ -506,9 +506,6 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   </span>
                 </p>
               )}
-              {items.length > 0 && (isMember || shippingCost === 0) && (
-                <p className="px-4 pt-3 text-xs text-primary font-semibold">Versand kostenlos</p>
-              )}
               {items.length === 0 ? (
                 <p className="text-muted-foreground text-center py-12">Dein Warenkorb ist leer.</p>
               ) : (
@@ -573,6 +570,9 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                       Alle ins Abo
                     </button>
                   )}
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {shippingCost > 0 ? <>Versand {formatPrice(String(shippingCost), currency)}</> : "Versand kostenlos"}
+                  </p>
                 </div>
               )}
             </div>
@@ -644,7 +644,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                     <p className="text-[11px] text-muted-foreground leading-none">Gesamt</p>
                     <p className="text-lg font-bold leading-tight tabular-nums">{formatPrice(String(total + shippingCost), currency)}</p>
                     {mitAbo && (
-                      <p className="text-[11px] text-muted-foreground leading-tight">+ {formatPrice(String(aboListeGesamt(aboListe.produkte)?.beitrag || 0), currency)}/Monat Abo</p>
+                      <p className="text-[11px] text-muted-foreground leading-tight">inkl. Versand + {formatPrice(String(aboListeGesamt(aboListe.produkte)?.beitrag || 0), currency)}/Monat Abo</p>
                     )}
                   </div>
                   <button
