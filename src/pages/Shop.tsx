@@ -29,6 +29,7 @@ import {
 } from "@/components/ShopFilters";
 import { shopZustandSchreiben, sucheAusZustand, zustandAusSuche } from "../../shared/shop-zustand.js";
 import { useShopKontextMerken } from "@/lib/shopRueckkehr";
+import { PRODUKTLISTE_ID, SHOP_LISTE_ABSTAND, zumProduktanfang } from "@/lib/produktanfang";
 import { cn } from "@/lib/utils";
 
 // Eigene-Farbe-Konfiguratoren: ganz oben, wenn man den Shop betritt.
@@ -351,6 +352,7 @@ export default function Shop() {
   };
   const waehleMarke = (name: string) => {
     setFilters({ ...stand.current, brands: markeUmschalten(stand.current.brands, name) });
+    zumProduktanfang(document.getElementById(PRODUKTLISTE_ID));
   };
 
   // Neue Suche setzt die Facetten zurück — sonst bleibt man bei 0 Treffern.
@@ -746,7 +748,7 @@ export default function Shop() {
       )}
 
       {/* ── Ergebnisleiste: Treffer · Ansicht · Sortierung ──────────────── */}
-      <div className="flex flex-wrap items-center gap-3 mb-4 py-2.5 px-4 rounded-xl border border-border bg-card">
+      <div id={PRODUKTLISTE_ID} className={`flex flex-wrap items-center gap-3 mb-4 py-2.5 px-4 rounded-xl border border-border bg-card ${SHOP_LISTE_ABSTAND}`}>
         <p className="text-sm font-semibold">
           {isLoading && sortedGridProducts.length === 0 ? "lädt …" : `${sortedGridProducts.length} Produkte`}
           {sortedGridProducts.length !== gridProducts.length && (

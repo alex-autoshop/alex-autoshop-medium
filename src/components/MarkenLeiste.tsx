@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { markeAktiv } from "@/lib/marken";
 
@@ -18,6 +19,21 @@ export function MarkenLeiste({
   label: string;
   mitAlle?: boolean;
 }) {
+  const leiste = useRef<HTMLDivElement>(null);
+  const zuletzt = useRef("");
+  const auswahl = Array.isArray(werte) ? werte.join("|") : wert;
+  useEffect(() => {
+    const root = leiste.current;
+    const name = zuletzt.current;
+    if (!root || !name) return;
+    const knopf = [...root.querySelectorAll("button")].find((b) => (b.textContent || "").startsWith(name));
+    if (!knopf) return;
+    const links = knopf.offsetLeft;
+    const rechts = links + knopf.offsetWidth;
+    if (links < root.scrollLeft) root.scrollLeft = Math.max(0, links - 8);
+    else if (rechts > root.scrollLeft + root.clientWidth) root.scrollLeft = rechts - root.clientWidth + 8;
+  }, [auswahl]);
+
   if (marken.length === 0) return null;
   const mehrfach = Array.isArray(werte);
   const gesamt = marken.reduce((s, m) => s + m.anzahl, 0);
@@ -27,7 +43,9 @@ export function MarkenLeiste({
       key={name}
       type="button"
       aria-pressed={aktiv}
-      onClick={() => {
+      onClick={(e) => {
+        zuletzt.current = wahl || "Alle";
+        e.currentTarget.scrollIntoView({ inline: "nearest", block: "nearest" });
         if (!wahl || (!mehrfach && aktiv)) onWahl("");
         else onWahl(wahl);
       }}
@@ -41,7 +59,7 @@ export function MarkenLeiste({
     </button>
   );
   return (
-    <div className="flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label={label}>
+    <div ref={leiste} className="flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label={label}>
       {mitAlle && chip("Alle", gesamt, alleAktiv, "")}
       {marken.map((m) => chip(
         m.name,

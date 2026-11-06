@@ -1,6 +1,7 @@
 import { useMemo, useRef } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useShopKontextMerken } from "@/lib/shopRueckkehr";
+import { PRODUKTLISTE_ID, KATEGORIE_LISTE_ABSTAND, zumProduktanfang } from "@/lib/produktanfang";
 import { ChevronRight, PackageOpen, ArrowRight } from "lucide-react";
 import { brandOf, markeAktiv, markeUmschalten, markenName, markenSlug, markenZaehlen } from "@/lib/marken";
 import { MarkenLeiste } from "@/components/MarkenLeiste";
@@ -170,6 +171,7 @@ export default function Kategorie() {
               const next = markeUmschalten(markenRef.current, name);
               markenRef.current = next;
               setMarken(next);
+              zumProduktanfang(document.getElementById(PRODUKTLISTE_ID));
             }}
             label="Nach Marke filtern"
           />
@@ -177,7 +179,7 @@ export default function Kategorie() {
       )}
 
       {/* Ergebnisleiste mit Sortierung */}
-      <div className="flex flex-wrap items-center gap-3 mb-4 py-2.5 px-4 rounded-xl border border-border bg-card">
+      <div id={PRODUKTLISTE_ID} className={`flex flex-wrap items-center gap-3 mb-4 py-2.5 px-4 rounded-xl border border-border bg-card ${KATEGORIE_LISTE_ABSTAND}`}>
         <p className="text-sm font-semibold">
           {isLoading && products.length === 0
             ? "lädt …"
