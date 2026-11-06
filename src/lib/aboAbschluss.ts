@@ -15,12 +15,16 @@ export async function aboAbschliessen(opts: {
   zahlweg: Zahlweg;
   produkte: unknown[];
   price: number;
+  waren?: unknown[];
+  einmalig?: number;
 }): Promise<Ergebnis> {
   const auswahl = {
     aboTyp: "produkt" as const,
     email: opts.email,
     produkte: opts.produkte,
     price: opts.price,
+    waren: opts.waren,
+    einmalig: opts.einmalig,
     ref: empfehlungOffen() ? empfehlungLesen() || undefined : undefined,
   };
   const co = await fetch("/api/membership-checkout", {
@@ -32,6 +36,9 @@ export async function aboAbschliessen(opts: {
   if (co.ok && coData.url) return { art: "weiter", url: coData.url };
   if (co.status === 409 || co.status === 400) {
     return { art: "fehler", text: coData.error || "Buchung nicht möglich — bitte die Seite neu laden." };
+  }
+  if (opts.waren && (coData.fallback || !co.ok)) {
+    return { art: "fehler", text: "Die Kartenzahlung ist noch nicht freigeschaltet. Bitte ruf uns an: 0202 82690." };
   }
   if (!(co.ok && coData.fallback) && !co.ok) {
     return { art: "fehler", text: coData.error || "Der Abschluss ist gerade nicht erreichbar." };

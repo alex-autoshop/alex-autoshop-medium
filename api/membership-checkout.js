@@ -17,7 +17,8 @@
 export const config = { runtime: "edge" };
 
 import { mitgliedsbeitrag, rabattName, DIENSTLEISTUNG_BUCHBAR } from "../shared/mitgliedspreise.js";
-import { aboListeGesamt } from "../shared/produktabo.js";
+import { aboListeGesamt, warenMitRabatt } from "../shared/produktabo.js";
+import { versandkosten } from "../shared/versand.js";
 import { empfehlungSichtbar } from "../shared/empfehlung.js";
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
@@ -104,6 +105,61 @@ async function createProduktSession({ email, price, zeilen, positionen, ref }) {
   const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: form,
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(`Stripe ${res.status}: ${JSON.stringify(data?.error || data).slice(0, 300)}`);
+  return { url: data.url };
+}
+
+/** Eine Zahlung: Abo monatlich wiederkehrend, Ware einmalig auf der ersten Rechnung. */
+async function createWarenAboSession({ email, monat, waren, versand, positionen, ref }) {
+  const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
+  if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
+  const form = new URLSearchParams();
+  form.set("mode", "subscription");
+  form.set("locale", "de");
+  form.set("customer_email", email);
+  form.set("success_url", `${BASE()}/warenkorb?status=success&session_id={CHECKOUT_SESSION_ID}`);
+  form.set("cancel_url", `${BASE()}/warenkorb?status=cancel`);
+  form.set("line_items[0][quantity]", "1");
+  form.set("line_items[0][price_data][currency]", "eur");
+  form.set("line_items[0][price_data][recurring][interval]", "month");
+  form.set("line_items[0][price_data][unit_amount]", String(Math.round(Number(monat) * 100)));
+  form.set("line_items[0][price_data][product_data][name]", "Produkt-Abo, monatlich kündbar");
+  let zeile = 1;
+  const einmaligDazu = (name, betrag) => {
+    form.set(`line_items[${zeile}][quantity]`, "1");
+    form.set(`line_items[${zeile}][price_data][currency]`, "eur");
+    form.set(`line_items[${zeile}][price_data][unit_amount]`, String(Math.round(Number(betrag) * 100)));
+    form.set(`line_items[${zeile}][price_data][product_data][name]`, String(name).slice(0, 120));
+    zeile += 1;
+  };
+  waren.forEach((w) => {
+    einmaligDazu(w.menge > 1 ? `${w.menge}× ${w.titel}` : w.titel, w.betrag);
+  });
+  if (versand > 0) einmaligDazu("Versand", versand);
+  const einmalig = Math.round((waren.reduce((s, w) => s + Number(w.betrag), 0) + Number(versand || 0)) * 100) / 100;
+  const monatText = Number(monat).toFixed(2).replace(".", ",");
+  const wareText = einmalig.toFixed(2).replace(".", ",");
+  form.set("custom_text[submit][message]", `Zahlungspflichtig bestellen. Einmalig ${wareText} €, dazu ${monatText} € im Monat. Monatlich kündbar, keine Mindestlaufzeit.`);
+  form.set("metadata[email]", email);
+  form.set("metadata[abo]", "produkt");
+  form.set("metadata[price]", String(monat));
+  form.set("metadata[einmalig]", String(einmalig));
+  form.set("metadata[positionen]", positionen);
+  form.set("subscription_data[metadata][email]", email);
+  form.set("subscription_data[metadata][abo]", "produkt");
+  form.set("subscription_data[metadata][price]", String(monat));
+  form.set("subscription_data[metadata][positionen]", positionen);
+  if (ref) form.set("metadata[ref]", ref);
+  const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Version": "2024-06-20",
+    },
     body: form,
   });
   const data = await res.json().catch(() => null);
@@ -211,7 +267,7 @@ export default async function handler(req) {
   let body;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
   const { email: emailRoh, level, modules = [], price, method, freePaint, aufbereitung, ref: refRoh,
-          aboTyp, rabatt, produkte = [] } = body || {};
+          aboTyp, rabatt, produkte = [], waren, einmalig } = body || {};
   const email = String(emailRoh || "").trim().toLowerCase();
   if (!EMAIL_OK.test(email)) return json({ error: "Bitte eine gültige E-Mail-Adresse angeben." }, 400);
   if (!["stripe", "gocardless"].includes(method)) return json({ error: "method muss stripe|gocardless sein" }, 400);
@@ -238,7 +294,29 @@ export default async function handler(req) {
     const positionen = liste.map((p) => `${p.titel}:${p.rabatt}`).join(";").slice(0, 450);
     const stufen = [...new Set(liste.map((p) => p.rabatt))].join(",");
     const paket = ["Pmix", String(g.beitrag), stufen].join("|");
+    const wareDabei = Array.isArray(waren) && waren.length > 0;
     try {
+      if (wareDabei) {
+        if (method !== "stripe") return json({ error: "Ware und Abo werden zusammen nur per Karte abgeschlossen." }, 400);
+        const gerechnet = warenMitRabatt(waren.map((w) => ({
+          titel: w?.titel,
+          einzel: w?.einzel,
+          menge: w?.menge,
+          rabatt: w?.rabatt,
+        })));
+        if (!gerechnet) return json({ error: "Die Warenpreise sind unvollständig." }, 400);
+        const versand = versandkosten({ summe: gerechnet.summe });
+        const summe = Math.round((gerechnet.summe + versand) * 100) / 100;
+        if (einmalig !== undefined && Number(einmalig) !== summe) {
+          return json({ error: "Der Warenpreis hat sich gerade geändert — bitte die Seite neu laden.", einmalig: summe }, 409);
+        }
+        const r = await createWarenAboSession({
+          email, monat: g.beitrag, waren: gerechnet.positionen, versand, positionen, ref: refAus(email, refRoh),
+        });
+        if (r.fallback) return json({ fallback: true, reason: "stripe noch nicht konfiguriert" });
+        if (!r.url) return json({ error: "Keine Checkout-URL erhalten" }, 502);
+        return json({ url: r.url });
+      }
       const r = method === "stripe"
         ? await createProduktSession({ email, price: g.beitrag, zeilen, positionen, ref: refAus(email, refRoh) })
         : await createProduktFlow({ email, price: g.beitrag, paket, positionen });
