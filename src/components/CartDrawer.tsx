@@ -471,7 +471,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm leading-tight line-clamp-2">{node.title}</p>
+                        <p lang="de" className="produkt-titel">{node.title}</p>
                         {item.variantTitle !== "Default Title" && (
                           <p className="text-xs text-muted-foreground mt-0.5">{item.variantTitle}</p>
                         )}

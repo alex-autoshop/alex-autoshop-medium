@@ -52,7 +52,7 @@ export function B2BProductCard({
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden flex flex-col hover:border-primary/50 transition-colors">
+    <div className="h-full bg-card rounded-xl border border-border overflow-hidden flex flex-col hover:border-primary/50 transition-colors">
       <div className="aspect-square bg-white overflow-hidden">
         {img ? (
           <img src={img} alt={node.title} loading="lazy" className="w-full h-full object-contain p-2" />
@@ -62,7 +62,7 @@ export function B2BProductCard({
       </div>
 
       <div className="p-3 flex flex-col flex-1 gap-2">
-        <h3 className="font-semibold text-sm leading-snug line-clamp-2 min-h-[2.5rem]">{node.title}</h3>
+        <h3 lang="de" className="produkt-titel">{node.title}</h3>
 
         <DeliveryBadge node={node} available={variant?.availableForSale !== false} />
 

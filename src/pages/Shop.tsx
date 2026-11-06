@@ -680,7 +680,7 @@ export default function Shop() {
             <Palette className="w-5 h-5 text-primary" />
             <h2 className="text-xl sm:text-2xl">Eigene Farbe konfigurieren</h2>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 items-start">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 items-stretch">
             {featured.map((p) => (
               <ProductCard key={p.node.id} product={p} />
             ))}
@@ -807,7 +807,7 @@ export default function Shop() {
                     className="w-10 h-10 object-contain rounded-lg bg-white border border-border/50 p-0.5 shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{title}</p>
+                  <p lang="de" className="produkt-titel">{title}</p>
                   {price && <p className="text-xs text-muted-foreground">{Number(price).toFixed(2).replace('.', ',')} €</p>}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">

@@ -528,7 +528,7 @@ function DashboardShop({ level, profile, trialActive, userId }: { level: number;
         <p className="text-center py-12 text-muted-foreground">Produkte konnten nicht geladen werden.</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 items-stretch">
             {products.map((p) => (
               <B2BProductCard key={p.node.id} product={p} memberLevel={level} discount={discount} />
             ))}

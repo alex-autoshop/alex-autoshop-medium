@@ -88,14 +88,15 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
         </div>
       </Link>
 
-      <div ref={spalte} className="p-4 flex flex-col flex-1 gap-2">
+      <div ref={spalte} className="p-3 sm:p-4 flex flex-col flex-1 gap-2">
         <Link to={`/produkt/${node.handle}`}>
-          <p className="font-semibold text-sm leading-snug line-clamp-2 min-h-[2.5rem] hover:text-primary transition-colors">
+          <p lang="de" className="produkt-titel hover:text-primary transition-colors">
             {node.title}
           </p>
         </Link>
         {gefahr.ist && !gesperrt && <GefahrstoffKompakt g={gefahr} />}
 
+        <div className="mt-auto flex flex-col gap-2">
         {/* Grundpreis */}
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Grundpreis</p>
@@ -172,6 +173,7 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
               <AboKnopf produkt={aboProdukt} kurz={breite < 220} />
             </Suspense>
           )}
+        </div>
         </div>
       </div>
     </div>

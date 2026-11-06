@@ -403,7 +403,8 @@ export function ProduktAbo() {
                     </button>
                     <button
                       type="button"
-                      className="text-xs lg:text-sm font-semibold leading-4 line-clamp-2 h-10 overflow-hidden text-left cursor-pointer hover:text-primary"
+                      lang="de"
+                      className="produkt-titel text-left cursor-pointer hover:text-primary"
                       onClick={() => setVorschau(p)}
                     >
                       {a.titel}
@@ -486,7 +487,7 @@ export function ProduktAbo() {
                       {p.bild && <img src={p.bild} alt="" className="w-full h-full object-cover" loading="lazy" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold leading-snug line-clamp-2">{p.titel}</p>
+                      <p lang="de" className="produkt-titel">{p.titel}</p>
                       {istMenge(p) && (
                         <p className="text-[11px] text-muted-foreground leading-tight">
                           {p.variante} · {p.menge}× / Monat
@@ -612,7 +613,7 @@ export function ProduktAbo() {
                       {p.bild && <img src={p.bild} alt="" className="w-full h-full object-cover" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold leading-snug line-clamp-2">{p.titel}</p>
+                      <p lang="de" className="produkt-titel">{p.titel}</p>
                       {istMenge(p) && (
                         <p className="text-[11px] text-muted-foreground leading-tight">{p.variante}</p>
                       )}
