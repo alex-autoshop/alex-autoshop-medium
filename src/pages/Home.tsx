@@ -7,12 +7,9 @@ import { MembershipCards } from "@/components/MembershipCards";
 import { ProductGrid } from "@/components/ProductGrid";
 import { useProducts } from "@/hooks/useProducts";
 import { SHOP_CATEGORIES, kategoriePfad } from "@/lib/shopCategories";
-import { useCollectionPreviews } from "@/hooks/useCollectionPreviews";
-
 import { collections } from "@/lib/categories";
 import { ShopBild } from "@/components/ShopBild";
-
-const HAUPT_HANDLES = SHOP_CATEGORIES.map((c) => c.handle);
+import { cn } from "@/lib/utils";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
@@ -51,7 +48,6 @@ const USPS = [
 
 export default function Home() {
   const { products, isLoading, error } = useProducts({ pageSize: 8 });
-  const kategorieBilder = useCollectionPreviews(HAUPT_HANDLES);
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const usps = teileSichtbar ? USPS : USPS.filter((usp) => usp.title !== "Teile per Kennzeichen");
 
@@ -118,18 +114,22 @@ export default function Home() {
         </motion.div>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           {SHOP_CATEGORIES.map((col, i) => {
-            const bild = kategorieBilder[col.handle] ?? collections.find((c) => c.slug === col.handle)?.image;
+            const statisch = collections.find((c) => c.slug === col.handle);
+            const bild = statisch?.image;
             return (
               <motion.div key={col.handle} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.05 }}>
                 <Link to={kategoriePfad(col.handle)} className="card-tilt overflow-hidden group block">
-                  <div className="aspect-[4/3] overflow-hidden bg-secondary flex items-center justify-center">
+                  <div className={cn("aspect-[4/3] overflow-hidden", statisch?.contain ? "bg-white" : "bg-secondary")}>
                     {bild ? (
                       <ShopBild
                         src={bild}
                         alt=""
-                        priority={i === 0}
+                        priority={i < 2}
                         sizes="(min-width: 1024px) 30vw, 46vw"
-                        className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+                        className={cn(
+                          "w-full h-full group-hover:scale-105 transition-transform duration-300",
+                          statisch?.contain ? "object-contain p-3" : "object-cover"
+                        )}
                       />
                     ) : (
                       <span className="text-muted-foreground/60 font-semibold px-4 text-center">{col.label}</span>
