@@ -1,12 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { istLieferant, markenSortieren } from "../shared/kundenmarke.js";
+import { istLieferant, markenSlug, markenSortieren } from "../shared/kundenmarke.js";
 
 test("Lieferanten sind keine Marken", () => {
   assert.equal(istLieferant("DS Color"), true);
   assert.equal(istLieferant("Inter Cars"), true);
   assert.equal(istLieferant("Alex Autoshop"), true);
   assert.equal(istLieferant("Mipa"), false);
+});
+
+test("Marken-Slug für die Adresse", () => {
+  assert.equal(markenSlug("Glasurit"), "glasurit");
+  assert.equal(markenSlug("RM"), "rm");
+  assert.equal(markenSlug("MANN-FILTER"), "mann-filter");
+  assert.equal(markenSlug("Spies Hecker"), "spies-hecker");
 });
 
 test("Marken nach Anzahl, Lieferanten fallen weg", () => {

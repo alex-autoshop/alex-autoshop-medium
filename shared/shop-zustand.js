@@ -3,6 +3,8 @@
 // sein. Marke und Sortierung stecken in der Query. „Zurück zum Shop“ und der
 // Browser-Zurück öffnen dieselbe Ansicht — nicht die Wunschfarben-Startseite.
 
+import { markenSlug } from "./kundenmarke.js";
+
 export const SHOP_KEY = "aa:shop";
 
 export const SORTIERUNGEN = ["empfohlen", "preis-auf", "preis-ab", "name", "marke"];
@@ -10,7 +12,7 @@ export const SORTIERUNGEN = ["empfohlen", "preis-auf", "preis-ab", "name", "mark
 function leseListe(params, name) {
   const aus = [];
   for (const roh of params.getAll(name)) {
-    for (const teil of String(roh).split("|")) {
+    for (const teil of String(roh).split(/[|,]/)) {
       const wert = teil.trim();
       if (wert && !aus.includes(wert)) aus.push(wert);
     }
@@ -37,14 +39,19 @@ export function zustandAusSuche(search) {
 /** Kanonische Query. Leere Auswahl ergibt "". */
 export function sucheAusZustand(z) {
   const params = new URLSearchParams();
-  for (const marke of z?.brands || []) params.append("marke", marke);
+  const marken = [];
+  for (const marke of z?.brands || []) {
+    const slug = markenSlug(marke);
+    if (slug && !marken.includes(slug)) marken.push(slug);
+  }
+  if (marken.length) params.set("marke", marken.join(","));
   for (const art of z?.tags || []) params.append("art", art);
   if (z?.priceMax) params.set("bis", String(z.priceMax));
   if (z?.onlyAvailable) params.set("lager", "1");
   const q = (z?.q || "").trim();
   if (q) params.set("q", q);
   if (z?.sort && z.sort !== "empfohlen" && SORTIERUNGEN.includes(z.sort)) params.set("sort", z.sort);
-  const s = params.toString();
+  const s = params.toString().replace(/(^|&)marke=([^&]*)/g, (_, trenner, wert) => `${trenner}marke=${wert.replace(/%2C/gi, ",")}`);
   return s ? `?${s}` : "";
 }
 

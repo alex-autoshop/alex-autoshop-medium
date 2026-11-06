@@ -1,8 +1,8 @@
-import { useMemo } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useMemo, useRef } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useShopKontextMerken } from "@/lib/shopRueckkehr";
 import { ChevronRight, PackageOpen, ArrowRight } from "lucide-react";
-import { brandOf, markenZaehlen } from "@/lib/marken";
+import { brandOf, markeAktiv, markeUmschalten, markenName, markenSlug, markenZaehlen } from "@/lib/marken";
 import { MarkenLeiste } from "@/components/MarkenLeiste";
 import { Seo } from "@/components/Seo";
 import { ProductGrid } from "@/components/ProductGrid";
@@ -55,7 +55,8 @@ function Hinweis({ titel, text }: { titel: string; text: React.ReactNode }) {
 
 export default function Kategorie() {
   const { handle = "" } = useParams();
-  const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
   const sortParam = params.get("sort") as CollectionSort | null;
   const sort: CollectionSort = COLLECTION_SORTS.some((s) => s.value === sortParam) ? sortParam! : "empfohlen";
 
@@ -63,16 +64,18 @@ export default function Kategorie() {
   const { products, isLoading, error, notFound, hasNextPage } = useCollectionProducts(handle, sort);
   useShopKontextMerken(!isLoading);
 
-  // Markenfilter: ?marke=Mipa,FRIZ — Marke kommt aus Titel/Handle (siehe @/lib/marken)
+  // Markenfilter: ?marke=glasurit,rm — Slug aus Titel/Handle (siehe @/lib/marken)
   const gewaehlteMarken = useMemo(
     () => (params.get("marke") ?? "").split(",").map((m) => m.trim()).filter(Boolean),
     [params]
   );
   const marken = useMemo(() => markenZaehlen(products), [products]);
   const sichtbar = useMemo(
-    () => (gewaehlteMarken.length ? products.filter((p) => gewaehlteMarken.includes(brandOf(p))) : products),
+    () => (gewaehlteMarken.length ? products.filter((p) => markeAktiv(gewaehlteMarken, brandOf(p))) : products),
     [products, gewaehlteMarken]
   );
+  const markenRef = useRef(gewaehlteMarken);
+  markenRef.current = gewaehlteMarken;
 
   if (!treffer) {
     return (
@@ -95,18 +98,27 @@ export default function Kategorie() {
   const sub = treffer.type === "sub" ? treffer.sub : null;
   const titel = sub ? sub.label : main.label;
 
+  const schreibeParams = (next: URLSearchParams) => {
+    const roh = next.toString().replace(
+      /(^|&)marke=([^&]*)/g,
+      (_, trenner, wert) => `${trenner}marke=${wert.replace(/%2C/gi, ",")}`,
+    );
+    navigate({ pathname: window.location.pathname, search: roh ? `?${roh}` : "" }, { replace: true });
+  };
+
   const setMarken = (liste: string[]) => {
     const next = new URLSearchParams(params);
-    if (liste.length) next.set("marke", liste.join(","));
+    const slugs = [...new Set(liste.map((m) => markenSlug(m)).filter(Boolean))];
+    if (slugs.length) next.set("marke", slugs.join(","));
     else next.delete("marke");
-    setParams(next, { replace: true });
+    schreibeParams(next);
   };
 
   const setSort = (v: CollectionSort) => {
     const next = new URLSearchParams(params);
     if (v === "empfohlen") next.delete("sort");
     else next.set("sort", v);
-    setParams(next, { replace: true });
+    schreibeParams(next);
   };
 
   return (
@@ -153,8 +165,12 @@ export default function Kategorie() {
         <div className="mb-4">
           <MarkenLeiste
             marken={marken}
-            wert={gewaehlteMarken.length === 1 ? gewaehlteMarken[0] : ""}
-            onWahl={(name) => setMarken(name ? [name] : [])}
+            werte={gewaehlteMarken}
+            onWahl={(name) => {
+              const next = markeUmschalten(markenRef.current, name);
+              markenRef.current = next;
+              setMarken(next);
+            }}
             label="Nach Marke filtern"
           />
         </div>
@@ -196,7 +212,7 @@ export default function Kategorie() {
       ) : !isLoading && gewaehlteMarken.length > 0 && sichtbar.length === 0 ? (
         <Hinweis
           titel="Keine Produkte dieser Marke hier"
-          text={<>In dieser Kategorie gibt es keine Produkte von {gewaehlteMarken.join(", ")}. <button type="button" onClick={() => setMarken([])} className="text-primary underline">Filter zurücksetzen</button></>}
+          text={<>In dieser Kategorie gibt es keine Produkte von {gewaehlteMarken.map((m) => markenName(m, marken.map((x) => x.name))).join(", ")}. <button type="button" onClick={() => setMarken([])} className="text-primary underline">Filter zurücksetzen</button></>}
         />
       ) : (
         <ProductGrid products={sichtbar} isLoading={isLoading && products.length === 0} fenster={24} />

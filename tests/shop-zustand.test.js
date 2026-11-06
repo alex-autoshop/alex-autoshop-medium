@@ -26,9 +26,9 @@ test("Marke Glasurit übersteht den Weg durch die Adresse", () => {
     q: "",
     sort: "empfohlen",
   });
-  assert.equal(suche, "?marke=Glasurit");
+  assert.equal(suche, "?marke=glasurit");
   const zurueck = zustandAusSuche(suche);
-  assert.deepEqual(zurueck.brands, ["Glasurit"]);
+  assert.deepEqual(zurueck.brands, ["glasurit"]);
   assert.equal(zurueck.sort, "empfohlen");
   assert.equal(zurueck.q, "");
 });
@@ -56,7 +56,7 @@ test("Suche, Art, Preis und Lager wandern mit", () => {
     sort: "preis-auf",
   });
   const z = zustandAusSuche(suche);
-  assert.deepEqual(z.brands, ["Glasurit", "Mipa"]);
+  assert.deepEqual(z.brands, ["glasurit", "mipa"]);
   assert.deepEqual(z.tags, ["Härter"]);
   assert.equal(z.priceMax, 50);
   assert.equal(z.onlyAvailable, true);
@@ -76,6 +76,16 @@ test("Kategorieleiste mit Marke Glasurit bleibt das Zurück-Ziel", () => {
   assert.equal(ziel.pathname, "/kategorie/lackierbedarf-alle");
   assert.equal(ziel.search, "?marke=Glasurit&sort=neu");
   assert.equal(ziel.scroll, 420);
+});
+
+test("Marke in der Adresse ist ein Slug, Komma und alte Parameter bleiben lesbar", () => {
+  assert.deepEqual(zustandAusSuche("?marke=glasurit,rm").brands, ["glasurit", "rm"]);
+  assert.deepEqual(zustandAusSuche("?marke=Glasurit&marke=Mipa").brands, ["Glasurit", "Mipa"]);
+  assert.deepEqual(zustandAusSuche("?marke=Glasurit,Mipa").brands, ["Glasurit", "Mipa"]);
+  assert.equal(
+    sucheAusZustand({ brands: ["Glasurit", "RM"], tags: [], priceMax: null, onlyAvailable: false, q: "", sort: "empfohlen" }),
+    "?marke=glasurit,rm",
+  );
 });
 
 test("Unbekannte Sortierung und fremde Pfade fallen weg", () => {
