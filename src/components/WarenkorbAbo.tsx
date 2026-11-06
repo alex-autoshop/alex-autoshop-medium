@@ -37,12 +37,14 @@ export function WarenkorbAboZeile({
   stufe,
   drin,
   onStufe,
+  toasterId,
 }: {
   produkt: AboMerkProdukt;
   menge: number;
   stufe: number;
   drin: boolean;
   onStufe: (rabatt: number) => void;
+  toasterId?: string;
 }) {
   const rechnung = mitgliedZeile(produkt.preis, menge, stufe);
   const waehrung = produkt.waehrung || "EUR";
@@ -50,12 +52,12 @@ export function WarenkorbAboZeile({
   const umschalten = () => {
     if (drin) {
       aboEinzelLoeschen(produkt.id);
-      toast.success("Aus der Abo-Liste genommen", { description: produkt.titel });
+      toast.success("Aus der Abo-Liste genommen", { description: produkt.titel, toasterId });
       return;
     }
     const erg = aboEinzelMerken({ ...produkt, rabatt: stufe });
-    if (erg === "voll") toast.error("Die Abo-Liste ist voll.");
-    else if (erg !== "leer") toast.success("In die Abo-Liste gelegt", { description: produkt.titel });
+    if (erg === "voll") toast.error("Die Abo-Liste ist voll.", { toasterId });
+    else if (erg !== "leer") toast.success("In die Abo-Liste gelegt", { description: produkt.titel, toasterId });
   };
 
   const waehlen = (rabatt: number) => {
@@ -150,10 +152,10 @@ export function AboKasse({ ersparnis }: { ersparnis: number }) {
       if (erg.art === "weiter") { window.location.href = erg.url; return; }
       if (erg.art === "anfrage") {
         setAnfrage(true);
-        toast.success("Liste ist bei uns", { description: "Die Online-Zahlung ist noch nicht freigeschaltet. Wir melden uns." });
+        toast.success("Liste ist bei uns", { description: "Die Online-Zahlung ist noch nicht freigeschaltet. Wir melden uns.", toasterId: "warenkorb" });
         return;
       }
-      toast.error(erg.text);
+      toast.error(erg.text, { toasterId: "warenkorb" });
     } finally {
       setLaeuft(false);
     }
