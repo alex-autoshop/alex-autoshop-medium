@@ -43,7 +43,7 @@ export function MemberProductCard({
   };
 
   return (
-    <div className="card-tilt overflow-hidden flex flex-col">
+    <div className="card-tilt overflow-hidden flex flex-col h-full">
       <div className="aspect-square bg-white overflow-hidden">
         {img ? (
           <img src={img} alt={node.title} loading="lazy" className="w-full h-full object-contain p-2" />
@@ -53,8 +53,9 @@ export function MemberProductCard({
       </div>
 
       <div className="p-4 flex flex-col flex-1 gap-3">
-        <h3 className="font-semibold text-sm leading-snug line-clamp-2 min-h-[2.5rem]">{node.title}</h3>
+        <h3 lang="de" className="produkt-titel">{node.title}</h3>
 
+        <div className="mt-auto flex flex-col gap-3">
         {/* Dein Preis */}
         <div>
           <p className="text-xs text-muted-foreground">{memberLevel > 0 ? "Dein Mitgliederpreis" : "Preis ohne Mitgliedschaft"}</p>
@@ -93,10 +94,11 @@ export function MemberProductCard({
         </div>
 
         {variant?.availableForSale && !multiple && (
-          <button onClick={add} className="btn-dark w-full mt-auto text-sm">
+          <button onClick={add} className="btn-dark w-full text-sm">
             <ShoppingCart className="w-4 h-4" /> In den Warenkorb
           </button>
         )}
+        </div>
       </div>
     </div>
   );

@@ -633,11 +633,11 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
           )}
 
           {suggestions.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-stretch">
               {suggestions.map((p) => (
                 <div
                   key={p.handle}
-                  className="rounded-xl border border-border bg-card flex flex-col overflow-hidden hover:border-primary/40 transition-colors"
+                  className="h-full rounded-xl border border-border bg-card flex flex-col overflow-hidden hover:border-primary/40 transition-colors"
                 >
                   {/* Produktbild */}
                   {p.image ? (
@@ -654,8 +654,8 @@ export function MaterialPlanner({ compact = false }: MaterialPlannerProps) {
                   )}
 
                   <div className="p-3 flex flex-col flex-1 gap-2">
-                    <p className="text-sm font-semibold leading-tight line-clamp-2 flex-1">{p.title}</p>
-                    <p className="text-primary font-bold text-base">{p.priceFormatted}</p>
+                    <p lang="de" className="produkt-titel">{p.title}</p>
+                    <p className="text-primary font-bold text-base mt-auto">{p.priceFormatted}</p>
 
                     <div className="flex gap-1.5">
                       <button

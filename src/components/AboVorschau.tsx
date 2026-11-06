@@ -104,7 +104,7 @@ export function AboVorschau({
           )}
         </div>
         <div className="p-5 flex flex-col gap-4">
-          <h2 id="abo-vorschau-titel" className="font-display text-xl sm:text-2xl leading-snug pr-8">
+          <h2 id="abo-vorschau-titel" lang="de" className="font-display text-xl sm:text-2xl leading-snug pr-8 [overflow-wrap:anywhere] hyphens-auto">
             {n.title}
           </h2>
           <GefahrstoffBlock g={gefahr} titel={n.title} handle={n.handle} />

@@ -198,7 +198,7 @@ export function MeineArtikel({ userId, discount }: { userId: string; discount: n
                 <div className="w-11 h-11 rounded-lg bg-secondary shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium leading-tight truncate">{a.title}</p>
+                <p lang="de" className="produkt-titel">{a.title}</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   {a.orderCount}× bestellt · {a.totalQty} Stück gesamt · zuletzt vor {a.daysSince} Tagen
                   {a.avgIntervalDays ? ` · üblich alle ${a.avgIntervalDays} Tage` : ""}
@@ -376,9 +376,9 @@ export function Schnellerfassung({
                 {!r.code.trim() ? (
                   <span className="text-muted-foreground/40">—</span>
                 ) : match ? (
-                  <span className="inline-flex items-center gap-1.5 text-foreground">
-                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span className="truncate">{match.product.node.title}</span>
+                  <span className="flex w-full items-start gap-1.5 text-foreground min-w-0">
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                    <span lang="de" className="produkt-titel min-w-0 flex-1">{match.product.node.title}</span>
                     <span className="ml-auto font-bold tabular-nums shrink-0">
                       {formatPrice(String(netto(match.price.amount, discount) * r.quantity), match.price.currencyCode)}
                     </span>
