@@ -21,7 +21,8 @@ import {
   legacyCategoryRedirect,
   navCategories,
 } from "@/lib/categories";
-import { brandOf, brandRank } from "@/lib/marken";
+import { brandOf, brandRank, markenZaehlen } from "@/lib/marken";
+import { MarkenLeiste } from "@/components/MarkenLeiste";
 import {
   ShopFilters, ActiveFilterChips, productPrice, productAvailable,
   type ShopFilterState,
@@ -643,7 +644,17 @@ export default function Shop() {
         </AnimatePresence>
       </div>
 
-      <div className="mb-4" />
+      <div className="mb-4 flex items-center gap-2">
+        <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-muted-foreground">Marke</span>
+        <div className="min-w-0 flex-1">
+        <MarkenLeiste
+          marken={markenZaehlen(gridProducts)}
+          wert={filters.brands.length === 1 ? filters.brands[0] : ""}
+          onWahl={(name) => setFilters({ ...filters, brands: name ? [name] : [] })}
+          label="Marke"
+        />
+        </div>
+      </div>
 
       {/* Schnellzugriff: Klarlack · Härter · Wunschfarbe · Verdünnung */}
       {showFeatured && (
