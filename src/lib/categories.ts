@@ -39,6 +39,7 @@ export const navCategories: ShopLink[] = [
     slug: "lackierbedarf-alle",
     query: 'tag:"Kategorie: Lackierbedarf"',
     image: "/images/collection-lackierprodukte.webp",
+    contain: true,
     children: [
       { label: "Grundierung & Füller", slug: "grundierung-fueller", query: 'product_type:"Grundierung & Füller"' },
       { label: "Spachtel", slug: "spachtel", query: 'product_type:"Spachtel"' },
@@ -55,6 +56,7 @@ export const navCategories: ShopLink[] = [
     slug: "karosserie-reparatur",
     query: 'tag:"Kategorie: Karosserie & Reparatur"',
     image: "/images/collection-karosserie.webp",
+    contain: true,
     children: [
       { label: "Dichten & Kleben", slug: "dichten-kleben-produkte", query: 'product_type:"Dichten & Kleben"' },
       { label: "Steinschlag- & Rostschutz", slug: "steinschlag-rostschutz", query: 'product_type:"Steinschlag- & Rostschutz"' },
@@ -82,6 +84,7 @@ export const navCategories: ShopLink[] = [
     slug: "oele-fluessigkeiten-filter",
     query: 'tag:"Kategorie: Öle"',
     image: "/images/collection-oele.webp",
+    contain: true,
     children: [
       { label: "Motoröl", slug: "motoroel", query: 'product_type:"Motoröl"' },
       { label: "Filter", slug: "filter", query: 'product_type:"Filter"' },
