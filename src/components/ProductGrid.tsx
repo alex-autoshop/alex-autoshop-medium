@@ -12,6 +12,9 @@ interface ProductGridProps {
   columns?: 4 | 5 | 6;
   /** Nur so viele Karten zeichnen, der Rest kommt auf Knopfdruck. */
   fenster?: number;
+  /** Filterspalte steht auch auf dem Handy links daneben — dann eine Karte
+   *  pro Zeile, ab sm zwei. Ab lg gelten wieder die normalen Spalten. */
+  nebenFilter?: boolean;
 }
 
 // Feste Klassen, damit Tailwind sie beim Build findet (kein String-Zusammenbau!).
@@ -19,6 +22,12 @@ const COLS: Record<4 | 5 | 6, string> = {
   4: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
   5: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
   6: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
+};
+
+const COLS_NEBEN_FILTER: Record<4 | 5 | 6, string> = {
+  4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+  5: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5",
+  6: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
 };
 
 function SkeletonCard() {
@@ -34,7 +43,7 @@ function SkeletonCard() {
   );
 }
 
-export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMore, columns = 5, fenster }: ProductGridProps) {
+export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMore, columns = 5, fenster, nebenFilter = false }: ProductGridProps) {
   const schluessel = `${fenster ?? 0}:${products.length}:${products[0]?.node.id ?? ""}:${products[products.length - 1]?.node.id ?? ""}`;
   const [sichtbar, setSichtbar] = useState(fenster ?? products.length);
   useEffect(() => {
@@ -51,7 +60,7 @@ export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMor
 
   return (
     <div>
-      <div className={`grid ${COLS[columns]} gap-3 sm:gap-4 items-stretch`}>
+      <div className={`grid ${nebenFilter ? COLS_NEBEN_FILTER[columns] : COLS[columns]} gap-3 sm:gap-4 items-stretch`}>
         {gezeigt.map((p, i) => (
           <ProductCard key={p.node.id} product={p} priority={i < 2} />
         ))}
