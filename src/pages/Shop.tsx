@@ -28,6 +28,7 @@ import {
   type ShopFilterState,
 } from "@/components/ShopFilters";
 import { shopZustandSchreiben, sucheAusZustand, zustandAusSuche } from "../../shared/shop-zustand.js";
+import { istOelFilter, OEL_KATEGORIE, oeleVorFiltern } from "../../shared/oel-reihenfolge.js";
 import { useShopKontextMerken } from "@/lib/shopRueckkehr";
 import { PRODUKTLISTE_ID, SHOP_LISTE_ABSTAND, zumProduktanfang } from "@/lib/produktanfang";
 import { cn } from "@/lib/utils";
@@ -448,40 +449,40 @@ export default function Shop() {
 
   /** Shop-Sortierung: Wunschfarben ganz oben → Mipa komplett → Eigenmarken
    *  (FRIZ, Master) → übrige Marken als geschlossene Blöcke → Unbekanntes zuletzt.
-   *  Innerhalb einer Marke bleibt PRODUCT_PRIORITY erhalten, danach alphabetisch. */
+   *  Innerhalb einer Marke bleibt PRODUCT_PRIORITY erhalten, danach alphabetisch.
+   *  In „Öle, Flüssigkeiten & Filter“ stehen Öle und Flüssigkeiten vor den Filtern;
+   *  die Sortierung gilt jeweils innerhalb der Gruppe und über die ganze Liste. */
   const sortedGridProducts = useMemo(() => {
-    if (sortMode === "preis-auf") return [...filteredProducts].sort((a, b) => productPrice(a) - productPrice(b));
-    if (sortMode === "preis-ab") return [...filteredProducts].sort((a, b) => productPrice(b) - productPrice(a));
-    if (sortMode === "name")
-      return [...filteredProducts].sort((a, b) => (a.node.title || "").localeCompare(b.node.title || "", "de"));
-    if (sortMode === "marke")
-      return [...filteredProducts].sort(
-        (a, b) =>
-          brandOf(a).localeCompare(brandOf(b), "de") ||
-          (a.node.title || "").localeCompare(b.node.title || "", "de")
-      );
-    return [...filteredProducts].sort((a, b) => {
-      // 1. Wunschfarben-Konfiguratoren immer zuerst
+    const vergleich = (a: ShopifyProduct, b: ShopifyProduct) => {
+      if (sortMode === "preis-auf") return productPrice(a) - productPrice(b);
+      if (sortMode === "preis-ab") return productPrice(b) - productPrice(a);
+      if (sortMode === "name") return (a.node.title || "").localeCompare(b.node.title || "", "de");
+      if (sortMode === "marke") {
+        return brandOf(a).localeCompare(brandOf(b), "de") || (a.node.title || "").localeCompare(b.node.title || "", "de");
+      }
       const aw = isWunschfarbe(a) ? 0 : 1;
       const bw = isWunschfarbe(b) ? 0 : 1;
       if (aw !== bw) return aw - bw;
-
-      // 2. Markenblock (Mipa → FRIZ → Master → Standox → …)
       const ar = brandRank(a);
       const br = brandRank(b);
       if (ar !== br) return ar - br;
-
-      // 3. Innerhalb der Marke: kuratierte Top-Produkte zuerst
       const ai = PRODUCT_PRIORITY.indexOf(a.node.handle);
       const bi = PRODUCT_PRIORITY.indexOf(b.node.handle);
       if (ai !== -1 && bi !== -1) return ai - bi;
       if (ai !== -1) return -1;
       if (bi !== -1) return 1;
-
-      // 4. Rest alphabetisch — stabile, nachvollziehbare Reihenfolge
       return (a.node.title || "").localeCompare(b.node.title || "", "de");
-    });
-  }, [filteredProducts, sortMode]);
+    };
+    if (category === OEL_KATEGORIE && !submittedSearch.trim()) return oeleVorFiltern(filteredProducts, vergleich);
+    return [...filteredProducts].sort(vergleich);
+  }, [filteredProducts, sortMode, category, submittedSearch]);
+
+  const filterTrennung = useMemo(() => {
+    if (category !== OEL_KATEGORIE || submittedSearch.trim()) return undefined;
+    const idx = sortedGridProducts.findIndex((p) => istOelFilter(p));
+    if (idx <= 0) return undefined;
+    return { vorId: sortedGridProducts[idx].node.id, titel: "Filter" };
+  }, [sortedGridProducts, category, submittedSearch]);
 
   const title = activeCategory ? activeCategory.label : "Shop";
   const marken = useMemo(() => markenZaehlen(gridProducts), [gridProducts]);
@@ -857,6 +858,7 @@ export default function Shop() {
         onLoadMore={loadMore}
         columns={columns}
         fenster={24}
+        trennung={filterTrennung}
       />
       )}
         </div>{/* Ende Hauptspalte */}
