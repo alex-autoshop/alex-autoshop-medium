@@ -3,6 +3,7 @@ import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, listeNor
 export const ABO_SPEICHER = "alex-produktabo-v1";
 export const ABO_EREIGNIS = "alex-abo-liste";
 export const ABO_HINWEIS = "alex-abo-entdeckt";
+const ABO_AKTIV = "alex-abo-aktiv";
 
 export interface AboMerkProdukt {
   id: string;
@@ -61,4 +62,14 @@ export function aboHinweisGesehen(): boolean {
 
 export function aboHinweisMerken() {
   try { localStorage.setItem(ABO_HINWEIS, "1"); } catch { /* bleibt für diesen Lauf über die Modul-Sperre aus */ }
+}
+
+/** Nach bezahltem Abo: die gewählten Stufen gelten im Warenkorb. */
+export function aboAktivLesen(): boolean {
+  try { return localStorage.getItem(ABO_AKTIV) === "1"; } catch { return false; }
+}
+
+export function aboAktivMerken() {
+  try { localStorage.setItem(ABO_AKTIV, "1"); } catch { /* privat */ }
+  window.dispatchEvent(new Event(ABO_EREIGNIS));
 }

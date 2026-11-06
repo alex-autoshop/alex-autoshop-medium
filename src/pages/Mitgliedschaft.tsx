@@ -1,4 +1,6 @@
 ﻿import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { aboAktivMerken } from "@/lib/aboListe";
 import { Phone, MessageCircle, ChevronDown, Wrench, PackageSearch } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { MembershipCards } from "@/components/MembershipCards";
@@ -72,7 +74,11 @@ const FAQ = [
 
 export default function Mitgliedschaft() {
   const { user, profile, loading } = useAuth();
+  const [suchParams] = useSearchParams();
   const mitglied = !!user && (profile.membership_level ?? 0) >= 1;
+  useEffect(() => {
+    if (suchParams.get("status") === "success") aboAktivMerken();
+  }, [suchParams]);
   const [wieder, setWieder] = useState(false);
   const zeigen = wieder || (!loading && !mitglied && !geschichteGesehen());
 
