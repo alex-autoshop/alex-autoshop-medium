@@ -12,7 +12,7 @@ import { versandkosten, VERSAND_FREI_AB } from "../../shared/versand.js";
 import { gefahrstoffVonKnoten } from "../../shared/gefahrstoff.js";
 import { mitgliedZeile } from "../../shared/produktabo.js";
 import { aboEinzelMerken } from "@/lib/aboListe";
-import { useAboListe, WarenkorbAboSumme, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
+import { AboKasse, useAboAktiv, useAboListe, WarenkorbAboSumme, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
 import { recordOrder, type OrderItem } from "@/lib/orders";
 import { sendMessage } from "@/lib/inbox";
 import { AuthModal } from "@/components/AuthModal";
@@ -154,15 +154,14 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [redirecting, setRedirecting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  const total = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
   const gefahren = items.map((i) => gefahrstoffVonKnoten(i.product.node)).filter((g) => g.ist);
   const mindestalter = gefahren.reduce((m, g) => Math.max(m, g.mindestalter || 0), 0);
   const gefahrgut = gefahren.filter((g) => g.unNr);
   const kasseZu = mindestalter > 0 && !alterBestaetigt;
   const currency = items[0]?.price.currencyCode ?? "EUR";
   const discount = user ? discountForLevel(profile.membership_level) : 0;
-  const memberSaving = total * (discount / 100);
   const aboListe = useAboListe();
+  const aboAktiv = useAboAktiv();
   const [aboWahl, setAboWahl] = useState<Record<string, number>>({});
 
   const aboDrin = (id: string) => aboListe.produkte.some((p) => p.id === id && p.art !== "menge");
@@ -195,11 +194,20 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     }
     return { dazu, voll };
   };
+  const zeilenBetrag = (item: (typeof items)[number]) => {
+    const einzel = parseFloat(item.price.amount);
+    const normal = einzel * item.quantity;
+    if (!aboAktiv || !aboDrin(item.product.node.id)) return normal;
+    return mitgliedZeile(einzel, item.quantity, aboStufe(item.product.node.id))?.mitglied ?? normal;
+  };
+  const total = Math.round(items.reduce((summe, item) => summe + zeilenBetrag(item), 0) * 100) / 100;
   const aboErsparnis = Math.round(items.reduce((summe, item) => {
+    if (!aboDrin(item.product.node.id)) return summe;
     const zeile = mitgliedZeile(parseFloat(item.price.amount), item.quantity, aboStufe(item.product.node.id));
     return summe + (zeile?.ersparnis ?? 0);
   }, 0) * 100) / 100;
   const allesImAbo = items.length > 0 && items.every((item) => aboDrin(item.product.node.id));
+  const memberSaving = total * (discount / 100);
 
   // Shopify-Shop: bezahlte Mitgliedschaft (Level 1–3) versendet kostenlos.
   // Die Teilebörse nutzt shared/versand.js ohne diesen Nachlass.
@@ -483,7 +491,14 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                           </ul>
                         )}
                         <p className="text-primary font-bold mt-1">
-                          {formatPrice(item.price.amount, item.price.currencyCode)}
+                          {aboAktiv && aboDrin(node.id) ? (
+                            <>
+                              <span className="text-muted-foreground line-through font-medium text-sm mr-1">
+                                {formatPrice(item.price.amount, item.price.currencyCode)}
+                              </span>
+                              {formatPrice(String(parseFloat(item.price.amount) * (1 - aboStufe(node.id) / 100)), item.price.currencyCode)}
+                            </>
+                          ) : formatPrice(item.price.amount, item.price.currencyCode)}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           <button
@@ -585,6 +600,8 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   <span>{formatPrice(String(total + shippingCost), currency)}</span>
                 </div>
 
+                <AboKasse ersparnis={aboErsparnis} />
+
                 {discount > 0 && (
                   <div className="rounded-lg bg-primary/10 border border-primary/20 p-2.5 text-sm text-center">
                     <span className="text-primary font-semibold">
@@ -617,6 +634,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 )}
 
                 {/* ── 1. NORMALER ONLINE-CHECKOUT ── */}
+                {aboAktiv && aboErsparnis > 0 && (
+                  <p className="text-[11px] text-muted-foreground text-center leading-snug">
+                    Abo-Preise gelten in dieser Summe, bei Abholung und auf Rechnung. Der gelbe Knopf öffnet den Ladenpreis.
+                  </p>
+                )}
                 <button
                   onClick={handleOnlineCheckout}
                   disabled={kasseZu}

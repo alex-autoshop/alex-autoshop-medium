@@ -40,6 +40,7 @@ const Gefahrstoffe = lazy(() => import("@/pages/Gefahrstoffe"));
 const Marke = lazy(() => import("@/pages/Marke"));
 const GefahrstoffBericht = lazy(() => import("@/pages/GefahrstoffBericht"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+const Warenkorb = lazy(() => import("@/pages/Warenkorb"));
 const AdminChat = lazy(() => import("@/pages/AdminChat"));
 
 function ScrollToTop() {
@@ -139,6 +140,7 @@ export default function App() {
                     <Route path="/shop/:category" element={<Shop />} />
                     <Route path="/kategorie/:handle" element={<Kategorie />} />
                     <Route path="/produkt/:handle" element={<ProductDetail />} />
+                    <Route path="/warenkorb" element={<Warenkorb />} />
                     <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />
                     <Route path="/teile/:slug" element={<TeileboerseTor><TeilArtikel /></TeileboerseTor>} />
                     <Route path="/teileboerse/artikel" element={<TeileboerseTor><TeilArtikel /></TeileboerseTor>} />
