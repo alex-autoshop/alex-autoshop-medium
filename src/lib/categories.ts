@@ -68,6 +68,7 @@ export const navCategories: ShopLink[] = [
     slug: "autopflege-detailing",
     query: 'tag:"Kategorie: Autopflege & Detailing"',
     image: "/images/collection-autopflege.webp",
+    contain: true,
     children: [
       { label: "Mikrofasertücher", slug: "mikrofasertuecher", query: 'product_type:"Mikrofasertücher"' },
       { label: "Schwämme", slug: "schwaemme", query: 'product_type:"Schwämme"' },
@@ -97,6 +98,7 @@ export const navCategories: ShopLink[] = [
     slug: "winter",
     query: 'tag:"Kategorie: Winter"',
     image: "/images/collection-winter.webp",
+    contain: true,
     children: [
       { label: "Eiskratzer & Schneebesen", slug: "eiskratzer-schneebesen", query: 'product_type:"Eiskratzer & Schneebesen"' },
       { label: "Enteiser & Frostschutz", slug: "enteiser-frostschutz", query: 'product_type:"Enteiser & Frostschutz"' },
@@ -107,6 +109,7 @@ export const navCategories: ShopLink[] = [
     slug: "sets-sonstiges",
     query: 'tag:"Kategorie: Sets & Sonstiges"',
     image: "/images/collection-sets.webp",
+    contain: true,
   },
 ];
 
