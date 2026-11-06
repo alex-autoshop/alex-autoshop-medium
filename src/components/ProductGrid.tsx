@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { type ShopifyProduct } from "@/lib/shopify";
 import { ProductCard } from "@/components/ProductCard";
 
@@ -12,6 +12,8 @@ interface ProductGridProps {
   columns?: 4 | 5 | 6;
   /** Nur so viele Karten zeichnen, der Rest kommt auf Knopfdruck. */
   fenster?: number;
+  /** Überschrift direkt vor dieser Karte, über die ganze Zeile. */
+  trennung?: { vorId: string; titel: string };
 }
 
 // Feste Klassen, damit Tailwind sie beim Build findet (kein String-Zusammenbau!).
@@ -34,7 +36,7 @@ function SkeletonCard() {
   );
 }
 
-export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMore, columns = 5, fenster }: ProductGridProps) {
+export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMore, columns = 5, fenster, trennung }: ProductGridProps) {
   const schluessel = `${fenster ?? 0}:${products.length}:${products[0]?.node.id ?? ""}:${products[products.length - 1]?.node.id ?? ""}`;
   const [sichtbar, setSichtbar] = useState(fenster ?? products.length);
   useEffect(() => {
@@ -53,7 +55,14 @@ export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMor
     <div>
       <div className={`grid ${COLS[columns]} gap-3 sm:gap-4 items-stretch`}>
         {gezeigt.map((p, i) => (
-          <ProductCard key={p.node.id} product={p} priority={i < 2} />
+          <Fragment key={p.node.id}>
+            {trennung && p.node.id === trennung.vorId && (
+              <h2 className="col-span-full mt-2 border-t border-border pt-4 text-sm font-semibold text-muted-foreground">
+                {trennung.titel}
+              </h2>
+            )}
+            <ProductCard product={p} priority={i < 2} />
+          </Fragment>
         ))}
         {isLoading && Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={`s-${i}`} />)}
       </div>
