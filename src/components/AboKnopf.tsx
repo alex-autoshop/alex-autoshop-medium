@@ -149,7 +149,7 @@ export function AboKnopf({ produkt, className, kurz = false }: {
         {gerade || drin
           ? <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
           : <BadgePercent className="w-4 h-4 shrink-0" aria-hidden="true" />}
-        <span className="truncate">{drin || gerade ? "Im Abo ✓" : kurz ? "+ Abo" : "Zum Abo hinzufügen"}</span>
+        <span className="truncate">{drin || gerade ? "Im Abo" : kurz ? "+ Abo" : "Zum Abo hinzufügen"}</span>
       </button>
 
       {hinweis && createPortal(
