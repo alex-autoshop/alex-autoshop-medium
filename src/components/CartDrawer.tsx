@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard, Lock, Truck, Info } from "lucide-react";
+import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
@@ -12,7 +12,7 @@ import { versandkosten, VERSAND_FREI_AB } from "../../shared/versand.js";
 import { gefahrstoffVonKnoten } from "../../shared/gefahrstoff.js";
 import { mitgliedZeile } from "../../shared/produktabo.js";
 import { aboEinzelMerken } from "@/lib/aboListe";
-import { AboKasse, useAboAktiv, useAboListe, WarenkorbAboSumme, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
+import { AboKasse, useAboAktiv, useAboListe, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
 import { recordOrder, type OrderItem } from "@/lib/orders";
 import { sendMessage } from "@/lib/inbox";
 import { AuthModal } from "@/components/AuthModal";
@@ -153,6 +153,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [confirmed, setConfirmed] = useState<ConfirmedOrder | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [kasseOffen, setKasseOffen] = useState(false);
 
   const gefahren = items.map((i) => gefahrstoffVonKnoten(i.product.node)).filter((g) => g.ist);
   const mindestalter = gefahren.reduce((m, g) => Math.max(m, g.mindestalter || 0), 0);
@@ -460,275 +461,150 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
 
             ) : (
             <>
-            {/* ── Artikel-Liste ── */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {items.length === 0 ? (
-                <p className="text-muted-foreground text-center py-12">
-                  Dein Warenkorb ist leer.
+            <div className="flex-1 overflow-y-auto">
+              {items.length > 0 && !isMember && total < VERSAND_FREI_AB && total > 0 && (
+                <p className="px-4 pt-3 text-xs text-muted-foreground">
+                  Noch <strong className="text-foreground">{formatPrice(String(remainingForFree), currency)}</strong> bis Gratisversand
+                  <span className="ml-2 inline-block align-middle h-1 w-16 rounded-full bg-border overflow-hidden">
+                    <span className="block h-full bg-primary" style={{ width: `${freeProgress}%` }} />
+                  </span>
                 </p>
+              )}
+              {items.length > 0 && (isMember || shippingCost === 0) && (
+                <p className="px-4 pt-3 text-xs text-primary font-semibold">Versand kostenlos</p>
+              )}
+              {items.length === 0 ? (
+                <p className="text-muted-foreground text-center py-12">Dein Warenkorb ist leer.</p>
               ) : (
-                items.map((item) => {
-                  const node = item.product.node;
-                  const img =
-                    node.images?.edges?.[0]?.node?.url || PRODUCT_IMAGES[node.handle] || "";
-                  return (
-                    <div key={item.uid} className="flex gap-3 border border-border rounded-xl p-3">
-                      <div className="w-20 h-20 rounded-lg bg-secondary shrink-0 overflow-hidden">
-                        {img && (
-                          <img src={img} alt={node.title} className="w-full h-full object-contain" loading="lazy" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p lang="de" className="produkt-titel">{node.title}</p>
-                        {item.variantTitle !== "Default Title" && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{item.variantTitle}</p>
-                        )}
-                        {item.attributes && item.attributes.length > 0 && (
-                          <ul className="text-[11px] text-muted-foreground mt-1 space-y-0.5">
-                            {item.attributes.map((a) => (
-                              <li key={a.key}><span className="font-medium">{a.key}:</span> {a.value}</li>
-                            ))}
-                          </ul>
-                        )}
-                        <p className="text-primary font-bold mt-1">
-                          {aboAktiv && aboDrin(node.id) ? (
-                            <>
-                              <span className="text-muted-foreground line-through font-medium text-sm mr-1">
-                                {formatPrice(item.price.amount, item.price.currencyCode)}
-                              </span>
-                              {formatPrice(String(parseFloat(item.price.amount) * (1 - aboStufe(node.id) / 100)), item.price.currencyCode)}
-                            </>
-                          ) : formatPrice(item.price.amount, item.price.currencyCode)}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <button
-                            onClick={() => updateQuantity(item.uid, item.quantity - 1)}
-                            disabled={isLoading}
-                            className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary"
-                            aria-label="Menge verringern"
-                          >
-                            <Minus className="w-4 h-4" />
-                          </button>
-                          <span className="w-8 text-center font-semibold">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.uid, item.quantity + 1)}
-                            disabled={isLoading}
-                            className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-secondary"
-                            aria-label="Menge erhöhen"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => removeItem(item.uid)}
-                            disabled={isLoading}
-                            className="w-10 h-10 rounded-lg flex items-center justify-center text-destructive hover:bg-destructive/10 ml-auto"
-                            aria-label="Entfernen"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                <div className="px-4 divide-y divide-border">
+                  {items.map((item) => {
+                    const node = item.product.node;
+                    const img = node.images?.edges?.[0]?.node?.url || PRODUCT_IMAGES[node.handle] || "";
+                    const stueck = aboAktiv && aboDrin(node.id)
+                      ? parseFloat(item.price.amount) * (1 - aboStufe(node.id) / 100)
+                      : parseFloat(item.price.amount);
+                    return (
+                      <div key={item.uid} className="flex gap-2 py-3">
+                        <div className="w-14 h-14 rounded-lg bg-white border border-border shrink-0 overflow-hidden">
+                          {img && <img src={img} alt="" className="w-full h-full object-contain" loading="lazy" />}
                         </div>
-                        <WarenkorbAboZeile
-                          produkt={aboProdukt(item)}
-                          menge={item.quantity}
-                          stufe={aboStufe(item.product.node.id)}
-                          drin={aboDrin(item.product.node.id)}
-                          onStufe={(rabatt) => setAboWahl((alt) => ({ ...alt, [item.product.node.id]: rabatt }))}
-                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-2">
+                            <p lang="de" className="text-sm font-semibold leading-tight line-clamp-1 flex-1 min-w-0" title={node.title}>{node.title}</p>
+                            <p className="text-sm font-bold shrink-0 tabular-nums">
+                              {aboAktiv && aboDrin(node.id) && (
+                                <span className="text-muted-foreground line-through font-medium text-xs mr-1">{formatPrice(item.price.amount, item.price.currencyCode)}</span>
+                              )}
+                              {formatPrice(String(stueck), item.price.currencyCode)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <button onClick={() => updateQuantity(item.uid, item.quantity - 1)} disabled={isLoading} className="w-8 h-8 rounded-md border border-border flex items-center justify-center" aria-label="Menge verringern"><Minus className="w-3.5 h-3.5" /></button>
+                            <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
+                            <button onClick={() => updateQuantity(item.uid, item.quantity + 1)} disabled={isLoading} className="w-8 h-8 rounded-md border border-border flex items-center justify-center" aria-label="Menge erhöhen"><Plus className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => removeItem(item.uid)} disabled={isLoading} className="w-8 h-8 rounded-md flex items-center justify-center text-destructive ml-auto" aria-label="Entfernen"><Trash2 className="w-3.5 h-3.5" /></button>
+                          </div>
+                          <WarenkorbAboZeile
+                            produkt={aboProdukt(item)}
+                            menge={item.quantity}
+                            stufe={aboStufe(node.id)}
+                            drin={aboDrin(node.id)}
+                            onStufe={(rabatt) => setAboWahl((alt) => ({ ...alt, [node.id]: rabatt }))}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
+                    );
+                  })}
+                </div>
               )}
               {items.length > 0 && (
-                <WarenkorbAboSumme
-                  betrag={aboErsparnis}
-                  waehrung={currency}
-                  allesDrin={allesImAbo}
-                  onAlle={() => {
-                    const { dazu, voll } = fehlendeInsAbo();
-                    if (voll) toast.error("Die Abo-Liste ist voll.");
-                    else if (dazu > 0) toast.success("Warenkorb in die Abo-Liste gelegt");
-                  }}
-                  onZurMitgliedschaft={() => { fehlendeInsAbo(); onClose(); }}
-                />
+                <div className="px-4 pb-4">
+                  {discount > 0 && (
+                    <p className="text-xs text-primary mb-2">Mitglied {discount} % — {formatPrice(String(memberSaving), currency)} an der Theke</p>
+                  )}
+                  <AboKasse ersparnis={aboErsparnis} />
+                  {!allesImAbo && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const { dazu, voll } = fehlendeInsAbo();
+                        if (voll) toast.error("Die Abo-Liste ist voll.");
+                        else if (dazu > 0) toast.success("Warenkorb in die Abo-Liste gelegt");
+                      }}
+                      className="text-xs font-semibold text-primary underline"
+                    >
+                      Alle ins Abo
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* ── Kassen-Bereich ── */}
             {items.length > 0 && (
-              <div className="border-t border-border p-4 space-y-3">
-                {/* ── Versand-Fortschrittsbalken (nur für Nicht-Mitglieder unter Freigrenze) ── */}
-                {!isMember && total < VERSAND_FREI_AB && total > 0 && (
-                  <div className="rounded-lg bg-secondary/60 border border-border p-3 space-y-2">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Noch <strong className="text-foreground">{formatPrice(String(remainingForFree), currency)}</strong> bis kostenlosem Versand</span>
-                      <span className="text-primary font-semibold">ab 150 €</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-border overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full transition-all duration-500"
-                        style={{ width: `${freeProgress}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Zwischensumme + Versand ── */}
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Zwischensumme</span>
-                    <span>{formatPrice(String(total), currency)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Versand</span>
-                    {isMember ? (
-                      <span className="text-primary font-semibold text-xs flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Kostenlos (Mitglied)
-                      </span>
-                    ) : shippingCost === 0 ? (
-                      <span className="text-primary font-semibold text-xs flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Kostenlos
-                      </span>
-                    ) : (
-                      <span>{formatPrice(String(shippingCost), currency)}</span>
+              <div className="shrink-0 border-t border-border bg-card" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+                {kasseOffen && (
+                  <div className="px-4 pt-3 space-y-2 border-b border-border">
+                    {mindestalter > 0 && (
+                      <label className="flex items-start gap-2 text-sm">
+                        <input type="checkbox" className="mt-1" checked={alterBestaetigt} onChange={(e) => setAlterBestaetigt(e.target.checked)} />
+                        <span>Ich bin mindestens {mindestalter} Jahre alt.</span>
+                      </label>
                     )}
-                  </div>
-                </div>
-
-                <div className="flex justify-between font-bold text-lg border-t border-border pt-2">
-                  <span>Gesamt</span>
-                  <span>{formatPrice(String(total + shippingCost), currency)}</span>
-                </div>
-
-                <AboKasse ersparnis={aboErsparnis} />
-
-                {discount > 0 && (
-                  <div className="rounded-lg bg-primary/10 border border-primary/20 p-2.5 text-sm text-center">
-                    <span className="text-primary font-semibold">
-                      Mitglied ({discount}%) — du sparst {formatPrice(String(memberSaving), currency)}
-                    </span>
-                    <span className="block text-xs text-muted-foreground mt-0.5">
-                      wird an der Theke verrechnet
-                    </span>
-                  </div>
-                )}
-
-                {mindestalter > 0 && (
-                  <label className="flex items-start gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      className="mt-1"
-                      checked={alterBestaetigt}
-                      onChange={(e) => setAlterBestaetigt(e.target.checked)}
-                    />
-                    <span>Ich bestätige, dass ich mindestens {mindestalter} Jahre alt bin.</span>
-                  </label>
-                )}
-                {gefahrgut.length > 0 && (
-                  <div className="rounded-lg border border-border bg-secondary/60 p-3 text-sm space-y-1">
-                    <p className="font-semibold">Gefahrgut im Warenkorb</p>
-                    {gefahrgut.map((g) => (
-                      <p key={g.unNr}>{g.unNr}{g.versandHinweis ? ` — ${g.versandHinweis}` : ""}</p>
-                    ))}
-                  </div>
-                )}
-
-                {/* ── 1. NORMALER ONLINE-CHECKOUT ── */}
-                {aboAktiv && aboErsparnis > 0 && (
-                  <p className="text-[11px] text-muted-foreground text-center leading-snug">
-                    Abo-Preise gelten in dieser Summe, bei Abholung und auf Rechnung. Der gelbe Knopf öffnet den Ladenpreis.
-                  </p>
-                )}
-                <button
-                  onClick={handleOnlineCheckout}
-                  disabled={kasseZu}
-                  className="btn-gold-bright w-full text-base font-bold gap-2 disabled:opacity-50"
-                >
-                  <CreditCard className="w-5 h-5" />
-                  Jetzt kaufen (Kreditkarte / PayPal)
-                </button>
-
-                {/* ── 2. EXPRESS-KAUF (SEPA / IBAN) ── */}
-                {user ? (
-                  hasIban ? (
-                    <button
-                      onClick={handleExpressOrder}
-                      disabled={placing || kasseZu}
-                      className="btn-outline w-full gap-2 disabled:opacity-60 border-primary/40 hover:border-primary"
-                    >
-                      <Zap className="w-4 h-4 text-primary" />
-                      {placing ? "Wird bestätigt …" : `⚡ Express-Kauf · SEPA ••••${profile.iban?.slice(-4)}`}
+                    {gefahrgut.length > 0 && (
+                      <p className="text-xs text-muted-foreground">{gefahrgut.map((g) => g.unNr).join(", ")} im Warenkorb</p>
+                    )}
+                    {aboAktiv && aboErsparnis > 0 && (
+                      <p className="text-[11px] text-muted-foreground">Abo-Preise gelten in der Summe, bei Abholung und auf Rechnung. Online bleibt der Ladenpreis.</p>
+                    )}
+                    <button onClick={handleOnlineCheckout} disabled={kasseZu} className="btn-gold-bright w-full text-sm min-h-11 gap-2 disabled:opacity-50">
+                      <CreditCard className="w-4 h-4" /> Jetzt kaufen
                     </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        toast.info("IBAN für Express-Kauf hinterlegen", {
-                          description: "Einmalig eintragen — dann blitzschnell bestellen ohne PayPal.",
-                          action: { label: "Einstellungen →", onClick: () => { onClose(); navigate("/dashboard?tab=settings"); } },
-                        });
-                      }}
-                      className="btn-outline w-full gap-2 opacity-70 hover:opacity-100"
-                    >
-                      <Zap className="w-4 h-4" />
-                      ⚡ Express-Kauf
-                      <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
-                        <Info className="w-3 h-3" /> IBAN hinterlegen
-                      </span>
-                    </button>
-                  )
-                ) : (
-                  <button
-                    onClick={() => setShowAuthModal(true)}
-                    className="btn-outline w-full gap-2 opacity-60 hover:opacity-100"
-                  >
-                    <Lock className="w-4 h-4" />
-                    ⚡ Express-Kauf —{" "}
-                    <span className="underline underline-offset-2">Anmelden</span>
-                  </button>
+                    <div className="flex justify-center gap-4 pb-2 text-xs">
+                      <button
+                        type="button"
+                        disabled={!!user && (placing || kasseZu)}
+                        onClick={() => {
+                          if (!user) { setShowAuthModal(true); return; }
+                          if (hasIban) handleExpressOrder();
+                          else toast.info("IBAN für Express-Kauf hinterlegen", {
+                            action: { label: "Einstellungen", onClick: () => { onClose(); navigate("/dashboard?tab=settings"); } },
+                          });
+                        }}
+                        className="underline text-muted-foreground disabled:opacity-50"
+                      >
+                        {placing ? "Wird bestätigt …" : "Express-Kauf"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!!user && (placing || kasseZu)}
+                        onClick={() => {
+                          if (!user) { setShowAuthModal(true); return; }
+                          if (isWuppertal) handleInvoiceOrder();
+                          else toast.info("Lieferung auf Rechnung nur mit Wuppertal-Adresse im Profil", {
+                            action: { label: "Einstellungen", onClick: () => { onClose(); navigate("/dashboard?tab=settings"); } },
+                          });
+                        }}
+                        className="underline text-muted-foreground disabled:opacity-50"
+                      >
+                        Auf Rechnung
+                      </button>
+                    </div>
+                  </div>
                 )}
-
-                {/* ── 3. LIEFERN & AUF RECHNUNG (nur Wuppertal, PLZ aus Profil) ── */}
-                {!user ? (
+                <div className="flex items-center gap-3 px-4 py-3 max-h-[120px]">
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-muted-foreground leading-none">Gesamt</p>
+                    <p className="text-lg font-bold leading-tight tabular-nums">{formatPrice(String(total + shippingCost), currency)}</p>
+                  </div>
                   <button
-                    onClick={() => setShowAuthModal(true)}
-                    className="btn-dark w-full gap-2 text-sm opacity-60 hover:opacity-100"
+                    type="button"
+                    onClick={() => setKasseOffen((v) => !v)}
+                    aria-expanded={kasseOffen}
+                    className="btn-primary flex-1 text-sm min-h-11"
                   >
-                    <Truck className="w-4 h-4" />
-                    Liefern & auf Rechnung —{" "}
-                    <span className="underline underline-offset-2">Anmelden</span>
+                    {kasseOffen ? "Zahlarten schließen" : "Zur Kasse"}
                   </button>
-                ) : isWuppertal ? (
-                  <button
-                    onClick={handleInvoiceOrder}
-                    disabled={placing || kasseZu}
-                    className="btn-dark w-full gap-2 text-sm"
-                  >
-                    <Truck className="w-4 h-4" />
-                    {placing ? "Bestätigung …" : `Bitte Liefern & auf Rechnung! (PLZ ${profilePlz})`}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      toast.info("Wuppertal-Adresse im Profil hinterlegen", {
-                        description: profilePlz
-                          ? `Deine PLZ ${profilePlz} liegt außerhalb Wuppertal. Lieferung auf Rechnung nur für PLZ 42xxx.`
-                          : "Trage deine Liefer-PLZ einmalig in den Einstellungen ein. Nur Wuppertal (PLZ 42xxx) berechtigt.",
-                        action: { label: "Einstellungen →", onClick: () => { onClose(); navigate("/dashboard?tab=settings"); } },
-                      });
-                    }}
-                    className="btn-dark w-full gap-2 text-sm opacity-60"
-                  >
-                    <Truck className="w-4 h-4" />
-                    Bitte Liefern & auf Rechnung!
-                    <span className="ml-auto text-xs flex items-center gap-1 opacity-80">
-                      <Info className="w-3 h-3" /> Wuppertal-Adresse erforderlich
-                    </span>
-                  </button>
-                )}
-
-                <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Sichere Bezahlung · alex-autoshop.de
-                </p>
+                </div>
               </div>
             )}
             </>
