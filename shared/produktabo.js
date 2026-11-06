@@ -197,6 +197,35 @@ export function mitgliedZeile(einzel, menge, rabatt) {
 }
 
 /**
+ * Warenwert einer Kasse. Zeilen mit gültiger Stufe werden zum Abo-Preis
+ * gerechnet, die anderen zum Ladenpreis. Der Browser-Preis zählt nicht.
+ */
+export function warenMitRabatt(zeilen) {
+  const cent = (n) => Math.round(Number(n) * 100) / 100;
+  let summe = 0;
+  const positionen = [];
+  for (const z of zeilen || []) {
+    const einzel = Number(z && z.einzel);
+    const menge = Math.floor(Number(z && z.menge));
+    const rabatt = Math.floor(Number(z && z.rabatt));
+    const titel = String((z && z.titel) || "Ware").slice(0, 80);
+    if (!Number.isFinite(einzel) || einzel < 0 || menge < 1 || menge > 999) return null;
+    if (rabattGueltig(rabatt)) {
+      const rech = mitgliedZeile(einzel, menge, rabatt);
+      if (!rech) return null;
+      positionen.push({ titel, menge, betrag: rech.mitglied });
+      summe = cent(summe + rech.mitglied);
+    } else {
+      const betrag = cent(einzel * menge);
+      positionen.push({ titel, menge, betrag });
+      summe = cent(summe + betrag);
+    }
+  }
+  if (!positionen.length) return null;
+  return { summe, positionen };
+}
+
+/**
  * Monatsbeitrag einer Position mit IHRER Stufe.
  * Einzelprodukt: fester Beitrag der Stufe. Mengen-Position (Lack): Anteil an der Ersparnis.
  */

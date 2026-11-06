@@ -13,7 +13,7 @@
 export const config = { runtime: "edge" };
 
 import { activateMembership, activateProduktAbo } from "./_activate-membership.js";
-import { shopifyMitgliedTag } from "./_shopify-order.js";
+import { shopifyAboStufen, shopifyMitgliedTag } from "./_shopify-order.js";
 import { positionenLesen, teileBestellung } from "./_teile-bestellung.js";
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from "../shared/empfehlung.js";
 
@@ -203,16 +203,21 @@ export default async function handler(req) {
     }
   }
 
-  if (event.type === "checkout.session.completed") {
+  if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
     const s = event.data?.object || {};
     const m = s.metadata || {};
-    if (m.email && m.abo === "produkt") {
-      const r = await activateProduktAbo({
-        email: m.email, price: m.price, stufen: m.positionen, positionen: m.positionen,
-        provider: "stripe", providerId: s.subscription || s.id,
-      });
-      console.log("[stripe-webhook] produkt-abo:", JSON.stringify(r));
-    } else if (m.email && m.level) {
+    const bezahlt = event.type === "checkout.session.async_payment_succeeded"
+      || s.payment_status === "paid"
+      || s.payment_status === "no_payment_required";
+    if (m.email && m.abo === "produkt" && (bezahlt || m.einmalig == null || m.einmalig === "")) {
+      if (bezahlt || event.type === "checkout.session.completed") {
+        const r = await activateProduktAbo({
+          email: m.email, price: m.price, stufen: m.positionen, positionen: m.positionen,
+          provider: "stripe", providerId: s.subscription || s.id,
+        });
+        console.log("[stripe-webhook] produkt-abo:", JSON.stringify(r));
+      }
+    } else if (event.type === "checkout.session.completed" && m.email && m.level) {
       const r = await activateMembership({
         email: m.email, level: m.level, modules: m.modules, price: m.price,
         provider: "stripe", providerId: s.subscription || s.id, ref: m.ref || "",
@@ -235,9 +240,11 @@ export default async function handler(req) {
     const status = String(sub.status || "");
     const ende = event.type === "customer.subscription.deleted"
       || ["canceled", "unpaid", "incomplete_expired"].includes(status);
-    if (ende && istMitgliedsMeta(sub.metadata || {})) {
-      const email = sub.metadata?.email || await stripeKundenEmail(sub.customer);
+    const meta = sub.metadata || {};
+    if (ende && (istMitgliedsMeta(meta) || meta.abo === "produkt")) {
+      const email = meta.email || await stripeKundenEmail(sub.customer);
       await mitgliedTagEntfernen(email, `${event.type}:${status || "deleted"}`);
+      if (meta.abo === "produkt") await shopifyAboStufen(email, []);
     } else if (ende) {
       console.warn("[stripe-webhook] Abo-Ende ohne Mitglieds-Metadaten:", sub.id || "");
     }
@@ -249,9 +256,11 @@ export default async function handler(req) {
     const inv = event.data?.object || {};
     if (!inv.next_payment_attempt) {
       let meta = inv.subscription_details?.metadata || inv.metadata || inv.lines?.data?.[0]?.metadata || {};
-      if (!istMitgliedsMeta(meta) && inv.subscription) meta = await stripeAboMeta(inv.subscription);
-      if (istMitgliedsMeta(meta)) {
-        await mitgliedTagEntfernen(meta.email || inv.customer_email, "invoice.payment_failed");
+      if (!istMitgliedsMeta(meta) && meta.abo !== "produkt" && inv.subscription) meta = await stripeAboMeta(inv.subscription);
+      if (istMitgliedsMeta(meta) || meta.abo === "produkt") {
+        const email = meta.email || inv.customer_email;
+        await mitgliedTagEntfernen(email, "invoice.payment_failed");
+        if (meta.abo === "produkt") await shopifyAboStufen(email, []);
       }
     }
   }

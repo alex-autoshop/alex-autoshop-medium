@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aboListeGesamt, listeNormalisieren, mengenPosition, PRODUKT_ABO_PREISE } from "../shared/produktabo.js";
+import { aboListeGesamt, listeNormalisieren, mengenPosition, PRODUKT_ABO_PREISE, warenMitRabatt } from "../shared/produktabo.js";
 
 test("jede Position behält ihre Stufe, der Beitrag ist die Summe", () => {
   const g = aboListeGesamt([
@@ -50,4 +50,18 @@ test("die drei Wunschfarben-Konfiguratoren fallen aus der Einzel-Liste, Mengen b
     ],
   });
   assert.deepEqual(n.produkte.map((p) => p.id), ["2", "3"]);
+});
+
+test("Warenkasse rechnet Abo-Zeilen selbst und lässt andere beim Ladenpreis", () => {
+  const g = warenMitRabatt([
+    { titel: "Spray", einzel: 13.95, menge: 1, rabatt: 40 },
+    { titel: "Klarlack", einzel: 92.95, menge: 3, rabatt: 40 },
+    { titel: "Tuch", einzel: 4.5, menge: 2, rabatt: 0 },
+  ]);
+  assert.equal(g.positionen[0].betrag, 8.37);
+  assert.equal(g.positionen[1].betrag, 167.31);
+  assert.equal(g.positionen[2].betrag, 9);
+  assert.equal(g.summe, 184.68);
+  assert.equal(warenMitRabatt([]), null);
+  assert.equal(warenMitRabatt([{ titel: "x", einzel: 1, menge: 0, rabatt: 15 }]), null);
 });

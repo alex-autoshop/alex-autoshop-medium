@@ -10,8 +10,9 @@ import { useAuth } from "@/context/AuthContext";
 import { discountForLevel } from "@/data/memberships";
 import { versandkosten, VERSAND_FREI_AB } from "../../shared/versand.js";
 import { gefahrstoffVonKnoten } from "../../shared/gefahrstoff.js";
-import { mitgliedZeile } from "../../shared/produktabo.js";
+import { aboListeGesamt, mitgliedZeile } from "../../shared/produktabo.js";
 import { aboEinzelMerken } from "@/lib/aboListe";
+import { aboAbschliessen } from "@/lib/aboAbschluss";
 import { AboKasse, useAboAktiv, useAboListe, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
 import { recordOrder, type OrderItem } from "@/lib/orders";
 import { sendMessage } from "@/lib/inbox";
@@ -154,6 +155,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [redirecting, setRedirecting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [kasseOffen, setKasseOffen] = useState(false);
+  const [aboLaeuft, setAboLaeuft] = useState(false);
 
   const gefahren = items.map((i) => gefahrstoffVonKnoten(i.product.node)).filter((g) => g.ist);
   const mindestalter = gefahren.reduce((m, g) => Math.max(m, g.mindestalter || 0), 0);
@@ -198,9 +200,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const zeilenBetrag = (item: (typeof items)[number]) => {
     const einzel = parseFloat(item.price.amount);
     const normal = einzel * item.quantity;
-    if (!aboAktiv || !aboDrin(item.product.node.id)) return normal;
+    if (!aboDrin(item.product.node.id)) return normal;
     return mitgliedZeile(einzel, item.quantity, aboStufe(item.product.node.id))?.mitglied ?? normal;
   };
+  const summeLaden = Math.round(items.reduce((summe, item) => summe + parseFloat(item.price.amount) * item.quantity, 0) * 100) / 100;
   const total = Math.round(items.reduce((summe, item) => summe + zeilenBetrag(item), 0) * 100) / 100;
   const aboErsparnis = Math.round(items.reduce((summe, item) => {
     if (!aboDrin(item.product.node.id)) return summe;
@@ -214,7 +217,8 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   // Die Teilebörse nutzt shared/versand.js ohne diesen Nachlass.
   const stufe = Number(profile.membership_level);
   const isMember = !!user && stufe >= 1 && stufe <= 3;
-  const shippingCost = isMember ? 0 : versandkosten({ summe: total });
+  const mitAbo = aboListe.produkte.length > 0;
+  const shippingCost = mitAbo || !isMember ? versandkosten({ summe: total }) : 0;
   const remainingForFree = Math.max(0, VERSAND_FREI_AB - total);
   const freeProgress = Math.min(100, (total / VERSAND_FREI_AB) * 100);
 
@@ -253,7 +257,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     const { error, orderId } = await recordOrder({
       userId: user.id,
       items: orderItems,
-      total,
+      total: summeLaden,
       currency,
       status: "sepa_pending",
     });
@@ -268,11 +272,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       recipient: user.id,
       type: "system",
       title: "Express-Kauf bestätigt ✓ — SEPA-Einzug",
-      body: `Deine Express-Bestellung über ${formatPrice(String(total), currency)} (${count} Position${count === 1 ? "" : "en"}) ist bestätigt. Der Betrag wird per SEPA-Lastschrift von deinem hinterlegten Bankkonto (••••${profile.iban?.slice(-4)}) eingezogen. Buchungsdatum: 2–3 Werktage.`,
+      body: `Deine Express-Bestellung über ${formatPrice(String(summeLaden), currency)} (${count} Position${count === 1 ? "" : "en"}) ist bestätigt. Der Betrag wird per SEPA-Lastschrift von deinem hinterlegten Bankkonto (••••${profile.iban?.slice(-4)}) eingezogen. Buchungsdatum: 2–3 Werktage.`,
     });
 
     const snapshot: ConfirmedOrder = {
-      total, currency, count, orderId, items: orderItems, mode: "sepa",
+      total: summeLaden, currency, count, orderId, items: orderItems, mode: "sepa",
       date: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       companyName: profile?.company_name, email: user.email,
     };
@@ -299,7 +303,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     const { error, orderId } = await recordOrder({
       userId: user.id,
       items: orderItems,
-      total,
+      total: summeLaden,
       currency,
       status: "auf_rechnung",
     });
@@ -314,11 +318,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       recipient: user.id,
       type: "system",
       title: "Lieferbestellung auf Rechnung ✓",
-      body: `Deine Bestellung über ${formatPrice(String(total), currency)} (PLZ ${profilePlz}) wird geliefert. Zahlungsziel: 14 Tage nach Lieferung. Die Bankdaten für die Überweisung erhältst du per E-Mail. Bestellnr: AA-${orderId?.slice(0, 8).toUpperCase() ?? "XXXXXX"}`,
+      body: `Deine Bestellung über ${formatPrice(String(summeLaden), currency)} (PLZ ${profilePlz}) wird geliefert. Zahlungsziel: 14 Tage nach Lieferung. Die Bankdaten für die Überweisung erhältst du per E-Mail. Bestellnr: AA-${orderId?.slice(0, 8).toUpperCase() ?? "XXXXXX"}`,
     });
 
     const snapshot: ConfirmedOrder = {
-      total, currency, count, orderId, items: orderItems, mode: "auf_rechnung",
+      total: summeLaden, currency, count, orderId, items: orderItems, mode: "auf_rechnung",
       date: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       companyName: profile?.company_name, email: user.email,
     };
@@ -329,6 +333,37 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   };
 
   // Normaler Shopify Checkout — direkte Cart-URL ohne API-Call, 100% zuverlässig
+  const handleAboKasse = async () => {
+    const mail = user?.email?.trim().toLowerCase() || "";
+    if (!user || !mail) { setShowAuthModal(true); return; }
+    if (kasseZu || aboLaeuft) return;
+    setAboLaeuft(true);
+    try {
+      const waren = items.map((item) => ({
+        titel: item.product.node.title,
+        einzel: parseFloat(item.price.amount),
+        menge: item.quantity,
+        rabatt: aboDrin(item.product.node.id) ? aboStufe(item.product.node.id) : 0,
+      }));
+      const erg = await aboAbschliessen({
+        email: mail,
+        zahlweg: "stripe",
+        produkte: aboListe.produkte,
+        price: aboListeGesamt(aboListe.produkte)?.beitrag || 0,
+        waren,
+        einmalig: Math.round((total + shippingCost) * 100) / 100,
+      });
+      if (erg.art === "weiter") {
+        setRedirecting(true);
+        window.location.href = erg.url;
+        return;
+      }
+      toast.error(erg.art === "anfrage" ? "Die Kartenzahlung ist noch nicht freigeschaltet. Bitte ruf uns an: 0202 82690." : erg.text, { toasterId: "warenkorb" });
+    } finally {
+      setAboLaeuft(false);
+    }
+  };
+
   const handleOnlineCheckout = () => {
     if (items.length === 0) return;
     // Variant-IDs aus GID extrahieren: "gid://shopify/ProductVariant/12345" → "12345"
@@ -481,7 +516,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   {items.map((item) => {
                     const node = item.product.node;
                     const img = node.images?.edges?.[0]?.node?.url || PRODUCT_IMAGES[node.handle] || "";
-                    const stueck = aboAktiv && aboDrin(node.id)
+                    const stueck = aboDrin(node.id)
                       ? parseFloat(item.price.amount) * (1 - aboStufe(node.id) / 100)
                       : parseFloat(item.price.amount);
                     return (
@@ -493,7 +528,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                           <div className="flex items-start gap-2">
                             <p lang="de" className="text-[13px] sm:text-sm font-semibold leading-[1.25] sm:leading-snug [overflow-wrap:anywhere] hyphens-auto flex-1 min-w-0">{node.title}</p>
                             <p className="text-sm font-bold shrink-0 tabular-nums">
-                              {aboAktiv && aboDrin(node.id) && (
+                              {aboDrin(node.id) && (
                                 <span className="text-muted-foreground line-through font-medium text-xs mr-1">{formatPrice(item.price.amount, item.price.currencyCode)}</span>
                               )}
                               {formatPrice(String(stueck), item.price.currencyCode)}
@@ -521,7 +556,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
               )}
               {items.length > 0 && (
                 <div className="px-4 pb-4">
-                  {discount > 0 && (
+                  {discount > 0 && !mitAbo && (
                     <p className="text-xs text-primary mb-2">Mitglied {discount} % — {formatPrice(String(memberSaving), currency)} an der Theke</p>
                   )}
                   <AboKasse ersparnis={aboErsparnis} />
@@ -555,12 +590,23 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                     {gefahrgut.length > 0 && (
                       <p className="text-xs text-muted-foreground">{gefahrgut.map((g) => g.unNr).join(", ")} im Warenkorb</p>
                     )}
-                    {aboAktiv && aboErsparnis > 0 && (
-                      <p className="text-[11px] text-muted-foreground">Abo-Preise gelten in der Summe, bei Abholung und auf Rechnung. Online bleibt der Ladenpreis.</p>
+                    {aboAktiv && !mitAbo && aboErsparnis > 0 && (
+                      <p className="text-[11px] text-muted-foreground">Abo-Preise gelten in der Summe, bei Abholung und auf Rechnung.</p>
                     )}
-                    <button onClick={handleOnlineCheckout} disabled={kasseZu} className="btn-gold-bright w-full text-sm min-h-11 gap-2 disabled:opacity-50">
-                      <CreditCard className="w-4 h-4" /> Jetzt kaufen
-                    </button>
+                    {mitAbo ? (
+                      <>
+                        <p className="text-[11px] text-muted-foreground leading-snug">
+                          Einmalig {formatPrice(String(total + shippingCost), currency)}, dazu {formatPrice(String(aboListeGesamt(aboListe.produkte)?.beitrag || 0), currency)} im Monat. Monatlich kündbar, keine Mindestlaufzeit.
+                        </p>
+                        <button type="button" onClick={handleAboKasse} disabled={kasseZu || aboLaeuft} className="btn-primary w-full text-sm min-h-11 disabled:opacity-50">
+                          {aboLaeuft ? "Einen Moment …" : "Zahlungspflichtig bestellen"}
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={handleOnlineCheckout} disabled={kasseZu} className="btn-gold-bright w-full text-sm min-h-11 gap-2 disabled:opacity-50">
+                        <CreditCard className="w-4 h-4" /> Jetzt kaufen
+                      </button>
+                    )}
                     <div className="flex justify-center gap-4 pb-2 text-xs">
                       <button
                         type="button"
@@ -597,10 +643,16 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   <div className="min-w-0">
                     <p className="text-[11px] text-muted-foreground leading-none">Gesamt</p>
                     <p className="text-lg font-bold leading-tight tabular-nums">{formatPrice(String(total + shippingCost), currency)}</p>
+                    {mitAbo && (
+                      <p className="text-[11px] text-muted-foreground leading-tight">+ {formatPrice(String(aboListeGesamt(aboListe.produkte)?.beitrag || 0), currency)}/Monat Abo</p>
+                    )}
                   </div>
                   <button
                     type="button"
-                    onClick={() => setKasseOffen((v) => !v)}
+                    onClick={() => {
+                      if (mitAbo && !user) { setShowAuthModal(true); return; }
+                      setKasseOffen((v) => !v);
+                    }}
                     aria-expanded={kasseOffen}
                     className="btn-primary flex-1 text-sm min-h-11"
                   >

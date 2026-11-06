@@ -80,6 +80,13 @@ export declare function mitgliedZeile(
   rabatt: number
 ): { normal: number; mitglied: number; ersparnis: number; rabatt: number } | null;
 
+export declare function warenMitRabatt(zeilen: Array<{
+  titel?: string;
+  einzel: number;
+  menge: number;
+  rabatt?: number;
+}> | null | undefined): { summe: number; positionen: Array<{ titel: string; menge: number; betrag: number }> } | null;
+
 export declare function beitragPosition(pos: {
   art?: string;
   rabatt: number;

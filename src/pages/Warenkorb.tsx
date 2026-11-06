@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 import { AboKasse, useAboListe, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
+import { aboAktivMerken } from "@/lib/aboListe";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
 import { mitgliedZeile } from "../../shared/produktabo.js";
@@ -12,6 +13,10 @@ export default function Warenkorb() {
   const items = useCartStore((s) => s.items);
   const openCart = useCartStore((s) => s.openCart);
   const liste = useAboListe();
+  const [params] = useSearchParams();
+  useEffect(() => {
+    if (params.get("status") === "success") aboAktivMerken();
+  }, [params]);
   const [wahl, setWahl] = useState<Record<string, number>>({});
   const ersparnis = Math.round(items.reduce((summe, item) => {
     const zeile = liste.produkte.find((p) => p.id === item.product.node.id && p.art !== "menge");
