@@ -1,12 +1,21 @@
-import { useRef, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { aboGruppen } from "../../shared/abo-kategorien.js";
+import { brandOf, markenZaehlen } from "@/lib/marken";
+import { MarkenLeiste } from "@/components/MarkenLeiste";
 import { cn } from "@/lib/utils";
 
 export interface AboKatalogProdukt {
   id?: string;
   handle?: string;
+  title?: string;
+  titel?: string;
+  vendor?: string;
   productType?: string;
+}
+
+function markeVon(p: AboKatalogProdukt) {
+  return brandOf({ node: { title: p.title || p.titel, handle: p.handle || "", vendor: p.vendor } });
 }
 
 function schieben(el: HTMLDivElement | null, richtung: number) {
@@ -22,11 +31,17 @@ function Reihe({
   titel,
   anzahl,
   onAlle,
+  marken,
+  marke,
+  onMarke,
   kinder,
 }: {
   titel: string;
   anzahl: number;
   onAlle?: () => void;
+  marken: { name: string; anzahl: number }[];
+  marke: string;
+  onMarke: (name: string) => void;
   kinder: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -65,6 +80,9 @@ function Reihe({
           </button>
         </div>
       </div>
+      <div className="mb-1.5">
+        <MarkenLeiste marken={marken} wert={marke} onWahl={onMarke} label={`Marken in ${titel}`} />
+      </div>
       <div
         ref={ref}
         className="flex gap-2 overflow-x-auto snap-x snap-mandatory scroll-pl-1 pb-0.5 items-stretch no-scrollbar lg:grid lg:grid-cols-3 lg:overflow-visible lg:snap-none lg:pb-0 lg:gap-2.5 xl:grid-cols-5"
@@ -86,8 +104,11 @@ export function AboProduktKatalog<T extends AboKatalogProdukt>({
   onKategorie: (id: string) => void;
   karte: (produkt: T) => ReactNode;
 }) {
+  const [globaleMarke, setGlobaleMarke] = useState("");
+  const [reihenMarke, setReihenMarke] = useState<Record<string, string>>({});
   const gruppen = aboGruppen(produkte);
   const sichtbar = kategorie === "alle" ? gruppen : gruppen.filter((g) => g.id === kategorie);
+  const alleMarken = markenZaehlen(produkte.map((p) => ({ node: { title: p.title || p.titel, handle: p.handle || "", vendor: p.vendor } })));
   const chips = [{ id: "alle", label: "Alle" }, ...gruppen.map((g) => ({ id: g.id, label: g.label }))];
 
   return (
@@ -113,6 +134,17 @@ export function AboProduktKatalog<T extends AboKatalogProdukt>({
             );
           })}
         </div>
+        <div className="mt-2 flex items-center gap-2">
+          <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-muted-foreground">Marke</span>
+          <div className="min-w-0 flex-1">
+          <MarkenLeiste
+            marken={alleMarken}
+            wert={globaleMarke}
+            onWahl={setGlobaleMarke}
+            label="Marke für alle Reihen"
+          />
+          </div>
+        </div>
       </div>
 
       {sichtbar.length === 0 ? (
@@ -123,10 +155,27 @@ export function AboProduktKatalog<T extends AboKatalogProdukt>({
             <Reihe
               key={gruppe.id}
               titel={gruppe.label}
-              anzahl={gruppe.produkte.length}
+              anzahl={(() => {
+                const wahl = reihenMarke[gruppe.id] || "";
+                return gruppe.produkte.filter((p) => {
+                  const m = markeVon(p);
+                  if (globaleMarke && m !== globaleMarke) return false;
+                  if (wahl && m !== wahl) return false;
+                  return true;
+                }).length;
+              })()}
               onAlle={kategorie === "alle" ? () => onKategorie(gruppe.id) : undefined}
+              marken={markenZaehlen(gruppe.produkte.map((p) => ({ node: { title: p.title || p.titel, handle: p.handle || "", vendor: p.vendor } })))}
+              marke={reihenMarke[gruppe.id] || ""}
+              onMarke={(name) => setReihenMarke((alt) => ({ ...alt, [gruppe.id]: name }))}
               kinder={
-              gruppe.produkte.map((produkt) => (
+              gruppe.produkte.filter((p) => {
+                const m = markeVon(p);
+                const wahl = reihenMarke[gruppe.id] || "";
+                if (globaleMarke && m !== globaleMarke) return false;
+                if (wahl && m !== wahl) return false;
+                return true;
+              }).map((produkt) => (
                 <div
                   key={produkt.id || produkt.handle || gruppe.id}
                   className="snap-start shrink-0 w-[40%] self-stretch flex lg:w-auto lg:shrink"

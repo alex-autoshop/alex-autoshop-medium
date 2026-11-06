@@ -37,6 +37,7 @@ const Versand = lazy(() => import("@/pages/Versand"));
 const Widerruf = lazy(() => import("@/pages/Widerruf"));
 const Kuendigen = lazy(() => import("@/pages/Kuendigen"));
 const Gefahrstoffe = lazy(() => import("@/pages/Gefahrstoffe"));
+const Marke = lazy(() => import("@/pages/Marke"));
 const GefahrstoffBericht = lazy(() => import("@/pages/GefahrstoffBericht"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const AdminChat = lazy(() => import("@/pages/AdminChat"));
@@ -158,6 +159,7 @@ export default function App() {
                     <Route path="/widerruf" element={<Widerruf />} />
                     <Route path="/kuendigen" element={<Kuendigen />} />
                     <Route path="/gefahrstoffe" element={<Gefahrstoffe />} />
+                    <Route path="/marken/:slug" element={<Marke />} />
                     <Route path="/intern/gefahrstoffe" element={<GefahrstoffBericht />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>

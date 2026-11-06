@@ -1,3 +1,5 @@
+import { istLieferant, markenSortieren } from "../../shared/kundenmarke.js";
+
 // ── Markenerkennung ───────────────────────────────────────────────────────────
 // Shopify `vendor` ist bei uns meist nur der Lieferant ("Alex Autoshop") —
 // die echte Marke steht im Titel. Daher Erkennung über Titel + Handle.
@@ -51,7 +53,7 @@ export const BRAND_ORDER: Array<{ brand: string; match: RegExp }> = [
 ];
 
 /** Lieferanten-Namen im Shopify-Feld `vendor`, die KEINE Marke sind. */
-const KEINE_MARKE = new Set(["alex autoshop", ""]);
+const KEINE_MARKE = new Set(["alex autoshop", "ds color", "ds-color", "inter cars", "intercars", ""]);
 
 type MarkenNode = { node: { title?: string; handle: string; vendor?: string } };
 
@@ -70,10 +72,34 @@ export function brandOf(p: MarkenNode): string {
   const i = brandIndex(p);
   if (i !== -1) return BRAND_ORDER[i].brand;
   const v = (p.node.vendor || "").trim();
-  if (!KEINE_MARKE.has(v.toLowerCase())) {
+  if (v && !KEINE_MARKE.has(v.toLowerCase()) && !istLieferant(v)) {
     return BRAND_ORDER.find((b) => b.brand.toLowerCase() === v.toLowerCase())?.brand ?? v;
   }
   return "Sonstige";
+}
+
+export function markenSlug(name: string) {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function markeAusSlug(slug: string) {
+  return BRAND_ORDER.find((b) => markenSlug(b.brand) === slug)?.brand ?? null;
+}
+
+/** Marken einer Produktliste, häufigste zuerst. */
+export function markenZaehlen(produkte: MarkenNode[]) {
+  const zaehler = new Map<string, number>();
+  for (const p of produkte) {
+    const name = brandOf(p);
+    if (!name || name === "Sonstige" || istLieferant(name)) continue;
+    zaehler.set(name, (zaehler.get(name) || 0) + 1);
+  }
+  return markenSortieren([...zaehler.entries()].map(([name, anzahl]) => ({ name, anzahl })));
 }
 
 /** Index der Marke in BRAND_ORDER; unbekannte Marken landen hinten. */
