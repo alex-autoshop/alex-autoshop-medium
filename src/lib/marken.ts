@@ -1,4 +1,6 @@
-import { istLieferant, markenSortieren } from "../../shared/kundenmarke.js";
+import { istLieferant, markenSlug, markenSortieren } from "../../shared/kundenmarke.js";
+
+export { markenSlug };
 
 // ── Markenerkennung ───────────────────────────────────────────────────────────
 // Shopify `vendor` ist bei uns meist nur der Lieferant ("Alex Autoshop") —
@@ -78,17 +80,31 @@ export function brandOf(p: MarkenNode): string {
   return "Sonstige";
 }
 
-export function markenSlug(name: string) {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
 export function markeAusSlug(slug: string) {
   return BRAND_ORDER.find((b) => markenSlug(b.brand) === slug)?.brand ?? null;
+}
+
+/** Gleiche Marke, egal ob Anzeigename oder Slug aus der Adresse. */
+export function markeAktiv(liste: string[], name: string) {
+  const ziel = markenSlug(name);
+  if (!ziel) return false;
+  return liste.some((eintrag) => markenSlug(eintrag) === ziel);
+}
+
+/** Klick auf eine Marke: an- oder abwählen. Leerer Name leert die Liste. */
+export function markeUmschalten(liste: string[], name: string) {
+  if (!name) return [];
+  const ziel = markenSlug(name);
+  if (liste.some((eintrag) => markenSlug(eintrag) === ziel)) {
+    return liste.filter((eintrag) => markenSlug(eintrag) !== ziel);
+  }
+  return [...liste, name];
+}
+
+/** Anzeigename zu einem Slug, falls die Marke in der Liste vorkommt. */
+export function markenName(token: string, bekannte: string[]) {
+  const ziel = markenSlug(token);
+  return bekannte.find((name) => markenSlug(name) === ziel) ?? markeAusSlug(ziel) ?? token;
 }
 
 /** Marken einer Produktliste, häufigste zuerst. */

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Palette, Droplets, Layers, Pipette, FlaskConical,
@@ -21,7 +21,7 @@ import {
   legacyCategoryRedirect,
   navCategories,
 } from "@/lib/categories";
-import { brandOf, brandRank, markenZaehlen } from "@/lib/marken";
+import { brandOf, brandRank, markeAktiv, markeUmschalten, markenZaehlen } from "@/lib/marken";
 import { MarkenLeiste } from "@/components/MarkenLeiste";
 import {
   ShopFilters, ActiveFilterChips, productPrice, productAvailable,
@@ -299,6 +299,7 @@ const SORT_LABELS: Record<SortMode, string> = {
 
 // ── Shop Page ─────────────────────────────────────────────────────────────────
 export default function Shop() {
+  const navigate = useNavigate();
   const { category: rawCategory } = useParams();
   const legacyTarget = rawCategory ? legacyCategoryRedirect(rawCategory) : undefined;
   const category = legacyTarget ? undefined : rawCategory;
@@ -339,11 +340,17 @@ export default function Shop() {
     const aktuell = sucheAusZustand(zustandAusSuche(window.location.search));
     if (suche === aktuell) return;
     shopZustandSchreiben({ pathname: window.location.pathname, search: suche, scroll: window.scrollY });
-    setParams(new URLSearchParams(suche.startsWith("?") ? suche.slice(1) : ""), { replace: true });
-  }, [setParams]);
+    navigate({ pathname: window.location.pathname, search: suche }, { replace: true });
+  }, [navigate]);
 
+  const stand = useRef(filters);
+  stand.current = filters;
   const setFilters = (f: ShopFilterState) => {
+    stand.current = f;
     schreibe({ ...f, q: submittedSearch, sort: sortMode });
+  };
+  const waehleMarke = (name: string) => {
+    setFilters({ ...stand.current, brands: markeUmschalten(stand.current.brands, name) });
   };
 
   // Neue Suche setzt die Facetten zurück — sonst bleibt man bei 0 Treffern.
@@ -426,10 +433,10 @@ export default function Shop() {
    *  gridProducts (also VOR den Filtern), damit man sieht was noch käme. */
   const filteredProducts = useMemo(() => {
     return gridProducts.filter((p) => {
-      if (filters.brands.length && !filters.brands.includes(brandOf(p))) return false;
+      if (filters.brands.length && !markeAktiv(filters.brands, brandOf(p))) return false;
       if (filters.tags.length) {
-        const tags = (p.node.tags ?? []).map((t) => t.toLowerCase());
-        if (!filters.tags.some((t) => tags.includes(t.toLowerCase()))) return false;
+        const tags = p.node.tags ?? [];
+        if (!filters.tags.some((t) => markeAktiv(tags, t))) return false;
       }
       if (filters.priceMax !== null && productPrice(p) > filters.priceMax) return false;
       if (filters.onlyAvailable && !productAvailable(p)) return false;
@@ -475,20 +482,7 @@ export default function Shop() {
   }, [filteredProducts, sortMode]);
 
   const title = activeCategory ? activeCategory.label : "Shop";
-
-  // Sticky shadow on scroll
-  const [isStuck, setIsStuck] = useState(false);
-  const stickyRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = stickyRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsStuck(!entry.isIntersecting),
-      { threshold: 1, rootMargin: "-81px 0px 0px 0px" },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  const marken = useMemo(() => markenZaehlen(gridProducts), [gridProducts]);
 
   if (legacyTarget) return <Navigate to={legacyTarget} replace />;
 
@@ -501,15 +495,11 @@ export default function Shop() {
 
       <h1 className="text-3xl sm:text-4xl mb-6">{title}</h1>
 
-      {/* Sentinel for IntersectionObserver */}
-      <div ref={stickyRef} className="h-px -mt-px" />
-
-      {/* Filter links — auch auf dem Handy, ohne Extra-Klick auf „Filter“.
-          Die Spalte ist schmal und sticky, die Produkte bleiben daneben. */}
-      <div className="grid grid-cols-[clamp(7.25rem,34vw,11rem)_minmax(0,1fr)] gap-2 sm:gap-4 items-start lg:grid-cols-[264px_minmax(0,1fr)] lg:gap-7">
+      {/* Sidebar nur ab 1024 px. Darunter eine Leiste über dem Raster. */}
+      <div className="lg:grid lg:grid-cols-[264px_minmax(0,1fr)] lg:gap-7 lg:items-start">
         <aside
           aria-label="Filter"
-          className="sticky top-20 sm:top-24 min-w-0 max-h-[calc(100dvh-5.5rem)] sm:max-h-[calc(100dvh-6.5rem)] lg:max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-y-contain pb-4"
+          className="hidden lg:block sticky top-24 min-w-0 max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-y-contain pb-4"
         >
           <ShopFilters
             products={gridProducts}
@@ -523,20 +513,9 @@ export default function Shop() {
         {/* ── Hauptspalte ──────────────────────────────────────────────── */}
         <div className="min-w-0">
 
-      {/* ── Sticky Search Bar ───────────────────────────────────────────── */}
-      <div
-        className={cn(
-          "sticky top-20 sm:top-24 z-30 py-3",
-          "transition-all duration-300",
-        )}
-      >
-        <div className={cn(
-          "flex items-center gap-3 rounded-2xl border px-3 py-2",
-          "bg-card border-border/80 backdrop-blur-md transition-all duration-300",
-          isStuck
-            ? "shadow-[0_8px_32px_rgba(0,0,0,0.18)] border-border"
-            : "shadow-[0_2px_12px_rgba(0,0,0,0.08)]",
-        )}>
+      {/* Suche bleibt im Fluss, damit sie die Karten nicht überdeckt. */}
+      <div className="relative z-20 sm:z-[35] mb-4">
+        <div className="flex items-center gap-3 rounded-2xl border px-3 py-2 bg-card border-border/80 shadow-[0_2px_12px_rgba(0,0,0,0.08)]">
           {/* Search input */}
           <div className="relative flex-1 min-w-0 group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
@@ -600,8 +579,8 @@ export default function Shop() {
             </AnimatePresence>
           </div>
 
-          {/* Kategorien-Menü. Unter sm steht dieselbe Liste in der linken Spalte. */}
-          <div className="hidden sm:block shrink-0">
+          {/* Kategorien stehen ab 1024 px in der Sidebar. Das Suchfeld bleibt darunter volle Breite. */}
+          <div className="hidden lg:block shrink-0">
             <CategoryDropdown activeCategory={activeCategory} activeSlug={category} />
           </div>
         </div>{/* end card row */}
@@ -644,22 +623,24 @@ export default function Shop() {
         </AnimatePresence>
       </div>
 
-      <div className="mb-4 flex items-center gap-2">
-        <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-muted-foreground">Marke</span>
-        <div className="min-w-0 flex-1">
-        <MarkenLeiste
-          marken={markenZaehlen(gridProducts)}
-          wert={filters.brands.length === 1 ? filters.brands[0] : ""}
-          onWahl={(name) => setFilters({ ...filters, brands: name ? [name] : [] })}
-          label="Marke"
-        />
+      <div className="sticky top-20 sm:top-24 z-30 -mx-3 sm:-mx-6 px-3 sm:px-6 py-2 mb-3 bg-background/95 backdrop-blur-md border-b border-border lg:static lg:z-auto lg:mx-0 lg:px-0 lg:py-0 lg:mb-4 lg:bg-transparent lg:backdrop-blur-none lg:border-0">
+        <div className="flex items-center gap-2">
+          <span className="hidden lg:inline shrink-0 text-xs font-bold uppercase tracking-wide text-muted-foreground">Marke</span>
+          <div className="min-w-0 flex-1">
+            <MarkenLeiste
+              marken={marken}
+              werte={filters.brands}
+              onWahl={waehleMarke}
+              label="Marke"
+            />
+          </div>
         </div>
       </div>
 
       {/* Schnellzugriff: Klarlack · Härter · Wunschfarbe · Verdünnung */}
       {showFeatured && (
         <section className="mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
             {[
               { slug: "klarlack-produkte", label: "Klarlack", sub: "2K HS & Express", icon: <Layers className="w-7 h-7" />, color: "from-blue-500/20 to-blue-400/5" },
               { slug: "haerter", label: "Härter", sub: "Standard · Fast · Slow", icon: <FlaskConical className="w-7 h-7" />, color: "from-amber-500/20 to-amber-400/5" },
@@ -669,7 +650,7 @@ export default function Shop() {
               <Link
                 key={slug}
                 to={`/shop/${slug}`}
-                className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${color} p-5 flex flex-col gap-3 hover:border-primary/50 transition-all duration-200 hover:scale-[1.02] min-h-[130px]`}
+                className={`group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${color} p-3.5 sm:p-5 flex flex-col gap-2 sm:gap-3 hover:border-primary/50 transition-all duration-200 hover:scale-[1.02] min-h-[104px] sm:min-h-[130px]`}
               >
                 <span className="text-primary opacity-80 group-hover:opacity-100 transition-opacity">{icon}</span>
                 <div>
@@ -684,7 +665,7 @@ export default function Shop() {
 
       {/* Eigene Farbe konfigurieren */}
       {showFeatured && featured.length === 0 && (
-        <div className="mb-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5" aria-hidden="true">
+        <div className="mb-10 grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5" aria-hidden="true">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-border overflow-hidden">
               <div className="aspect-square bg-secondary" />
@@ -699,7 +680,7 @@ export default function Shop() {
             <Palette className="w-5 h-5 text-primary" />
             <h2 className="text-xl sm:text-2xl">Eigene Farbe konfigurieren</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 items-start">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 items-start">
             {featured.map((p) => (
               <ProductCard key={p.node.id} product={p} />
             ))}
@@ -792,7 +773,7 @@ export default function Shop() {
             ))}
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <label className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground">
             <span className="hidden sm:inline">Sortiert nach:</span>
             <select
               value={sortMode}
@@ -807,7 +788,9 @@ export default function Shop() {
         </div>
       </div>
 
-      <ActiveFilterChips filters={filters} onChange={setFilters} />
+      <div className="hidden lg:block">
+        <ActiveFilterChips filters={filters} onChange={setFilters} marken={marken.map((m) => m.name)} />
+      </div>
 
       {/* Mengenmodus: Alle Produkte als kompakte Liste mit Mengenfeld */}
       {shopMode === 'menge' ? (
@@ -872,7 +855,6 @@ export default function Shop() {
         onLoadMore={loadMore}
         columns={columns}
         fenster={24}
-        nebenFilter
       />
       )}
         </div>{/* Ende Hauptspalte */}

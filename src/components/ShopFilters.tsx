@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, X, RotateCcw } from "lucide-react";
+import { ChevronDown, Search, X, RotateCcw } from "lucide-react";
 import { categoryPath, navCategories } from "@/lib/categories";
+import { markeAktiv, markeUmschalten, markenName } from "@/lib/marken";
+import { istLieferant } from "../../shared/kundenmarke.js";
 import { cn } from "@/lib/utils";
 import type { ShopifyProduct } from "@/lib/shopify";
 
@@ -20,6 +22,10 @@ export const EMPTY_FILTERS: ShopFilterState = {
 };
 
 export const PRICE_STEPS = [10, 25, 50, 100, 250];
+
+export function filterAnzahl(filters: ShopFilterState) {
+  return filters.brands.length + filters.tags.length + (filters.priceMax ? 1 : 0) + (filters.onlyAvailable ? 1 : 0);
+}
 
 /** Tags, die als Filter wirklich helfen — Shopify-Tags sind sonst zu wild. */
 const TAG_WHITELIST = [
@@ -151,7 +157,7 @@ export function ShopFilters({
   const brands = useMemo(
     () =>
       [...brandCounts.entries()]
-        .filter(([b]) => b !== "Sonstige")
+        .filter(([b]) => b !== "Sonstige" && !istLieferant(b))
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "de")),
     [brandCounts]
   );
@@ -162,16 +168,22 @@ export function ShopFilters({
 
   const availableCount = useMemo(() => products.filter(productAvailable).length, [products]);
 
+  const [markenSuche, setMarkenSuche] = useState("");
+  const such = markenSuche.trim().toLowerCase();
+  const sichtbareMarken = such ? brands.filter(([b]) => b.toLowerCase().includes(such)) : brands;
+
+  const stand = useRef(filters);
+  stand.current = filters;
+  const setzen = (teil: Partial<ShopFilterState>) => {
+    const next = { ...stand.current, ...teil };
+    stand.current = next;
+    onChange(next);
+  };
   const toggle = (key: "brands" | "tags", value: string) => {
-    const list = filters[key];
-    onChange({
-      ...filters,
-      [key]: list.includes(value) ? list.filter((x) => x !== value) : [...list, value],
-    });
+    setzen({ [key]: markeUmschalten(stand.current[key], value) });
   };
 
-  const activeCount =
-    filters.brands.length + filters.tags.length + (filters.priceMax ? 1 : 0) + (filters.onlyAvailable ? 1 : 0);
+  const activeCount = filterAnzahl(filters);
 
   return (
     <div className="text-sm flex flex-col min-w-0">
@@ -264,18 +276,31 @@ export function ShopFilters({
         </div>
 
         <Section title="Marke" count={brands.length}>
+          <div className="relative mb-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              value={markenSuche}
+              onChange={(e) => setMarkenSuche(e.target.value)}
+              placeholder="Marke suchen …"
+              aria-label="Marke suchen"
+              className="w-full h-10 pl-9 pr-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:border-primary/60"
+            />
+          </div>
           <div className="lg:max-h-[280px] lg:overflow-y-auto lg:pr-1 space-y-0.5">
-            {brands.map(([b, n]) => (
+            {sichtbareMarken.map(([b, n]) => (
               <CheckRow
                 key={b}
                 label={b}
                 count={n}
-                active={filters.brands.includes(b)}
+                active={markeAktiv(filters.brands, b)}
                 onToggle={() => toggle("brands", b)}
               />
             ))}
             {brands.length === 0 && (
               <p className="px-2 py-1 text-xs text-muted-foreground">Keine Marken erkannt</p>
+            )}
+            {brands.length > 0 && sichtbareMarken.length === 0 && (
+              <p className="px-2 py-1 text-xs text-muted-foreground">Keine Marke dazu</p>
             )}
           </div>
         </Section>
@@ -288,7 +313,7 @@ export function ShopFilters({
                   key={t}
                   label={t}
                   count={n}
-                  active={filters.tags.includes(t)}
+                  active={markeAktiv(filters.tags, t)}
                   onToggle={() => toggle("tags", t)}
                 />
               ))}
@@ -302,7 +327,7 @@ export function ShopFilters({
               <button
                 key={v}
                 type="button"
-                onClick={() => onChange({ ...filters, priceMax: filters.priceMax === v ? null : v })}
+                onClick={() => setzen({ priceMax: stand.current.priceMax === v ? null : v })}
                 className={cn(
                   "px-2 py-1 lg:px-2.5 rounded-lg border text-[11px] lg:text-xs font-semibold transition-colors",
                   filters.priceMax === v
@@ -321,7 +346,7 @@ export function ShopFilters({
             label="Nur lieferbare Artikel"
             count={availableCount}
             active={filters.onlyAvailable}
-            onToggle={() => onChange({ ...filters, onlyAvailable: !filters.onlyAvailable })}
+            onToggle={() => setzen({ onlyAvailable: !stand.current.onlyAvailable })}
           />
         </Section>
       </div>
@@ -333,18 +358,20 @@ export function ShopFilters({
 export function ActiveFilterChips({
   filters,
   onChange,
+  marken = [],
 }: {
   filters: ShopFilterState;
   onChange: (f: ShopFilterState) => void;
+  marken?: string[];
 }) {
   const chips: Array<{ label: string; clear: () => void }> = [
     ...filters.brands.map((b) => ({
-      label: b,
-      clear: () => onChange({ ...filters, brands: filters.brands.filter((x) => x !== b) }),
+      label: markenName(b, marken),
+      clear: () => onChange({ ...filters, brands: markeUmschalten(filters.brands, b) }),
     })),
     ...filters.tags.map((t) => ({
       label: t,
-      clear: () => onChange({ ...filters, tags: filters.tags.filter((x) => x !== t) }),
+      clear: () => onChange({ ...filters, tags: markeUmschalten(filters.tags, t) }),
     })),
   ];
   if (filters.priceMax) {
