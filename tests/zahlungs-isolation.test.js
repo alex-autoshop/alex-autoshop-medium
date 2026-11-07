@@ -95,7 +95,7 @@ test("Zahlungs-Erfüllung auf der Vorschau", { concurrency: false }, async (t) =
     assert.equal(erfuellungGesperrt(), true);
 
     process.env.PUBLIC_BASE_URL = "https://alex-autoshop-medium-abc.vercel.app";
-    assert.equal(erfuellungGesperrt(), false);
+    assert.equal(erfuellungGesperrt(), true, "Vorschau schreibt nicht, auch mit Testdatenbank");
   });
 
   await t.test("Mitgliedschafts-Checkout öffnet keine Session ohne Schlüssel und ruft Stripe nicht auf", async () => {

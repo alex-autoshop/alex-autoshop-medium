@@ -8,8 +8,8 @@ import { toast } from "sonner";
 import { useVollerKatalog } from "@/hooks/useVollerKatalog";
 import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/lib/supabase";
 import { empfehlungLesen } from "@/lib/empfehlung";
+import { aboZahlungErgebnis } from "../../shared/abo-kasse.js";
 import { empfehlungOffen } from "../../shared/empfehlung.js";
 import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
@@ -263,23 +263,9 @@ export function ProduktAbo() {
         body: JSON.stringify({ ...auswahl, method: zahlweg }),
       });
       const coData = await co.json().catch(() => ({}));
-      if (co.ok && coData.url) { window.location.href = coData.url; return; }
-      if (co.status === 409 || co.status === 400) {
-        throw new Error(coData.error || "Buchung nicht möglich — bitte Seite neu laden.");
-      }
-
-      // 2) Anbieter noch nicht eingerichtet → Anfrage per E-Mail, wie gehabt
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
-      const res = await fetch("/api/membership-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify(auswahl),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Unbekannter Fehler");
-      toast.success("Anfrage gesendet! 📬", {
-        description: "Wir melden uns zur Zahlung. Deine Produktliste liegt bei uns.",
-      });
+      const erg = aboZahlungErgebnis(co.status, coData);
+      if (erg.art === "weiter") { window.location.href = erg.url; return; }
+      throw new Error(erg.text);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {

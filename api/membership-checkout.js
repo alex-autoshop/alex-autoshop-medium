@@ -20,6 +20,7 @@ import { mitgliedsbeitrag, rabattName, DIENSTLEISTUNG_BUCHBAR } from "../shared/
 import { aboListeGesamt, warenMitRabatt } from "../shared/produktabo.js";
 import { versandkosten } from "../shared/versand.js";
 import { empfehlungSichtbar } from "../shared/empfehlung.js";
+import { checkoutBasis } from "../shared/zahlungs-isolation.js";
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
 const REF_OK = /^[A-Z0-9]{6,8}$/;
@@ -29,7 +30,11 @@ const refAus = (email, x) => {
   return REF_OK.test(r) ? r : "";
 };
 
-const BASE = () => process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de";
+function basisAus(req) {
+  const h = req?.headers;
+  const host = typeof h?.get === "function" ? (h.get("x-forwarded-host") || h.get("host")) : "";
+  return checkoutBasis(host);
+}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -40,7 +45,7 @@ const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", ...CORS } });
 
 // ── Stripe: Checkout Session (subscription) ──────────────────────────────────
-async function createStripeSession({ email, level, modules, price, paket, ref, titel }) {
+async function createStripeSession({ email, level, modules, price, paket, ref, titel, basis = "https://alex-autoshop.de" }) {
   const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
   if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
 
@@ -48,8 +53,8 @@ async function createStripeSession({ email, level, modules, price, paket, ref, t
   const form = new URLSearchParams();
   form.set("mode", "subscription");
   form.set("customer_email", email);
-  form.set("success_url", `${BASE()}/mitgliedschaft?status=success&session_id={CHECKOUT_SESSION_ID}`);
-  form.set("cancel_url", `${BASE()}/mitgliedschaft?status=cancel`);
+  form.set("success_url", `${basis}/mitgliedschaft?status=success&session_id={CHECKOUT_SESSION_ID}`);
+  form.set("cancel_url", `${basis}/mitgliedschaft?status=cancel`);
   form.set("line_items[0][quantity]", "1");
   form.set("line_items[0][price_data][currency]", "eur");
   form.set("line_items[0][price_data][recurring][interval]", "month");
@@ -78,14 +83,14 @@ async function createStripeSession({ email, level, modules, price, paket, ref, t
   return { url: data.url };
 }
 
-async function createProduktSession({ email, price, zeilen, positionen, ref }) {
+async function createProduktSession({ email, price, zeilen, positionen, ref, basis = "https://alex-autoshop.de" }) {
   const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
   if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
   const form = new URLSearchParams();
   form.set("mode", "subscription");
   form.set("customer_email", email);
-  form.set("success_url", `${BASE()}/mitgliedschaft?status=success&session_id={CHECKOUT_SESSION_ID}`);
-  form.set("cancel_url", `${BASE()}/mitgliedschaft?status=cancel`);
+  form.set("success_url", `${basis}/mitgliedschaft?status=success&session_id={CHECKOUT_SESSION_ID}`);
+  form.set("cancel_url", `${basis}/mitgliedschaft?status=cancel`);
   zeilen.forEach((z, i) => {
     form.set(`line_items[${i}][quantity]`, "1");
     form.set(`line_items[${i}][price_data][currency]`, "eur");
@@ -113,15 +118,15 @@ async function createProduktSession({ email, price, zeilen, positionen, ref }) {
 }
 
 /** Eine Zahlung: Abo monatlich wiederkehrend, Ware einmalig auf der ersten Rechnung. */
-async function createWarenAboSession({ email, monat, waren, versand, positionen, ref }) {
+async function createWarenAboSession({ email, monat, waren, versand, positionen, ref, basis = "https://alex-autoshop.de" }) {
   const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
   if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
   const form = new URLSearchParams();
   form.set("mode", "subscription");
   form.set("locale", "de");
   form.set("customer_email", email);
-  form.set("success_url", `${BASE()}/warenkorb?status=success&session_id={CHECKOUT_SESSION_ID}`);
-  form.set("cancel_url", `${BASE()}/warenkorb?status=cancel`);
+  form.set("success_url", `${basis}/warenkorb?status=success&session_id={CHECKOUT_SESSION_ID}`);
+  form.set("cancel_url", `${basis}/warenkorb?status=cancel`);
   form.set("line_items[0][quantity]", "1");
   form.set("line_items[0][price_data][currency]", "eur");
   form.set("line_items[0][price_data][recurring][interval]", "month");
@@ -167,7 +172,7 @@ async function createWarenAboSession({ email, monat, waren, versand, positionen,
   return { url: data.url };
 }
 
-async function createProduktFlow({ email, price, paket, positionen }) {
+async function createProduktFlow({ email, price, paket, positionen, basis = "https://alex-autoshop.de" }) {
   const token = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
   if (!/^(live|sandbox)_[A-Za-z0-9_-]{10,}$/.test(token)) return { fallback: true };
   const host = token.startsWith("live_") ? "https://api.gocardless.com" : "https://api-sandbox.gocardless.com";
@@ -194,8 +199,8 @@ async function createProduktFlow({ email, price, paket, positionen }) {
     headers,
     body: JSON.stringify({
       billing_request_flows: {
-        redirect_uri: `${BASE()}/mitgliedschaft?status=success&provider=gocardless`,
-        exit_uri: `${BASE()}/mitgliedschaft?status=cancel`,
+        redirect_uri: `${basis}/mitgliedschaft?status=success&provider=gocardless`,
+        exit_uri: `${basis}/mitgliedschaft?status=cancel`,
         prefilled_customer: { email },
         links: { billing_request: br?.billing_requests?.id },
       },
@@ -207,7 +212,7 @@ async function createProduktFlow({ email, price, paket, positionen }) {
 }
 
 // ── GoCardless: Billing Request + Flow (SEPA-Mandat) ─────────────────────────
-async function createGoCardlessFlow({ email, level, modules, price, paket, ref, titel }) {
+async function createGoCardlessFlow({ email, level, modules, price, paket, ref, titel, basis = "https://alex-autoshop.de" }) {
   // Nur ein echter Token zählt (Platzhalter in Vercel → freundlicher Hinweis),
   // und live/sandbox ergibt sich aus dem Token selbst.
   const token = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
@@ -248,8 +253,8 @@ async function createGoCardlessFlow({ email, level, modules, price, paket, ref, 
     headers,
     body: JSON.stringify({
       billing_request_flows: {
-        redirect_uri: `${BASE()}/mitgliedschaft?status=success&provider=gocardless`,
-        exit_uri: `${BASE()}/mitgliedschaft?status=cancel`,
+        redirect_uri: `${basis}/mitgliedschaft?status=success&provider=gocardless`,
+        exit_uri: `${basis}/mitgliedschaft?status=cancel`,
         prefilled_customer: { email },
         links: { billing_request: brId },
       },
@@ -266,6 +271,7 @@ export default async function handler(req) {
 
   let body;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
+  const basis = basisAus(req);
   const { email: emailRoh, level, modules = [], price, method, freePaint, aufbereitung, ref: refRoh,
           aboTyp, rabatt, produkte = [], waren, einmalig } = body || {};
   const email = String(emailRoh || "").trim().toLowerCase();
@@ -311,15 +317,15 @@ export default async function handler(req) {
           return json({ error: "Der Warenpreis hat sich gerade geändert — bitte die Seite neu laden.", einmalig: summe }, 409);
         }
         const r = await createWarenAboSession({
-          email, monat: g.beitrag, waren: gerechnet.positionen, versand, positionen, ref: refAus(email, refRoh),
+          email, monat: g.beitrag, waren: gerechnet.positionen, versand, positionen, ref: refAus(email, refRoh), basis,
         });
         if (r.fallback) return json({ fallback: true, reason: "stripe noch nicht konfiguriert" });
         if (!r.url) return json({ error: "Keine Checkout-URL erhalten" }, 502);
         return json({ url: r.url });
       }
       const r = method === "stripe"
-        ? await createProduktSession({ email, price: g.beitrag, zeilen, positionen, ref: refAus(email, refRoh) })
-        : await createProduktFlow({ email, price: g.beitrag, paket, positionen });
+        ? await createProduktSession({ email, price: g.beitrag, zeilen, positionen, ref: refAus(email, refRoh), basis })
+        : await createProduktFlow({ email, price: g.beitrag, paket, positionen, basis });
       if (r.fallback) return json({ fallback: true, reason: `${method} noch nicht konfiguriert` });
       if (!r.url) return json({ error: "Keine Checkout-URL erhalten" }, 502);
       return json({ url: r.url });
@@ -353,7 +359,7 @@ export default async function handler(req) {
     b.freePaint ? "farbe" : "ohneFarbe",
     b.aufbereitung ? "aufb" : "ohneAufb",
   ].join("|");
-  const arg = { email, level: b.level, modules: b.module, price: b.preis, paket, ref: refAus(email, refRoh) };
+  const arg = { email, level: b.level, modules: b.module, price: b.preis, paket, ref: refAus(email, refRoh), basis };
 
   try {
     const result = method === "stripe"

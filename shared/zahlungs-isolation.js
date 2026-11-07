@@ -1,10 +1,10 @@
 // Die Produktionsdatenbank darf nur der Live-Shop beschreiben.
-// Jedes andere Vercel-Projekt (Webhook-Host, lokale Tests) ist gesperrt,
-// sobald die Supabase-URL fehlt oder das Projekt zasbdvtsxgimcezotlsi ist.
+// Jedes andere Projekt ist gesperrt, sobald die Supabase-URL fehlt oder
+// das Projekt zasbdvtsxgimcezotlsi ist.
 //
-// Vorschau des Live-Shops bleibt zusätzlich gesperrt, bis BEIDES gilt:
-//   • Supabase-URL zeigt auf ein anderes Projekt
-//   • PUBLIC_BASE_URL ist gesetzt und zeigt nicht auf alex-autoshop.de
+// Jede Vorschau des Live-Shops bleibt gesperrt, auch mit der Testdatenbank.
+// Dort liegt weiterhin der Produktions-Service-Key. Schreiben darf nur der
+// separate Webhook-Host (VERCEL_ENV=production, andere Projekt-ID, Test-URL).
 
 export const PRODUKTIONS_SUPABASE_REF = "zasbdvtsxgimcezotlsi";
 export const LIVE_SHOP_PROJECT_ID = "prj_c0sRkrUnvHGqAb8rTYC3UPFZhqnG";
@@ -19,10 +19,17 @@ export function erfuellungGesperrt() {
   const env = typeof process !== "undefined" && process.env ? process.env : {};
   const prodDb = supabaseZiel().includes(PRODUKTIONS_SUPABASE_REF);
   const liveShop = String(env.VERCEL_PROJECT_ID || "") === LIVE_SHOP_PROJECT_ID;
+  if (String(env.VERCEL_ENV || "") === "preview") return true;
   if (prodDb && !liveShop) return true;
-  if (String(env.VERCEL_ENV || "") !== "preview") return false;
-  if (prodDb) return true;
-  const base = String(env.PUBLIC_BASE_URL || "").trim().toLowerCase();
-  if (!base || base.includes("alex-autoshop.de")) return true;
   return false;
+}
+
+/** Erfolgslink der Bezahlseite. Eine Vorschau-Adresse bleibt auf der Vorschau. */
+export function checkoutBasis(host) {
+  const env = typeof process !== "undefined" && process.env ? process.env : {};
+  const fest = String(env.PUBLIC_BASE_URL || "").trim().replace(/\/+$/, "");
+  if (fest) return fest;
+  const h = String(host || "").split(",")[0].trim().toLowerCase();
+  if (/^[a-z0-9.-]+\.vercel\.app$/.test(h)) return `https://${h}`;
+  return "https://alex-autoshop.de";
 }
