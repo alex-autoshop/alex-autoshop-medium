@@ -21,6 +21,7 @@ import { shopifyMitgliedTag } from "./_shopify-order.js";
 import { positionenLesen, teileBestellung, teileBestellungBezahlt } from "./_teile-bestellung.js";
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from "../shared/empfehlung.js";
 import { rabattName } from "../shared/mitgliedspreise.js";
+import { erfuellungGesperrt } from "../shared/zahlungs-isolation.js";
 
 // ── Teile-Zahlungen für die Zahlungsgrenze festhalten (nur Server) ──────────
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co").replace(/\/+$/, "");
@@ -329,6 +330,14 @@ export default async function handler(req) {
 
   let payload;
   try { payload = JSON.parse(raw); } catch { return new Response("Invalid JSON", { status: 400 }); }
+
+  // Signatur ist gültig, aber diese Vorschau schreibt ins Produktionsprojekt.
+  // 200, damit GoCardless nicht wiederholt — es wird kein Mandat und kein Abo angelegt.
+  if (erfuellungGesperrt()) {
+    return new Response(JSON.stringify({ received: true, erfuellung: "gesperrt" }), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    });
+  }
 
   for (const ev of payload.events || []) {
     try {
