@@ -258,10 +258,10 @@ export default function Versand() {
               Einen Altteilpfand berechnen wir nicht.
             </p>
             <p>
-              <strong className="text-foreground">Gefahrgut & Sperrgut:</strong> Lacke, Spraydosen
-              und Verdünner versenden wir nach den ADR-Vorschriften. Einen Zuschlag, der erst
-              nach der Bestellung dazukommt, gibt es nicht. Passt etwas nicht in den genannten
-              Versand, sagen wir das vor der Bestellung.
+              <strong className="text-foreground">Gefahrgut:</strong> Steht auf der Produktseite
+              ein Gefahrgut- oder Versandhinweis, gilt der. Einen Zuschlag, der erst nach der
+              Bestellung dazukommt, gibt es nicht. Können wir einen Artikel so nicht versenden,
+              sagen wir das vor der Bestellung.
             </p>
             <p>
               <strong className="text-foreground">Teillieferungen:</strong> Wenn Artikel getrennt

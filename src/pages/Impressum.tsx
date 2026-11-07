@@ -70,9 +70,10 @@ const Impressum = () => (
       <hr />
 
       <h2>Hinweis gemäß § 36 VSBG</h2>
-      <p>Alex Autoshop ist weder bereit noch verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
+      <p>Wir sind nicht verpflichtet und nicht bereit, an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
+      <p>Die Europäische Plattform zur Online-Streitbeilegung ist seit dem 20. Juli 2025 eingestellt. Einen Link dorthin gibt es nicht mehr.</p>
 
-      <p><em>Stand: Juli 2026</em></p>
+      <p><em>Stand: November 2026</em></p>
     </article>
   </div>
 );

@@ -143,8 +143,10 @@ const Datenschutz = () => {
       <p>
         Kartenzahlung läuft über Stripe, SEPA-Lastschrift über GoCardless.
         {teile ? " Teile- und Katalogdaten kommen von unserem Teilegroßhandel und von TecDoc-Datenanbietern." : ""} E-Mails
-        (Bestellbestätigung, Widerruf, Kündigung) versenden wir über Resend, sofern ein
-        Versandschlüssel hinterlegt ist. Google Analytics und ein Meta-Pixel laden nur, wenn
+        (Bestellbestätigung, Widerruf, Kündigung und, bei Gewerbekunden, die Links zu
+        Sicherheitsdatenblättern der bestellten Gefahrstoffe) versenden wir über Resend, sofern ein
+        Versandschlüssel hinterlegt ist. Die Datenblätter versenden wir zur Vertragserfüllung und
+        zur Erfüllung rechtlicher Pflichten (Art. 6 Abs. 1 lit. b und c DSGVO). Google Analytics und ein Meta-Pixel laden nur, wenn
         du „Alle akzeptieren“ wählst; das Pixel nur zusätzlich, wenn eine echte Pixel-ID
         gesetzt ist. Die Auswahl kannst du über „Cookie-Einstellungen“ im Fuß der Seite
         zurücknehmen.
