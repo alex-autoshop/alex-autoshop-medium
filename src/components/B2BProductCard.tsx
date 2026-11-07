@@ -64,7 +64,7 @@ export function B2BProductCard({
       <div className="p-3 flex flex-col flex-1 gap-2">
         <h3 lang="de" className="produkt-titel">{node.title}</h3>
 
-        <DeliveryBadge node={node} available={variant?.availableForSale !== false} />
+        <DeliveryBadge node={node} variant={variant} available={variant?.availableForSale !== false} />
 
         <div className="mt-auto">
           {discount > 0 ? (

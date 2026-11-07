@@ -107,7 +107,7 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
           </p>
         </div>
 
-        <DeliveryBadge node={node} available={firstVariant?.availableForSale !== false} />
+        <DeliveryBadge node={node} variant={firstVariant} available={firstVariant?.availableForSale !== false} />
 
         {/* Mitgliedspreise ausklappbar */}
         <button

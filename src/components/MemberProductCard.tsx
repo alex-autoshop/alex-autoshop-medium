@@ -68,7 +68,7 @@ export function MemberProductCard({
           )}
         </div>
 
-        <DeliveryBadge node={node} available={variant?.availableForSale !== false} />
+        <DeliveryBadge node={node} variant={variant} available={variant?.availableForSale !== false} />
 
         {/* Ersparnis je Stufe */}
         <div className="rounded-xl bg-secondary/70 p-3 space-y-1.5">

@@ -44,6 +44,7 @@ export interface ShopifyProduct {
             name: string;
             value: string;
           }>;
+          lieferzeit?: Array<{ key: string; value: string } | null> | null;
         };
       }>;
     };
@@ -51,6 +52,7 @@ export interface ShopifyProduct {
       name: string;
       values: string[];
     }>;
+    lieferzeit?: Array<{ key: string; value: string } | null> | null;
     gefahrstoffMetafelder?: Array<{ key: string; value: string } | null> | null;
   };
 }
@@ -99,6 +101,13 @@ export async function storefrontApiRequest(query: string, variables: Record<stri
   return data;
 }
 
+const LIEFERZEIT_FELDER = `
+  lieferzeit: metafields(identifiers: [
+    {namespace: "custom", key: "lieferzeit_min"},
+    {namespace: "custom", key: "lieferzeit_max"}
+  ]) { key value }
+`;
+
 const PRODUCT_CARD_FIELDS = `
   id
   title
@@ -137,6 +146,7 @@ const PRODUCT_CARD_FIELDS = `
           name
           value
         }
+        ${LIEFERZEIT_FELDER}
       }
     }
   }
@@ -156,6 +166,7 @@ const PRODUCT_CARD_FIELDS = `
     {namespace: "gefahrstoff", key: "mindestalter"},
     {namespace: "gefahrstoff", key: "versand_hinweis"}
   ]) { key value }
+  ${LIEFERZEIT_FELDER}
 `;
 
 export const STOREFRONT_PRODUCTS_QUERY = `
@@ -235,6 +246,7 @@ export const STOREFRONT_PRODUCT_BY_HANDLE_QUERY = `
               name
               value
             }
+            ${LIEFERZEIT_FELDER}
           }
         }
       }
@@ -242,6 +254,7 @@ export const STOREFRONT_PRODUCT_BY_HANDLE_QUERY = `
         name
         values
       }
+      ${LIEFERZEIT_FELDER}
       gefahrstoffMetafelder: metafields(identifiers: [
         {namespace: "gefahrstoff", key: "ist_gefahrstoff"},
         {namespace: "gefahrstoff", key: "h_saetze"},
