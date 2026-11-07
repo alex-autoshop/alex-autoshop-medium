@@ -7,6 +7,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { cn } from "@/lib/utils";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
+import { Grundpreis } from "@/components/Grundpreis";
 
 // Professionelle B2B-Karte: Netto-Mitgliederpreis prominent, Mengen-Eingabe,
 // direkt bestellen — wie in einem Distributor-Portal.
@@ -80,6 +81,7 @@ export function B2BProductCard({
               </div>
               <p className="text-xs text-muted-foreground line-through">{formatPrice(String(basePrice), cur)}</p>
               <p className="text-[11px] text-muted-foreground">Netto-Mitgliederpreis (Level {memberLevel})</p>
+              <Grundpreis variant={variant} />
             </>
           ) : (
             <>
@@ -88,6 +90,7 @@ export function B2BProductCard({
                 {formatPrice(String(basePrice), cur)}
               </p>
               <p className="text-[11px] text-primary font-semibold">Mitglieder ab −15%</p>
+              <Grundpreis variant={variant} />
             </>
           )}
 

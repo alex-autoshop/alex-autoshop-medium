@@ -45,6 +45,8 @@ export interface ShopifyProduct {
             value: string;
           }>;
           lieferzeit?: Array<{ key: string; value: string } | null> | null;
+          unitPrice?: { amount: string; currencyCode: string } | null;
+          unitPriceMeasurement?: { referenceValue?: number; referenceUnit?: string } | null;
         };
       }>;
     };
@@ -54,6 +56,7 @@ export interface ShopifyProduct {
     }>;
     lieferzeit?: Array<{ key: string; value: string } | null> | null;
     gefahrstoffMetafelder?: Array<{ key: string; value: string } | null> | null;
+    gpsr?: Array<{ key: string; value: string } | null> | null;
   };
 }
 
@@ -146,6 +149,8 @@ const PRODUCT_CARD_FIELDS = `
           name
           value
         }
+        unitPrice { amount currencyCode }
+        unitPriceMeasurement { referenceValue referenceUnit }
         ${LIEFERZEIT_FELDER}
       }
     }
@@ -161,12 +166,20 @@ const PRODUCT_CARD_FIELDS = `
     {namespace: "gefahrstoff", key: "piktogramme"},
     {namespace: "gefahrstoff", key: "signalwort"},
     {namespace: "gefahrstoff", key: "sdb_url"},
+    {namespace: "gefahrstoff", key: "tds_url"},
     {namespace: "gefahrstoff", key: "sdb_stand"},
     {namespace: "gefahrstoff", key: "gefahrgut_un_nr"},
     {namespace: "gefahrstoff", key: "mindestalter"},
     {namespace: "gefahrstoff", key: "versand_hinweis"}
   ]) { key value }
   ${LIEFERZEIT_FELDER}
+  gpsr: metafields(identifiers: [
+    {namespace: "custom", key: "gpsr_hersteller_name"},
+    {namespace: "custom", key: "gpsr_hersteller_adresse"},
+    {namespace: "custom", key: "gpsr_hersteller_kontakt"},
+    {namespace: "custom", key: "gpsr_eu_verantwortlicher"},
+    {namespace: "custom", key: "gpsr_sicherheitshinweise"}
+  ]) { key value }
 `;
 
 export const STOREFRONT_PRODUCTS_QUERY = `
@@ -246,6 +259,8 @@ export const STOREFRONT_PRODUCT_BY_HANDLE_QUERY = `
               name
               value
             }
+            unitPrice { amount currencyCode }
+            unitPriceMeasurement { referenceValue referenceUnit }
             ${LIEFERZEIT_FELDER}
           }
         }
@@ -262,10 +277,18 @@ export const STOREFRONT_PRODUCT_BY_HANDLE_QUERY = `
         {namespace: "gefahrstoff", key: "piktogramme"},
         {namespace: "gefahrstoff", key: "signalwort"},
         {namespace: "gefahrstoff", key: "sdb_url"},
+        {namespace: "gefahrstoff", key: "tds_url"},
         {namespace: "gefahrstoff", key: "sdb_stand"},
         {namespace: "gefahrstoff", key: "gefahrgut_un_nr"},
         {namespace: "gefahrstoff", key: "mindestalter"},
         {namespace: "gefahrstoff", key: "versand_hinweis"}
+      ]) { key value }
+      gpsr: metafields(identifiers: [
+        {namespace: "custom", key: "gpsr_hersteller_name"},
+        {namespace: "custom", key: "gpsr_hersteller_adresse"},
+        {namespace: "custom", key: "gpsr_hersteller_kontakt"},
+        {namespace: "custom", key: "gpsr_eu_verantwortlicher"},
+        {namespace: "custom", key: "gpsr_sicherheitshinweise"}
       ]) { key value }
     }
   }

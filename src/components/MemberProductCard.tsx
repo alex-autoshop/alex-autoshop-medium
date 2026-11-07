@@ -5,6 +5,7 @@ import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useCartStore } from "@/stores/cartStore";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
+import { Grundpreis } from "@/components/Grundpreis";
 import { cn } from "@/lib/utils";
 
 // Produktkarte fürs Mitglieder-Dashboard: zeigt pro Mitgliedschaftsstufe,
@@ -66,6 +67,7 @@ export function MemberProductCard({
           {memberLevel > 0 && (
             <p className="text-xs text-muted-foreground line-through">{formatPrice(String(basePrice), cur)}</p>
           )}
+          <Grundpreis variant={variant} />
         </div>
 
         <DeliveryBadge node={node} variant={variant} available={variant?.availableForSale !== false} />

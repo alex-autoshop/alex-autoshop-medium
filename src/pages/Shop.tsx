@@ -31,6 +31,7 @@ import { shopZustandSchreiben, sucheAusZustand, zustandAusSuche } from "../../sh
 import { istOelFilter, OEL_KATEGORIE, oeleVorFiltern } from "../../shared/oel-reihenfolge.js";
 import { useShopKontextMerken } from "@/lib/shopRueckkehr";
 import { PRODUKTLISTE_ID, SHOP_LISTE_ABSTAND, zumProduktanfang } from "@/lib/produktanfang";
+import { Grundpreis } from "@/components/Grundpreis";
 import { cn } from "@/lib/utils";
 
 // Eigene-Farbe-Konfiguratoren: ganz oben, wenn man den Shop betritt.
@@ -838,6 +839,7 @@ export default function Shop() {
                 <div className="flex-1 min-w-0">
                   <p lang="de" className="produkt-titel">{title}</p>
                   {price && <p className="text-xs text-muted-foreground">{Number(price).toFixed(2).replace('.', ',')} €</p>}
+                  <Grundpreis variant={p.node.variants?.edges?.[0]?.node} />
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
