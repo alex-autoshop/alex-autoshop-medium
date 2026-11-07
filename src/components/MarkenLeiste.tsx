@@ -28,10 +28,10 @@ export function MarkenLeiste({
     if (!root || !name) return;
     const knopf = [...root.querySelectorAll("button")].find((b) => (b.textContent || "").startsWith(name));
     if (!knopf) return;
-    const links = knopf.offsetLeft;
+    const links = knopf.getBoundingClientRect().left - root.getBoundingClientRect().left + root.scrollLeft;
     const rechts = links + knopf.offsetWidth;
-    if (links < root.scrollLeft) root.scrollLeft = Math.max(0, links - 8);
-    else if (rechts > root.scrollLeft + root.clientWidth) root.scrollLeft = rechts - root.clientWidth + 8;
+    if (links < root.scrollLeft - 1) root.scrollLeft = links;
+    else if (rechts > root.scrollLeft + root.clientWidth + 1) root.scrollLeft = rechts - root.clientWidth;
   }, [auswahl]);
 
   if (marken.length === 0) return null;
@@ -43,14 +43,13 @@ export function MarkenLeiste({
       key={name}
       type="button"
       aria-pressed={aktiv}
-      onClick={(e) => {
+      onClick={() => {
         zuletzt.current = wahl || "Alle";
-        e.currentTarget.scrollIntoView({ inline: "nearest", block: "nearest" });
         if (!wahl || (!mehrfach && aktiv)) onWahl("");
         else onWahl(wahl);
       }}
       className={cn(
-        "shrink-0 inline-flex items-center gap-1 rounded-full border px-3 min-h-10 text-xs font-semibold",
+        "shrink-0 snap-start inline-flex items-center gap-1 rounded-full border px-3 min-h-10 text-xs font-semibold",
         aktiv ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:border-primary"
       )}
     >
@@ -59,7 +58,7 @@ export function MarkenLeiste({
     </button>
   );
   return (
-    <div ref={leiste} className="flex gap-1.5 overflow-x-auto no-scrollbar" role="group" aria-label={label}>
+    <div ref={leiste} className="flex w-full min-w-0 gap-1.5 overflow-x-auto overflow-y-hidden overscroll-x-contain snap-x snap-mandatory no-scrollbar" role="group" aria-label={label}>
       {mitAlle && chip("Alle", gesamt, alleAktiv, "")}
       {marken.map((m) => chip(
         m.name,

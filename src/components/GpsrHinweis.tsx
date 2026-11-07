@@ -27,7 +27,7 @@ export function GpsrHinweis({
     g.eu && ["Verantwortliche Person in der EU", g.eu],
   ].filter(Boolean) as Array<[string, string]>;
   return (
-    <section className="mt-6 rounded-2xl border border-border bg-card p-4 space-y-2" aria-label="Herstellerangaben">
+    <section className="rounded-2xl border border-border bg-card p-4 space-y-2" aria-label="Herstellerangaben">
       <h2 className="text-lg font-display">Herstellerangaben / Produktsicherheit</h2>
       {zeilen.map(([label, wert]) => (
         <p key={label} className="text-sm whitespace-pre-line">
