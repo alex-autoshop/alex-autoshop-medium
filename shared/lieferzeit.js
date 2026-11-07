@@ -1,6 +1,6 @@
-/** Voraussichtliche Lieferzeit in Werktagen. Fehlt eine Angabe, gelten 2–3. */
+/** Voraussichtliche Lieferzeit in Werktagen. Fehlt eine Angabe, gelten 1–3. */
 
-export const LIEFERZEIT_STANDARD = { min: 2, max: 3 };
+export const LIEFERZEIT_STANDARD = { min: 1, max: 3 };
 
 export function lieferzahl(wert) {
   if (wert == null || wert === "") return null;
