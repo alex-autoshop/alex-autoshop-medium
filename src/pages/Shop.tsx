@@ -392,7 +392,8 @@ export default function Shop() {
   }, []);
 
   const query = useMemo(() => {
-    if (submittedSearch.trim()) return `title:*${submittedSearch.trim()}*`;
+    const begriff = submittedSearch.trim().replace(/["\\*]/g, "");
+    if (begriff) return `title:*${begriff}* OR sku:"${begriff}"`;
     if (activeCategory) return activeCategory.query;
     return "";
   }, [submittedSearch, activeCategory]);
@@ -742,13 +743,18 @@ export default function Shop() {
         </span>
         <div className="flex flex-wrap w-full sm:w-auto items-center rounded-lg border border-border bg-secondary/40 p-0.5 gap-0.5">
           {([
-            { id: 'standard', label: 'Standard' },
-            { id: 'schnell',  label: 'Schnellbestellung' },
-            { id: 'menge',    label: 'Mengenmodus' },
-          ] as { id: ShopMode; label: string }[]).map(m => (
+            { id: 'schnell' as const, label: 'Schnellbestellung' },
+            { id: 'menge' as const, label: 'Mengenmodus' },
+          ]).map(m => (
             <button
               key={m.id}
-              onClick={() => setShopMode(m.id)}
+              type="button"
+              aria-pressed={shopMode === m.id}
+              onClick={() => setShopMode((aktuell) => {
+                const naechstes = aktuell === m.id ? "standard" : m.id;
+                if (naechstes === "schnell") inputRef.current?.focus();
+                return naechstes;
+              })}
               className={cn(
                 "flex-1 sm:flex-none px-2 sm:px-4 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all duration-150",
                 shopMode === m.id
@@ -767,28 +773,6 @@ export default function Shop() {
           <span className="basis-full sm:basis-auto min-w-0 text-xs text-muted-foreground sm:ml-2">Mengen direkt anpassen und alles auf einmal bestellen</span>
         )}
       </div>
-
-      {/* Schnellbestellung: Artikel-Nr. Direkteingabe */}
-      {shopMode === 'schnell' && (
-        <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4">
-          <p className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">⚡</span>
-            Schnellbestellung — Produkt direkt suchen und in den Warenkorb legen
-          </p>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                placeholder="Produktname oder Artikelnummer …"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full h-10 pl-9 pr-4 rounded-lg border border-border bg-card text-sm focus:outline-none focus:border-primary/50"
-              />
-            </div>
-            <button className="btn-primary px-4 text-sm">Suchen</button>
-          </div>
-        </div>
-      )}
 
       {/* ── Ergebnisleiste: Treffer · Ansicht · Sortierung ──────────────── */}
       <div id={PRODUKTLISTE_ID} className={`flex flex-wrap items-center gap-3 mb-4 py-2.5 px-4 rounded-xl border border-border bg-card ${SHOP_LISTE_ABSTAND}`}>
