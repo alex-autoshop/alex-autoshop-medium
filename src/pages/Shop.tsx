@@ -486,6 +486,38 @@ export default function Shop() {
 
   const title = activeCategory ? activeCategory.label : "Shop";
   const marken = useMemo(() => markenZaehlen(gridProducts), [gridProducts]);
+  const leisteRef = useRef<HTMLDivElement>(null);
+  const [leisteKlebt, setLeisteKlebt] = useState(false);
+  useEffect(() => {
+    const el = leisteRef.current;
+    if (!el) return;
+    const hoehe = () => {
+      document.documentElement.style.setProperty("--shop-leiste", `${el.offsetHeight}px`);
+    };
+    hoehe();
+    const ro = new ResizeObserver(hoehe);
+    ro.observe(el);
+    let rahmen = 0;
+    const pruefen = () => {
+      cancelAnimationFrame(rahmen);
+      rahmen = requestAnimationFrame(() => {
+        const header = document.querySelector("header");
+        const kante = header ? header.getBoundingClientRect().bottom : 0;
+        const klebt = el.getBoundingClientRect().top <= kante + 1;
+        setLeisteKlebt((alt) => (alt === klebt ? alt : klebt));
+      });
+    };
+    pruefen();
+    window.addEventListener("scroll", pruefen, { passive: true });
+    window.addEventListener("resize", pruefen);
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(rahmen);
+      window.removeEventListener("scroll", pruefen);
+      window.removeEventListener("resize", pruefen);
+      document.documentElement.style.removeProperty("--shop-leiste");
+    };
+  }, []);
 
   if (legacyTarget) return <Navigate to={legacyTarget} replace />;
 
@@ -516,19 +548,29 @@ export default function Shop() {
         {/* ── Hauptspalte ──────────────────────────────────────────────── */}
         <div className="min-w-0">
 
-      {/* Suche bleibt im Fluss, damit sie die Karten nicht überdeckt. */}
-      <div className="relative z-20 sm:z-[35] mb-4">
-        <div className="flex items-center gap-3 rounded-2xl border px-3 py-2 bg-card border-border/80 shadow-[0_2px_12px_rgba(0,0,0,0.08)]">
+      {/* Suche, Kategorien und Marken laufen unter dem Kopf mit — eine Leiste, kein zweites Band. */}
+      <div
+        ref={leisteRef}
+        className={cn(
+          "sticky z-30 mb-3 py-1.5 sm:py-2",
+          "top-[calc(5rem+env(safe-area-inset-top,0px))] sm:top-[calc(6rem+env(safe-area-inset-top,0px))]",
+          "-mx-3 px-3 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0",
+          "bg-background/95 backdrop-blur-md",
+          leisteKlebt && "shadow-[0_8px_18px_rgba(0,0,0,0.08)]",
+        )}
+      >
+        <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-3">
+        <div className="flex items-center gap-2 rounded-2xl border px-2 py-1 lg:px-3 lg:py-2 bg-card border-border/80 shadow-[0_2px_12px_rgba(0,0,0,0.06)] lg:w-[min(100%,34rem)] lg:shrink-0">
           {/* Search input */}
           <div className="relative flex-1 min-w-0 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 lg:left-4 lg:w-[18px] lg:h-[18px] text-muted-foreground transition-colors duration-200 group-focus-within:text-primary" />
             <input
               ref={inputRef}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Produkt suchen …"
               className={cn(
-                "w-full h-[44px] pl-10 pr-10 rounded-xl border-0 text-sm",
+                "w-full h-10 lg:h-[44px] pl-9 pr-9 lg:pl-10 lg:pr-10 rounded-xl border-0 text-sm",
                 "bg-transparent",
                 "outline-none transition-all duration-200",
                 "placeholder:text-muted-foreground/50",
@@ -582,52 +624,12 @@ export default function Shop() {
             </AnimatePresence>
           </div>
 
-          {/* Kategorien stehen ab 1024 px in der Sidebar. Das Suchfeld bleibt darunter volle Breite. */}
+          {/* Kategorien stehen ab 1024 px neben der Suche. Darunter bleibt das Feld volle Breite. */}
           <div className="hidden lg:block shrink-0">
             <CategoryDropdown activeCategory={activeCategory} activeSlug={category} />
           </div>
-        </div>{/* end card row */}
-
-
-        {/* Active category breadcrumb */}
-        <AnimatePresence>
-          {category && activeCategory && (
-            <motion.div
-              initial={{ opacity: 0, height: 0, marginTop: 0 }}
-              animate={{ opacity: 1, height: "auto", marginTop: 8 }}
-              exit={{ opacity: 0, height: 0, marginTop: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                <Link to="/shop" className="hover:text-foreground transition-colors">
-                  Alle
-                </Link>
-                {parentCategory && (
-                  <>
-                    <span>/</span>
-                    <Link to={`/shop/${parentCategory.slug}`} className="hover:text-foreground transition-colors">
-                      {parentCategory.label}
-                    </Link>
-                  </>
-                )}
-                <span>/</span>
-                <span className="text-foreground font-medium">{activeCategory.label}</span>
-                <Link
-                  to="/shop"
-                  className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-3 h-3" />
-                  Filter entfernen
-                </Link>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <div className="sticky top-20 sm:top-24 z-30 -mx-3 sm:-mx-6 px-3 sm:px-6 py-2 mb-3 bg-background/95 backdrop-blur-md border-b border-border lg:static lg:z-auto lg:mx-0 lg:px-0 lg:py-0 lg:mb-4 lg:bg-transparent lg:backdrop-blur-none lg:border-0">
-        <div className="flex items-center gap-2">
+        </div>
+        <div className="flex items-center gap-2 min-w-0 lg:flex-1">
           <span className="hidden lg:inline shrink-0 text-xs font-bold uppercase tracking-wide text-muted-foreground">Marke</span>
           <div className="min-w-0 flex-1">
             <MarkenLeiste
@@ -638,7 +640,43 @@ export default function Shop() {
             />
           </div>
         </div>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {category && activeCategory && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 8 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden mb-3"
+          >
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+              <Link to="/shop" className="hover:text-foreground transition-colors">
+                Alle
+              </Link>
+              {parentCategory && (
+                <>
+                  <span>/</span>
+                  <Link to={`/shop/${parentCategory.slug}`} className="hover:text-foreground transition-colors">
+                    {parentCategory.label}
+                  </Link>
+                </>
+              )}
+              <span>/</span>
+              <span className="text-foreground font-medium">{activeCategory.label}</span>
+              <Link
+                to="/shop"
+                className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-3 h-3" />
+                Filter entfernen
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Schnellzugriff: Klarlack · Härter · Wunschfarbe · Verdünnung */}
       {showFeatured && (
