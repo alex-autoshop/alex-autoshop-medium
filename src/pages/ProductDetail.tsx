@@ -17,6 +17,7 @@ import { PaintConfigurator } from "@/components/PaintConfigurator";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
 import { Grundpreis } from "@/components/Grundpreis";
 import { GpsrHinweis } from "@/components/GpsrHinweis";
+import { gpsrLesen } from "../../shared/gpsr.js";
 import { AboKnopf } from "@/components/AboKnopf";
 import { BaldVerfuegbar, GefahrstoffBlock, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
 import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
@@ -123,6 +124,7 @@ export default function ProductDetail() {
   }
 
   const gefahr = gefahrstoffVonKnoten(product);
+  const hersteller = gpsrLesen(product.gpsr);
   const gesperrt = kaufGesperrt(gefahr);
 
   const addToCart = async () => {
@@ -164,8 +166,6 @@ export default function ProductDetail() {
         <div>
           <h1 className="text-2xl sm:text-3xl leading-tight mb-4">{product.title}</h1>
           {gefahr.ist && !gesperrt && <div className="mb-4"><GefahrstoffKompakt g={gefahr} /></div>}
-          <GefahrstoffBlock g={gefahr} titel={product.title} handle={product.handle} />
-          <GpsrHinweis felder={product.gpsr} sdbUrl={gefahr.sdbUrl} />
 
           {CONFIGURATOR_HANDLES.has(handle ?? "") ? (
             <>
@@ -284,6 +284,12 @@ export default function ProductDetail() {
               <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
                 {product.description}
               </p>
+            </div>
+          )}
+          {(gefahr.ist || hersteller.hat) && (
+            <div className="mt-8 space-y-4">
+              <GefahrstoffBlock g={gefahr} titel={product.title} handle={product.handle} />
+              <GpsrHinweis felder={product.gpsr} sdbUrl={gefahr.sdbUrl} />
             </div>
           )}
 
