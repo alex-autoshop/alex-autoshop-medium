@@ -14,6 +14,7 @@ import { aboListeGesamt, mitgliedZeile } from "../../shared/produktabo.js";
 import { aboEinzelMerken } from "@/lib/aboListe";
 import { aboAbschliessen } from "@/lib/aboAbschluss";
 import { AboKasse, useAboAktiv, useAboListe, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
+import { deliveryFor, deliveryForCart } from "@/lib/delivery";
 import { recordOrder, type OrderItem } from "@/lib/orders";
 import { sendMessage } from "@/lib/inbox";
 import { AuthModal } from "@/components/AuthModal";
@@ -219,6 +220,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const isMember = !!user && stufe >= 1 && stufe <= 3;
   const mitAbo = aboListe.produkte.length > 0;
   const shippingCost = mitAbo || !isMember ? versandkosten({ summe: total }) : 0;
+  const liefer = deliveryForCart(items.map((item) => {
+    const variante = item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node;
+    return deliveryFor(item.product.node, variante);
+  }));
   const remainingForFree = Math.max(0, VERSAND_FREI_AB - total);
   const freeProgress = Math.min(100, (total / VERSAND_FREI_AB) * 100);
 
@@ -572,6 +577,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   )}
                   <p className="text-xs text-muted-foreground mt-2">
                     {shippingCost > 0 ? <>Versand {formatPrice(String(shippingCost), currency)}</> : "Versand kostenlos"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Lieferzeit {liefer.zeit.label}
+                    {liefer.verschieden ? " · gilt für die langsamste Position" : ""}
                   </p>
                 </div>
               )}

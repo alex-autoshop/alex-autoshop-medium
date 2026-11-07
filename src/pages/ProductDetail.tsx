@@ -185,7 +185,7 @@ export default function ProductDetail() {
             {price && formatPrice(String(priceNum * quantity), price.currencyCode)}
           </p>
 
-          <DeliveryBadge node={product} available={selectedVariant?.availableForSale !== false} size="md" className="mt-5" />
+          <DeliveryBadge node={product} variant={selectedVariant} available={selectedVariant?.availableForSale !== false} size="md" className="mt-5" />
 
           {variants.length > 1 && (
             <div className="mt-6">

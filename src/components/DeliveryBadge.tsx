@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 
 interface DeliveryBadgeProps {
   node: DeliveryNode;
+  /** Gewählte Variante. Ihre Lieferzeit geht vor der des Produkts. */
+  variant?: DeliveryNode | null;
   /** false = Variante/Produkt nicht bestellbar */
   available?: boolean;
   /** "sm" = Produktkarte, "md" = Produktdetailseite */
@@ -15,8 +17,8 @@ interface DeliveryBadgeProps {
  * Einheitliche Lieferzeit-Angabe. Wird in allen Produktkarten und auf der
  * Produktseite verwendet, damit die Aussage ueberall identisch ist.
  */
-export function DeliveryBadge({ node, available = true, size = "sm", className }: DeliveryBadgeProps) {
-  const { label } = deliveryFor(node);
+export function DeliveryBadge({ node, variant, available = true, size = "sm", className }: DeliveryBadgeProps) {
+  const { label } = deliveryFor(node, variant);
 
   if (!available) {
     return (

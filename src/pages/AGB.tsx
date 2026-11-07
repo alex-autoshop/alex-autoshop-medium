@@ -67,7 +67,7 @@ const AGB = () => {
 
       <h3>6. Lieferung</h3>
       <p>Wir liefern innerhalb Deutschlands mit DHL oder über unseren Lieferservice im Raum Wuppertal; Selbstabholung in der Handelstraße 64, 42277 Wuppertal ist möglich.</p>
-      <p><strong>Lieferzeit:</strong> Online-Shop in der Regel 1–3 Werktage nach Vertragsschluss (bei Vorkasse nach Zahlungseingang).{teile ? " Teilebörse: das am Artikel angezeigte voraussichtliche Lieferdatum." : ""} Abweichende Lieferzeiten stehen am Artikel.</p>
+      <p><strong>Lieferzeit:</strong> Sie hängt vom Artikel ab und steht auf der Produktseite sowie im Warenkorb. Innerhalb Deutschlands sind es in der Regel 1–7 Werktage nach Vertragsschluss (bei Vorkasse nach Zahlungseingang). Das ist eine voraussichtliche Angabe, kein festes Datum.{teile ? " Teilebörse: das am Artikel angezeigte voraussichtliche Lieferdatum." : ""}</p>
       <p>Teillieferungen nehmen wir nur vor, wenn sie Ihnen zumutbar sind; zusätzliche Versandkosten entstehen Ihnen dadurch nicht.</p>
       <p>Ist ein bestellter Artikel ohne unser Verschulden nicht lieferbar, weil uns unser Lieferant trotz rechtzeitiger Bestellung nicht beliefert, informieren wir Sie unverzüglich und erstatten bereits geleistete Zahlungen sofort.</p>
 

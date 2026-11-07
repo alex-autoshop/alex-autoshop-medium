@@ -75,7 +75,7 @@ export default function Versand() {
                 </div>
                 <div>
                   <p className="font-semibold">DHL Paketversand</p>
-                  <p className="text-sm text-muted-foreground">Deutschlandweit · 1–3 Werktage</p>
+                  <p className="text-sm text-muted-foreground">Deutschlandweit · Lieferzeit je Artikel, in der Regel 1–7 Werktage</p>
                 </div>
               </div>
               <div className="text-right shrink-0">
@@ -89,6 +89,9 @@ export default function Versand() {
               <ShippingBadge label="Shop: Mitglieder gratis" />
               <ShippingBadge label="Sendungsverfolgung inklusive" />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Die voraussichtliche Lieferzeit hängt von der Ware ab. Sie steht auf der Produktseite und im Warenkorb.
+            </p>
           </div>
 
           {/* Eigene Lieferung */}
