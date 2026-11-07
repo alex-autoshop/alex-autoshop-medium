@@ -31,14 +31,14 @@ test("vollständige Angaben bleiben käuflich, H-Satz hat den Wortlaut", () => {
   assert.equal(g.sdbUrl.startsWith("https://"), true);
 });
 
-test("Gefahrstoff ohne H-Sätze, Piktogramm oder Signalwort ist nicht käuflich", () => {
+test("unvollständige Kennzeichnung wird gemeldet und bleibt käuflich", () => {
   const g = gefahrstoffLesen([
     { key: "ist_gefahrstoff", value: "true" },
     { key: "h_saetze", value: "H226" },
     { key: "signalwort", value: "Achtung" },
   ]);
   assert.equal(gefahrstoffUnvollstaendig(g), true);
-  assert.equal(kaufGesperrt(g), true);
+  assert.equal(kaufGesperrt(g), false);
 });
 
 test("Sicherheitsdatenblatt älter als drei Jahre wird gemeldet, ein junges nicht", () => {

@@ -26,4 +26,6 @@ test("GPSR-Block bleibt weg, wenn nichts hinterlegt ist", () => {
   assert.equal(da.hat, true);
   assert.equal(da.eu, "");
   assert.equal(da.name, "Beispiel GmbH");
+  const zeilen = gpsrLesen([{ key: "gpsr_hersteller_adresse", value: "Weg 1\n10115 Berlin" }]);
+  assert.equal(zeilen.adresse, "Weg 1\n10115 Berlin");
 });

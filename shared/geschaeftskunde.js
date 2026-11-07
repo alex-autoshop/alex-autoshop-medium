@@ -12,11 +12,11 @@ function firma(wert) {
 
 export function istGeschaeftskunde(bestellung) {
   const kunde = bestellung && bestellung.customer;
-  if (tags(kunde).some((t) => t === "b2b" || t === "gewerbe" || t === "firma")) return true;
+  if (tags(kunde).some((t) => t === "b2b" || t === "gewerbe" || t === "werkstatt" || t === "firma")) return true;
   const adressen = [
     bestellung && bestellung.billing_address,
     bestellung && bestellung.shipping_address,
-    kunde && kunde.default_address,
+    kunde && (kunde.default_address || kunde.defaultAddress),
   ];
   if (adressen.some((a) => firma(a && a.company))) return true;
   const notizen = (bestellung && bestellung.note_attributes) || [];
