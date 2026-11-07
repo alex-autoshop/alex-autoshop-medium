@@ -56,7 +56,7 @@ const FAQ = [
   },
   {
     q: "Kann ich monatlich kündigen?",
-    a: "Ja, die Mitgliedschaft ist monatlich kündbar. Keine Mindestlaufzeit, kein Risiko.",
+    a: "Ja. Es gibt keine Mindestlaufzeit. Über die Schaltfläche „Verträge hier kündigen“ unten auf jeder Seite können Sie ohne Anmeldung kündigen, außerdem per E-Mail an info@alex-autoshop.de oder per Brief, jeweils zum Ende des laufenden Monats.",
   },
   {
     q: "Gilt der Rabatt auf alles?",

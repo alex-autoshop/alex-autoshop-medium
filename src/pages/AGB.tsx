@@ -108,7 +108,7 @@ const AGB = () => {
 
       <h3>12. Kundenservice und Streitbeilegung</h3>
       <p>Fragen, Reklamationen und Beschwerden: info@alex-autoshop.de oder WhatsApp/Telefon 0202 82690 (Mo–Fr 9–17:30, Sa 9–14 Uhr).</p>
-      <p>Wir sind nicht verpflichtet und nicht bereit, an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.</p>
+      <p>Wir sind nicht verpflichtet und nicht bereit, an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen (§ 36 VSBG). Die Europäische Plattform zur Online-Streitbeilegung ist seit dem 20. Juli 2025 eingestellt. Einen Link dorthin gibt es nicht mehr.</p>
 
       <hr />
 

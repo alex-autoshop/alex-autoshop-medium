@@ -85,8 +85,9 @@ export default function Widerruf() {
           <li>
             zur Lieferung von Waren, die nicht vorgefertigt sind und für deren Herstellung eine
             individuelle Auswahl oder Bestimmung durch den Verbraucher maßgeblich ist oder die
-            eindeutig auf die persönlichen Bedürfnisse des Verbrauchers zugeschnitten sind — z. B.
-            nach Ihrem Farbcode oder Ihrer Vorlage angemischte Lacke („Wunschfarbe“).
+            eindeutig auf die persönlichen Bedürfnisse des Verbrauchers zugeschnitten sind
+            (§ 312g Abs. 2 Nr. 1 BGB) — z. B. nach Ihrem Farbcode oder Ihrer Vorlage angemischte
+            Lacke (Wunschfarbe) sowie individuell befüllte Spraydosen und Lackstifte.
           </li>
         </ul>
         <p>
