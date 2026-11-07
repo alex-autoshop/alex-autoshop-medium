@@ -2,9 +2,9 @@ import { produktanfangZiel } from "../../shared/produktanfang.js";
 
 export const PRODUKTLISTE_ID = "produktliste";
 
-/** Sticky Kopf und, auf dem Handy, die Chip-Leiste. Ab 1024 px klebt nur der Kopf. */
+/** Kopf plus die mitlaufende Such- und Markenleiste. Die Höhe setzt der Shop als --shop-leiste. */
 export const SHOP_LISTE_ABSTAND =
-  "scroll-mt-[calc(8.75rem+env(safe-area-inset-top,0px))] sm:scroll-mt-[calc(9.75rem+env(safe-area-inset-top,0px))] lg:scroll-mt-[calc(6rem+env(safe-area-inset-top,0px))]";
+  "scroll-mt-[calc(5rem+env(safe-area-inset-top,0px)+var(--shop-leiste,8.5rem))] sm:scroll-mt-[calc(6rem+env(safe-area-inset-top,0px)+var(--shop-leiste,8.5rem))]";
 
 /** Kategorieseite: die Chips kleben nicht, nur der Kopf. */
 export const KATEGORIE_LISTE_ABSTAND =
