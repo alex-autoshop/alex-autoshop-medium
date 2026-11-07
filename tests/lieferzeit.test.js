@@ -13,10 +13,10 @@ const felder = (min, max) => [
   { key: "lieferzeit_max", value: String(max) },
 ];
 
-test("fehlende Felder werden 2–3 Werktage, nicht 1–2", () => {
-  assert.deepEqual(lieferzeitWaehlen(null, null), { min: 2, max: 3 });
+test("fehlende Felder werden 1–3 Werktage", () => {
+  assert.deepEqual(lieferzeitWaehlen(null, null), { min: 1, max: 3 });
   assert.equal(lieferzeitAusFeldern([{ key: "lieferzeit_min", value: "5" }]), null);
-  assert.equal(lieferzeitText({ min: 2, max: 3 }), "2–3 Werktage");
+  assert.equal(lieferzeitText({ min: 1, max: 3 }), "1–3 Werktage");
   assert.equal(lieferzeitText({ min: 1, max: 1 }), "1 Werktag");
 });
 

@@ -1,7 +1,7 @@
 /**
  * Voraussichtliche Lieferzeit aus den Feldern custom.lieferzeit_min und
  * custom.lieferzeit_max (Werktage). Eine Variante geht vor dem Produkt.
- * Fehlt die Angabe, gelten 2–3 Werktage.
+ * Fehlt die Angabe, gelten 1–3 Werktage.
  */
 
 import {
@@ -14,7 +14,7 @@ import {
 export interface DeliveryTime {
   minDays: number;
   maxDays: number;
-  /** z. B. "2–3 Werktage" */
+  /** z. B. "1–3 Werktage" */
   label: string;
 }
 
@@ -34,7 +34,7 @@ function ausSpan(spanne: { min: number; max: number }): DeliveryTime {
   return { minDays: spanne.min, maxDays: spanne.max, label: lieferzeitText(spanne) };
 }
 
-export const DEFAULT_DELIVERY = ausSpan({ min: 2, max: 3 });
+export const DEFAULT_DELIVERY = ausSpan({ min: 1, max: 3 });
 
 export function deliveryFor(
   node: DeliveryNode | undefined | null,
