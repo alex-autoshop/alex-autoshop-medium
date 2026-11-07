@@ -491,18 +491,22 @@ export default function Shop() {
   useEffect(() => {
     const el = leisteRef.current;
     if (!el) return;
-    const hoehe = () => {
+    const kopf = document.querySelector("#root header");
+    const messen = () => {
+      const px = kopf ? Math.ceil(kopf.getBoundingClientRect().height) : 96;
+      document.documentElement.style.setProperty("--shop-kopf", `${px}px`);
+      el.style.top = `${px}px`;
       document.documentElement.style.setProperty("--shop-leiste", `${el.offsetHeight}px`);
     };
-    hoehe();
-    const ro = new ResizeObserver(hoehe);
+    messen();
+    const ro = new ResizeObserver(messen);
     ro.observe(el);
+    if (kopf) ro.observe(kopf);
     let rahmen = 0;
     const pruefen = () => {
       cancelAnimationFrame(rahmen);
       rahmen = requestAnimationFrame(() => {
-        const header = document.querySelector("header");
-        const kante = header ? header.getBoundingClientRect().bottom : 0;
+        const kante = kopf ? kopf.getBoundingClientRect().bottom : 0;
         const klebt = el.getBoundingClientRect().top <= kante + 1;
         setLeisteKlebt((alt) => (alt === klebt ? alt : klebt));
       });
@@ -516,6 +520,7 @@ export default function Shop() {
       window.removeEventListener("scroll", pruefen);
       window.removeEventListener("resize", pruefen);
       document.documentElement.style.removeProperty("--shop-leiste");
+      document.documentElement.style.removeProperty("--shop-kopf");
     };
   }, []);
 
@@ -552,8 +557,7 @@ export default function Shop() {
       <div
         ref={leisteRef}
         className={cn(
-          "sticky z-30 mb-3 py-1.5 sm:py-2",
-          "top-[calc(5rem+env(safe-area-inset-top,0px))] sm:top-[calc(6rem+env(safe-area-inset-top,0px))]",
+          "sticky z-30 mb-3 py-1.5 sm:py-2 top-24 lg:top-36",
           "-mx-3 px-3 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0",
           "bg-background/95 backdrop-blur-md",
           leisteKlebt && "shadow-[0_8px_18px_rgba(0,0,0,0.08)]",

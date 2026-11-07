@@ -2,9 +2,9 @@ import { produktanfangZiel } from "../../shared/produktanfang.js";
 
 export const PRODUKTLISTE_ID = "produktliste";
 
-/** Kopf plus die mitlaufende Such- und Markenleiste. Die Höhe setzt der Shop als --shop-leiste. */
+/** Kopf plus die mitlaufende Such- und Markenleiste. Der Shop misst beides. */
 export const SHOP_LISTE_ABSTAND =
-  "scroll-mt-[calc(5rem+env(safe-area-inset-top,0px)+var(--shop-leiste,8.5rem))] sm:scroll-mt-[calc(6rem+env(safe-area-inset-top,0px)+var(--shop-leiste,8.5rem))]";
+  "scroll-mt-[calc(var(--shop-kopf,8.75rem)+var(--shop-leiste,8.5rem))]";
 
 /** Kategorieseite: die Chips kleben nicht, nur der Kopf. */
 export const KATEGORIE_LISTE_ABSTAND =
