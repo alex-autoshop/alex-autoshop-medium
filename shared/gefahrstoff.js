@@ -189,6 +189,7 @@ export function gefahrstoffVonKnoten(knoten) {
   return gefahrstoffLesen(knoten && knoten.gefahrstoffMetafelder);
 }
 
-export function kaufGesperrt(g) {
-  return gefahrstoffUnvollstaendig(g);
+/** Unvollständige Kennzeichnung wird gemeldet, sperrt den Kauf aber nicht. */
+export function kaufGesperrt() {
+  return false;
 }

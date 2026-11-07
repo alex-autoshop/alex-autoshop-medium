@@ -50,10 +50,11 @@ async function metafelder(produktId, token, domain) {
 
 function blatt(felder) {
   const roh = {};
-  for (const feld of felder) if (feld?.key) roh[feld.key] = String(feld.value || "").trim();
-  const ist = roh.ist_gefahrstoff === "true" || roh.ist_gefahrstoff === "True";
-  const url = /^https:\/\/\S+$/i.test(roh.sdb_url || "") ? roh.sdb_url : "";
-  return ist && url ? url : "";
+  for (const feld of felder) if (feld?.key) roh[feld.key] = feld.value;
+  const ist = roh.ist_gefahrstoff === true || String(roh.ist_gefahrstoff || "").trim().toLowerCase() === "true";
+  if (!ist) return null;
+  const url = /^https:\/\/\S+$/i.test(String(roh.sdb_url || "").trim()) ? String(roh.sdb_url).trim() : "";
+  return { url };
 }
 
 export default async function handler(req) {
@@ -84,8 +85,8 @@ export default async function handler(req) {
     const id = zeile?.product_id;
     if (!id || gesehen.has(id)) continue;
     gesehen.add(id);
-    const url = blatt(await metafelder(id, token, domain));
-    if (url) links.push({ titel: String(zeile.title || "Artikel").slice(0, 160), url });
+    const blattDa = blatt(await metafelder(id, token, domain));
+    if (blattDa) links.push({ titel: String(zeile.title || "Artikel").slice(0, 160), url: blattDa.url });
   }
   if (!links.length) return json({ ok: true, skipped: "kein-blatt" });
 
@@ -94,7 +95,7 @@ export default async function handler(req) {
     `Sicherheitsdatenblätter zu Ihrer Bestellung ${nummer}`,
     "",
     "Für die folgenden Gefahrstoffe aus dieser Bestellung liegt ein Sicherheitsdatenblatt vor:",
-    ...links.map((l) => `- ${l.titel}: ${l.url}`),
+    ...links.map((l) => (l.url ? `- ${l.titel}: ${l.url}` : `- ${l.titel}: Datenblatt liegt noch nicht als Link vor. Anfordern: info@alex-autoshop.de`)),
     "",
     "Alex Autoshop, Handelstraße 64, 42277 Wuppertal",
   ].join("\n");
