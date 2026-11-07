@@ -74,6 +74,9 @@ begin
 end;
 $$;
 
+-- Dashboard ruft das mit der angemeldeten Admin-Sitzung auf (src/lib/inbox.ts).
+-- anon und PUBLIC dürfen es nicht sehen. Die Funktion prüft zusätzlich rolle=admin.
+revoke all on function public.approve_membership_request(uuid) from public, anon;
 grant execute on function public.approve_membership_request(uuid) to authenticated;
 
 
@@ -291,7 +294,9 @@ alter table public.guthaben_reservierungen enable row level security;
 -- Guthaben aus den Konto-Daten als Zahl (kaputte Werte zählen als 0)
 create or replace function public.guthaben_von(p_meta jsonb)
 returns numeric
-language sql immutable
+language sql
+immutable
+set search_path = pg_catalog
 as $$
   select coalesce(case when (p_meta ->> 'affiliate_credit') ~ '^-?[0-9]+(\.[0-9]+)?$'
                        then (p_meta ->> 'affiliate_credit')::numeric end, 0);
