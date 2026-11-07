@@ -15,6 +15,8 @@ import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { useCartStore } from "@/stores/cartStore";
 import { PaintConfigurator } from "@/components/PaintConfigurator";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
+import { Grundpreis } from "@/components/Grundpreis";
+import { GpsrHinweis } from "@/components/GpsrHinweis";
 import { AboKnopf } from "@/components/AboKnopf";
 import { BaldVerfuegbar, GefahrstoffBlock, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
 import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
@@ -163,6 +165,7 @@ export default function ProductDetail() {
           <h1 className="text-2xl sm:text-3xl leading-tight mb-4">{product.title}</h1>
           {gefahr.ist && !gesperrt && <div className="mb-4"><GefahrstoffKompakt g={gefahr} /></div>}
           <GefahrstoffBlock g={gefahr} titel={product.title} handle={product.handle} />
+          <GpsrHinweis felder={product.gpsr} sdbUrl={gefahr.sdbUrl} />
 
           {CONFIGURATOR_HANDLES.has(handle ?? "") ? (
             <>
@@ -184,6 +187,7 @@ export default function ProductDetail() {
           <p className="text-3xl font-bold">
             {price && formatPrice(String(priceNum * quantity), price.currencyCode)}
           </p>
+          <Grundpreis variant={selectedVariant} className="mt-1 text-sm" />
 
           <DeliveryBadge node={product} variant={selectedVariant} available={selectedVariant?.availableForSale !== false} size="md" className="mt-5" />
 

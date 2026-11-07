@@ -15,6 +15,7 @@ import { aboEinzelMerken } from "@/lib/aboListe";
 import { aboAbschliessen } from "@/lib/aboAbschluss";
 import { AboKasse, useAboAktiv, useAboListe, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
 import { deliveryFor, deliveryForCart } from "@/lib/delivery";
+import { Grundpreis } from "@/components/Grundpreis";
 import { recordOrder, type OrderItem } from "@/lib/orders";
 import { sendMessage } from "@/lib/inbox";
 import { AuthModal } from "@/components/AuthModal";
@@ -518,6 +519,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   {items.map((item) => {
                     const node = item.product.node;
                     const img = node.images?.edges?.[0]?.node?.url || PRODUCT_IMAGES[node.handle] || "";
+                    const variante = node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node;
                     const stueck = aboDrin(node.id)
                       ? parseFloat(item.price.amount) * (1 - aboStufe(node.id) / 100)
                       : parseFloat(item.price.amount);
@@ -536,6 +538,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                               {formatPrice(String(stueck), item.price.currencyCode)}
                             </p>
                           </div>
+                          <Grundpreis variant={variante} className="text-right" />
                           <div className="flex items-center gap-1 mt-1">
                             <button onClick={() => updateQuantity(item.uid, item.quantity - 1)} disabled={isLoading} className="w-8 h-8 rounded-md border border-border flex items-center justify-center" aria-label="Menge verringern"><Minus className="w-3.5 h-3.5" /></button>
                             <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>

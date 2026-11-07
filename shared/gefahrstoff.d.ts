@@ -5,6 +5,7 @@ export interface Gefahrstoff {
   piktogramme: string[];
   signalwort: "" | "Gefahr" | "Achtung";
   sdbUrl: string;
+  tdsUrl: string;
   sdbStand: string;
   unNr: string;
   mindestalter: number | null;
@@ -16,6 +17,8 @@ export function gefahrstoffLesen(
 ): Gefahrstoff;
 
 export function hSatzText(code: string): string;
+
+export function pSatzText(code: string): string;
 
 export function gefahrstoffUnvollstaendig(g: Gefahrstoff | null | undefined): boolean;
 

@@ -114,6 +114,7 @@ export function gefahrstoffLesen(felder) {
   const signal = String(roh.signalwort || "").trim();
   const signalwort = SIGNALE.has(signal) ? signal : "";
   const sdbUrl = /^https:\/\/\S+$/i.test(String(roh.sdb_url || "").trim()) ? String(roh.sdb_url).trim() : "";
+  const tdsUrl = /^https:\/\/\S+$/i.test(String(roh.tds_url || "").trim()) ? String(roh.tds_url).trim() : "";
   const sdbStand = /^\d{4}-\d{2}-\d{2}$/.test(String(roh.sdb_stand || "").trim()) ? String(roh.sdb_stand).trim() : "";
   const un = String(roh.gefahrgut_un_nr || "").trim();
   return {
@@ -123,11 +124,41 @@ export function gefahrstoffLesen(felder) {
     piktogramme,
     signalwort,
     sdbUrl,
+    tdsUrl,
     sdbStand,
     unNr: un,
     mindestalter: zahl(roh.mindestalter),
     versandHinweis: String(roh.versand_hinweis || "").trim().slice(0, 400),
   };
+}
+
+const P_SAETZE = {
+  P101: "Ist ärztlicher Rat erforderlich, Verpackung oder Kennzeichnungsetikett bereithalten.",
+  P102: "Darf nicht in die Hände von Kindern gelangen.",
+  P103: "Vor Gebrauch Kennzeichnungsetikett lesen.",
+  P210: "Von Hitze, heißen Oberflächen, Funken, offenen Flammen und anderen Zündquellen fernhalten. Nicht rauchen.",
+  P211: "Nicht gegen offene Flamme oder andere Zündquelle sprühen.",
+  P251: "Nicht durchstechen oder verbrennen, auch nicht nach Gebrauch.",
+  P260: "Staub, Rauch, Gas, Nebel, Dampf, Aerosol nicht einatmen.",
+  P261: "Einatmen von Staub, Rauch, Gas, Nebel, Dampf, Aerosol vermeiden.",
+  P271: "Nur im Freien oder in gut belüfteten Räumen verwenden.",
+  P280: "Schutzhandschuhe, Schutzkleidung, Augenschutz, Gesichtsschutz tragen.",
+  "P301+P310": "BEI VERSCHLUCKEN: Sofort GIFTINFORMATIONSZENTRUM oder Arzt anrufen.",
+  "P302+P352": "BEI BERÜHRUNG MIT DER HAUT: Mit viel Wasser waschen.",
+  "P304+P340": "BEI EINATMEN: Die Person an die frische Luft bringen und für ungehinderte Atmung sorgen.",
+  "P305+P351+P338": "BEI KONTAKT MIT DEN AUGEN: Einige Minuten lang behutsam mit Wasser ausspülen. Eventuell vorhandene Kontaktlinsen nach Möglichkeit entfernen. Weiter ausspülen.",
+  P312: "Bei Unwohlsein GIFTINFORMATIONSZENTRUM oder Arzt anrufen.",
+  "P332+P313": "Bei Hautreizung: Ärztlichen Rat einholen.",
+  "P337+P313": "Bei anhaltender Augenreizung: Ärztlichen Rat einholen.",
+  P403: "An einem gut belüfteten Ort aufbewahren.",
+  P405: "Unter Verschluss aufbewahren.",
+  "P410+P412": "Vor Sonnenbestrahlung schützen und nicht Temperaturen über 50 °C aussetzen.",
+  P501: "Inhalt und Behälter der Problemabfallentsorgung zuführen.",
+};
+
+export function pSatzText(code) {
+  const rein = String(code || "").toUpperCase().replace(/\s+/g, "");
+  return P_SAETZE[rein] || "";
 }
 
 export function hSatzText(code) {

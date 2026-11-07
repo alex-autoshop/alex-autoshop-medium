@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { FileDown, Mail } from "lucide-react";
-import { hSatzText, type Gefahrstoff } from "../../shared/gefahrstoff.js";
+import { hSatzText, pSatzText, type Gefahrstoff } from "../../shared/gefahrstoff.js";
 import { GhsPiktogramm } from "@/components/GhsPiktogramm";
 
 export function GefahrstoffKompakt({ g }: { g: Gefahrstoff }) {
@@ -84,25 +84,38 @@ export function GefahrstoffBlock({ g, titel, handle }: { g: Gefahrstoff; titel: 
         </ul>
       )}
       {g.pSaetze.length > 0 && (
-        <p className="text-xs text-muted-foreground">Sicherheitshinweise: {g.pSaetze.join(", ")}. Der volle Wortlaut steht im Sicherheitsdatenblatt.</p>
+        <ul className="space-y-1 text-sm">
+          {g.pSaetze.map((code) => (
+            <li key={code}>
+              <span className="font-semibold">{code}</span>
+              {pSatzText(code) ? ` — ${pSatzText(code)}` : " — Wortlaut steht im Sicherheitsdatenblatt."}
+            </li>
+          ))}
+        </ul>
       )}
       {g.unNr && (
         <p className="text-sm">Gefahrgut-Hinweis für den Versand: {g.unNr}{g.versandHinweis ? `. ${g.versandHinweis}` : ""}</p>
       )}
       {!g.unNr && g.versandHinweis && <p className="text-sm">Versandhinweis: {g.versandHinweis}</p>}
       {g.mindestalter && <p className="text-sm">Abgabe erst ab {g.mindestalter} Jahren.</p>}
-      <div className="pt-1">
-        {g.sdbUrl ? (
+      <div className="pt-1 flex flex-wrap gap-2">
+        {g.sdbUrl && (
           <a href={g.sdbUrl} className="btn-outline text-sm" target="_blank" rel="noopener noreferrer">
             <FileDown className="w-4 h-4" /> Sicherheitsdatenblatt herunterladen
           </a>
-        ) : form ? (
+        )}
+        {g.tdsUrl && (
+          <a href={g.tdsUrl} className="btn-outline text-sm" target="_blank" rel="noopener noreferrer">
+            <FileDown className="w-4 h-4" /> Technisches Datenblatt
+          </a>
+        )}
+        {!g.sdbUrl && (form ? (
           <SdbForm titel={titel} handle={handle} onZu={() => setForm(false)} />
         ) : (
           <button type="button" className="btn-outline text-sm" onClick={() => setForm(true)}>
             <Mail className="w-4 h-4" /> Sicherheitsdatenblatt anfordern
           </button>
-        )}
+        ))}
       </div>
     </section>
   );

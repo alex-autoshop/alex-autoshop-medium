@@ -11,6 +11,7 @@ import { useCartStore } from "@/stores/cartStore";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { cn } from "@/lib/utils";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
+import { Grundpreis } from "@/components/Grundpreis";
 import { BaldVerfuegbar, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
 import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
 
@@ -97,14 +98,13 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
         {gefahr.ist && !gesperrt && <GefahrstoffKompakt g={gefahr} />}
 
         <div className="mt-auto flex flex-col gap-2">
-        {/* Grundpreis */}
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Grundpreis</p>
           <p className="text-xl font-display font-bold text-foreground">
             {multiple && <span className="text-sm font-medium text-muted-foreground">Ab </span>}
             {formatPrice(String(basePrice), cur)}
             <span className="text-[11px] font-normal text-muted-foreground ml-1">inkl. MwSt. · zzgl. <Link to="/versand" onClick={(e) => e.stopPropagation()} className="underline">Versand</Link></span>
           </p>
+          <Grundpreis variant={firstVariant} className="mt-0.5" />
         </div>
 
         <DeliveryBadge node={node} variant={firstVariant} available={firstVariant?.availableForSale !== false} />
