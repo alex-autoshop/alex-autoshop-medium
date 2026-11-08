@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
+import { katalogVorholen, produktVorholen } from "@/lib/katalog";
 import { BrowserRouter, Routes, Route, useLocation, useNavigationType, Navigate, useParams } from "react-router-dom";
 import { empfehlungMerken } from "@/lib/empfehlung";
 import { empfehlungOffen } from "../shared/empfehlung.js";
@@ -102,6 +103,29 @@ function AltesFahrzeug() {
   return <Navigate to={`/fahrzeugboerse/${slug ?? ""}`} replace />;
 }
 
+/** Produkt- und Kategorieseiten vorholen, sobald der Zeiger darüber geht. */
+function Vorholen() {
+  useEffect(() => {
+    const ziel = (event: Event) => {
+      const el = event.target instanceof Element ? event.target : null;
+      const link = el?.closest("a[href]");
+      if (!link) return;
+      const href = link.getAttribute("href") || "";
+      if (href.startsWith("/produkt/")) {
+        produktVorholen(decodeURIComponent(href.slice("/produkt/".length).split(/[?#]/)[0]));
+      } else if (href.startsWith("/kategorie/")) {
+        const handle = decodeURIComponent(href.slice("/kategorie/".length).split(/[?#]/)[0]);
+        katalogVorholen({ was: "kollektion", handle, first: "100", sort: "empfohlen" });
+      } else if (href === "/shop" || href.startsWith("/shop/")) {
+        katalogVorholen({ was: "produkte", first: "100" });
+      }
+    };
+    document.addEventListener("pointerover", ziel);
+    return () => document.removeEventListener("pointerover", ziel);
+  }, []);
+  return null;
+}
+
 function SchaleWeg() {
   useLayoutEffect(() => {
     const weg = () => {
@@ -122,6 +146,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <SchaleWeg />
+        <Vorholen />
         <ScrollToTop />
         <EmpfehlungMerken />
         <Suspense fallback={<PageFallback />}>

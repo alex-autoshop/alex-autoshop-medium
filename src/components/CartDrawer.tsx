@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Minus, Plus, Trash2, Zap, ShieldCheck, CheckCircle2, FileText, Printer, CreditCard, Truck } from "lucide-react";
@@ -147,7 +147,10 @@ function generateInvoiceHtml(order: ConfirmedOrder): string {
 }
 
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
-  const { items, isLoading, updateQuantity, removeItem, clearCart } = useCartStore();
+  const { items, isLoading, updateQuantity, removeItem, clearCart, preiseAuffrischen } = useCartStore();
+  useEffect(() => {
+    if (open) preiseAuffrischen();
+  }, [open, preiseAuffrischen]);
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
@@ -257,14 +260,25 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       return;
     }
     setPlacing(true);
-    const count = items.reduce((n, i) => n + i.quantity, 0);
-    const orderItems = toOrderItems();
+    const frisch = await preiseAuffrischen();
+    const summeFrisch = Math.round(frisch.reduce((summe, item) => summe + parseFloat(item.price.amount) * item.quantity, 0) * 100) / 100;
+    const count = frisch.reduce((n, i) => n + i.quantity, 0);
+    const orderItems = frisch.map((i) => ({
+      variantId: i.variantId,
+      variantTitle: i.variantTitle,
+      title: i.product.node.title,
+      handle: i.product.node.handle,
+      image: i.product.node.images?.edges?.[0]?.node?.url ?? "",
+      price: i.price,
+      quantity: i.quantity,
+    }));
+    const waehrung = frisch[0]?.price.currencyCode ?? currency;
 
     const { error, orderId } = await recordOrder({
       userId: user.id,
       items: orderItems,
-      total: summeLaden,
-      currency,
+      total: summeFrisch,
+      currency: waehrung,
       status: "sepa_pending",
     });
 
@@ -278,11 +292,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       recipient: user.id,
       type: "system",
       title: "Express-Kauf bestätigt ✓ — SEPA-Einzug",
-      body: `Deine Express-Bestellung über ${formatPrice(String(summeLaden), currency)} (${count} Position${count === 1 ? "" : "en"}) ist bestätigt. Der Betrag wird per SEPA-Lastschrift von deinem hinterlegten Bankkonto (••••${profile.iban?.slice(-4)}) eingezogen. Buchungsdatum: 2–3 Werktage.`,
+      body: `Deine Express-Bestellung über ${formatPrice(String(summeFrisch), waehrung)} (${count} Position${count === 1 ? "" : "en"}) ist bestätigt. Der Betrag wird per SEPA-Lastschrift von deinem hinterlegten Bankkonto (••••${profile.iban?.slice(-4)}) eingezogen. Buchungsdatum: 2–3 Werktage.`,
     });
 
     const snapshot: ConfirmedOrder = {
-      total: summeLaden, currency, count, orderId, items: orderItems, mode: "sepa",
+      total: summeFrisch, currency: waehrung, count, orderId, items: orderItems, mode: "sepa",
       date: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       companyName: profile?.company_name, email: user.email,
     };
@@ -303,14 +317,25 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       return;
     }
     setPlacing(true);
-    const count = items.reduce((n, i) => n + i.quantity, 0);
-    const orderItems = toOrderItems();
+    const frisch = await preiseAuffrischen();
+    const summeFrisch = Math.round(frisch.reduce((summe, item) => summe + parseFloat(item.price.amount) * item.quantity, 0) * 100) / 100;
+    const count = frisch.reduce((n, i) => n + i.quantity, 0);
+    const orderItems = frisch.map((i) => ({
+      variantId: i.variantId,
+      variantTitle: i.variantTitle,
+      title: i.product.node.title,
+      handle: i.product.node.handle,
+      image: i.product.node.images?.edges?.[0]?.node?.url ?? "",
+      price: i.price,
+      quantity: i.quantity,
+    }));
+    const waehrung = frisch[0]?.price.currencyCode ?? currency;
 
     const { error, orderId } = await recordOrder({
       userId: user.id,
       items: orderItems,
-      total: summeLaden,
-      currency,
+      total: summeFrisch,
+      currency: waehrung,
       status: "auf_rechnung",
     });
 
@@ -324,11 +349,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       recipient: user.id,
       type: "system",
       title: "Lieferbestellung auf Rechnung ✓",
-      body: `Deine Bestellung über ${formatPrice(String(summeLaden), currency)} (PLZ ${profilePlz}) wird geliefert. Zahlungsziel: 14 Tage nach Lieferung. Die Bankdaten für die Überweisung erhältst du per E-Mail. Bestellnr: AA-${orderId?.slice(0, 8).toUpperCase() ?? "XXXXXX"}`,
+      body: `Deine Bestellung über ${formatPrice(String(summeFrisch), waehrung)} (PLZ ${profilePlz}) wird geliefert. Zahlungsziel: 14 Tage nach Lieferung. Die Bankdaten für die Überweisung erhältst du per E-Mail. Bestellnr: AA-${orderId?.slice(0, 8).toUpperCase() ?? "XXXXXX"}`,
     });
 
     const snapshot: ConfirmedOrder = {
-      total: summeLaden, currency, count, orderId, items: orderItems, mode: "auf_rechnung",
+      total: summeFrisch, currency: waehrung, count, orderId, items: orderItems, mode: "auf_rechnung",
       date: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       companyName: profile?.company_name, email: user.email,
     };
@@ -345,7 +370,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     if (kasseZu || aboLaeuft) return;
     setAboLaeuft(true);
     try {
-      const waren = items.map((item) => ({
+      const frisch = await preiseAuffrischen();
+      const summe = Math.round(frisch.reduce((s, item) => s + zeilenBetrag(item), 0) * 100) / 100;
+      const versand = mitAbo || !isMember ? versandkosten({ summe }) : 0;
+      const waren = frisch.map((item) => ({
         titel: item.product.node.title,
         einzel: parseFloat(item.price.amount),
         menge: item.quantity,
@@ -357,7 +385,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         produkte: aboListe.produkte,
         price: aboListeGesamt(aboListe.produkte)?.beitrag || 0,
         waren,
-        einmalig: Math.round((total + shippingCost) * 100) / 100,
+        einmalig: Math.round((summe + versand) * 100) / 100,
       });
       if (erg.art === "weiter") {
         setRedirecting(true);
@@ -370,20 +398,36 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     }
   };
 
-  const handleOnlineCheckout = () => {
+  const handleOnlineCheckout = async () => {
     if (items.length === 0) return;
+    setRedirecting(true);
+    const frisch = await preiseAuffrischen();
     // Variant-IDs aus GID extrahieren: "gid://shopify/ProductVariant/12345" → "12345"
-    const cartItems = items
+    // Der Shop rechnet den Preis selbst — nicht den gespeicherten.
+    const cartItems = frisch
       .map(i => {
         const numericId = i.variantId.split('/').pop();
         return `${numericId}:${i.quantity}`;
       })
       .join(',');
     const shopifyCartUrl = `https://shop.alex-autoshop.de/cart/${cartItems}`;
+    const summeFrisch = Math.round(frisch.reduce((summe, item) => summe + parseFloat(item.price.amount) * item.quantity, 0) * 100) / 100;
     if (user) {
-      recordOrder({ userId: user.id, items: toOrderItems(), total, currency });
+      recordOrder({
+        userId: user.id,
+        items: frisch.map((i) => ({
+          variantId: i.variantId,
+          variantTitle: i.variantTitle,
+          title: i.product.node.title,
+          handle: i.product.node.handle,
+          image: i.product.node.images?.edges?.[0]?.node?.url ?? "",
+          price: i.price,
+          quantity: i.quantity,
+        })),
+        total: summeFrisch,
+        currency: frisch[0]?.price.currencyCode ?? currency,
+      });
     }
-    setRedirecting(true);
     setTimeout(() => {
       window.location.href = shopifyCartUrl;
     }, 1800);

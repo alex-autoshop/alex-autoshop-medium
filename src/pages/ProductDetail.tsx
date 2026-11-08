@@ -6,10 +6,10 @@ import { toast } from "sonner";
 import { Seo } from "@/components/Seo";
 import {
   type ShopifyProduct,
-  storefrontApiRequest,
-  STOREFRONT_PRODUCT_BY_HANDLE_QUERY,
   formatPrice,
 } from "@/lib/shopify";
+import { leseEinbettung, nimmFrisch, produktHolen } from "@/lib/katalog";
+import { ShopBild } from "@/components/ShopBild";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { useCartStore } from "@/stores/cartStore";
@@ -48,27 +48,47 @@ const CONFIGURATOR_HANDLES = new Set([
 type ProductNode = ShopifyProduct["node"] & { vendor?: string };
 
 export default function ProductDetail() {
-  const { handle } = useParams();
-  const [product, setProduct] = useState<ProductNode | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const { handle = "" } = useParams();
+  const key = `produkt:${handle}`;
+  const start = leseEinbettung((m) => m.schluessel === key);
+  const startProdukt = (start?.data?.productByHandle ?? null) as ProductNode | null;
+  const [fuer, setFuer] = useState(key);
+  const [product, setProduct] = useState<ProductNode | null>(startProdukt);
+  const [isLoading, setIsLoading] = useState(!startProdukt);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(startProdukt?.variants?.edges?.[0]?.node?.id ?? null);
   const [quantity, setQuantity] = useState(1);
   const addItem = useCartStore((s) => s.addItem);
   const cartLoading = useCartStore((s) => s.isLoading);
 
+  if (fuer !== key) {
+    const neu = leseEinbettung((m) => m.schluessel === key)?.data?.productByHandle as ProductNode | null;
+    setFuer(key);
+    setProduct(neu ?? null);
+    setIsLoading(!neu);
+    setSelectedVariantId(neu?.variants?.edges?.[0]?.node?.id ?? null);
+    setQuantity(1);
+  }
+
   useEffect(() => {
     if (!handle) return;
-    setIsLoading(true);
-    setProduct(null);
-    storefrontApiRequest(STOREFRONT_PRODUCT_BY_HANDLE_QUERY, { handle })
-      .then((data) => {
-        const p = data?.data?.productByHandle ?? null;
+    let aktiv = true;
+    (async () => {
+      const data = await nimmFrisch((m) => m?.schluessel === key)
+        ?? await produktHolen(handle);
+      if (!aktiv) return;
+      const p = (data?.data?.productByHandle ?? null) as ProductNode | null;
+      if (p) {
         setProduct(p);
-        setSelectedVariantId(p?.variants?.edges?.[0]?.node?.id ?? null);
-      })
-      .catch(() => setProduct(null))
-      .finally(() => setIsLoading(false));
-  }, [handle]);
+        setSelectedVariantId((bisher) =>
+          bisher && p.variants?.edges?.some((e) => e.node.id === bisher) ? bisher : p.variants?.edges?.[0]?.node?.id ?? null,
+        );
+      } else {
+        setProduct((bisher) => bisher);
+      }
+      setIsLoading(false);
+    })();
+    return () => { aktiv = false; };
+  }, [handle, key]);
 
   const variants = product?.variants?.edges?.map((e) => e.node) ?? [];
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? variants[0];
@@ -130,15 +150,18 @@ export default function ProductDetail() {
 
   const addToCart = async () => {
     console.log('[addToCart] called, selectedVariant:', selectedVariant?.id, 'cartLoading:', cartLoading);
-    if (!selectedVariant) { console.log('[addToCart] no selectedVariant, return'); return; }
+    if (!selectedVariant || !handle) { console.log('[addToCart] no selectedVariant, return'); return; }
+    const live = await produktHolen(handle, true);
+    const aktuell = (live?.data?.productByHandle ?? product) as ProductNode;
+    const variante = aktuell.variants?.edges?.find((e) => e.node.id === selectedVariant.id)?.node ?? selectedVariant;
     console.log('[addToCart] calling addItem...');
     await addItem({
-      product: { node: product },
-      variantId: selectedVariant.id,
-      variantTitle: selectedVariant.title,
-      price: selectedVariant.price,
+      product: { node: aktuell },
+      variantId: variante.id,
+      variantTitle: variante.title,
+      price: variante.price,
       quantity,
-      selectedOptions: selectedVariant.selectedOptions ?? [],
+      selectedOptions: variante.selectedOptions ?? [],
     });
     console.log('[addToCart] addItem done');
     toast.success("In den Warenkorb gelegt", { description: `${quantity}× ${product.title}` });
@@ -157,7 +180,13 @@ export default function ProductDetail() {
         <div className="card-tilt overflow-hidden hover:translate-y-0">
           <div className="aspect-square bg-white">
             {img ? (
-              <img src={img} alt={product.title} className="w-full h-full object-contain p-4" />
+              <ShopBild
+                src={img}
+                alt={product.title}
+                priority
+                sizes="(min-width: 768px) 45vw, 92vw"
+                className="w-full h-full object-contain p-4"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">Kein Bild</div>
             )}

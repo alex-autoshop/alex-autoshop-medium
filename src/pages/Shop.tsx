@@ -14,6 +14,7 @@ import {
   STOREFRONT_PRODUCT_BY_HANDLE_QUERY,
   type ShopifyProduct,
 } from "@/lib/shopify";
+import { katalogLesen } from "@/lib/katalog";
 import {
   categoryPath,
   getCategoryBySlug,
@@ -392,21 +393,21 @@ export default function Shop() {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
-  const query = useMemo(() => {
-    const begriff = submittedSearch.trim().replace(/["\\*]/g, "");
-    if (begriff) return `title:*${begriff}* OR sku:"${begriff}"`;
-    if (activeCategory) return activeCategory.query;
-    return "";
-  }, [submittedSearch, activeCategory]);
-
-  // Kompletten Katalog laden (442 Produkte = 2 Requests à 250), damit die
+  // Kompletten Katalog laden, damit die
   // Markensortierung über ALLE Produkte greift und nicht nur über die erste Seite.
   // In einer Kategorie zuerst die Shopify-Collection, sonst die Regel-Suche.
+  const sucheText = submittedSearch.trim();
   const { products, isLoading, error, hasNextPage, loadMore } = useProducts({
-    query,
-    collectionHandle: submittedSearch.trim() ? undefined : activeCategory?.slug,
-    pageSize: 250,
+    suche: sucheText,
+    query: sucheText ? "" : (activeCategory?.query ?? ""),
+    collectionHandle: sucheText ? undefined : activeCategory?.slug,
+    pageSize: 100,
     loadAll: true,
+    einbettung: sucheText
+      ? `shop::${sucheText}`
+      : activeCategory
+        ? `kollektion:${activeCategory.slug}:empfohlen`
+        : "shop::",
   });
 
   useShopKontextMerken(!isLoading);
@@ -414,15 +415,23 @@ export default function Shop() {
   // Featured konfigurator products
   const [featured, setFeatured] = useState<ShopifyProduct[]>([]);
   useEffect(() => {
-    Promise.all(
-      FEATURED_HANDLES.map((h) =>
-        storefrontApiRequest(STOREFRONT_PRODUCT_BY_HANDLE_QUERY, { handle: h })
-          .then((d) => d?.data?.productByHandle)
-          .catch(() => null),
-      ),
-    ).then((nodes) =>
-      setFeatured(nodes.filter(Boolean).map((node: ShopifyProduct["node"]) => ({ node }))),
-    );
+    let aktiv = true;
+    (async () => {
+      const cache = await katalogLesen({ was: "handles", handles: FEATURED_HANDLES.join(",") });
+      let liste = (cache?.data?.products?.edges ?? []) as ShopifyProduct[];
+      if (!liste.length) {
+        const nodes = await Promise.all(
+          FEATURED_HANDLES.map((h) =>
+            storefrontApiRequest(STOREFRONT_PRODUCT_BY_HANDLE_QUERY, { handle: h })
+              .then((d) => d?.data?.productByHandle)
+              .catch(() => null),
+          ),
+        );
+        liste = nodes.filter(Boolean).map((node: ShopifyProduct["node"]) => ({ node }));
+      }
+      if (aktiv) setFeatured(liste);
+    })();
+    return () => { aktiv = false; };
   }, []);
 
   const showFeatured = !category && !submittedSearch.trim();

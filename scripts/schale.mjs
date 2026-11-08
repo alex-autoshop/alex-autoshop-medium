@@ -5,6 +5,7 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { PRODUKT_ABO_PREISE } from "../shared/produktabo.js";
+import { einbetten } from "./einbetten.mjs";
 
 const dist = "dist";
 const euro = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(PRODUKT_ABO_PREISE[15]);
@@ -37,19 +38,7 @@ function mitHero(basis, hero, klasse, kopf) {
   return h;
 }
 
-const beschreibung = "Lackierprodukte, Autoteile und Werkstattbedarf mit bis zu 40 % Rabatt. Heute bestellt, schnell abholbereit.";
-
 const routen = [
-  {
-    pfad: "shop/index.html",
-    klasse: " aa-hell",
-    hero: `<h1>Shop</h1>`,
-    kopf: {
-      title: "Shop | Alex Autoshop Wuppertal",
-      description: `Shop bei Alex Autoshop Wuppertal – ${beschreibung}`,
-      canonical: "https://www.alex-autoshop.de/shop",
-    },
-  },
   {
     pfad: "mitgliedschaft/index.html",
     klasse: " aa-mitte",
@@ -60,22 +49,13 @@ const routen = [
       canonical: "https://www.alex-autoshop.de/mitgliedschaft",
     },
   },
-  {
-    pfad: "kategorie/lackierbedarf-alle/index.html",
-    klasse: " aa-hell",
-    hero: `<h1>Lackierbedarf</h1>`,
-    kopf: {
-      title: "Lackierbedarf kaufen | Alex Autoshop Wuppertal",
-      description: "Lackierbedarf bei Alex Autoshop Wuppertal: Profi-Qualität für Werkstatt und Lackiererei, schnell abholbereit.",
-      canonical: "https://www.alex-autoshop.de/kategorie/lackierbedarf-alle",
-    },
-  },
 ];
 
-writeFileSync(join(dist, "index.html"), html);
 for (const route of routen) {
   const ziel = join(dist, route.pfad);
   mkdirSync(dirname(ziel), { recursive: true });
   writeFileSync(ziel, mitHero(html, route.hero, route.klasse, route.kopf));
 }
-console.log("Schalen:", routen.map((r) => r.pfad).join(", "));
+const seiten = await einbetten(html, dist);
+writeFileSync(join(dist, "index.html"), seiten.html);
+console.log("Schalen:", routen.map((r) => r.pfad).join(", "), "+", seiten.anzahl, "Katalogseiten");
