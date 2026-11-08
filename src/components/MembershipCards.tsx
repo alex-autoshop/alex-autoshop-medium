@@ -438,12 +438,15 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
       };
 
       // 1) Echte Zahlung versuchen (Stripe-Abo bzw. GoCardless-SEPA)
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      if (!token) { setAnmeldung(true); return; }
       const co = await fetch("/api/membership-checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...auswahl, method: payMethod }),
       });
       const coData = await co.json().catch(() => ({}));
+      if (co.status === 401) { setAnmeldung(true); return; }
       if (co.ok && coData.url) {
         // Weiterleitung zur sicheren Bezahlseite
         window.location.href = coData.url;
@@ -453,7 +456,6 @@ function Card({ m, compact }: { m: MembershipLevel; compact: boolean }) {
         throw new Error(coData.error || "Buchung nicht möglich — bitte Seite neu laden.");
       }
       // 2) Fallback: Anbieter noch nicht konfiguriert → bisheriger E-Mail-Anfrage-Flow
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
       const res = await fetch("/api/membership-email", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },

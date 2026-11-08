@@ -8,9 +8,7 @@ import { toast } from "sonner";
 import { useVollerKatalog } from "@/hooks/useVollerKatalog";
 import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/lib/supabase";
-import { empfehlungLesen } from "@/lib/empfehlung";
-import { empfehlungOffen } from "../../shared/empfehlung.js";
+import { aboAbschliessen } from "@/lib/aboAbschluss";
 import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
   mengenPosition, aboListeGesamt, rabattGueltig,
@@ -156,7 +154,7 @@ const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
 
 export function ProduktAbo() {
-  const { user } = useAuth();
+  const { user, loading: kontoLaedt } = useAuth();
   const start = useMemo(liste_laden, []);
   const [standard, setStandard] = useState<number>(start.standard);
   const [wahl, setWahl] = useState<Record<string, number>>({});
@@ -256,48 +254,30 @@ export function ProduktAbo() {
   async function abschliessen(e: React.FormEvent) {
     e.preventDefault();
     if (!gesamt) { toast.error("Leg zuerst mindestens ein Produkt in die Liste."); return; }
+    if (kontoLaedt) return;
     if (!user) { setAnmeldung(true); return; }
     const mail = user.email?.trim().toLowerCase() || "";
     if (!mail) { toast.error("Bitte E-Mail-Adresse angeben."); return; }
 
     setLaeuft(true);
     try {
-      const auswahl = {
-        aboTyp: "produkt" as const,
+      const erg = await aboAbschliessen({
         email: mail,
+        zahlweg,
+        price: gesamt.beitrag,
         produkte: produkte.map((p) => istMenge(p)
           ? { art: "menge" as const, id: p.id, handle: p.handle, titel: anzeigeTitel(p), variante: p.variante, lacksystem: p.lacksystem, menge: p.menge, einzelpreis: p.einzelpreis, rabatt: p.rabatt }
           : { art: "einzel" as const, id: p.id, handle: p.handle, titel: p.titel, preis: p.preis, rabatt: p.rabatt }),
-        price: gesamt.beitrag,
-        ref: empfehlungOffen() ? empfehlungLesen() || undefined : undefined,
-      };
-
-      // 1) Echte Zahlung versuchen — gleicher Weg wie bei der Dienstleistungs-Mitgliedschaft
-      const co = await fetch("/api/membership-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...auswahl, method: zahlweg }),
       });
-      const coData = await co.json().catch(() => ({}));
-      if (co.ok && coData.url) { window.location.href = coData.url; return; }
-      if (co.status === 409 || co.status === 400) {
-        throw new Error(coData.error || "Buchung nicht möglich — bitte Seite neu laden.");
+      if (erg.art === "anmelden") { setAnmeldung(true); return; }
+      if (erg.art === "weiter") { window.location.href = erg.url; return; }
+      if (erg.art === "anfrage") {
+        toast.success("Anfrage gesendet! 📬", {
+          description: "Wir melden uns zur Zahlung. Deine Produktliste liegt bei uns.",
+        });
+        return;
       }
-
-      // 2) Anbieter noch nicht eingerichtet → Anfrage per E-Mail, wie gehabt
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
-      const res = await fetch("/api/membership-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify(auswahl),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Unbekannter Fehler");
-      toast.success("Anfrage gesendet! 📬", {
-        description: "Wir melden uns zur Zahlung. Deine Produktliste liegt bei uns.",
-      });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      toast.error(erg.text);
     } finally {
       setLaeuft(false);
     }

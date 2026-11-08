@@ -20,6 +20,7 @@ import { recordOrder, type OrderItem } from "@/lib/orders";
 import { kasseAdresse } from "../../shared/farbangabe.js";
 import { sendMessage } from "@/lib/inbox";
 import { AuthModal } from "@/components/AuthModal";
+import { AboAnmeldung } from "@/components/AboAnmeldung";
 
 interface CartDrawerProps {
   open: boolean;
@@ -160,6 +161,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [confirmed, setConfirmed] = useState<ConfirmedOrder | null>(null);
   const [redirecting, setRedirecting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [aboAnmeldung, setAboAnmeldung] = useState(false);
   const [kasseOffen, setKasseOffen] = useState(false);
   const [aboLaeuft, setAboLaeuft] = useState(false);
 
@@ -369,7 +371,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   // Normaler Shopify Checkout — direkte Cart-URL ohne API-Call, 100% zuverlässig
   const handleAboKasse = async () => {
     const mail = user?.email?.trim().toLowerCase() || "";
-    if (!user || !mail) { setShowAuthModal(true); return; }
+    if (!user || !mail) { setAboAnmeldung(true); return; }
     if (kasseZu || aboLaeuft) return;
     setAboLaeuft(true);
     try {
@@ -390,6 +392,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         waren,
         einmalig: Math.round((summe + versand) * 100) / 100,
       });
+      if (erg.art === "anmelden") { setAboAnmeldung(true); return; }
       if (erg.art === "weiter") {
         setRedirecting(true);
         window.location.href = erg.url;
@@ -723,10 +726,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (mitAbo && !user) { setShowAuthModal(true); return; }
-                      setKasseOffen((v) => !v);
-                    }}
+                    onClick={() => setKasseOffen((v) => !v)}
                     aria-expanded={kasseOffen}
                     className="btn-primary flex-1 text-sm min-h-11"
                   >
@@ -745,6 +745,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         onClose={() => setShowAuthModal(false)}
         onSuccess={() => setShowAuthModal(false)}
       />
+      <AboAnmeldung offen={aboAnmeldung} onZu={() => setAboAnmeldung(false)} />
       {redirecting && (
         <motion.div
           initial={{ opacity: 0 }}

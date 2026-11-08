@@ -5,17 +5,23 @@ import { toast } from "sonner";
 import { Seo } from "@/components/Seo";
 import { useAuth } from "@/context/AuthContext";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
+import { ABO_KONTO_HINWEIS } from "../../shared/abo-konto.js";
+import { aboZielLesen, aboZielVergessen } from "@/lib/aboListe";
 
 type Modus = "login" | "register" | "vergessen" | "neu";
 
 export default function Konto() {
-  const { signIn, signUp, configured, resetPassword, updatePassword, recovery } = useAuth();
+  const { signIn, signUp, configured, resetPassword, updatePassword, recovery, user: angemeldet, loading: kontoLaedt } = useAuth();
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectTo = (location.state as { from?: string })?.from || "/dashboard";
+  const state = location.state as { from?: string; abo?: boolean; tab?: string } | null;
+  const abo = !!state?.abo || !!aboZielLesen();
+  const redirectTo = state?.abo
+    ? (state.from?.startsWith("/mitgliedschaft") ? state.from : "/mitgliedschaft")
+    : (state?.from || aboZielLesen() || "/dashboard");
   const [mode, setMode] = useState<Modus>(
-    () => ((location.state as { tab?: string } | null)?.tab === "register" ? "register" : "login"),
+    () => (state?.tab === "register" ? "register" : "login"),
   );
   /** Link zum Zurücksetzen ist raus — Hinweis statt Formular. */
   const [mailRaus, setMailRaus] = useState(false);
@@ -25,6 +31,15 @@ export default function Konto() {
   useEffect(() => {
     if (recovery) setMode("neu");
   }, [recovery]);
+
+  // Abo-Anmeldung: nach dem Konto zurück auf die Mitgliedschaft, Liste bleibt liegen.
+  useEffect(() => {
+    if (kontoLaedt || !angemeldet || recovery || mode === "neu") return;
+    const ziel = aboZielLesen();
+    if (!ziel) return;
+    aboZielVergessen();
+    navigate(ziel, { replace: true });
+  }, [angemeldet, kontoLaedt, recovery, mode, navigate]);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,6 +75,7 @@ export default function Konto() {
         const { error } = await signIn(email, password);
         if (error) return toast.error("Login fehlgeschlagen", { description: error });
         toast.success("Willkommen zurück!");
+        aboZielVergessen();
         navigate(redirectTo);
       } else {
         const { error, needsConfirmation } = await signUp(email, password, {
@@ -75,14 +91,17 @@ export default function Konto() {
               ...(v.color_name.trim() ? { color_name: v.color_name.trim() } : {}),
               ...(v.vin.trim() ? { vin: v.vin.trim() } : {}),
             })),
-        });
+        }, abo ? `${window.location.origin}/mitgliedschaft` : undefined);
         if (error) return toast.error("Registrierung fehlgeschlagen", { description: error });
         if (needsConfirmation) {
           toast.success("Konto erstellt!", {
-            description: "Bitte bestätige den Link in deiner E-Mail, dann kannst du dich anmelden.",
+            description: abo
+              ? "Bitte bestätige den Link in deiner E-Mail. Deine Abo-Liste bleibt erhalten."
+              : "Bitte bestätige den Link in deiner E-Mail, dann kannst du dich anmelden.",
           });
         } else {
           toast.success("Konto erstellt!");
+          aboZielVergessen();
           navigate(redirectTo);
           return;
         }
@@ -104,6 +123,11 @@ export default function Konto() {
             : mode === "vergessen" ? "Passwort vergessen"
             : "Neues Passwort"}
         </h1>
+        {abo && mode !== "neu" && (
+          <p className="text-sm leading-relaxed rounded-lg bg-primary/10 border border-primary/20 px-3 py-2 mb-4">
+            {ABO_KONTO_HINWEIS} Deine Abo-Liste bleibt erhalten.
+          </p>
+        )}
         <p className="text-muted-foreground text-sm mb-6">
           {mode === "login"
             ? (teileSichtbar ? "Melde dich an für Teilebörse & Mitgliederbereich." : "Melde dich an für den Mitgliederbereich.")

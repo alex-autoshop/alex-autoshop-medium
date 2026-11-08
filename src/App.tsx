@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NurAdmin } from "@/components/NurAdmin";
 import { TeileboerseTor } from "@/components/TeileboerseTor";
 import { CookieConsent } from "@/components/CookieConsent";
+import { AboRueckkehr } from "@/components/AboAnmeldung";
 
 const Toaster = lazy(() => import("sonner").then((m) => ({ default: m.Toaster })));
 const Home = lazy(() => import("@/pages/Home"));
@@ -149,6 +150,7 @@ export default function App() {
         <Vorholen />
         <ScrollToTop />
         <EmpfehlungMerken />
+        <AboRueckkehr />
         <Suspense fallback={<PageFallback />}>
           <Routes>
             {/* Admin-Chat: kein Header, kein Footer, kein Widget */}

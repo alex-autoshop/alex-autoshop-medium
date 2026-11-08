@@ -23,6 +23,7 @@ import { mitgliedsbeitrag, MODULE } from '../shared/mitgliedspreise.js';
 import { aboListeGesamt, istWunschfarbeMenge, mengenAngabeNormalisieren, wunschfarbeAboTitel } from '../shared/produktabo.js';
 import { internPruefen } from './_intern.js';
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from '../shared/empfehlung.js';
+import { kundeAusAnfrage } from '../shared/abo-konto.js';
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
 const REF_OK = /^[A-Z0-9]{6,8}$/;
@@ -529,7 +530,7 @@ export default async function handler(req) {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
   }
@@ -540,8 +541,9 @@ export default async function handler(req) {
   catch { return jsonError('Ungültiger Request-Body', 400); }
 
   if (body?.aboTyp === "produkt") {
-    const emailP = String(body.email || "").trim().toLowerCase();
-    if (!EMAIL_OK.test(emailP)) return jsonError("Bitte eine gültige E-Mail-Adresse angeben.", 400);
+    const konto = await kundeAusAnfrage(req);
+    if (!konto.ok) return jsonError(konto.error, konto.status);
+    const emailP = konto.email;
     if (!RESEND_API_KEY) return jsonError("RESEND_API_KEY nicht konfiguriert", 503);
     const liste = (Array.isArray(body.produkte) ? body.produkte : []).map((p) => {
       const art = p?.art === "menge" || p?.einzelpreis != null ? "menge" : "einzel";

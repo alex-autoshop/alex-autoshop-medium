@@ -73,3 +73,34 @@ export function aboAktivMerken() {
   try { localStorage.setItem(ABO_AKTIV, "1"); } catch { /* privat */ }
   window.dispatchEvent(new Event(ABO_EREIGNIS));
 }
+
+const ABO_ZURUECK = "alex-abo-zurueck";
+const ZURUECK_MS = 2 * 60 * 60 * 1000;
+
+/** Nach der Anmeldung wieder auf die Mitgliedschaft, solange die Abo-Liste noch gilt. */
+export function aboZielMerken(pfad = "/mitgliedschaft") {
+  const ziel = pfad.startsWith("/mitgliedschaft") ? pfad : "/mitgliedschaft";
+  try {
+    localStorage.setItem(ABO_ZURUECK, JSON.stringify({ pfad: ziel, bis: Date.now() + ZURUECK_MS }));
+  } catch { /* privater Modus */ }
+}
+
+export function aboZielLesen(): string | null {
+  try {
+    const roh = localStorage.getItem(ABO_ZURUECK);
+    if (!roh) return null;
+    const daten = JSON.parse(roh) as { pfad?: string; bis?: number };
+    if (!daten?.pfad || !daten.pfad.startsWith("/mitgliedschaft")) return null;
+    if (typeof daten.bis === "number" && daten.bis < Date.now()) {
+      localStorage.removeItem(ABO_ZURUECK);
+      return null;
+    }
+    return daten.pfad;
+  } catch {
+    return null;
+  }
+}
+
+export function aboZielVergessen() {
+  try { localStorage.removeItem(ABO_ZURUECK); } catch { /* privat */ }
+}

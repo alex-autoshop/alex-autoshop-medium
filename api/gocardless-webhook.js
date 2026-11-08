@@ -17,6 +17,7 @@
 export const config = { runtime: "edge" };
 
 import { activateMembership, activateProduktAbo } from "./_activate-membership.js";
+import { userIdAusPaket } from "../shared/abo-konto.js";
 import { shopifyMitgliedTag } from "./_shopify-order.js";
 import { positionenLesen, teileBestellung, teileBestellungBezahlt } from "./_teile-bestellung.js";
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from "../shared/empfehlung.js";
@@ -118,6 +119,17 @@ async function verifyGoCardless(rawBody, sigHeader, secret) {
 // Mitgliedschaft: seit 22.09.2026 steckt die Auswahl kompakt in "paket"
 // ("L2|Autoteile,Lackfarben|180|farbe|aufb"), weil GoCardless nur 3
 // Metadaten-Felder erlaubt. Ältere Anfragen hatten einzelne Felder.
+/** Abo-Metadaten am Mandat: höchstens drei Felder, Konto-ID immer dabei wenn wir sie kennen. */
+function aboMeta(meta) {
+  const userId = userIdAusPaket(meta?.paket) || (istUuid(meta?.user_id) ? String(meta.user_id).toLowerCase() : "");
+  if (!userId) return meta || {};
+  return {
+    email: meta?.email || "",
+    paket: String(meta?.paket || ""),
+    user_id: userId,
+  };
+}
+
 function paketAuspacken(meta) {
   if (meta.paket) {
     const [l, mods, preis] = String(meta.paket).split("|");
@@ -196,7 +208,7 @@ async function handleBillingRequestFulfilled(billingRequestId) {
               interval_unit: "monthly",
               name: "Alex Autoshop Produkt-Abo",
               links: { mandate: mandateId },
-              metadata: { email: meta.email || "", paket: meta.paket, positionen: String(meta.positionen || "").slice(0, 200) },
+              metadata: aboMeta(meta),
             },
           }),
         });
@@ -230,7 +242,7 @@ async function handleBillingRequestFulfilled(billingRequestId) {
             interval_unit: "monthly",
             name: `Alex Autoshop Mitgliedschaft — ${rabattName(paket.level)}`,
             links: { mandate: mandateId },
-            metadata: meta,
+            metadata: aboMeta(meta),
           },
         }),
       });

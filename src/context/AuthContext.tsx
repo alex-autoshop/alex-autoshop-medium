@@ -48,7 +48,7 @@ interface AuthState {
   profile: CompanyProfile;
   loading: boolean;
   configured: boolean;
-  signUp: (email: string, password: string, profile: CompanyProfile) => Promise<{ error?: string; needsConfirmation?: boolean }>;
+  signUp: (email: string, password: string, profile: CompanyProfile, redirectTo?: string) => Promise<{ error?: string; needsConfirmation?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (profile: CompanyProfile) => Promise<{ error?: string }>;
@@ -170,13 +170,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const signUp: AuthState["signUp"] = async (email, password, profile) => {
+  const signUp: AuthState["signUp"] = async (email, password, profile, redirectTo) => {
     const supabase = await getSb();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { ...profile, membership_level: 0 } },
+      options: {
+        data: { ...profile, membership_level: 0 },
+        ...(redirectTo ? { emailRedirectTo: redirectTo } : {}),
+      },
     });
     if (error) return { error: error.message };
     // Wenn keine Session zurückkommt, muss die E-Mail erst bestätigt werden.

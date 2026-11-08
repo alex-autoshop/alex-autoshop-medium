@@ -20,8 +20,8 @@ import { mitgliedsbeitrag, rabattName, DIENSTLEISTUNG_BUCHBAR } from "../shared/
 import { aboListeGesamt, istWunschfarbeMenge, mengenAngabeNormalisieren, warenMitRabatt, wunschfarbeAboTitel } from "../shared/produktabo.js";
 import { versandkosten } from "../shared/versand.js";
 import { empfehlungSichtbar } from "../shared/empfehlung.js";
+import { kundeAusAnfrage, paketMitKonto } from "../shared/abo-konto.js";
 
-const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
 const REF_OK = /^[A-Z0-9]{6,8}$/;
 const refAus = (email, x) => {
   if (!empfehlungSichtbar(email)) return "";
@@ -33,21 +33,31 @@ const BASE = () => process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type",
+  "Access-Control-Allow-Headers": "content-type, authorization",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+/** Stripe-Abo an das Kundenkonto hängen: E-Mail plus Konto-ID, nicht an eine frei gewählte Adresse. */
+function stripeKontoSetzen(form, email, userId) {
+  form.set("customer_email", email);
+  form.set("client_reference_id", String(userId || ""));
+  form.set("metadata[email]", email);
+  form.set("metadata[user_id]", String(userId || ""));
+  form.set("subscription_data[metadata][email]", email);
+  form.set("subscription_data[metadata][user_id]", String(userId || ""));
+}
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", ...CORS } });
 
 // ── Stripe: Checkout Session (subscription) ──────────────────────────────────
-async function createStripeSession({ email, level, modules, price, paket, ref, titel }) {
+async function createStripeSession({ email, userId, level, modules, price, paket, ref, titel }) {
   const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
   if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
 
   const cents = Math.round(Number(price) * 100);
   const form = new URLSearchParams();
   form.set("mode", "subscription");
-  form.set("customer_email", email);
+  stripeKontoSetzen(form, email, userId);
   form.set("success_url", `${BASE()}/mitgliedschaft?status=success&session_id={CHECKOUT_SESSION_ID}`);
   form.set("cancel_url", `${BASE()}/mitgliedschaft?status=cancel`);
   form.set("line_items[0][quantity]", "1");
@@ -57,13 +67,11 @@ async function createStripeSession({ email, level, modules, price, paket, ref, t
   form.set("line_items[0][price_data][product_data][name]", titel || `Alex Autoshop Mitgliedschaft — ${rabattName(level)}`);
   form.set("line_items[0][price_data][product_data][description]", `Module: ${(modules || []).join(", ") || "Basis"}`);
   // Metadaten für den Webhook (Aktivierung + Shopify-Bestellung)
-  form.set("metadata[email]", email);
   form.set("metadata[level]", String(level));
   form.set("metadata[modules]", (modules || []).join(","));
   form.set("metadata[price]", String(price));
   form.set("metadata[paket]", paket);
   if (ref) form.set("metadata[ref]", ref);
-  form.set("subscription_data[metadata][email]", email);
   form.set("subscription_data[metadata][level]", String(level));
   form.set("subscription_data[metadata][modules]", (modules || []).join(","));
   form.set("subscription_data[metadata][price]", String(price));
@@ -78,12 +86,12 @@ async function createStripeSession({ email, level, modules, price, paket, ref, t
   return { url: data.url };
 }
 
-async function createProduktSession({ email, price, zeilen, positionen, ref }) {
+async function createProduktSession({ email, userId, price, zeilen, positionen, ref }) {
   const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
   if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
   const form = new URLSearchParams();
   form.set("mode", "subscription");
-  form.set("customer_email", email);
+  stripeKontoSetzen(form, email, userId);
   form.set("success_url", `${BASE()}/mitgliedschaft?status=success&session_id={CHECKOUT_SESSION_ID}`);
   form.set("cancel_url", `${BASE()}/mitgliedschaft?status=cancel`);
   zeilen.forEach((z, i) => {
@@ -93,11 +101,9 @@ async function createProduktSession({ email, price, zeilen, positionen, ref }) {
     form.set(`line_items[${i}][price_data][unit_amount]`, String(Math.round(z.betrag * 100)));
     form.set(`line_items[${i}][price_data][product_data][name]`, z.name);
   });
-  form.set("metadata[email]", email);
   form.set("metadata[abo]", "produkt");
   form.set("metadata[price]", String(price));
   form.set("metadata[positionen]", positionen);
-  form.set("subscription_data[metadata][email]", email);
   form.set("subscription_data[metadata][abo]", "produkt");
   form.set("subscription_data[metadata][price]", String(price));
   form.set("subscription_data[metadata][positionen]", positionen);
@@ -113,13 +119,13 @@ async function createProduktSession({ email, price, zeilen, positionen, ref }) {
 }
 
 /** Eine Zahlung: Abo monatlich wiederkehrend, Ware einmalig auf der ersten Rechnung. */
-async function createWarenAboSession({ email, monat, waren, versand, positionen, ref }) {
+async function createWarenAboSession({ email, userId, monat, waren, versand, positionen, ref }) {
   const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
   if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
   const form = new URLSearchParams();
   form.set("mode", "subscription");
   form.set("locale", "de");
-  form.set("customer_email", email);
+  stripeKontoSetzen(form, email, userId);
   form.set("success_url", `${BASE()}/warenkorb?status=success&session_id={CHECKOUT_SESSION_ID}`);
   form.set("cancel_url", `${BASE()}/warenkorb?status=cancel`);
   form.set("line_items[0][quantity]", "1");
@@ -143,12 +149,10 @@ async function createWarenAboSession({ email, monat, waren, versand, positionen,
   const monatText = Number(monat).toFixed(2).replace(".", ",");
   const wareText = einmalig.toFixed(2).replace(".", ",");
   form.set("custom_text[submit][message]", `Zahlungspflichtig bestellen. Einmalig ${wareText} €, dazu ${monatText} € im Monat. Monatlich kündbar, keine Mindestlaufzeit.`);
-  form.set("metadata[email]", email);
   form.set("metadata[abo]", "produkt");
   form.set("metadata[price]", String(monat));
   form.set("metadata[einmalig]", String(einmalig));
   form.set("metadata[positionen]", positionen);
-  form.set("subscription_data[metadata][email]", email);
   form.set("subscription_data[metadata][abo]", "produkt");
   form.set("subscription_data[metadata][price]", String(monat));
   form.set("subscription_data[metadata][positionen]", positionen);
@@ -167,7 +171,7 @@ async function createWarenAboSession({ email, monat, waren, versand, positionen,
   return { url: data.url };
 }
 
-async function createProduktFlow({ email, price, paket, positionen }) {
+async function createProduktFlow({ email, userId, price, paket, positionen }) {
   const token = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
   if (!/^(live|sandbox)_[A-Za-z0-9_-]{10,}$/.test(token)) return { fallback: true };
   const host = token.startsWith("live_") ? "https://api.gocardless.com" : "https://api-sandbox.gocardless.com";
@@ -183,7 +187,11 @@ async function createProduktFlow({ email, price, paket, positionen }) {
     body: JSON.stringify({
       billing_requests: {
         mandate_request: { scheme: "sepa_core", currency: "EUR" },
-        metadata: { email, paket, positionen: String(positionen || "").slice(0, 200) },
+        metadata: {
+          email,
+          paket: paketMitKonto(paket, userId),
+          positionen: String(positionen || "").slice(0, 200),
+        },
       },
     }),
   });
@@ -207,7 +215,7 @@ async function createProduktFlow({ email, price, paket, positionen }) {
 }
 
 // ── GoCardless: Billing Request + Flow (SEPA-Mandat) ─────────────────────────
-async function createGoCardlessFlow({ email, level, modules, price, paket, ref, titel }) {
+async function createGoCardlessFlow({ email, userId, level, modules, price, paket, ref, titel }) {
   // Nur ein echter Token zählt (Platzhalter in Vercel → freundlicher Hinweis),
   // und live/sandbox ergibt sich aus dem Token selbst.
   const token = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
@@ -232,8 +240,8 @@ async function createGoCardlessFlow({ email, level, modules, price, paket, ref, 
         // SEPA-Buchung wäre abgelehnt worden). Der Webhook packt "paket" aus.
         metadata: {
           email,
-          paket,
-          ...(ref ? { ref } : {}),
+          paket: paketMitKonto(paket, userId),
+          ...(ref ? { ref } : { user_id: String(userId || "") }),
         },
       },
     }),
@@ -266,10 +274,13 @@ export default async function handler(req) {
 
   let body;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
-  const { email: emailRoh, level, modules = [], price, method, freePaint, aufbereitung, ref: refRoh,
+  const konto = await kundeAusAnfrage(req);
+  if (!konto.ok) return json({ error: konto.error }, konto.status);
+  // Adresse und Konto kommen aus der Sitzung. Eine mitgeschickte E-Mail wird ignoriert.
+  const email = konto.email;
+  const userId = konto.userId;
+  const { level, modules = [], price, method, freePaint, aufbereitung, ref: refRoh,
           aboTyp, rabatt, produkte = [], waren, einmalig } = body || {};
-  const email = String(emailRoh || "").trim().toLowerCase();
-  if (!EMAIL_OK.test(email)) return json({ error: "Bitte eine gültige E-Mail-Adresse angeben." }, 400);
   if (!["stripe", "gocardless"].includes(method)) return json({ error: "method muss stripe|gocardless sein" }, 400);
 
   // ── Produkt-Abo: eigener Weg. Die Dienstleistungs-Mitgliedschaft unten bleibt unberührt. ──
@@ -308,7 +319,7 @@ export default async function handler(req) {
       p.lacksystem ? `${p.titel} (${p.lacksystem}):${p.rabatt}` : `${p.titel}:${p.rabatt}`
     )).join(";").slice(0, 450);
     const stufen = [...new Set(liste.map((p) => p.rabatt))].join(",");
-    const paket = ["Pmix", String(g.beitrag), stufen].join("|");
+    const paket = paketMitKonto(["Pmix", String(g.beitrag), stufen].join("|"), userId);
     const wareDabei = Array.isArray(waren) && waren.length > 0;
     try {
       if (wareDabei) {
@@ -326,15 +337,15 @@ export default async function handler(req) {
           return json({ error: "Der Warenpreis hat sich gerade geändert — bitte die Seite neu laden.", einmalig: summe }, 409);
         }
         const r = await createWarenAboSession({
-          email, monat: g.beitrag, waren: gerechnet.positionen, versand, positionen, ref: refAus(email, refRoh),
+          email, userId, monat: g.beitrag, waren: gerechnet.positionen, versand, positionen, ref: refAus(email, refRoh),
         });
         if (r.fallback) return json({ fallback: true, reason: "stripe noch nicht konfiguriert" });
         if (!r.url) return json({ error: "Keine Checkout-URL erhalten" }, 502);
         return json({ url: r.url });
       }
       const r = method === "stripe"
-        ? await createProduktSession({ email, price: g.beitrag, zeilen, positionen, ref: refAus(email, refRoh) })
-        : await createProduktFlow({ email, price: g.beitrag, paket, positionen });
+        ? await createProduktSession({ email, userId, price: g.beitrag, zeilen, positionen, ref: refAus(email, refRoh) })
+        : await createProduktFlow({ email, userId, price: g.beitrag, paket, positionen });
       if (r.fallback) return json({ fallback: true, reason: `${method} noch nicht konfiguriert` });
       if (!r.url) return json({ error: "Keine Checkout-URL erhalten" }, 502);
       return json({ url: r.url });
@@ -361,14 +372,14 @@ export default async function handler(req) {
   if (!(b.preis > 0)) return json({ error: "Dieser Beitrag kann nicht online gebucht werden — bitte ruf uns an." }, 400);
 
   // Kompakt für GoCardless (max. 3 Felder) — Webhook liest es wieder aus.
-  const paket = [
+  const paket = paketMitKonto([
     `L${b.level}`,
     b.module.join(",") || "-",
     String(b.preis),
     b.freePaint ? "farbe" : "ohneFarbe",
     b.aufbereitung ? "aufb" : "ohneAufb",
-  ].join("|");
-  const arg = { email, level: b.level, modules: b.module, price: b.preis, paket, ref: refAus(email, refRoh) };
+  ].join("|"), userId);
+  const arg = { email, userId, level: b.level, modules: b.module, price: b.preis, paket, ref: refAus(email, refRoh) };
 
   try {
     const result = method === "stripe"
