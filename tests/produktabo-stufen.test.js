@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aboListeGesamt, listeNormalisieren, mengenPosition, PRODUKT_ABO_PREISE, warenMitRabatt } from "../shared/produktabo.js";
+import {
+  ABO_2K_AUFSCHLAG, aboListeGesamt, LACKSYSTEM_1K, LACKSYSTEM_2K,
+  listeNormalisieren, mengenPosition, mischBedarf, PRODUKT_ABO_PREISE, warenMitRabatt,
+} from "../shared/produktabo.js";
 
 test("jede Position behält ihre Stufe, der Beitrag ist die Summe", () => {
   const g = aboListeGesamt([
@@ -50,6 +53,66 @@ test("die drei Wunschfarben-Konfiguratoren fallen aus der Einzel-Liste, Mengen b
     ],
   });
   assert.deepEqual(n.produkte.map((p) => p.id), ["2", "3"]);
+});
+
+test("2K-Aufschlag liegt auf dem Normalpreis, Rabatt und Beitrag folgen daraus", () => {
+  const gebinde = [{ label: "1 Liter", liter: 1, preis: 110 }];
+  const wahl = { bedarfLiter: 20, anteilB: 0, gebindeA: gebinde, gebindeB: [], rabatt: 40 };
+  const ohne = mischBedarf(wahl);
+  const mit = mischBedarf({ ...wahl, aufschlag: ABO_2K_AUFSCHLAG });
+  assert.equal(ABO_2K_AUFSCHLAG, 0.25);
+  assert.equal(ohne.normal, 2200);
+  assert.equal(ohne.mitglied, 1320);
+  assert.equal(ohne.ersparnis, 880);
+  assert.equal(ohne.beitrag, 176);
+  assert.equal(mit.teilA.preis, 2200);
+  assert.equal(mit.normal, 2750);
+  assert.equal(mit.mitglied, 1650);
+  assert.equal(mit.ersparnis, 1100);
+  assert.equal(mit.beitrag, 220);
+  assert.equal(mischBedarf({ ...wahl, aufschlag: 0 }).normal, 2200);
+});
+
+test("altes egal wird 1K bevorzugt, alter 2K-Preis bekommt den Aufschlag einmal", () => {
+  const n = listeNormalisieren({
+    standard: 40,
+    produkte: [
+      {
+        id: "farben-mix::0::egal::L", art: "menge", titel: "Wunschfarbe",
+        variante: "Standox · egal · 20 L / Monat", lacksystem: "egal",
+        einzelpreis: 205.75, menge: 20, rabatt: 40,
+      },
+      {
+        id: "farben-mix::100::2k::L", art: "menge", titel: "Wunschfarbe",
+        variante: "Mipa · 2K · 20 L / Monat", lacksystem: "2K",
+        einzelpreis: 22, menge: 20, rabatt: 40,
+      },
+      {
+        id: "farben-mix::0::1k::L", art: "menge", titel: "Wunschfarbe",
+        variante: "Standox · 1K · 20 L / Monat", lacksystem: "1K",
+        einzelpreis: 205.75, menge: 20, rabatt: 40,
+      },
+      {
+        id: "farben-mix::0::2k::L", art: "menge", titel: "Wunschfarbe",
+        variante: "Standox · 2K bevorzugt · 20 L / Monat", lacksystem: LACKSYSTEM_2K,
+        einzelpreis: 137.5, menge: 20, rabatt: 40,
+      },
+    ],
+  });
+  assert.equal(n.produkte[0].lacksystem, LACKSYSTEM_1K);
+  assert.equal(n.produkte[0].variante, "Standox · 1K bevorzugt · 20 L / Monat");
+  assert.equal(n.produkte[0].id, "farben-mix::0::1k::L");
+  assert.equal(n.produkte[0].einzelpreis, 205.75);
+  assert.equal(n.produkte[1].lacksystem, LACKSYSTEM_2K);
+  assert.equal(n.produkte[1].variante, "Mipa · 2K bevorzugt · 20 L / Monat");
+  assert.equal(n.produkte[1].einzelpreis, 27.5);
+  assert.equal(n.produkte[2].lacksystem, LACKSYSTEM_1K);
+  assert.equal(n.produkte[2].variante, "Standox · 1K bevorzugt · 20 L / Monat");
+  assert.equal(n.produkte[2].einzelpreis, 205.75);
+  assert.equal(n.produkte[3].einzelpreis, 137.5);
+  const nochmal = listeNormalisieren(n);
+  assert.equal(nochmal.produkte[1].einzelpreis, 27.5);
+  assert.equal(nochmal.produkte[1].variante, "Mipa · 2K bevorzugt · 20 L / Monat");
 });
 
 test("Warenkasse rechnet Abo-Zeilen selbst und lässt andere beim Ladenpreis", () => {

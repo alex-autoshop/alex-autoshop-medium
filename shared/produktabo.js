@@ -42,6 +42,75 @@ export const MAX_PRODUKTE = 100;
 export const ABO_RABATTE = [15, 28, 40];
 
 /**
+ * Aufschlag auf den 2K-Normalpreis im Produkt-Abo.
+ * Viele Farbtöne gibt es nicht als 2K — dann wird 1K geliefert. Der Zuschlag
+ * liegt auf dem Normalpreis, bevor Rabatt und Beitrag gerechnet werden.
+ * ÄNDERN: nur diese Zahl. 0.25 = plus 25 %.
+ */
+export const ABO_2K_AUFSCHLAG = 0.25;
+
+export const LACKSYSTEM_1K = "1K bevorzugt";
+export const LACKSYSTEM_2K = "2K bevorzugt";
+
+/** Alte Werte („1K“, „2K“, „egal“, „Egal – 1K oder 2K“) auf die zwei Knöpfe. */
+export function lacksystemKanonisch(wert) {
+  const t = String(wert ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  if (t.startsWith("2k")) return LACKSYSTEM_2K;
+  if (t.startsWith("1k")) return LACKSYSTEM_1K;
+  return LACKSYSTEM_1K;
+}
+
+/** Kurzer Alt-Code „2K“, dessen Einzelpreis den Aufschlag noch nicht enthält. */
+export function istAlter2kOhneAufschlag(wert) {
+  const t = String(wert ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  if (!t.startsWith("2k")) return false;
+  return !t.startsWith("2k bevorzugt");
+}
+
+/** Normalpreis mal (1 + Aufschlag), auf Cent. Ohne Aufschlag bleibt der Preis. */
+export function preisMitAufschlag(betrag, aufschlag) {
+  const n = Number(betrag);
+  if (!Number.isFinite(n)) return null;
+  const a = Number(aufschlag);
+  const faktor = Number.isFinite(a) && a > 0 ? 1 + a : 1;
+  return Math.round(n * faktor * 100) / 100;
+}
+
+function varianteKanonisch(text) {
+  return String(text || "").split(" · ").map((teil) => {
+    const t = teil.trim().toLowerCase().replace(/\s+/g, " ");
+    if (t.startsWith("2k")) return LACKSYSTEM_2K;
+    if (t.startsWith("1k")) return LACKSYSTEM_1K;
+    if (t === "egal" || t.startsWith("egal")) return LACKSYSTEM_1K;
+    return teil;
+  }).join(" · ");
+}
+
+/**
+ * Gespeicherte Mengen-Zeile: „egal“ wird „1K bevorzugt“.
+ * Ein alter „2K“-Einzelpreis bekommt den Aufschlag genau einmal.
+ */
+export function mengenAngabeNormalisieren(p) {
+  if (!p) return p;
+  const hatLack = p.lacksystem != null && String(p.lacksystem).trim() !== "";
+  const hatVariante = p.variante != null && String(p.variante).length > 0;
+  const id = p.id != null ? String(p.id) : "";
+  const hatEgalId = /::egal::/i.test(id);
+  if (!hatLack && !hatVariante && !hatEgalId) return p;
+
+  const auf = hatLack && istAlter2kOhneAufschlag(p.lacksystem);
+  const einzel = Number(p.einzelpreis);
+  const naechster = { ...p };
+  if (hatLack) naechster.lacksystem = lacksystemKanonisch(p.lacksystem);
+  if (hatVariante) naechster.variante = varianteKanonisch(p.variante);
+  if (hatEgalId) naechster.id = id.replace(/::egal::/gi, "::1k::");
+  if (auf && Number.isFinite(einzel)) {
+    naechster.einzelpreis = preisMitAufschlag(einzel, ABO_2K_AUFSCHLAG);
+  }
+  return naechster;
+}
+
+/**
  * Monatsbeitrag für eine Abo-Liste.
  *
  *   Beitrag = Preis je Produkt (abhängig vom Rabatt) × Anzahl Produkte
@@ -117,7 +186,8 @@ export function listeNormalisieren(roh) {
     .filter((p) => p && (p.art === "menge" || !istAboKonfigurator(p.handle)))
     .map((p) => {
       const eigene = Math.floor(Number(p && p.rabatt));
-      return { ...p, rabatt: rabattGueltig(eigene) ? eigene : standard };
+      const basis = { ...p, rabatt: rabattGueltig(eigene) ? eigene : standard };
+      return mengenAngabeNormalisieren(basis);
     });
   return { standard, produkte };
 }
@@ -369,8 +439,9 @@ export function guenstigsteKombi(gebinde, bedarfLiter) {
  * Monatsbedarf auf zwei Marken aufteilen und beide Hälften günstigst einkaufen.
  *
  * @param {{ bedarfLiter:number, anteilB:number,
- *           gebindeA:Array, gebindeB:Array, rabatt:number }} wahl
+ *           gebindeA:Array, gebindeB:Array, rabatt:number, aufschlag?:number }} wahl
  *   anteilB = Anteil der zweiten Marke in Prozent (0 = nur A, 100 = nur B)
+ *   aufschlag = Zuschlag auf den Normalpreis vor Rabatt (2K: ABO_2K_AUFSCHLAG)
  */
 export function mischBedarf(wahl) {
   const bedarf = Number(wahl && wahl.bedarfLiter);
@@ -387,8 +458,10 @@ export function mischBedarf(wahl) {
   if (!teilA || !teilB) return null;
 
   const cent = (n) => Math.round(n * 100) / 100;
-  const normal = cent(teilA.preis + teilB.preis);
-  if (normal <= 0) return null;
+  const basis = cent(teilA.preis + teilB.preis);
+  if (basis <= 0) return null;
+  const normal = preisMitAufschlag(basis, wahl && wahl.aufschlag);
+  if (!(normal > 0)) return null;
   const mitglied = cent(normal * (1 - rabatt / 100));
   const ersparnis = cent(normal - mitglied);
   const beitrag = cent(Math.max(MENGE_MINDESTBEITRAG, ersparnis * ANTEIL_AN_ERSPARNIS));
