@@ -1,5 +1,3 @@
-import { useState, type FormEvent } from "react";
-import { FileDown, Mail } from "lucide-react";
 import { hSatzText, pSatzText, type Gefahrstoff } from "../../shared/gefahrstoff.js";
 import { GhsPiktogramm } from "@/components/GhsPiktogramm";
 
@@ -17,52 +15,7 @@ export function GefahrstoffKompakt({ g }: { g: Gefahrstoff }) {
   );
 }
 
-function SdbForm({ titel, handle, onZu }: { titel: string; handle: string; onZu: () => void }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [firma, setFirma] = useState("");
-  const [status, setStatus] = useState<"offen" | "sendet" | "ok" | "fehler">("offen");
-
-  async function senden(e: FormEvent) {
-    e.preventDefault();
-    setStatus("sendet");
-    try {
-      const res = await fetch("/api/sdb-anfrage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, firma, produkt: titel, handle }),
-      });
-      if (!res.ok) throw new Error();
-      setStatus("ok");
-    } catch {
-      setStatus("fehler");
-    }
-  }
-
-  if (status === "ok") {
-    return <p className="text-sm text-primary font-semibold">Danke. Wir schicken das Sicherheitsdatenblatt an {email}.</p>;
-  }
-
-  return (
-    <form onSubmit={senden} className="space-y-2">
-      <input className="input-base" required placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} aria-label="Name" />
-      <input className="input-base" required type="email" placeholder="E-Mail" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="E-Mail" />
-      <input className="input-base" placeholder="Firma (optional)" value={firma} onChange={(e) => setFirma(e.target.value)} aria-label="Firma" />
-      {status === "fehler" && (
-        <p className="text-sm text-destructive">Das hat nicht geklappt. Schreib an info@alex-autoshop.de.</p>
-      )}
-      <div className="flex gap-2">
-        <button type="submit" className="btn-primary text-sm" disabled={status === "sendet"}>
-          {status === "sendet" ? "Wird gesendet …" : "Anfordern"}
-        </button>
-        <button type="button" className="btn-outline text-sm" onClick={onZu}>Abbrechen</button>
-      </div>
-    </form>
-  );
-}
-
-export function GefahrstoffBlock({ g, titel, handle }: { g: Gefahrstoff; titel: string; handle: string }) {
-  const [form, setForm] = useState(false);
+export function GefahrstoffBlock({ g }: { g: Gefahrstoff }) {
   if (!g.ist) return null;
   return (
     <section className="rounded-2xl border border-border bg-card p-4 space-y-3" aria-label="Gefahrenhinweise">
@@ -98,25 +51,6 @@ export function GefahrstoffBlock({ g, titel, handle }: { g: Gefahrstoff; titel: 
       )}
       {!g.unNr && g.versandHinweis && <p className="text-sm">Versandhinweis: {g.versandHinweis}</p>}
       {g.mindestalter && <p className="text-sm">Abgabe erst ab {g.mindestalter} Jahren.</p>}
-      <div className="pt-1 flex flex-wrap gap-2">
-        {g.sdbUrl && (
-          <a href={g.sdbUrl} className="btn-outline text-sm" target="_blank" rel="noopener noreferrer">
-            <FileDown className="w-4 h-4" /> Sicherheitsdatenblatt herunterladen
-          </a>
-        )}
-        {g.tdsUrl && (
-          <a href={g.tdsUrl} className="btn-outline text-sm" target="_blank" rel="noopener noreferrer">
-            <FileDown className="w-4 h-4" /> Technisches Datenblatt
-          </a>
-        )}
-        {!g.sdbUrl && (form ? (
-          <SdbForm titel={titel} handle={handle} onZu={() => setForm(false)} />
-        ) : (
-          <button type="button" className="btn-outline text-sm" onClick={() => setForm(true)}>
-            <Mail className="w-4 h-4" /> Sicherheitsdatenblatt anfordern
-          </button>
-        ))}
-      </div>
     </section>
   );
 }

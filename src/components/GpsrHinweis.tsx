@@ -1,4 +1,3 @@
-import { FileDown } from "lucide-react";
 import { gpsrLesen } from "../../shared/gpsr.js";
 
 function Kontakt({ wert }: { wert: string }) {
@@ -13,13 +12,11 @@ function Kontakt({ wert }: { wert: string }) {
 
 export function GpsrHinweis({
   felder,
-  sdbUrl,
 }: {
   felder?: Array<{ key?: string; value?: string } | null> | null;
-  sdbUrl?: string;
 }) {
   const g = gpsrLesen(felder);
-  if (!g.hat && !sdbUrl) return null;
+  if (!g.hat) return null;
   const zeilen = [
     g.name && ["Hersteller", g.name],
     g.adresse && ["Anschrift", g.adresse],
@@ -36,11 +33,6 @@ export function GpsrHinweis({
         </p>
       ))}
       {g.hinweise && <p className="text-sm whitespace-pre-line">{g.hinweise}</p>}
-      {sdbUrl && (
-        <a href={sdbUrl} className="btn-outline text-sm mt-1" target="_blank" rel="noopener noreferrer">
-          <FileDown className="w-4 h-4" /> Sicherheitsdatenblatt
-        </a>
-      )}
     </section>
   );
 }
