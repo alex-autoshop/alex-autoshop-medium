@@ -1,8 +1,7 @@
 import { supabase } from "@/lib/supabase";
+import { ADMIN_EMAILS } from "@/lib/adminEmails";
 
-// Admin-Konten (sehen eingehende Mitgliedschaftsanfragen + können freischalten).
-// Muss mit den E-Mails in supabase-admin-approve.sql übereinstimmen.
-export const ADMIN_EMAILS = ["alexanderharitopoulos@gmail.com", "info@alex-autoshop.de"];
+export { ADMIN_EMAILS };
 
 export interface Message {
   id: string;

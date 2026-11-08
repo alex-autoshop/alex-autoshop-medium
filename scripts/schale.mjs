@@ -2,8 +2,8 @@
  * Nach dem Vite-Build: je Route eine HTML-Datei mit dem passenden Kopf,
  * damit der dunkle Hero ohne JavaScript sichtbar ist.
  */
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import { PRODUKT_ABO_PREISE } from "../shared/produktabo.js";
 import { jsonFuerScript } from "../shared/katalog-regeln.js";
 import { startseitenLd } from "../shared/seo-katalog.js";
@@ -66,4 +66,61 @@ for (const route of routen) {
 }
 const seiten = await einbetten(html, dist);
 writeFileSync(join(dist, "index.html"), seiten.html);
-console.log("Schalen:", routen.map((r) => r.pfad).join(", "), "+", seiten.anzahl, "Katalogseiten");
+const vorladen = seitenVorladen(dist);
+for (const pfad of [join(dist, ".vite/manifest.json"), join(dist, "manifest.json")]) {
+  if (existsSync(pfad)) unlinkSync(pfad);
+}
+console.log("Schalen:", routen.map((r) => r.pfad).join(", "), "+", seiten.anzahl, "Katalogseiten", vorladen ? `+ ${vorladen} Vorladen` : "");
+
+function manifestLesen() {
+  for (const pfad of [join(dist, ".vite/manifest.json"), join(dist, "manifest.json")]) {
+    if (existsSync(pfad)) return JSON.parse(readFileSync(pfad, "utf8"));
+  }
+  return null;
+}
+
+function seitenQuelle(rel) {
+  if (rel === "index.html") return "src/pages/Home.tsx";
+  if (rel.startsWith("kategorie/")) return "src/pages/Kategorie.tsx";
+  if (rel.startsWith("produkt/")) return "src/pages/ProductDetail.tsx";
+  if (rel.startsWith("mitgliedschaft/")) return "src/pages/Mitgliedschaft.tsx";
+  if (rel.startsWith("shop/")) return "src/pages/Shop.tsx";
+  return "";
+}
+
+function linksFuer(manifest, quelle) {
+  const eintrag = manifest[quelle];
+  if (!eintrag?.file) return "";
+  const dateien = new Set([eintrag.file, ...(eintrag.css || [])]);
+  return [...dateien].map((datei) => (
+    datei.endsWith(".css")
+      ? `<link rel="preload" href="/${datei}" as="style">`
+      : `<link rel="modulepreload" crossorigin href="/${datei}">`
+  )).join("");
+}
+
+function htmlDateien(ordner, basis = ordner) {
+  const aus = [];
+  for (const name of readdirSync(ordner)) {
+    const abs = join(ordner, name);
+    if (statSync(abs).isDirectory()) aus.push(...htmlDateien(abs, basis));
+    else if (name.endsWith(".html")) aus.push(relative(basis, abs));
+  }
+  return aus;
+}
+
+function seitenVorladen(wurzel) {
+  const manifest = manifestLesen();
+  if (!manifest) return 0;
+  let n = 0;
+  for (const rel of htmlDateien(wurzel)) {
+    const links = linksFuer(manifest, seitenQuelle(rel.replaceAll("\\", "/")));
+    if (!links) continue;
+    const abs = join(wurzel, rel);
+    const inhalt = readFileSync(abs, "utf8");
+    if (inhalt.includes(links)) continue;
+    writeFileSync(abs, inhalt.replace("</head>", `${links}</head>`));
+    n += 1;
+  }
+  return n;
+}

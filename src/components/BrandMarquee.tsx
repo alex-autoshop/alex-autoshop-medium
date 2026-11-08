@@ -7,24 +7,24 @@ import { Link } from "react-router-dom";
 // die Kacheln bleiben in derselben Größe und lassen sich von Hand schieben.
 const SCHRITT_S = 1.5;
 
-const FEATURED = [
-  { name: "Standox", src: "/images/brands/standox.png", tagline: "Premium Lacksystem", href: "/marken/standox" },
-  { name: "3M", src: "/images/brands/3m.png", tagline: "Schleif & Politur", href: "/marken/3m" },
-  { name: "Sonax", src: "/images/brands/sonax.png", tagline: "Fahrzeugpflege", href: "/marken/sonax" },
-  { name: "Liqui Moly", src: "/images/brands/liqui-moly.png", tagline: "Öle & Additive", href: "/marken/liqui-moly" },
-  { name: "Castrol", src: "/images/brands/castrol.png", tagline: "Motorenöl", href: "/marken/castrol" },
-  { name: "Mipa", src: "/images/brands/mipa.png", tagline: "Lackierbedarf", href: "/marken/mipa" },
+const FEATURED: { name: string; src: string; tagline: string; href: string; w?: number; h?: number }[] = [
+  { name: "Standox", src: "/images/opt/brands/standox.webp", tagline: "Premium Lacksystem", href: "/marken/standox", w: 227, h: 128 },
+  { name: "3M", src: "/images/opt/brands/3m.webp", tagline: "Schleif & Politur", href: "/marken/3m", w: 128, h: 128 },
+  { name: "Sonax", src: "/images/opt/brands/sonax.webp", tagline: "Fahrzeugpflege", href: "/marken/sonax", w: 300, h: 64 },
+  { name: "Liqui Moly", src: "/images/opt/brands/liqui-moly.webp", tagline: "Öle & Additive", href: "/marken/liqui-moly", w: 196, h: 128 },
+  { name: "Castrol", src: "/images/opt/brands/castrol.webp", tagline: "Motorenöl", href: "/marken/castrol", w: 300, h: 76 },
+  { name: "Mipa", src: "/images/opt/brands/mipa.webp", tagline: "Lackierbedarf", href: "/marken/mipa", w: 192, h: 80 },
   { name: "Glasurit", src: "/images/brands/glasurit.svg", tagline: "Profi-Lacksysteme", href: "/marken/glasurit" },
   { name: "RM", src: "/images/brands/rm.svg", tagline: "Profi-Lacksystem", href: "/shop?marke=rm" },
   { name: "MANN-FILTER", src: "/images/brands/mann-filter.svg", tagline: "Filter", href: "/marken/mann-filter" },
-  { name: "Cromax", src: "/images/brands/cromax.png", tagline: "Lacksystem", href: "/shop?marke=cromax" },
-  { name: "Colad", src: "/images/brands/colad-mark.png", tagline: "Abdeckbedarf", href: "/marken/colad" },
+  { name: "Cromax", src: "/images/opt/brands/cromax.webp", tagline: "Lacksystem", href: "/shop?marke=cromax", w: 181, h: 128 },
+  { name: "Colad", src: "/images/opt/brands/colad-mark.webp", tagline: "Abdeckbedarf", href: "/marken/colad", w: 167, h: 66 },
   { name: "Sikkens", src: "/images/brands/sikkens.svg", tagline: "Profi-Lacksystem", href: "/marken/sikkens" },
-  { name: "Indasa", src: "/images/brands/indasa-wordmark.png", tagline: "Schleifmittel", href: "/marken/indasa" },
-  { name: "Spies Hecker", src: "/images/brands/spies-hecker-mark.png", tagline: "Profi-Lacksystem", href: "/marken/spies-hecker" },
+  { name: "Indasa", src: "/images/opt/brands/indasa-wordmark.webp", tagline: "Schleifmittel", href: "/marken/indasa", w: 480, h: 92 },
+  { name: "Spies Hecker", src: "/images/opt/brands/spies-hecker-mark.webp", tagline: "Profi-Lacksystem", href: "/marken/spies-hecker", w: 100, h: 84 },
   { name: "PPG", src: "/images/brands/ppg-mark.svg", tagline: "Lacksystem", href: "/shop?marke=ppg" },
-  { name: "Anest Iwata", src: "/images/brands/anest-iwata.png", tagline: "Lackierpistolen", href: "/shop?marke=anest-iwata" },
-  { name: "Spray Max", src: "/images/brands/spraymax.png", tagline: "Spraydosen", href: "/marken/spray-max" },
+  { name: "Anest Iwata", src: "/images/opt/brands/anest-iwata.webp", tagline: "Lackierpistolen", href: "/shop?marke=anest-iwata", w: 480, h: 121 },
+  { name: "Spray Max", src: "/images/opt/brands/spraymax.webp", tagline: "Spraydosen", href: "/marken/spray-max", w: 125, h: 68 },
   { name: "Novol", src: "/images/brands/novol-wordmark.svg", tagline: "Spachtel & Füller", href: "/marken/novol" },
   { name: "FLEX", src: "/images/brands/flex.svg", tagline: "Schleifmaschinen", href: "/shop?marke=flex" },
 ];
@@ -83,6 +83,8 @@ function Kachel({
         <img
           src={brand.src}
           alt=""
+          width={brand.w}
+          height={brand.h}
           loading={eager ? "eager" : "lazy"}
           decoding="async"
           draggable={false}
@@ -103,8 +105,8 @@ function Kachel({
 function Gruppe({ hidden }: { hidden?: boolean }) {
   return (
     <div className="aa-marken-gruppe" aria-hidden={hidden || undefined}>
-      {FEATURED.map((brand) => (
-        <Kachel key={brand.name} brand={brand} eager={!hidden} />
+      {FEATURED.map((brand, i) => (
+        <Kachel key={brand.name} brand={brand} eager={!hidden && i < 2} />
       ))}
     </div>
   );

@@ -1,9 +1,9 @@
-﻿import { Link } from "react-router-dom";
+﻿import { lazy, Suspense } from "react";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Phone, MapPin, Clock, Paintbrush, Wrench, BadgePercent } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { BrandMarquee } from "@/components/BrandMarquee";
-import { MembershipCards } from "@/components/MembershipCards";
 import { ProductGrid } from "@/components/ProductGrid";
 import { useProducts } from "@/hooks/useProducts";
 import { SHOP_CATEGORIES, kategoriePfad } from "@/lib/shopCategories";
@@ -15,6 +15,10 @@ import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
 import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
 import { BELIEBTE_ANFRAGE } from "../../shared/beliebte-produkte.js";
+
+const MembershipCards = DIENSTLEISTUNG_BUCHBAR
+  ? lazy(() => import("@/components/MembershipCards").then((m) => ({ default: m.MembershipCards })))
+  : null;
 
 const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
@@ -69,7 +73,7 @@ export default function Home() {
           }}
         />
         <div className="container py-20 sm:py-28 relative">
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+          <motion.div initial={false} animate={{ opacity: 1, y: 0 }}>
             <p className="text-gold-accent font-semibold tracking-wide uppercase text-sm mb-4">
               Fachgroßhandel in Wuppertal
             </p>
@@ -170,7 +174,11 @@ export default function Home() {
               {teileSichtbar ? " Die Teilebörse hat einen Preis für alle." : ""} Monatlich kündbar, keine Mindestabnahme.
             </p>
           </motion.div>
-          {DIENSTLEISTUNG_BUCHBAR ? <MembershipCards /> : (
+          {MembershipCards ? (
+            <Suspense fallback={null}>
+              <MembershipCards />
+            </Suspense>
+          ) : (
             <div className="max-w-xl mx-auto text-center">
               <p className="text-muted-foreground mb-6">
                 Pro Produkt im Monat: {euro(PRODUKT_ABO_PREISE[15])} bei 15 %, {euro(PRODUKT_ABO_PREISE[28])} bei 28 %, {euro(PRODUKT_ABO_PREISE[40])} bei 40 %.

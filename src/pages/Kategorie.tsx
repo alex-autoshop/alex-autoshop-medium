@@ -191,6 +191,7 @@ export default function Kategorie() {
         canonical={seoSeite?.canonical}
         noindex={Boolean(qAusUrl)}
         preloadImage={products[0]?.node.images?.edges?.[0]?.node?.url}
+        imageSizes="(min-width: 1280px) 18vw, (min-width: 640px) 30vw, 46vw"
       />
 
       {/* Breadcrumb */}

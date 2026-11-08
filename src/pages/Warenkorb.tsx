@@ -5,6 +5,7 @@ import { AboKasse, useAboListe, WarenkorbAboZeile } from "@/components/Warenkorb
 import { aboAktivMerken } from "@/lib/aboListe";
 import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
+import { bildAdresse } from "../../shared/katalog-regeln.js";
 import { mitgliedZeile } from "../../shared/produktabo.js";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 
@@ -44,7 +45,7 @@ export default function Warenkorb() {
             return (
               <li key={item.uid} className="rounded-xl border border-border p-3">
                 <div className="flex gap-3">
-                  {bild && <img src={bild} alt={node.title} width={64} height={64} className="w-16 h-16 object-contain bg-white rounded-lg" loading="lazy" />}
+                  {bild && <img src={bildAdresse(bild, 128)} alt={node.title} width={64} height={64} className="w-16 h-16 object-contain bg-white rounded-lg" loading="lazy" />}
                   <div className="min-w-0">
                     <p lang="de" className="produkt-titel">{node.title}</p>
                     <p className="text-sm text-muted-foreground">{item.quantity} × {formatPrice(item.price.amount, item.price.currencyCode)}</p>

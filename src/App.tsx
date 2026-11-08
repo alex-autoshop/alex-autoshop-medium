@@ -1,5 +1,7 @@
-import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
-import { katalogVorholen, produktVorholen } from "@/lib/katalog";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { linkVorholen } from "@/lib/katalogVorholen";
+import { lazySeite } from "@/lib/lazySeite";
+import { ChunkGrenze } from "@/components/ChunkGrenze";
 import { BrowserRouter, Routes, Route, useLocation, useNavigationType, Navigate, useParams } from "react-router-dom";
 import { empfehlungMerken } from "@/lib/empfehlung";
 import { empfehlungOffen } from "../shared/empfehlung.js";
@@ -13,38 +15,38 @@ import { TeileboerseTor } from "@/components/TeileboerseTor";
 import { CookieConsent } from "@/components/CookieConsent";
 import { AboRueckkehr } from "@/components/AboAnmeldung";
 
-const Toaster = lazy(() => import("sonner").then((m) => ({ default: m.Toaster })));
-const Home = lazy(() => import("@/pages/Home"));
-const Shop = lazy(() => import("@/pages/Shop"));
-const Kategorie = lazy(() => import("@/pages/Kategorie"));
-const ProductDetail = lazy(() => import("@/pages/ProductDetail"));
-const Mitgliedschaft = lazy(() => import("@/pages/Mitgliedschaft"));
-const Teileportal = lazy(() => import("@/pages/Teileportal"));
-const TeilArtikel = lazy(() => import("@/pages/TeilArtikel"));
-const AdminMembers = lazy(() => import("@/pages/AdminMembers"));
-const Fahrzeugmarkt = lazy(() => import("@/pages/Fahrzeugmarkt"));
-const FahrzeugDetail = lazy(() => import("@/pages/FahrzeugDetail"));
-const Mieten = lazy(() => import("@/pages/Mieten"));
-const Vermieten = lazy(() => import("@/pages/Vermieten"));
-const Finanzierung = lazy(() => import("@/pages/Finanzierung"));
-const Kreditvermittlung = lazy(() => import("@/pages/Kreditvermittlung"));
-const Foerdermittel = lazy(() => import("@/pages/Foerdermittel"));
-const Merkliste = lazy(() => import("@/pages/Merkliste"));
-const Laden = lazy(() => import("@/pages/Laden"));
-const Konto = lazy(() => import("@/pages/Konto"));
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const Impressum = lazy(() => import("@/pages/Impressum"));
-const Datenschutz = lazy(() => import("@/pages/Datenschutz"));
-const AGB = lazy(() => import("@/pages/AGB"));
-const Versand = lazy(() => import("@/pages/Versand"));
-const Widerruf = lazy(() => import("@/pages/Widerruf"));
-const Kuendigen = lazy(() => import("@/pages/Kuendigen"));
-const Gefahrstoffe = lazy(() => import("@/pages/Gefahrstoffe"));
-const Marke = lazy(() => import("@/pages/Marke"));
-const GefahrstoffBericht = lazy(() => import("@/pages/GefahrstoffBericht"));
-const NotFound = lazy(() => import("@/pages/NotFound"));
-const Warenkorb = lazy(() => import("@/pages/Warenkorb"));
-const AdminChat = lazy(() => import("@/pages/AdminChat"));
+const Toaster = lazySeite(() => import("sonner").then((m) => ({ default: m.Toaster })));
+const Home = lazySeite(() => import("@/pages/Home"));
+const Shop = lazySeite(() => import("@/pages/Shop"));
+const Kategorie = lazySeite(() => import("@/pages/Kategorie"));
+const ProductDetail = lazySeite(() => import("@/pages/ProductDetail"));
+const Mitgliedschaft = lazySeite(() => import("@/pages/Mitgliedschaft"));
+const Teileportal = lazySeite(() => import("@/pages/Teileportal"));
+const TeilArtikel = lazySeite(() => import("@/pages/TeilArtikel"));
+const AdminMembers = lazySeite(() => import("@/pages/AdminMembers"));
+const Fahrzeugmarkt = lazySeite(() => import("@/pages/Fahrzeugmarkt"));
+const FahrzeugDetail = lazySeite(() => import("@/pages/FahrzeugDetail"));
+const Mieten = lazySeite(() => import("@/pages/Mieten"));
+const Vermieten = lazySeite(() => import("@/pages/Vermieten"));
+const Finanzierung = lazySeite(() => import("@/pages/Finanzierung"));
+const Kreditvermittlung = lazySeite(() => import("@/pages/Kreditvermittlung"));
+const Foerdermittel = lazySeite(() => import("@/pages/Foerdermittel"));
+const Merkliste = lazySeite(() => import("@/pages/Merkliste"));
+const Laden = lazySeite(() => import("@/pages/Laden"));
+const Konto = lazySeite(() => import("@/pages/Konto"));
+const Dashboard = lazySeite(() => import("@/pages/Dashboard"));
+const Impressum = lazySeite(() => import("@/pages/Impressum"));
+const Datenschutz = lazySeite(() => import("@/pages/Datenschutz"));
+const AGB = lazySeite(() => import("@/pages/AGB"));
+const Versand = lazySeite(() => import("@/pages/Versand"));
+const Widerruf = lazySeite(() => import("@/pages/Widerruf"));
+const Kuendigen = lazySeite(() => import("@/pages/Kuendigen"));
+const Gefahrstoffe = lazySeite(() => import("@/pages/Gefahrstoffe"));
+const Marke = lazySeite(() => import("@/pages/Marke"));
+const GefahrstoffBericht = lazySeite(() => import("@/pages/GefahrstoffBericht"));
+const NotFound = lazySeite(() => import("@/pages/NotFound"));
+const Warenkorb = lazySeite(() => import("@/pages/Warenkorb"));
+const AdminChat = lazySeite(() => import("@/pages/AdminChat"));
 
 function ScrollToTop() {
   const { pathname, hash, state } = useLocation();
@@ -105,42 +107,113 @@ function AltesFahrzeug() {
   return <Navigate to={`/fahrzeugboerse/${slug ?? ""}`} replace />;
 }
 
-/** Produkt- und Kategorieseiten vorholen, sobald der Zeiger darüber geht. */
+/** Daten und Seitenstück vorholen, sobald der Zeiger oder der Finger den Link berührt. */
 function Vorholen() {
   useEffect(() => {
     const ziel = (event: Event) => {
       const el = event.target instanceof Element ? event.target : null;
       const link = el?.closest("a[href]");
       if (!link) return;
-      const href = link.getAttribute("href") || "";
-      if (href.startsWith("/produkt/")) {
-        produktVorholen(decodeURIComponent(href.slice("/produkt/".length).split(/[?#]/)[0]));
-      } else if (href.startsWith("/kategorie/")) {
-        const handle = decodeURIComponent(href.slice("/kategorie/".length).split(/[?#]/)[0]);
-        katalogVorholen({ was: "kollektion", handle, first: "100", sort: "empfohlen" });
-      } else if (href === "/shop" || href.startsWith("/shop/")) {
-        katalogVorholen({ was: "produkte", first: "100" });
-      }
+      linkVorholen(link.getAttribute("href") || "");
     };
     document.addEventListener("pointerover", ziel);
-    return () => document.removeEventListener("pointerover", ziel);
+    document.addEventListener("pointerdown", ziel);
+    document.addEventListener("focusin", ziel);
+    return () => {
+      document.removeEventListener("pointerover", ziel);
+      document.removeEventListener("pointerdown", ziel);
+      document.removeEventListener("focusin", ziel);
+    };
   }, []);
   return null;
 }
 
+/** Dünner Balken, wenn ein Seitenwechsel länger als einen Moment dauert. */
+function Navigationsbalken() {
+  const { pathname } = useLocation();
+  const [sichtbar, setSichtbar] = useState(false);
+  const zeigen = useRef(0);
+  const verstecken = useRef(0);
+  useEffect(() => {
+    setSichtbar(false);
+    window.clearTimeout(zeigen.current);
+    window.clearTimeout(verstecken.current);
+  }, [pathname]);
+  useEffect(() => {
+    const start = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const el = event.target instanceof Element ? event.target : null;
+      const link = el?.closest("a[href]");
+      if (!link || link.getAttribute("target") === "_blank") return;
+      const href = link.getAttribute("href") || "";
+      if (!href.startsWith("/") || href.startsWith("//")) return;
+      const pfad = href.split(/[?#]/)[0] || "/";
+      if (pfad === window.location.pathname) return;
+      window.clearTimeout(zeigen.current);
+      window.clearTimeout(verstecken.current);
+      zeigen.current = window.setTimeout(() => setSichtbar(true), 180);
+      verstecken.current = window.setTimeout(() => setSichtbar(false), 8000);
+    };
+    document.addEventListener("click", start);
+    return () => document.removeEventListener("click", start);
+  }, []);
+  if (!sichtbar) return null;
+  return <div className="fixed inset-x-0 top-0 z-[80] h-1 bg-primary animate-pulse" role="progressbar" aria-label="Seite lädt" />;
+}
+
 function SchaleWeg() {
   useLayoutEffect(() => {
-    const weg = () => {
-      if (document.querySelector("#root h1")) document.getElementById("aa-shell")?.classList.add("aa-weg");
-    };
-    weg();
+    const shell = document.getElementById("aa-shell");
     const root = document.getElementById("root");
-    if (!root) return;
+    let timer = 0;
+    const weg = () => {
+      if (!shell || shell.classList.contains("aa-weg")) return;
+      // Finger noch auf einem Link der Schale: den Klick nicht verschlucken.
+      if (shell.getAttribute("data-druck")) return;
+      if (!root?.querySelector("h1")) return;
+      shell.classList.add("aa-weg");
+      beobachter.disconnect();
+    };
+    const spaeter = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(weg, 0);
+    };
     const beobachter = new MutationObserver(weg);
-    beobachter.observe(root, { childList: true, subtree: true });
-    return () => beobachter.disconnect();
+    if (root) beobachter.observe(root, { childList: true, subtree: true });
+    weg();
+    shell?.addEventListener("pointerup", spaeter);
+    shell?.addEventListener("pointercancel", spaeter);
+    return () => {
+      beobachter.disconnect();
+      window.clearTimeout(timer);
+      shell?.removeEventListener("pointerup", spaeter);
+      shell?.removeEventListener("pointercancel", spaeter);
+    };
   }, []);
   return null;
+}
+
+function SpaeterToaster() {
+  const [an, setAn] = useState(false);
+  useEffect(() => {
+    const start = () => setAn(true);
+    const fenster = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (fenster.requestIdleCallback) {
+      const id = fenster.requestIdleCallback(start, { timeout: 2500 });
+      return () => fenster.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(start, 1200);
+    return () => window.clearTimeout(id);
+  }, []);
+  if (!an) return null;
+  return (
+    <Suspense fallback={null}>
+      <Toaster position="top-center" richColors />
+    </Suspense>
+  );
 }
 
 export default function App() {
@@ -149,19 +222,21 @@ export default function App() {
       <AuthProvider>
         <SchaleWeg />
         <Vorholen />
+        <Navigationsbalken />
         <ScrollToTop />
         <EmpfehlungMerken />
         <AboRueckkehr />
-        <Suspense fallback={<PageFallback />}>
+        <ChunkGrenze>
           <Routes>
             {/* Admin-Chat: kein Header, kein Footer, kein Widget */}
-            <Route path="/admin/chat" element={<AdminChat />} />
-            <Route path="/admin/mitglieder" element={<AdminMembers />} />
+            <Route path="/admin/chat" element={<Suspense fallback={<PageFallback />}><AdminChat /></Suspense>} />
+            <Route path="/admin/mitglieder" element={<Suspense fallback={<PageFallback />}><AdminMembers /></Suspense>} />
             {/* Alle anderen Seiten mit normalem Layout */}
             <Route path="*" element={
               <div className="min-h-screen flex flex-col">
                 <Header />
                 <main className="flex-1">
+                  <Suspense fallback={<PageFallback />}>
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/shop" element={<Shop />} />
@@ -208,6 +283,7 @@ export default function App() {
                     <Route path="/intern/gefahrstoffe" element={<GefahrstoffBericht />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
+                  </Suspense>
                 </main>
                 <Footer />
                 {/* Materialplaner-Fenster vorerst abgehaengt — das Symbol oben ist raus.
@@ -222,10 +298,8 @@ export default function App() {
               </div>
             } />
           </Routes>
-        </Suspense>
-        <Suspense fallback={null}>
-          <Toaster position="top-center" richColors />
-        </Suspense>
+        </ChunkGrenze>
+        <SpaeterToaster />
       </AuthProvider>
     </BrowserRouter>
   );

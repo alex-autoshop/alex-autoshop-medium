@@ -184,6 +184,7 @@ export default function ProductDetail() {
         description={seo?.description}
         image={img || undefined}
         preloadImage={img || undefined}
+        imageSizes="(min-width: 768px) 45vw, 92vw"
         jsonLd={seo?.jsonLd}
         canonical={seo?.canonical}
         ogType="product"

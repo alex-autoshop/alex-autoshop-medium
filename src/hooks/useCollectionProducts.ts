@@ -87,6 +87,7 @@ export function useCollectionProducts(handle: string, sort: CollectionSort, page
         setCollectionImage(collection.image?.url ?? null);
         setIsLoading(false);
         while (more) {
+          await new Promise((resolve) => window.setTimeout(resolve, 40));
           const next = await kollektionHolen({
             handle,
             first: pageSize,

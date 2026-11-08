@@ -6,8 +6,16 @@ import "@fontsource/dm-sans/600.css";
 import "@fontsource/dm-sans/700.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { istChunkFehler, seiteNeuLaden } from "../shared/abruf.js";
 import App from "./App";
 import "./index.css";
+
+window.addEventListener("vite:preloadError", (event) => {
+  const fehler = (event as Event & { payload?: unknown }).payload;
+  if (fehler && !istChunkFehler(fehler)) return;
+  event.preventDefault();
+  seiteNeuLaden();
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

@@ -56,19 +56,6 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
   const topLevel = MEMBERSHIP_LEVELS[MEMBERSHIP_LEVELS.length - 1];
   const maxSavePerPiece = basePrice * (topLevel.discountPercent / 100);
 
-  useEffect(() => {
-    const el = spalte.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-    const beobachter = new IntersectionObserver((eintraege) => {
-      if (eintraege.some((e) => e.isIntersecting)) {
-        produktVorholen(node.handle);
-        beobachter.disconnect();
-      }
-    }, { rootMargin: "240px" });
-    beobachter.observe(el);
-    return () => beobachter.disconnect();
-  }, [node.handle]);
-
   const add = async () => {
     if (!firstVariant) return;
     await addItem({

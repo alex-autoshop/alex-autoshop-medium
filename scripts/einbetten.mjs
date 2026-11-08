@@ -52,7 +52,7 @@ function schreiben(dist, pfad, inhalt) {
 
 function erstesBild(edges) {
   const url = edges?.[0]?.node?.images?.edges?.[0]?.node?.url;
-  return url ? bildAdresse(url, 640, "webp") : "";
+  return url ? bildAdresse(url, 480, "webp") : "";
 }
 
 export async function einbetten(basis, dist) {

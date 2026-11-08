@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { wiederholen } from "../../shared/abruf.js";
 
 const SHOPIFY_API_VERSION = '2025-07';
 const SHOPIFY_STORE_PERMANENT_DOMAIN = import.meta.env.VITE_SHOPIFY_DOMAIN || 'j1a6sr-q2.myshopify.com';
@@ -72,14 +73,15 @@ export async function storefrontApiRequest(query: string, variables: Record<stri
     console.log('[shopify] cart mutation →', query.trim().slice(0, 80), 'vars:', JSON.stringify(variables).slice(0, 200));
   }
 
-  const response = await fetch(SHOPIFY_STOREFRONT_URL, {
+  const response = await wiederholen((signal) => fetch(SHOPIFY_STOREFRONT_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Shopify-Storefront-Access-Token': SHOPIFY_STOREFRONT_TOKEN
     },
     body: JSON.stringify({ query, variables }),
-  });
+    signal,
+  }), { versuche: isCartMutation ? 1 : 2, timeoutMs: isCartMutation ? 15000 : 8000, pauseMs: 250 });
 
   console.log('[shopify] status:', response.status, '|', query.trim().slice(0, 50));
 
