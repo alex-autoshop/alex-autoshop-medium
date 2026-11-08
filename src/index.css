@@ -239,6 +239,17 @@ font[style] {
   }
 }
 
+@keyframes prozess-ein {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .prozess-ein {
+    opacity: 0;
+    animation: prozess-ein 0.4s ease forwards;
+  }
+}
+
 /* Barrierefreiheit: Nutzer mit reduzierter Bewegung bekommen keine Animationen */
 @media (prefers-reduced-motion: reduce) {
   *,
