@@ -2,18 +2,34 @@ import { useEffect, useRef, useState } from "react";
 import { type ShopifyProduct } from "@/lib/shopify";
 import { produkteHolen } from "@/lib/katalog";
 
+function wartenBisRuhe() {
+  return new Promise<void>((resolve) => {
+    const fenster = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    };
+    if (fenster.requestIdleCallback) {
+      fenster.requestIdleCallback(() => resolve(), { timeout: 500 });
+      return;
+    }
+    window.setTimeout(resolve, 80);
+  });
+}
+
 /**
  * Der ganze veröffentlichte Katalog, Seite für Seite, über den Cache.
- * Die erste Seite erscheint sofort, der Rest läuft im Hintergrund.
+ * Die erste Seite erscheint sofort, der Rest läuft in Pausen, damit die
+ * Seite tippbar bleibt. `bereit` hält den Abruf zurück, bis der Bereich
+ * in der Nähe des Fensters ist.
  */
-export function useVollerKatalog(suchbegriff: string) {
+export function useVollerKatalog(suchbegriff: string, bereit = true) {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
   const lauf = useRef(0);
 
   useEffect(() => {
+    if (!bereit) return;
     const id = ++lauf.current;
     let aktiv = true;
     setProducts([]);
@@ -45,7 +61,8 @@ export function useVollerKatalog(suchbegriff: string) {
           setHasMore(weiter);
           seiten += 1;
           if (!weiter) break;
-          await new Promise((resolve) => window.setTimeout(resolve, 40));
+          await wartenBisRuhe();
+          if (!aktiv || id !== lauf.current) return;
         }
       } catch (e) {
         if (id === lauf.current) setFehler(e instanceof Error ? e.message : "Fehler beim Laden");
@@ -55,7 +72,7 @@ export function useVollerKatalog(suchbegriff: string) {
     })();
 
     return () => { aktiv = false; };
-  }, [suchbegriff]);
+  }, [suchbegriff, bereit]);
 
   return { products, isLoading, hasMore, fehler };
 }
