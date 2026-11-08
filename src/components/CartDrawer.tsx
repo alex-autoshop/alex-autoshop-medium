@@ -17,6 +17,7 @@ import { AboKasse, useAboAktiv, useAboListe, WarenkorbAboZeile } from "@/compone
 import { deliveryFor, deliveryForCart } from "@/lib/delivery";
 import { Grundpreis } from "@/components/Grundpreis";
 import { recordOrder, type OrderItem } from "@/lib/orders";
+import { kasseAdresse } from "../../shared/farbangabe.js";
 import { sendMessage } from "@/lib/inbox";
 import { AuthModal } from "@/components/AuthModal";
 
@@ -271,6 +272,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       image: i.product.node.images?.edges?.[0]?.node?.url ?? "",
       price: i.price,
       quantity: i.quantity,
+      ...(i.attributes?.length ? { attributes: i.attributes } : {}),
     }));
     const waehrung = frisch[0]?.price.currencyCode ?? currency;
 
@@ -328,6 +330,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       image: i.product.node.images?.edges?.[0]?.node?.url ?? "",
       price: i.price,
       quantity: i.quantity,
+      ...(i.attributes?.length ? { attributes: i.attributes } : {}),
     }));
     const waehrung = frisch[0]?.price.currencyCode ?? currency;
 
@@ -410,7 +413,12 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         return `${numericId}:${i.quantity}`;
       })
       .join(',');
-    const shopifyCartUrl = `https://shop.alex-autoshop.de/cart/${cartItems}`;
+    const permalink = `https://shop.alex-autoshop.de/cart/${cartItems}`;
+    const kasse = kasseAdresse({
+      attributeVorhanden: frisch.some((i) => (i.attributes?.length ?? 0) > 0),
+      checkoutUrl: useCartStore.getState().checkoutUrl,
+      permalink,
+    });
     const summeFrisch = Math.round(frisch.reduce((summe, item) => summe + parseFloat(item.price.amount) * item.quantity, 0) * 100) / 100;
     if (user) {
       recordOrder({
@@ -423,13 +431,14 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
           image: i.product.node.images?.edges?.[0]?.node?.url ?? "",
           price: i.price,
           quantity: i.quantity,
+          ...(i.attributes?.length ? { attributes: i.attributes } : {}),
         })),
         total: summeFrisch,
         currency: frisch[0]?.price.currencyCode ?? currency,
       });
     }
     setTimeout(() => {
-      window.location.href = shopifyCartUrl;
+      window.location.href = kasse;
     }, 1800);
   };
 
@@ -583,6 +592,15 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                             </p>
                           </div>
                           <Grundpreis variant={variante} className="text-right" />
+                          {item.attributes?.length ? (
+                            <ul className="mt-1 space-y-0.5">
+                              {item.attributes.map((angabe) => (
+                                <li key={angabe.key} className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                                  <span className="font-medium text-foreground">{angabe.key}:</span> {angabe.value}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
                           <div className="flex items-center gap-1 mt-1">
                             <button onClick={() => updateQuantity(item.uid, item.quantity - 1)} disabled={isLoading} className="w-8 h-8 rounded-md border border-border flex items-center justify-center" aria-label="Menge verringern"><Minus className="w-3.5 h-3.5" /></button>
                             <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>

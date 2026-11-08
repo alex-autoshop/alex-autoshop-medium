@@ -6,6 +6,9 @@ import { type ShopifyProduct, formatPrice } from "@/lib/shopify";
 import { useCartStore } from "@/stores/cartStore";
 import { useAuth } from "@/context/AuthContext";
 import { discountForModule } from "@/data/memberships";
+import { anzeigePreis, farbAttribute, istStandardvariante } from "../../shared/farbangabe.js";
+import { DeliveryBadge } from "@/components/DeliveryBadge";
+import { Grundpreis } from "@/components/Grundpreis";
 import { cn } from "@/lib/utils";
 
 type Variant = ShopifyProduct["node"]["variants"]["edges"][number]["node"];
@@ -24,10 +27,12 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
   const cartLoading = useCartStore((s) => s.isLoading);
   const { user, profile } = useAuth();
   const modules = profile.membership_modules ?? ["Autoteile", "Lackfarben", "Lackmaterial"];
-  const discount = user ? discountForModule(profile.membership_level, modules, "Lackfarben") : 0;
+  const lackRabatt = user ? discountForModule(profile.membership_level, modules, "Lackfarben") : 0;
 
   const options = product.options ?? [];
   const variants: Variant[] = (product.variants?.edges ?? []).map((e) => e.node);
+  const standard = istStandardvariante(product);
+  const discount = standard ? 0 : lackRabatt;
 
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [qty, setQty] = useState(1);
@@ -51,17 +56,17 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
     );
 
   const allSelected = options.every((o) => selected[o.name]);
-  const variant = useMemo(
-    () =>
-      allSelected
-        ? variants.find((v) => options.every((o) => v.selectedOptions.some((so) => so.name === o.name && so.value === selected[o.name])))
-        : undefined,
-    [allSelected, selected, variants, options]
-  );
+  const variant = useMemo(() => {
+    if (standard) return variants[0];
+    return allSelected
+      ? variants.find((v) => options.every((o) => v.selectedOptions.some((so) => so.name === o.name && so.value === selected[o.name])))
+      : undefined;
+  }, [standard, allSelected, selected, variants, options]);
 
   const basePrice = variant ? parseFloat(variant.price.amount) : 0;
   const cur = variant?.price.currencyCode ?? "EUR";
-  const memberPrice = basePrice * (1 - discount / 100);
+  const summe = anzeigePreis(basePrice, qty, lackRabatt, standard);
+  const memberPrice = anzeigePreis(basePrice, 1, lackRabatt, standard);
 
   const pick = (optName: string, value: string) =>
     setSelected((p) => {
@@ -72,15 +77,15 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
 
   const add = async () => {
     if (!variant) return toast.error("Bitte Marke, System und Menge wählen");
-    if (!automarke.trim()) return toast.error("Bitte die Automarke angeben");
-    if (!colorValue.trim()) return toast.error(`Bitte ${colorMode} angeben`);
-
-    const fahrzeug = [automarke, modell, baujahr].map((s) => s.trim()).filter(Boolean).join(" ");
-    const attributes = [
-      { key: "Fahrzeug", value: fahrzeug },
-      { key: colorMode, value: colorValue.trim() },
-      ...(note.trim() ? [{ key: "Hinweis", value: note.trim() }] : []),
-    ];
+    const gebaut = farbAttribute({
+      automarke,
+      modell,
+      baujahr,
+      art: colorMode,
+      wert: colorValue,
+      hinweis: note,
+    });
+    if (!gebaut.ok) return toast.error(gebaut.fehler);
 
     await addItem({
       product: { node: product },
@@ -89,9 +94,12 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
       price: variant.price,
       quantity: qty,
       selectedOptions: variant.selectedOptions,
-      attributes,
+      attributes: gebaut.attribute,
     });
-    toast.success("Wunschfarbe im Warenkorb", { description: `${qty}× ${variant.title}` });
+    toast.success(
+      standard ? "In den Warenkorb gelegt" : "Wunschfarbe im Warenkorb",
+      { description: standard ? `${qty}× ${product.title}` : `${qty}× ${variant.title}` },
+    );
     setQty(1);
   };
 
@@ -99,8 +107,8 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
 
   return (
     <div className="space-y-6">
-      {/* Optionen als Schritte */}
-      {options.map((opt) => {
+      {/* Optionen als Schritte. Eine einzelne Standardvariante ist schon gewählt. */}
+      {!standard && options.map((opt) => {
         step += 1;
         return (
           <Section key={opt.name} n={step} title={LABEL[opt.name] ?? opt.name}>
@@ -192,7 +200,53 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
         />
       </Section>
 
-      {/* Preis + Warenkorb */}
+      {/* Set: Set-Preis, Lieferzeit, Menge. Kein Lackfarben-Rabatt. */}
+      {standard && variant && (
+        <div>
+          <p className="text-3xl font-bold">{formatPrice(String(summe), cur)}</p>
+          <Grundpreis variant={variant} className="mt-1 text-sm" />
+          <DeliveryBadge
+            node={product}
+            variant={variant}
+            available={variant.availableForSale !== false}
+            size="md"
+            className="mt-5"
+          />
+          <div className="flex items-center gap-3 mt-6">
+            <div className="flex items-center border border-border rounded-lg">
+              <button
+                type="button"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                className="w-12 h-12 flex items-center justify-center hover:bg-secondary rounded-l-lg"
+                aria-label="Menge verringern"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+              <span className="w-10 text-center font-bold">{qty}</span>
+              <button
+                type="button"
+                onClick={() => setQty((q) => q + 1)}
+                className="w-12 h-12 flex items-center justify-center hover:bg-secondary rounded-r-lg"
+                aria-label="Menge erhöhen"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={add}
+              disabled={cartLoading || variant.availableForSale === false}
+              className="btn-primary flex-1"
+            >
+              {cartLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShoppingCart className="w-5 h-5" />}
+              {variant.availableForSale !== false ? "In den Warenkorb" : "Nicht verfügbar"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Preis + Warenkorb der Wunschfarbe */}
+      {!standard && (
       <div className="card-tilt hover:translate-y-0 p-5 sm:p-6">
         {variant ? (
           <div className="flex items-end justify-between flex-wrap gap-3 mb-4">
@@ -235,6 +289,7 @@ export function PaintConfigurator({ product }: { product: ShopifyProduct["node"]
           </p>
         )}
       </div>
+      )}
     </div>
   );
 }
