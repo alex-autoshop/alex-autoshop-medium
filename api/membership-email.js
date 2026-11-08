@@ -23,6 +23,7 @@ import { mitgliedsbeitrag, MODULE } from '../shared/mitgliedspreise.js';
 import { aboListeGesamt, mengenAngabeNormalisieren } from '../shared/produktabo.js';
 import { internPruefen } from './_intern.js';
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from '../shared/empfehlung.js';
+import { erfuellungGesperrt } from '../shared/zahlungs-isolation.js';
 
 const EMAIL_OK = /^[^\s@<>"'`,;]{1,64}@[^\s@<>"'`,;]{1,190}\.[A-Za-z]{2,24}$/;
 const REF_OK = /^[A-Z0-9]{6,8}$/;
@@ -535,6 +536,11 @@ export default async function handler(req) {
   }
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
 
+  // Vorschau teilt sich die Produktionsdatenbank. Keine Anfrage, kein Konto, keine Mail.
+  if (erfuellungGesperrt()) {
+    return jsonError("Diese Vorschau legt keine Mitgliedschaft an. Dafür braucht es eine eigene Testdatenbank.", 409);
+  }
+
   let body;
   try { body = await req.json(); }
   catch { return jsonError('Ungültiger Request-Body', 400); }
@@ -589,7 +595,10 @@ export default async function handler(req) {
   const { email: emailRoh, level: levelRoh, modules: modulesRoh = [], price: priceRoh, freePaint, aufbereitung, ref: refRoh } = body || {};
   const email = String(emailRoh || '').trim().toLowerCase();
   if (!EMAIL_OK.test(email)) return jsonError('Bitte eine gültige E-Mail-Adresse angeben.', 400);
-  if (!RESEND_API_KEY)  return jsonError('RESEND_API_KEY nicht konfiguriert', 500);
+  // Live-Shop bleibt bei fehlendem Mail-Key stehen, bevor ein Konto entsteht.
+  // Der Webhook-Host darf die Testdatenbank beschreiben, ohne eine Mail zu schicken.
+  const webhookHost = String(process.env.ZAHLUNG_WEBHOOK_HOST || "") === "1";
+  if (!RESEND_API_KEY && !webhookHost) return jsonError('RESEND_API_KEY nicht konfiguriert', 500);
 
   const intern = await internPruefen(req, 'membership-email', email, String(levelRoh));
   let level, modules, price;
@@ -735,6 +744,13 @@ export default async function handler(req) {
     } catch (e) {
       console.error('Supabase (non-fatal):', e?.message);
     }
+  }
+
+  // Webhook-Host ohne Mail-Key: Konto und Anfrage stehen, es geht keine Mail raus.
+  if (!RESEND_API_KEY) {
+    return new Response(JSON.stringify({ ok: true, mail: "aus" }), {
+      status: 200, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+    });
   }
 
   // ── Email 1: Onboarding (sofort) ──────────────────────────────────────────

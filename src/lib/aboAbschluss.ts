@@ -1,15 +1,14 @@
-import { supabase } from "@/lib/supabase";
 import { empfehlungLesen } from "@/lib/empfehlung";
+import { aboZahlungErgebnis } from "../../shared/abo-kasse.js";
 import { empfehlungOffen } from "../../shared/empfehlung.js";
 
 export type Zahlweg = "gocardless" | "stripe";
 
 type Ergebnis =
   | { art: "weiter"; url: string }
-  | { art: "anfrage" }
   | { art: "fehler"; text: string };
 
-/** Gleicher Abschluss wie auf der Mitgliedschaftsseite. Ohne Zahlungs-Keys bleibt es eine Anfrage. */
+/** Produkt-Abo nur über die Bezahlseite. Ohne URL bleibt es ein Fehler, keine Anfrage. */
 export async function aboAbschliessen(opts: {
   email: string;
   zahlweg: Zahlweg;
@@ -33,23 +32,5 @@ export async function aboAbschliessen(opts: {
     body: JSON.stringify({ ...auswahl, method: opts.zahlweg }),
   });
   const coData = await co.json().catch(() => ({}));
-  if (co.ok && coData.url) return { art: "weiter", url: coData.url };
-  if (co.status === 409 || co.status === 400) {
-    return { art: "fehler", text: coData.error || "Buchung nicht möglich — bitte die Seite neu laden." };
-  }
-  if (opts.waren && (coData.fallback || !co.ok)) {
-    return { art: "fehler", text: "Die Kartenzahlung ist noch nicht freigeschaltet. Bitte ruf uns an: 0202 82690." };
-  }
-  if (!(co.ok && coData.fallback) && !co.ok) {
-    return { art: "fehler", text: coData.error || "Der Abschluss ist gerade nicht erreichbar." };
-  }
-  const token = (await supabase?.auth.getSession())?.data.session?.access_token;
-  const res = await fetch("/api/membership-email", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify(auswahl),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) return { art: "fehler", text: data.error || "Die Anfrage konnte nicht gesendet werden." };
-  return { art: "anfrage" };
+  return aboZahlungErgebnis(co.status, coData);
 }

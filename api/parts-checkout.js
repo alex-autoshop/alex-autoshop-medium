@@ -47,6 +47,7 @@ import { adminPruefen } from "./_admin.js";
 import { versandkosten, pfandBetrag, DHL_EUR, VERSAND_FREI_AB } from "../shared/versand.js";
 import { markeFuerKunde } from "../shared/grosshaendler.js";
 import { teileboerseDarf } from "../shared/teileboerse-zugang.js";
+import { erfuellungGesperrt } from "../shared/zahlungs-isolation.js";
 
 const BASE = () => (process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de").replace(/\/+$/, "");
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co";
@@ -106,6 +107,7 @@ const rund2 = (x) => Math.round(x * 100) / 100;
 
 /** Supabase-Funktion mit dem Service-Key aufrufen. */
 async function rpc(name, args) {
+  if (erfuellungGesperrt()) return { ok: false, daten: null };
   const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!svc) return { ok: false, daten: null };
   try {
@@ -145,6 +147,7 @@ const SCHONFRIST_STRIPE = 20 * 1000;
 const SCHONFRIST_GC = 30 * 60 * 1000;
 
 async function offeneKlaeren(userId) {
+  if (erfuellungGesperrt()) return false;
   const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!svc || !/^[0-9a-f-]{36}$/i.test(String(userId || ""))) return false;
   let geaendert = false;
