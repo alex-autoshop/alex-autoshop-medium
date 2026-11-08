@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut, ChevronDown } from "lucide-react";
-import { SHOP_CATEGORIES, kategoriePfad } from "@/lib/shopCategories";
+import { SHOP_CATEGORIES, kategoriePfad, unterkategoriePfad } from "@/lib/shopCategories";
 import { useCartStore } from "@/stores/cartStore";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
@@ -92,12 +92,17 @@ function KategorieLeiste() {
                     {cat.children.map((sub) => (
                       <NavLink
                         key={sub.handle}
-                        to={kategoriePfad(sub.handle)}
+                        to={unterkategoriePfad(sub)}
                         onClick={() => setOffen(null)}
                         className={({ isActive }) =>
                           cn(
                             "block px-3 py-2.5 rounded-xl text-sm transition-colors",
-                            isActive ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted/60 text-foreground/85"
+                            sub.accent
+                              ? "font-semibold text-primary hover:bg-muted/60"
+                              : isActive
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "hover:bg-muted/60 text-foreground/85",
+                            sub.accent && isActive && "bg-primary/10"
                           )
                         }
                       >
@@ -161,10 +166,18 @@ function KategorieAkkordeon({ onNavigate }: { onNavigate: () => void }) {
                 {cat.children.map((sub) => (
                   <NavLink
                     key={sub.handle}
-                    to={kategoriePfad(sub.handle)}
+                    to={unterkategoriePfad(sub)}
                     onClick={onNavigate}
                     className={({ isActive }) =>
-                      cn("px-3 py-2.5 min-h-[44px] flex items-center text-sm rounded-lg", isActive ? "text-gold-bright bg-white/10" : "text-white/75 hover:bg-white/10")
+                      cn(
+                        "px-3 py-2.5 min-h-[44px] flex items-center text-sm rounded-lg",
+                        sub.accent
+                          ? "font-semibold text-gold-bright"
+                          : isActive
+                            ? "text-gold-bright bg-white/10"
+                            : "text-white/75 hover:bg-white/10",
+                        sub.accent && isActive && "bg-white/10"
+                      )
                     }
                   >
                     {sub.label}

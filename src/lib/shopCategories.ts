@@ -6,6 +6,10 @@
 export interface SubCategory {
   handle: string;
   label: string;
+  /** Direkter Pfad, wenn der Eintrag keine eigene Kollektion öffnet. */
+  to?: string;
+  /** Dezenter Gold-Akzent, gleicher Ton wie „Alle …“. */
+  accent?: boolean;
 }
 
 export interface MainCategory {
@@ -19,6 +23,15 @@ export const SHOP_CATEGORIES: MainCategory[] = [
     handle: "lackierbedarf-alle",
     label: "Lackierbedarf",
     children: [
+      // Spraydose und Lackstift gibt es nicht als ein Produkt. Beide (und die
+      // Wunschfarbe in Litern) liegen in dieser Kollektion, von dort geht es
+      // in den jeweiligen Farb-Konfigurator.
+      {
+        handle: "wunschfarbe-spraydose-lackstift",
+        label: "Wunschfarbe: Spraydose & Lackstift",
+        to: "/kategorie/wunschfarbe-lackstift",
+        accent: true,
+      },
       { handle: "grundierung-fueller", label: "Grundierung & Füller" },
       { handle: "spachtel", label: "Spachtel" },
       { handle: "schleifmittel-produkte", label: "Schleifmittel" },
@@ -100,6 +113,10 @@ export const SHOP_CATEGORIES: MainCategory[] = [
 
 export const kategoriePfad = (handle: string) => `/kategorie/${handle}`;
 
+export function unterkategoriePfad(sub: Pick<SubCategory, "handle" | "to">): string {
+  return sub.to || kategoriePfad(sub.handle);
+}
+
 /** Findet eine Haupt- oder Unterkategorie samt Elternteil. */
 export function findCategory(handle: string):
   | { type: "main"; main: MainCategory }
@@ -107,7 +124,7 @@ export function findCategory(handle: string):
   | null {
   for (const main of SHOP_CATEGORIES) {
     if (main.handle === handle) return { type: "main", main };
-    const sub = main.children.find((c) => c.handle === handle);
+    const sub = main.children.find((c) => !c.to && c.handle === handle);
     if (sub) return { type: "sub", main, sub };
   }
   return null;
