@@ -1,10 +1,10 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useShopKontextMerken } from "@/lib/shopRueckkehr";
 import { PRODUKTLISTE_ID, KATEGORIE_LISTE_ABSTAND, zumProduktanfang } from "@/lib/produktanfang";
 import { ChevronRight, PackageOpen, ArrowRight } from "lucide-react";
 import { brandOf, markeAktiv, markeUmschalten, markenName, markenSlug, markenZaehlen } from "@/lib/marken";
-import { MarkenLeiste } from "@/components/MarkenLeiste";
+import { ProduktSuchleiste } from "@/components/ProduktSuchleiste";
 import { Seo } from "@/components/Seo";
 import { ProductGrid } from "@/components/ProductGrid";
 import { useCollectionProducts } from "@/hooks/useCollectionProducts";
@@ -16,6 +16,7 @@ import {
   type CollectionSort,
   type SubCategory,
 } from "@/lib/shopCategories";
+import type { ShopifyProduct } from "@/lib/shopify";
 import { cn } from "@/lib/utils";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { legacyCategoryRedirect } from "@/lib/categories";
@@ -45,6 +46,15 @@ function Chips({ items, activeHandle }: { items: SubCategory[]; activeHandle?: s
   );
 }
 
+function passtZurSuche(p: ShopifyProduct, suche: string) {
+  const worte = suche.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!worte.length) return true;
+  const n = p.node;
+  const skus = (n.variants?.edges ?? []).map((e) => e.node.sku || "");
+  const text = [n.title, n.vendor, n.productType, ...skus].join("\n").toLowerCase();
+  return worte.every((wort) => text.includes(wort));
+}
+
 function Hinweis({ titel, text }: { titel: string; text: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-border bg-card px-6 py-12 text-center max-w-xl mx-auto">
@@ -68,17 +78,44 @@ export default function Kategorie() {
   useShopKontextMerken(!isLoading);
 
   // Markenfilter: ?marke=glasurit,rm — Slug aus Titel/Handle (siehe @/lib/marken)
+  const qAusUrl = (params.get("q") || "").trim();
+  const [suche, setSuche] = useState(qAusUrl);
+  const qGemerk = useRef(qAusUrl);
+  if (qGemerk.current !== qAusUrl) {
+    qGemerk.current = qAusUrl;
+    setSuche(qAusUrl);
+  }
   const gewaehlteMarken = useMemo(
     () => (params.get("marke") ?? "").split(",").map((m) => m.trim()).filter(Boolean),
     [params]
   );
-  const marken = useMemo(() => markenZaehlen(products), [products]);
+  const suchtreffer = useMemo(
+    () => products.filter((p) => passtZurSuche(p, suche)),
+    [products, suche],
+  );
+  const marken = useMemo(() => markenZaehlen(suchtreffer), [suchtreffer]);
   const sichtbar = useMemo(
-    () => (gewaehlteMarken.length ? products.filter((p) => markeAktiv(gewaehlteMarken, brandOf(p))) : products),
-    [products, gewaehlteMarken]
+    () => (gewaehlteMarken.length ? suchtreffer.filter((p) => markeAktiv(gewaehlteMarken, brandOf(p))) : suchtreffer),
+    [suchtreffer, gewaehlteMarken]
   );
   const markenRef = useRef(gewaehlteMarken);
   markenRef.current = gewaehlteMarken;
+
+  useEffect(() => {
+    if (suche.trim() === qAusUrl) return;
+    const t = window.setTimeout(() => {
+      const next = new URLSearchParams(params);
+      const wert = suche.trim();
+      if (wert) next.set("q", wert);
+      else next.delete("q");
+      const roh = next.toString().replace(
+        /(^|&)marke=([^&]*)/g,
+        (_, trenner, marke) => `${trenner}marke=${marke.replace(/%2C/gi, ",")}`,
+      );
+      navigate({ pathname: window.location.pathname, search: roh ? `?${roh}` : "" }, { replace: true });
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [suche, qAusUrl, params, navigate]);
 
   if (alt) return <Navigate to={alt} replace />;
 
@@ -152,7 +189,7 @@ export default function Kategorie() {
 
       {/* Unterkategorien (Hauptseite) bzw. Geschwister (Unterseite) */}
       {main.children.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-4">
           {sub && (
             <Link
               to={kategoriePfad(main.handle)}
@@ -165,29 +202,36 @@ export default function Kategorie() {
         </div>
       )}
 
-      {/* Markenfilter */}
-      {marken.length > 0 && (
-        <div className="mb-4">
-          <MarkenLeiste
-            marken={marken}
-            werte={gewaehlteMarken}
-            onWahl={(name) => {
-              const next = markeUmschalten(markenRef.current, name);
-              markenRef.current = next;
-              setMarken(next);
-              zumProduktanfang(document.getElementById(PRODUKTLISTE_ID));
-            }}
-            label="Nach Marke filtern"
-          />
-        </div>
-      )}
+      <ProduktSuchleiste
+        suche={suche}
+        onSuche={setSuche}
+        onLeeren={() => {
+          setSuche("");
+          const next = new URLSearchParams(params);
+          next.delete("q");
+          schreibeParams(next);
+        }}
+        kategorieLabel={titel}
+        kategorieSlug={handle}
+        kategorieZu={kategoriePfad}
+        marken={marken}
+        markenWerte={gewaehlteMarken}
+        onMarke={(name) => {
+          const next = markeUmschalten(markenRef.current, name);
+          markenRef.current = next;
+          setMarken(next);
+          zumProduktanfang(document.getElementById(PRODUKTLISTE_ID));
+        }}
+        ganzSuche={suche.trim() ? `/shop?q=${encodeURIComponent(suche.trim())}` : undefined}
+        rand="seite"
+      />
 
       {/* Ergebnisleiste mit Sortierung */}
       <div id={PRODUKTLISTE_ID} className={`flex flex-wrap items-center gap-3 mb-4 py-2.5 px-4 rounded-xl border border-border bg-card ${KATEGORIE_LISTE_ABSTAND}`}>
         <p className="text-sm font-semibold">
           {isLoading && products.length === 0
             ? "lädt …"
-            : gewaehlteMarken.length
+            : suche.trim() || gewaehlteMarken.length
               ? `${sichtbar.length} von ${products.length}${hasNextPage ? "+" : ""} Produkten`
               : `${products.length}${hasNextPage ? "+" : ""} Produkte`}
         </p>
@@ -214,6 +258,11 @@ export default function Kategorie() {
         <Hinweis
           titel="Hier ist gerade noch nichts"
           text={<>In dieser Kategorie sind aktuell keine Produkte. Schau in eine andere Kategorie oder frag uns direkt: <a href={`tel:${SHOP_INFO.phoneIntl}`} className="text-primary underline">{SHOP_INFO.phone}</a>.</>}
+        />
+      ) : !isLoading && suche.trim() && sichtbar.length === 0 ? (
+        <Hinweis
+          titel="Nichts dazu in dieser Kategorie"
+          text={<>Für „{suche.trim()}“ gibt es hier keinen Treffer. <Link to={`/shop?q=${encodeURIComponent(suche.trim())}`} className="text-primary underline">Im ganzen Shop suchen</Link>.</>}
         />
       ) : !isLoading && gewaehlteMarken.length > 0 && sichtbar.length === 0 ? (
         <Hinweis
