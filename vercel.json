@@ -9,6 +9,7 @@
     { "source": "/teileportal/:path*", "destination": "/teileboerse", "permanent": true }
   ],
   "rewrites": [
+    { "source": "/api/katalog", "destination": "/api/empfehlung?aa=katalog" },
     { "source": "/", "destination": "/index.html" },
     { "source": "/shop", "destination": "/index.html" },
     { "source": "/shop/:path*", "destination": "/index.html" },

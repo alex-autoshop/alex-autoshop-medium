@@ -15,8 +15,9 @@
  */
 
 import { empfehlungSichtbar } from "../shared/empfehlung.js";
+import { istKatalog, katalogHandler } from "./_katalog.js";
 
-export const config = { runtime: "nodejs", maxDuration: 10 };
+export const config = { runtime: "nodejs", maxDuration: 15 };
 
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co").replace(/\/+$/, "");
 const REF_OK = /^[A-Z0-9]{6,8}$/;
@@ -28,6 +29,8 @@ function send(res, status, obj) {
 }
 
 export default async function handler(req, res) {
+  // Katalog läuft hier mit, damit keine zusätzliche Funktion nötig ist.
+  if (istKatalog(req)) return katalogHandler(req, res);
   if (req.method !== "POST") return send(res, 405, { error: "Nur POST." });
   const svc = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!svc) return send(res, 500, { error: "Server nicht eingerichtet." });

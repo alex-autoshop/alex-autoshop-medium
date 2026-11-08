@@ -23,8 +23,6 @@ import {
   variantenIds,
 } from "../shared/katalog-regeln.js";
 
-export const config = { runtime: "nodejs", maxDuration: 15 };
-
 function antwort(res, status, obj, cache) {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", cache);
@@ -129,7 +127,13 @@ const SORT_NAME = {
   "CREATED:true": "neu",
 };
 
-export default async function handler(req, res) {
+export function istKatalog(req) {
+  const q = req.query || {};
+  const url = String(req.url || "");
+  return q.aa === "katalog" || url.includes("aa=katalog") || url.includes("/api/katalog");
+}
+
+export async function katalogHandler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return antwort(res, 405, { error: "Nur Abruf." }, cacheNie());
