@@ -20,7 +20,7 @@ export const config = { runtime: 'edge' };
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { mitgliedsbeitrag, MODULE } from '../shared/mitgliedspreise.js';
-import { aboListeGesamt } from '../shared/produktabo.js';
+import { aboListeGesamt, mengenAngabeNormalisieren } from '../shared/produktabo.js';
 import { internPruefen } from './_intern.js';
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from '../shared/empfehlung.js';
 
@@ -543,17 +543,22 @@ export default async function handler(req) {
     const emailP = String(body.email || "").trim().toLowerCase();
     if (!EMAIL_OK.test(emailP)) return jsonError("Bitte eine gültige E-Mail-Adresse angeben.", 400);
     if (!RESEND_API_KEY) return jsonError("RESEND_API_KEY nicht konfiguriert", 503);
-    const liste = (Array.isArray(body.produkte) ? body.produkte : []).map((p) => ({
-      art: p?.art === "menge" || p?.einzelpreis != null ? "menge" : "einzel",
-      rabatt: p?.rabatt,
-      preis: p?.preis,
-      einzelpreis: p?.einzelpreis,
-      menge: p?.menge,
-      titel: String(p?.titel || p?.handle || "Produkt"),
-    }));
+    const liste = (Array.isArray(body.produkte) ? body.produkte : []).map((p) => {
+      const art = p?.art === "menge" || p?.einzelpreis != null ? "menge" : "einzel";
+      const norm = art === "menge" ? mengenAngabeNormalisieren({ ...p, art }) : p;
+      return {
+        art,
+        rabatt: norm?.rabatt,
+        preis: norm?.preis,
+        einzelpreis: norm?.einzelpreis,
+        menge: norm?.menge,
+        lacksystem: art === "menge" ? norm?.lacksystem : "",
+        titel: String(norm?.titel || norm?.handle || "Produkt"),
+      };
+    });
     const g = aboListeGesamt(liste);
     if (!g) return jsonError("Unbekannte Rabattstufe oder leere Produktliste.", 400);
-    const zeilen = liste.map((p, i) => `<tr><td style="padding:6px 0;border-bottom:1px solid #222;">${p.titel}</td><td style="padding:6px 0;border-bottom:1px solid #222;text-align:right;">${p.rabatt} %</td><td style="padding:6px 0;border-bottom:1px solid #222;text-align:right;">${g.zeilen[i].beitrag.toFixed(2).replace(".", ",")} €</td></tr>`).join("");
+    const zeilen = liste.map((p, i) => `<tr><td style="padding:6px 0;border-bottom:1px solid #222;">${p.titel}${p.lacksystem ? ` · ${p.lacksystem}` : ""}</td><td style="padding:6px 0;border-bottom:1px solid #222;text-align:right;">${p.rabatt} %</td><td style="padding:6px 0;border-bottom:1px solid #222;text-align:right;">${g.zeilen[i].beitrag.toFixed(2).replace(".", ",")} €</td></tr>`).join("");
     const html = `<p>Deine Abo-Liste, jede Position mit eigener Stufe. Summe ${g.beitrag.toFixed(2).replace(".", ",")} € im Monat.</p><table width="100%">${zeilen}</table>`;
     const mail = await fetch("https://api.resend.com/emails", {
       method: "POST",

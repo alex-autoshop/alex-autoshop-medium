@@ -6,6 +6,16 @@ export declare const MIN_PRODUKTE: number;
 export declare const MAX_PRODUKTE: number;
 export declare const ABO_RABATTE: number[];
 
+/** Zuschlag auf den 2K-Normalpreis, bevor Rabatt und Beitrag gerechnet werden. */
+export declare const ABO_2K_AUFSCHLAG: number;
+export declare const LACKSYSTEM_1K: "1K bevorzugt";
+export declare const LACKSYSTEM_2K: "2K bevorzugt";
+
+export declare function lacksystemKanonisch(wert: unknown): "1K bevorzugt" | "2K bevorzugt";
+export declare function istAlter2kOhneAufschlag(wert: unknown): boolean;
+export declare function preisMitAufschlag(betrag: number, aufschlag?: number): number | null;
+export declare function mengenAngabeNormalisieren<T extends Record<string, unknown> | null>(p: T): T;
+
 export interface AboBeitrag {
   rabatt: number;
   anzahl: number;
@@ -125,6 +135,8 @@ export declare function mischBedarf(wahl: {
   gebindeA: Array<{ label: string; liter: number; preis: number }>;
   gebindeB: Array<{ label: string; liter: number; preis: number }>;
   rabatt: number;
+  /** Zuschlag auf den Normalpreis vor dem Rabatt. 2K nutzt ABO_2K_AUFSCHLAG. */
+  aufschlag?: number;
 }): {
   literA: number; literB: number;
   teilA: Kombi; teilB: Kombi;

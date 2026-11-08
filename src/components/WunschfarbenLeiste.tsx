@@ -3,7 +3,10 @@ import { Loader2, Plus, Minus, Palette, SprayCan, Pencil, Info, Lightbulb, Chevr
 import {
   storefrontApiRequest, STOREFRONT_PRODUCT_BY_HANDLE_QUERY, type ShopifyProduct,
 } from "@/lib/shopify";
-import { literAus, mischBedarf, guenstigsteKombi, mengenPosition, ABO_RABATTE } from "../../shared/produktabo.js";
+import {
+  literAus, mischBedarf, mengenPosition, preisMitAufschlag, ABO_RABATTE, ABO_2K_AUFSCHLAG,
+  LACKSYSTEM_1K, LACKSYSTEM_2K,
+} from "../../shared/produktabo.js";
 import { cn } from "@/lib/utils";
 
 /** Die drei Misch-Produkte. Preise und Gebinde kommen aus Shopify — hier steht
@@ -21,8 +24,8 @@ export interface MengenEintrag {
   titel: string;
   variantId: string;
   variante: string;
-  /** 1K, 2K oder egal — steht so auch in der Abo-Liste. */
-  lacksystem: "1K" | "2K" | "egal";
+  /** „1K bevorzugt“ oder „2K bevorzugt“ — steht so auch in der Abo-Liste. */
+  lacksystem: typeof LACKSYSTEM_1K | typeof LACKSYSTEM_2K;
   /** Eigene Rabattstufe dieser Lack-Position, unabhängig von den anderen Produkten. */
   rabatt: number;
   einzelpreis: number;
@@ -43,12 +46,11 @@ function markenName(name: string) {
   return String(name || "").replace(/\s*\([^)]*\)/g, "").trim();
 }
 
-type Lacksystem = "1k" | "2k" | "egal";
+type Lacksystem = "1k" | "2k";
 
-const LACKSYSTEME: { id: Lacksystem; titel: string; hinweis: string; kuerzel: "1K" | "2K" | "egal" }[] = [
-  { id: "1k", titel: "1K-Lack", hinweis: "Basislack, Klarlack kommt separat drüber", kuerzel: "1K" },
-  { id: "2k", titel: "2K-Lack immer bevorzugt", hinweis: "Lack mit Härter, ohne extra Klarlack", kuerzel: "2K" },
-  { id: "egal", titel: "Egal – 1K oder 2K", hinweis: "Wir nehmen, was für deinen Farbton verfügbar und am günstigsten ist", kuerzel: "egal" },
+const LACKSYSTEME: { id: Lacksystem; titel: typeof LACKSYSTEM_1K | typeof LACKSYSTEM_2K; hinweis: string }[] = [
+  { id: "1k", titel: LACKSYSTEM_1K, hinweis: "Basislack, Klarlack kommt separat drüber" },
+  { id: "2k", titel: LACKSYSTEM_2K, hinweis: "Lack mit Härter – gibt es deinen Farbton nicht in 2K, bekommst du 1K" },
 ];
 
 function systemKlasse(wert: string): "1k" | "2k" | "" {
@@ -73,7 +75,7 @@ export function WunschfarbenLeiste({
   const [produkte, setProdukte] = useState<Record<string, Produkt | null>>({});
   const [laedt, setLaedt] = useState(true);
   const [anteilB, setAnteilB] = useState(0);      // Anteil der zweiten Marke in %
-  const [system, setSystem] = useState<Lacksystem>("egal");
+  const [system, setSystem] = useState<Lacksystem>("1k");
   const [lackRabatt, setLackRabatt] = useState(15);
   const [bedarf, setBedarf] = useState(4);
 
@@ -124,7 +126,7 @@ export function WunschfarbenLeiste({
   );
 
   useEffect(() => {
-    setSystem("egal");
+    setSystem("1k");
     setAnteilB(0);
     setBedarf(inLitern ? 4 : 10);
   }, [aktiv, inLitern]);
@@ -144,7 +146,8 @@ export function WunschfarbenLeiste({
       .filter((g) => g.preis > 0);
   };
 
-  const systemText = LACKSYSTEME.find((s) => s.id === system)!.kuerzel;
+  const systemText = LACKSYSTEME.find((s) => s.id === system)!.titel;
+  const aufschlag = system === "2k" ? ABO_2K_AUFSCHLAG : 0;
 
   const markeA = marken[0] ?? "";
   const markeB = marken[1] ?? "";
@@ -155,22 +158,15 @@ export function WunschfarbenLeiste({
     gebindeA: gebindeVon(markeA, sys),
     gebindeB: markeB ? gebindeVon(markeB, sys) : [],
     rabatt: lackRabatt,
+    aufschlag: sys === "2k" ? ABO_2K_AUFSCHLAG : 0,
   });
   const liter1 = inLitern ? literFuer("1k") : null;
   const liter2 = inLitern ? literFuer("2k") : null;
-  const guenstiger = (a: typeof liter1, b: typeof liter1) => {
-    if (!a) return b;
-    if (!b) return a;
-    return a.normal <= b.normal ? a : b;
-  };
 
   // ── Rechnung ──────────────────────────────────────────────────────────────
-  // 1K nur die 1K-Gebinde, 2K die 2K-Gebinde (sonst dieselbe Basis),
-  // Egal = der günstigere der beiden.
-  const literRechnung = !inLitern ? null
-    : system === "1k" ? liter1
-    : system === "2k" ? liter2
-    : guenstiger(liter1, liter2);
+  // 1K nur die 1K-Gebinde. 2K die 2K-Gebinde (sonst dieselbe Basis),
+  // danach ABO_2K_AUFSCHLAG auf den Normalpreis.
+  const literRechnung = !inLitern ? null : system === "2k" ? liter2 : liter1;
 
   const stueckVon = (sys: "1k" | "2k") => {
     const liste = [
@@ -180,10 +176,13 @@ export function WunschfarbenLeiste({
     const preise = liste.map((g) => g.preis).filter(Number.isFinite);
     return preise.length ? Math.min(...preise) : Number.NaN;
   };
-  // Stückware (Dose, Stift): nur die billigste passende Variante × Anzahl
-  const stueckPreis = !inLitern
-    ? Math.min(...(system === "egal" ? [stueckVon("1k"), stueckVon("2k")] : [stueckVon(system)]).filter(Number.isFinite))
-    : 0;
+  // Stückware (Dose, Stift): nur die billigste passende Variante × Anzahl.
+  // Bei 2K liegt derselbe Aufschlag auf dem Normalpreis wie bei den Litern.
+  const stueckRoh = !inLitern ? stueckVon(system) : Number.NaN;
+  const stueckMitAufschlag = Number.isFinite(stueckRoh) && aufschlag > 0
+    ? preisMitAufschlag(stueckRoh, aufschlag)
+    : stueckRoh;
+  const stueckPreis = typeof stueckMitAufschlag === "number" ? stueckMitAufschlag : Number.NaN;
   const stueckRechnung = !inLitern && Number.isFinite(stueckPreis) && stueckPreis > 0
     ? mengenPosition({ einzelpreis: stueckPreis, menge: bedarf, rabatt: lackRabatt })
     : null;
@@ -315,11 +314,11 @@ export function WunschfarbenLeiste({
             </div>
           )}
 
-          {/* ── Lacksystem: 1K, 2K oder das Günstigste ─────────────── */}
+          {/* ── Lacksystem: 1K oder 2K bevorzugt ───────────────────── */}
           {(inLitern || aufbauten.length > 0) && (
             <div className="mb-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Lacksystem</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="group" aria-label="Lacksystem wählen">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="group" aria-label="Lacksystem wählen">
                 {LACKSYSTEME.map((s) => {
                   const an = system === s.id;
                   return (
@@ -413,7 +412,7 @@ export function WunschfarbenLeiste({
                   <span className="line-through text-muted-foreground tabular-nums">{euro(rechnung.normal)}</span>
                 </div>
                 <div className="flex justify-between font-semibold">
-                  <span>Als Mitglied</span>
+                  <span>Dein Preis</span>
                   <span className="text-primary tabular-nums">{euro(rechnung.mitglied)}</span>
                 </div>
                 <div className="flex justify-between text-red-600 font-semibold">
