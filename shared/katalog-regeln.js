@@ -96,6 +96,7 @@ export const PRODUKT_FELDER = `
     {namespace: "custom", key: "gpsr_eu_verantwortlicher"},
     {namespace: "custom", key: "gpsr_sicherheitshinweise"}
   ]) { key value }
+  prozessSchritte: metafield(namespace: "custom", key: "prozess_schritte") { value }
 `;
 
 export const QUERY_PRODUKTE = `query Produkte($first: Int!, $after: String, $query: String) {

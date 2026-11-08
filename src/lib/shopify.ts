@@ -57,6 +57,7 @@ export interface ShopifyProduct {
     lieferzeit?: Array<{ key: string; value: string } | null> | null;
     gefahrstoffMetafelder?: Array<{ key: string; value: string } | null> | null;
     gpsr?: Array<{ key: string; value: string } | null> | null;
+    prozessSchritte?: { value: string } | null;
   };
 }
 
@@ -280,6 +281,7 @@ export const STOREFRONT_PRODUCT_BY_HANDLE_QUERY = `
         {namespace: "custom", key: "gpsr_eu_verantwortlicher"},
         {namespace: "custom", key: "gpsr_sicherheitshinweise"}
       ]) { key value }
+      prozessSchritte: metafield(namespace: "custom", key: "prozess_schritte") { value }
     }
   }
 `;

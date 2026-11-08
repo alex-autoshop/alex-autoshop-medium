@@ -24,6 +24,7 @@ import { TechnischeDokumentation } from "@/components/TechnischeDokumentation";
 import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
 import { cn } from "@/lib/utils";
 import { EmpfohleneProdukte } from "@/components/EmpfohleneProdukte";
+import { AnwendungProzess } from "@/components/AnwendungProzess";
 
 function ZurueckZumShop({ className, mitPfeil = false }: { className?: string; mitPfeil?: boolean }) {
   const ziel = useMemo(() => shopZurueckZiel(), []);
@@ -193,7 +194,7 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl leading-tight mb-4">{product.title}</h1>
           {gefahr.ist && !gesperrt && <div className="mb-4"><GefahrstoffKompakt g={gefahr} /></div>}
 
@@ -316,6 +317,7 @@ export default function ProductDetail() {
               </p>
             </div>
           )}
+          <AnwendungProzess key={product.handle} produkt={product} />
           {(gefahr.ist || hersteller.hat) && (
             <div className="mt-8 space-y-4">
               <GefahrstoffBlock g={gefahr} />
