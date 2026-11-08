@@ -15,6 +15,15 @@ export declare function lacksystemKanonisch(wert: unknown): "1K bevorzugt" | "2K
 export declare function istAlter2kOhneAufschlag(wert: unknown): boolean;
 export declare function preisMitAufschlag(betrag: number, aufschlag?: number): number | null;
 export declare function mengenAngabeNormalisieren<T extends Record<string, unknown> | null>(p: T): T;
+export declare function mengeZahl(wert: number): string;
+export declare function wunschfarbeAboTitel(rabatt: number, liter: number): string | null;
+export declare function istWunschfarbeMenge(p: {
+  art?: string;
+  handle?: string;
+  id?: string;
+  einzelpreis?: number;
+} | null | undefined): boolean;
+export declare function wunschfarbeDetail(variante: string, liter: number): string;
 
 export interface AboBeitrag {
   rabatt: number;

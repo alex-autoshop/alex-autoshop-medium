@@ -52,6 +52,48 @@ export const ABO_2K_AUFSCHLAG = 0.25;
 export const LACKSYSTEM_1K = "1K bevorzugt";
 export const LACKSYSTEM_2K = "2K bevorzugt";
 
+/** Deutsche Menge: 4 → „4“, 1.5 → „1,5“, 1000 → „1.000“. */
+export function mengeZahl(wert) {
+  const n = Number(wert);
+  if (!Number.isFinite(n)) return "";
+  const gerundet = Math.round(n * 100) / 100;
+  const negativ = gerundet < 0;
+  const [ganz, bruch] = Math.abs(gerundet).toFixed(2).split(".");
+  const gruppen = ganz.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const rest = bruch.replace(/0+$/, "");
+  const text = rest ? `${gruppen},${rest}` : gruppen;
+  return negativ ? `-${text}` : text;
+}
+
+/** Wunschfarbe in der Abo-Liste, z. B. „40 % auf 4 L Wunschfarbe im Monat“. */
+export function wunschfarbeAboTitel(rabatt, liter) {
+  const r = Math.floor(Number(rabatt));
+  const l = Number(liter);
+  if (!Number.isFinite(r) || !Number.isFinite(l) || l <= 0) return null;
+  return `${r} % auf ${mengeZahl(l)} L Wunschfarbe im Monat`;
+}
+
+/** Mengen-Zeile der Wunschfarbe (nicht Spraydose oder Lackstift). */
+export function istWunschfarbeMenge(p) {
+  if (!p) return false;
+  const handle = String(p.handle || "");
+  const id = String(p.id || "");
+  if (handle !== "farben-mix" && !id.startsWith("farben-mix::")) return false;
+  return p.art === "menge" || p.einzelpreis != null;
+}
+
+/**
+ * Detailzeile ohne eingefrorene Liter. Markenmix und Lacksystem bleiben,
+ * die Liter folgen der aktuellen Menge.
+ */
+export function wunschfarbeDetail(variante, liter) {
+  const kern = String(variante || "")
+    .replace(/\s*·\s*[\d.,]+\s*L\s*\/\s*Monat\s*$/i, "")
+    .trim();
+  const literText = `${mengeZahl(liter)} L / Monat`;
+  return kern ? `${kern} · ${literText}` : literText;
+}
+
 /** Alte Werte („1K“, „2K“, „egal“, „Egal – 1K oder 2K“) auf die zwei Knöpfe. */
 export function lacksystemKanonisch(wert) {
   const t = String(wert ?? "").trim().toLowerCase().replace(/\s+/g, " ");
