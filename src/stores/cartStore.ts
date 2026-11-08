@@ -1,15 +1,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import {
-  type ShopifyProduct,
-  storefrontApiRequest,
-  CART_QUERY,
-  createShopifyCart,
-  addLineToShopifyCart,
-  updateShopifyCartLine,
-  removeLineFromShopifyCart,
-} from '@/lib/shopify';
-import { variantenPreise } from '@/lib/katalog';
+import type { ShopifyProduct } from '@/lib/shopify';
+
+async function warenkorb() {
+  return import('@/lib/shopify');
+}
 
 export interface CartItem {
   lineId: string | null;
@@ -69,6 +64,7 @@ export const useCartStore = create<CartStore>()(
         console.log('[cartStore.addItem] variantId:', item.variantId, 'cartId:', cartId, 'existingItem:', existingItem?.uid);
         set({ isLoading: true });
         try {
+          const { createShopifyCart, updateShopifyCartLine, addLineToShopifyCart } = await warenkorb();
           if (!cartId) {
             console.log('[cartStore.addItem] creating new cart...');
             const result = await createShopifyCart({ variantId: item.variantId, quantity: item.quantity, attributes: item.attributes });
@@ -125,6 +121,7 @@ export const useCartStore = create<CartStore>()(
 
         set({ isLoading: true });
         try {
+          const { updateShopifyCartLine } = await warenkorb();
           const result = await updateShopifyCartLine(cartId, item.lineId, quantity);
           if (result.success) {
             set({ items: get().items.map(i => i.uid === uid ? { ...i, quantity } : i) });
@@ -145,6 +142,7 @@ export const useCartStore = create<CartStore>()(
 
         set({ isLoading: true });
         try {
+          const { removeLineFromShopifyCart } = await warenkorb();
           const result = await removeLineFromShopifyCart(cartId, item.lineId);
           if (result.success) {
             const newItems = get().items.filter(i => i.uid !== uid);
@@ -166,6 +164,7 @@ export const useCartStore = create<CartStore>()(
         const vorher = get().items;
         const ids = [...new Set(vorher.map((item) => item.variantId))].slice(0, 50);
         if (!ids.length) return vorher;
+        const { variantenPreise } = await import('@/lib/katalog');
         const nodes = await variantenPreise(ids);
         if (!nodes?.length) return get().items;
         const preise = new Map(nodes.filter((n) => n?.id && n.price?.amount).map((n) => [n!.id, n!.price]));
@@ -197,6 +196,7 @@ export const useCartStore = create<CartStore>()(
 
         set({ isSyncing: true });
         try {
+          const { storefrontApiRequest, CART_QUERY } = await warenkorb();
           const data = await storefrontApiRequest(CART_QUERY, { id: cartId });
           if (!data) return;
           const cart = data?.data?.cart;

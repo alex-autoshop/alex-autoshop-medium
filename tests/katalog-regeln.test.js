@@ -46,8 +46,8 @@ test("Suche ohne Steuerzeichen", () => {
 test("Cursor und Cache", () => {
   assert.equal(cursor("abc+/=_-"), "abc+/=_-");
   assert.equal(cursor("a b"), null);
-  assert.match(cacheOeffentlich(), /s-maxage=120/);
-  assert.match(cacheOeffentlich(), /stale-while-revalidate=600/);
+  assert.match(cacheOeffentlich(), /s-maxage=300/);
+  assert.match(cacheOeffentlich(), /stale-while-revalidate=86400/);
   assert.match(cacheNie(), /no-store/);
 });
 
@@ -64,6 +64,8 @@ test("Bilder und Karten ohne Roh-HTML", () => {
       variants: { edges: [{ node: { id: "1" } }, { node: { id: "2" } }] },
     },
   }]);
+  assert.match(html, /srcset=/);
+  assert.match(html, /sizes=/);
   assert.match(html, /Ab /);
   assert.match(html, /Lack &lt;rot&gt;/);
   assert.doesNotMatch(html, /<rot>/);

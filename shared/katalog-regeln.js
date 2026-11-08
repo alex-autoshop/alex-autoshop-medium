@@ -204,12 +204,19 @@ export function variantenIds(wert) {
   return aus;
 }
 
+export const KARTEN_GROESSEN = "(min-width: 1280px) 18vw, (min-width: 640px) 30vw, 46vw";
+const BILD_BREITEN = [240, 480, 720, 960];
+
 export function cacheOeffentlich() {
-  return "public, max-age=30, s-maxage=120, stale-while-revalidate=600";
+  return "public, max-age=60, s-maxage=300, stale-while-revalidate=86400";
 }
 
 export function cacheNie() {
   return "private, no-store";
+}
+
+export function bildSrcset(url, format = "webp") {
+  return BILD_BREITEN.map((w) => `${bildAdresse(url, w, format)} ${w}w`).join(", ");
 }
 
 export function bildAdresse(url, breite, format) {
@@ -264,12 +271,13 @@ export function kartenHtml(edges) {
     const bild = bildNode?.url;
     const preis = node.priceRange?.minVariantPrice;
     const src = bild ? bildAdresse(bild, 480, "webp") : "";
+    const set = bild ? bildSrcset(bild, "webp") : "";
     const mehrere = (node.variants?.edges?.length || 0) > 1;
     const prio = i < 2 ? ' fetchpriority="high"' : ' loading="lazy"';
     const breite = Number(bildNode?.width) > 0 ? Math.round(bildNode.width) : 480;
     const hoehe = Number(bildNode?.height) > 0 ? Math.round(bildNode.height) : 480;
     return `<a href="/produkt/${htmlText(node.handle)}"><span class="aa-bild">${
-      src ? `<img src="${htmlText(src)}" alt="${htmlText(node.title)}" width="${breite}" height="${hoehe}"${prio} decoding="async">` : ""
+      src ? `<img src="${htmlText(src)}" srcset="${htmlText(set)}" sizes="${KARTEN_GROESSEN}" alt="${htmlText(node.title)}" width="${breite}" height="${hoehe}"${prio} decoding="async">` : ""
     }</span><span class="aa-name">${htmlText(node.title)}</span><strong>${mehrere ? "Ab " : ""}${htmlText(euro(preis?.amount, preis?.currencyCode))}</strong></a>`;
   }).join("");
 }

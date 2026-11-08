@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { useVollerKatalog } from "@/hooks/useVollerKatalog";
 import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { useAuth } from "@/context/AuthContext";
-import { aboAbschliessen } from "@/lib/aboAbschluss";
 import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
   mengenPosition, aboListeGesamt, rabattGueltig,
@@ -261,6 +260,7 @@ export function ProduktAbo() {
 
     setLaeuft(true);
     try {
+      const { aboAbschliessen } = await import("@/lib/aboAbschluss");
       const erg = await aboAbschliessen({
         email: mail,
         zahlweg,

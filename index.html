@@ -180,7 +180,7 @@
     </script>
     <div id="aa-shell">
       <header class="aa-head">
-        <a href="/"><img src="/images/logo-cropped.png" alt="Alex Autoshop" width="180" height="56"></a>
+        <a href="/"><img src="/images/opt/logo.webp" alt="Alex Autoshop" width="180" height="56"></a>
         <nav class="aa-nav" aria-label="Hauptnavigation">
           <a href="/shop">Shop</a>
           <a href="/mitgliedschaft">Mitgliedschaft</a>
@@ -211,6 +211,41 @@
         </div>
       </div>
     </div>
+    <script>
+      (function () {
+        var shell = document.getElementById("aa-shell");
+        if (!shell) return;
+        var href = "";
+        var x = 0;
+        var y = 0;
+        var moved = false;
+        var geklickt = false;
+        shell.addEventListener("pointerdown", function (e) {
+          shell.setAttribute("data-druck", "1");
+          geklickt = false;
+          moved = false;
+          x = e.clientX;
+          y = e.clientY;
+          var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+          href = a && a.href ? a.href : "";
+        }, true);
+        shell.addEventListener("pointermove", function (e) {
+          if (Math.abs(e.clientX - x) > 10 || Math.abs(e.clientY - y) > 10) moved = true;
+        }, true);
+        shell.addEventListener("click", function () { geklickt = true; }, true);
+        var los = function () {
+          setTimeout(function () {
+            var ziel = href;
+            var verloren = Boolean(ziel) && !geklickt && !moved;
+            shell.removeAttribute("data-druck");
+            href = "";
+            if (verloren && location.href !== ziel) location.href = ziel;
+          }, 0);
+        };
+        shell.addEventListener("pointerup", los, true);
+        shell.addEventListener("pointercancel", los, true);
+      })();
+    </script>
     <div id="root"></div>
     <script type="application/json" id="aa-daten">null</script>
     <div id="google_translate_element" style="display: none"></div>

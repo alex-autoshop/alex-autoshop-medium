@@ -41,7 +41,7 @@ export function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Marke */}
           <div>
-            <img src="/images/logo-cropped.png" alt="Alex Autoshop" width={168} height={48} className="h-12 w-auto mb-4" />
+            <img src="/images/opt/logo.webp" alt="Alex Autoshop" width={168} height={48} className="h-12 w-auto mb-4" />
             <p className="text-sm text-white/60 leading-relaxed">
               Autolack, Lackierprodukte, Autoteile und Werkstattbedarf — Fachgroßhandel in Wuppertal seit 2021.
             </p>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { teileboerseCookieSetzen } from "@/lib/teileboerseSichtbar";
 import type { Session, User, SupabaseClient } from "@supabase/supabase-js";
 
@@ -96,6 +96,21 @@ function readProfile(user: User | null): CompanyProfile {
   };
 }
 
+/** Login-Client nur laden, wenn wirklich eine Sitzung daliegt oder ein Link aus der Mail kommt. */
+function sitzungMoeglich() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const schluessel = localStorage.key(i) || "";
+      if (!schluessel.startsWith("sb-") || !schluessel.endsWith("-auth-token")) continue;
+      const roh = localStorage.getItem(schluessel) || "";
+      if (roh.includes("access_token")) return true;
+    }
+  } catch {
+    /* privater Modus */
+  }
+  return /type=recovery|access_token|neues-passwort/.test(`${window.location.hash}${window.location.search}`);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -108,10 +123,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return /type=recovery/.test(window.location.hash) || /neues-passwort/.test(window.location.search);
   });
 
+  const unsubRef = useRef(() => {});
+  const verbunden = useRef(false);
+  const verbinde = async () => {
+    const supabase = await getSb();
+    if (supabase && !verbunden.current) {
+      verbunden.current = true;
+      const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+        setSession(s);
+        setUser(s?.user ?? null);
+        setLoading(false);
+        if (event === "PASSWORD_RECOVERY") setRecovery(true);
+      });
+      unsubRef.current = () => {
+        sub.subscription.unsubscribe();
+        verbunden.current = false;
+      };
+    }
+    return supabase;
+  };
+
   useEffect(() => {
     let stop = false;
-    let unsub = () => {};
-    getSb().then((supabase) => {
+    if (!sitzungMoeglich()) {
+      setLoading(false);
+      return () => { stop = true; };
+    }
+    verbinde().then((supabase) => {
       if (stop || !supabase) {
         setLoading(false);
         return;
@@ -125,14 +163,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           supabase.auth.getUser().then(({ data: frisch }) => { if (!stop && frisch.user) setUser(frisch.user); }).catch(() => {});
         }
       });
-      const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-        setSession(s);
-        setUser(s?.user ?? null);
-        if (event === "PASSWORD_RECOVERY") setRecovery(true);
-      });
-      unsub = () => sub.subscription.unsubscribe();
     });
-    return () => { stop = true; unsub(); };
+    return () => { stop = true; unsubRef.current(); };
+    // verbinde liest nur Refs und Setter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -149,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (a.referred_by || a.referred_by_id) { empfehlungVergessen(); return; }
     let lebt = true;
     (async () => {
-      const supabase = await getSb();
+      const supabase = await verbinde();
       if (!supabase) return;
       const token = (await supabase.auth.getSession()).data.session?.access_token;
       if (!token) return;
@@ -171,7 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user?.id]);
 
   const signUp: AuthState["signUp"] = async (email, password, profile, redirectTo) => {
-    const supabase = await getSb();
+    const supabase = await verbinde();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -187,14 +221,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn: AuthState["signIn"] = async (email, password) => {
-    const supabase = await getSb();
+    const supabase = await verbinde();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return error ? { error: error.message } : {};
   };
 
   const signOut = async () => {
-    const supabase = await getSb();
+    const supabase = await verbinde();
     await supabase?.auth.signOut();
   };
 
@@ -205,7 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * abklopfen. Supabase antwortet deshalb auch bei Unbekannten mit "ok".
    */
   const resetPassword: AuthState["resetPassword"] = async (email) => {
-    const supabase = await getSb();
+    const supabase = await verbinde();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const ziel = `${window.location.origin}/konto?neues-passwort=1`;
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: ziel });
@@ -214,7 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /** Neues Passwort setzen — geht nur mit gültigem Link aus der E-Mail. */
   const updatePassword: AuthState["updatePassword"] = async (password) => {
-    const supabase = await getSb();
+    const supabase = await verbinde();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const { data, error } = await supabase.auth.updateUser({ password });
     if (error) return { error: error.message };
@@ -224,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProfile: AuthState["updateProfile"] = async (profile) => {
-    const supabase = await getSb();
+    const supabase = await verbinde();
     if (!supabase) return { error: "Login ist noch nicht konfiguriert." };
     const { data, error } = await supabase.auth.updateUser({ data: profile });
     if (error) return { error: error.message };

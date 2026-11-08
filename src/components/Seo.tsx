@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { shopBildVorspann } from "@/components/ShopBild";
 
 interface SeoProps {
   title: string;
@@ -14,6 +15,8 @@ interface SeoProps {
   /** Kanonische Adresse ohne Query. Standard ist der Pfad. */
   canonical?: string;
   ogType?: string;
+  /** Anzeigegröße des vorab geladenen Bildes, passend zum sichtbaren Bild. */
+  imageSizes?: string;
 }
 
 const SITE_URL = "https://www.alex-autoshop.de";
@@ -44,7 +47,7 @@ function setLink(rel: string, href: string, extra?: Record<string, string>) {
   if (extra) Object.entries(extra).forEach(([k, v]) => el!.setAttribute(k, v));
 }
 
-export function Seo({ title, description, image, preloadImage, jsonLd, noindex, titelFertig, canonical, ogType }: SeoProps) {
+export function Seo({ title, description, image, preloadImage, jsonLd, noindex, titelFertig, canonical, ogType, imageSizes }: SeoProps) {
   useEffect(() => {
     const fullTitle = titelFertig ? title : `${title} | ${SITE_NAME}`;
     const img = image || DEFAULT_IMAGE;
@@ -74,6 +77,7 @@ export function Seo({ title, description, image, preloadImage, jsonLd, noindex, 
 
     let preload = document.head.querySelector<HTMLLinkElement>('link[data-seo="lcp"]');
     if (preloadImage) {
+      const vorspann = shopBildVorspann(preloadImage, imageSizes);
       if (!preload) {
         preload = document.createElement("link");
         preload.rel = "preload";
@@ -81,7 +85,11 @@ export function Seo({ title, description, image, preloadImage, jsonLd, noindex, 
         preload.dataset.seo = "lcp";
         document.head.appendChild(preload);
       }
-      preload.href = preloadImage;
+      preload.href = vorspann.href;
+      if (vorspann.srcSet) {
+        preload.setAttribute("imagesrcset", vorspann.srcSet);
+        preload.setAttribute("imagesizes", vorspann.sizes);
+      }
       preload.setAttribute("fetchpriority", "high");
     } else {
       preload?.remove();
@@ -106,7 +114,7 @@ export function Seo({ title, description, image, preloadImage, jsonLd, noindex, 
       scripte.forEach((script) => script.remove());
       document.head.querySelector('link[data-seo="lcp"]')?.remove();
     };
-  }, [title, description, image, preloadImage, jsonLd, noindex, titelFertig, canonical, ogType]);
+  }, [title, description, image, preloadImage, imageSizes, jsonLd, noindex, titelFertig, canonical, ogType]);
 
   return null;
 }

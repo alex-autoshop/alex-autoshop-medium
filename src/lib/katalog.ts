@@ -6,6 +6,9 @@ import {
   storefrontApiRequest,
 } from "@/lib/shopify";
 import { beliebteHolen } from "../../shared/beliebte-produkte.js";
+import { katalogJson, katalogVorholen, produktVorholen } from "@/lib/katalogVorholen";
+
+export { katalogVorholen, produktVorholen };
 
 export interface KatalogMeta {
   art?: string;
@@ -36,33 +39,11 @@ declare global {
   }
 }
 
-function parameter(such: Record<string, string | number | boolean | null | undefined>) {
-  const p = new URLSearchParams();
-  for (const [k, v] of Object.entries(such)) {
-    if (v === undefined || v === null || v === "") continue;
-    p.set(k, String(v));
-  }
-  return p;
-}
-
 export async function katalogLesen(
   such: Record<string, string | number | boolean | null | undefined>,
   opts?: { frisch?: boolean },
 ): Promise<KatalogAntwort | null> {
-  try {
-    const p = parameter(such);
-    if (opts?.frisch) p.set("frisch", "1");
-    const res = await fetch(`/api/katalog?${p}`, {
-      headers: { Accept: "application/json" },
-      cache: opts?.frisch ? "no-store" : "default",
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (!json || json.error || !json.data) return null;
-    return json as KatalogAntwort;
-  } catch {
-    return null;
-  }
+  return katalogJson(such, opts) as Promise<KatalogAntwort | null>;
 }
 
 export function kanten(payload: KatalogAntwort | null | undefined): Array<{ node: never }> {
@@ -99,21 +80,6 @@ export async function nimmFrisch(passend: (meta: KatalogMeta | undefined) => boo
     /* die Seite holt selbst */
   }
   return null;
-}
-
-const vorgeholt = new Set<string>();
-
-export function katalogVorholen(such: Record<string, string>) {
-  const key = parameter(such).toString();
-  if (!key || vorgeholt.has(key)) return;
-  vorgeholt.add(key);
-  fetch(`/api/katalog?${key}`, { headers: { Accept: "application/json" } }).catch(() => {});
-}
-
-export function produktVorholen(handle: string) {
-  if (!handle) return;
-  katalogVorholen({ was: "produkt", handle });
-  import("@/pages/ProductDetail");
 }
 
 export async function produkteHolen(vars: { first: number; after?: string | null; suche?: string; bereich?: string; einbettung?: string; filter?: string }) {

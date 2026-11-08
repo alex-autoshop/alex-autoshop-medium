@@ -45,6 +45,7 @@ export function useVollerKatalog(suchbegriff: string) {
           setHasMore(weiter);
           seiten += 1;
           if (!weiter) break;
+          await new Promise((resolve) => window.setTimeout(resolve, 40));
         }
       } catch (e) {
         if (id === lauf.current) setFehler(e instanceof Error ? e.message : "Fehler beim Laden");

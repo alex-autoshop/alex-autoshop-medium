@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Lock, Phone } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { ADMIN_EMAILS } from "@/lib/inbox";
+import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { Seo } from "@/components/Seo";
 

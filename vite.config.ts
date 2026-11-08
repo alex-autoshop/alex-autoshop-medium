@@ -9,6 +9,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    manifest: true,
+  },
   server: {
     port: 8081,
     host: true,

@@ -1,9 +1,8 @@
-﻿import { useEffect, useState } from "react";
+﻿import { lazy, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { aboAktivMerken } from "@/lib/aboListe";
 import { Phone, MessageCircle, ChevronDown, Wrench, PackageSearch } from "lucide-react";
 import { Seo } from "@/components/Seo";
-import { MembershipCards } from "@/components/MembershipCards";
 import { MembershipCalculator } from "@/components/MembershipCalculator";
 import { ProduktAbo } from "@/components/ProduktAbo";
 import { MitgliedsGeschichte } from "@/components/MitgliedsGeschichte";
@@ -13,6 +12,10 @@ import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
+
+const MembershipCards = DIENSTLEISTUNG_BUCHBAR
+  ? lazy(() => import("@/components/MembershipCards").then((m) => ({ default: m.MembershipCards })))
+  : null;
 
 const GESCHICHTE = "alex-mitglied-geschichte";
 let geschichteMontiert = 0;
@@ -211,7 +214,11 @@ export default function Mitgliedschaft() {
           })}
         </div>
 
-        {DIENSTLEISTUNG_BUCHBAR && abo === "dienstleistung" ? <MembershipCards /> : <ProduktAbo />}
+        {MembershipCards && abo === "dienstleistung" ? (
+          <Suspense fallback={null}>
+            <MembershipCards />
+          </Suspense>
+        ) : <ProduktAbo />}
       </section>
 
       {/* Spar-Rechner — gehört zur Dienstleistungs-Mitgliedschaft */}
