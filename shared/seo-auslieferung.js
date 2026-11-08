@@ -21,6 +21,7 @@ import {
   standardVariante,
 } from "./seo-katalog.js";
 import { geruest } from "./seo-html.js";
+import { produktWeiterleitung } from "./produkt-weiterleitung.js";
 
 const SITE = "https://www.alex-autoshop.de";
 
@@ -174,7 +175,7 @@ async function produktSitemap() {
     const kante = data?.data?.products;
     for (const eintrag of kante?.edges || []) {
       const handle = sichererHandle(eintrag?.node?.handle);
-      if (!handle) continue;
+      if (!handle || produktWeiterleitung(handle)) continue;
       const tag = String(eintrag.node.updatedAt || "").slice(0, 10);
       const lastmod = /^\d{4}-\d{2}-\d{2}$/.test(tag) ? `<lastmod>${tag}</lastmod>` : "";
       urls.push(`  <url><loc>${SITE}/produkt/${handle}</loc>${lastmod}</url>`);
@@ -200,7 +201,11 @@ export async function katalogAnfrage(request) {
   try {
     if (pfad === "/sitemap-produkte.xml") return await produktSitemap();
     const produkt = pfad.match(/^\/produkt\/([^/]+)$/);
-    if (produkt) return await produktSeite(url, produkt[1]);
+    if (produkt) {
+      const ziel = produktWeiterleitung(sichererHandle(decodeURIComponent(produkt[1])));
+      if (ziel) return Response.redirect(new URL(ziel, url.origin).href, 308);
+      return await produktSeite(url, produkt[1]);
+    }
     const kategorie = pfad.match(/^\/kategorie\/([^/]+)$/);
     if (kategorie) return await kategorieSeite(url, kategorie[1]);
   } catch {

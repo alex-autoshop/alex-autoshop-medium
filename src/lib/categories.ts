@@ -22,6 +22,8 @@ export interface ShopLink {
   to?: string;
   /** Dezenter Gold-Akzent in Filtern und Kategorie-Menü. */
   accent?: boolean;
+  /** Kategorieseite bleibt erreichbar, erscheint aber nicht in Filtern oder Chips. */
+  nurSeite?: boolean;
   image?: string;
   /** Produktfoto auf hellem Grund: in der Kachel vollständig zeigen. */
   contain?: boolean;
@@ -55,7 +57,7 @@ export const navCategories: ShopLink[] = [
       { label: "Klarlack", slug: "klarlack-produkte", query: 'product_type:"Klarlack"' },
       { label: "Härter", slug: "haerter", query: 'product_type:"Härter"' },
       { label: "Verdünnung & Zusätze", slug: "verduennung-zusaetze", query: 'product_type:"Verdünnung & Zusätze"' },
-      { label: "Wunschfarbe & Lackstift", slug: "wunschfarbe-lackstift", query: 'product_type:"Wunschfarbe & Lackstift"' },
+      { label: "Wunschfarbe & Lackstift", slug: "wunschfarbe-lackstift", query: 'product_type:"Wunschfarbe & Lackstift"', nurSeite: true },
       { label: "Lackierpistolen & Zubehör", slug: "lackierpistolen-zubehor", query: 'product_type:"Lackierpistolen & Zubehör"' },
       { label: "Maschinen & Werkzeug", slug: "maschinen-werkzeug", query: 'product_type:"Maschinen & Werkzeug"' },
       { label: "Verbrauchsmaterial", slug: "verbrauchsmaterial", query: 'product_type:"Verbrauchsmaterial"' },
@@ -170,6 +172,11 @@ export function getParentCategory(slug: string): ShopCategory | undefined {
     if (group.slug && group.query) return { slug: group.slug, label: group.label, query: group.query };
   }
   return undefined;
+}
+
+/** Unterkategorien für Filter und Kategoriesuche. Reine Kategorieseiten fehlen. */
+export function menueLinks(items: ShopLink[] | undefined): ShopLink[] {
+  return (items ?? []).filter((item) => !item.nurSeite);
 }
 
 export function categoryPath(item: Pick<ShopLink, "slug" | "to">): string | null {

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, X, ShoppingCart, Phone, LayoutDashboard, LogIn, LogOut, ChevronDown } from "lucide-react";
-import { SHOP_CATEGORIES, kategoriePfad, unterkategoriePfad } from "@/lib/shopCategories";
+import { SHOP_CATEGORIES, kategoriePfad, menueKinder, unterkategoriePfad } from "@/lib/shopCategories";
 import { useCartStore } from "@/stores/cartStore";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useAuth } from "@/context/AuthContext";
@@ -49,6 +49,7 @@ function KategorieLeiste() {
     <div className="hidden lg:block border-t border-white/10">
       <nav aria-label="Kategorien" className="container flex items-stretch justify-between">
         {SHOP_CATEGORIES.map((cat, i) => {
+          const kinder = menueKinder(cat.children);
           const rechts = i >= SHOP_CATEGORIES.length - 2;
           return (
             <div
@@ -64,8 +65,8 @@ function KategorieLeiste() {
               <NavLink
                 to={kategoriePfad(cat.handle)}
                 onClick={() => setOffen(null)}
-                aria-haspopup={cat.children.length > 0 || undefined}
-                aria-expanded={cat.children.length > 0 ? offen === cat.handle : undefined}
+                aria-haspopup={kinder.length > 0 || undefined}
+                aria-expanded={kinder.length > 0 ? offen === cat.handle : undefined}
                 className={({ isActive }) =>
                   cn(
                     "flex items-center gap-1 px-2 min-h-[44px] text-sm font-semibold whitespace-nowrap transition-colors border-b-2",
@@ -76,9 +77,9 @@ function KategorieLeiste() {
                 }
               >
                 {cat.label}
-                {cat.children.length > 0 && <ChevronDown className="w-3.5 h-3.5 opacity-70" />}
+                {kinder.length > 0 && <ChevronDown className="w-3.5 h-3.5 opacity-70" />}
               </NavLink>
-              {cat.children.length > 0 && offen === cat.handle && (
+              {kinder.length > 0 && offen === cat.handle && (
                 <div className={cn("absolute top-full z-50 pt-1", rechts ? "right-0" : "left-0")}>
                   <div className="w-72 max-h-[70vh] overflow-y-auto rounded-2xl border border-border bg-card text-foreground shadow-2xl p-2">
                     <Link
@@ -89,7 +90,7 @@ function KategorieLeiste() {
                       Alle {cat.label}
                     </Link>
                     <div className="h-px bg-border/60 mx-2 my-1" />
-                    {cat.children.map((sub) => (
+                    {kinder.map((sub) => (
                       <NavLink
                         key={sub.handle}
                         to={unterkategoriePfad(sub)}
@@ -127,8 +128,9 @@ function KategorieAkkordeon({ onNavigate }: { onNavigate: () => void }) {
     <div className="flex flex-col gap-1 pb-2 mb-1 border-b border-white/10">
       <p className="px-4 pt-1 pb-1 text-[11px] font-bold uppercase tracking-widest text-white/45">Kategorien</p>
       {SHOP_CATEGORIES.map((cat) => {
+        const kinder = menueKinder(cat.children);
         const auf = offen === cat.handle;
-        if (cat.children.length === 0) {
+        if (kinder.length === 0) {
           return (
             <NavLink
               key={cat.handle}
@@ -163,7 +165,7 @@ function KategorieAkkordeon({ onNavigate }: { onNavigate: () => void }) {
                 >
                   Alle {cat.label}
                 </NavLink>
-                {cat.children.map((sub) => (
+                {kinder.map((sub) => (
                   <NavLink
                     key={sub.handle}
                     to={unterkategoriePfad(sub)}

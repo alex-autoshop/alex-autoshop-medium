@@ -17,6 +17,7 @@ import {
 } from "../shared/katalog-regeln.js";
 import { kategorieDokument, produktDokument } from "../shared/seo-katalog.js";
 import { geruest } from "../shared/seo-html.js";
+import { produktWeiterleitung } from "../shared/produkt-weiterleitung.js";
 
 function kategorien() {
   const src = readFileSync(new URL("../src/lib/shopCategories.ts", import.meta.url), "utf8");
@@ -162,7 +163,7 @@ export async function einbetten(basis, dist) {
     for (const p of edges) {
       const node = p.node;
       const handle = sichererHandle(node?.handle);
-      if (!handle || gesehen.has(handle)) continue;
+      if (!handle || gesehen.has(handle) || produktWeiterleitung(handle)) continue;
       gesehen.add(handle);
       const bild = node.images?.edges?.[0]?.node?.url;
       const dok = produktDokument(node);
