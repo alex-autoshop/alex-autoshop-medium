@@ -1,19 +1,69 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 
-// Spotlight-Karussell der Marken — Animation übernommen von der Profi-Seite,
-// angepasst an die Medium-Site (dunkle Sektion, weiße Karten, Gold-Akzent).
+// Spotlight-Karussell. Auf Desktop bleiben 7 Kacheln in der bisherigen Größe,
+// auf dem Handy 3. Weitere Marken kommen seitenweise, Punkte und Autoplay
+// laufen über die ganze Liste.
+//
+// Reihenfolge der Ergänzungen: Produktzahl im veröffentlichten Katalog
+// (Marke aus Titel/Handle, sonst Vendor). Lieferanten und Marken ohne
+// mehrere Produkte sind nicht dabei.
 const FEATURED = [
-  { name: "Standox", src: "/images/brands/standox.png", tagline: "Premium Lacksystem" },
-  { name: "3M", src: "/images/brands/3m.png", tagline: "Schleif & Politur" },
-  { name: "Sonax", src: "/images/brands/sonax.png", tagline: "Fahrzeugpflege" },
-  { name: "Liqui Moly", src: "/images/brands/liqui-moly.png", tagline: "Öle & Additive" },
-  { name: "Castrol", src: "/images/brands/castrol.png", tagline: "Motorenöl" },
-  { name: "Mipa", src: "/images/brands/mipa.png", tagline: "Lackierbedarf" },
-  { name: "Glasurit", src: "/images/brands/glasurit.svg", tagline: "Profi-Lacksysteme" },
+  { name: "Standox", src: "/images/brands/standox.png", tagline: "Premium Lacksystem", href: "/marken/standox" },
+  { name: "3M", src: "/images/brands/3m.png", tagline: "Schleif & Politur", href: "/marken/3m" },
+  { name: "Sonax", src: "/images/brands/sonax.png", tagline: "Fahrzeugpflege", href: "/marken/sonax" },
+  { name: "Liqui Moly", src: "/images/brands/liqui-moly.png", tagline: "Öle & Additive", href: "/marken/liqui-moly" },
+  { name: "Castrol", src: "/images/brands/castrol.png", tagline: "Motorenöl", href: "/marken/castrol" },
+  { name: "Mipa", src: "/images/brands/mipa.png", tagline: "Lackierbedarf", href: "/marken/mipa" },
+  { name: "Glasurit", src: "/images/brands/glasurit.svg", tagline: "Profi-Lacksysteme", href: "/marken/glasurit" },
+  { name: "RM", src: "/images/brands/rm.svg", tagline: "Profi-Lacksystem", href: "/shop?marke=rm" },
+  { name: "MANN-FILTER", src: "/images/brands/mann-filter.svg", tagline: "Filter", href: "/marken/mann-filter" },
+  { name: "Cromax", src: "/images/brands/cromax.png", tagline: "Lacksystem", href: "/shop?marke=cromax" },
+  { name: "Colad", src: "/images/brands/colad-mark.png", tagline: "Abdeckbedarf", href: "/marken/colad" },
+  { name: "Sikkens", src: "/images/brands/sikkens.svg", tagline: "Profi-Lacksystem", href: "/marken/sikkens" },
+  { name: "Indasa", src: "/images/brands/indasa-wordmark.png", tagline: "Schleifmittel", href: "/marken/indasa" },
+  { name: "Spies Hecker", src: "/images/brands/spies-hecker-mark.png", tagline: "Profi-Lacksystem", href: "/marken/spies-hecker" },
+  { name: "PPG", src: "/images/brands/ppg-mark.svg", tagline: "Lacksystem", href: "/shop?marke=ppg" },
+  { name: "Anest Iwata", src: "/images/brands/anest-iwata.png", tagline: "Lackierpistolen", href: "/shop?marke=anest-iwata" },
+  { name: "Spray Max", src: "/images/brands/spraymax.png", tagline: "Spraydosen", href: "/marken/spray-max" },
+  { name: "Novol", src: "/images/brands/novol-wordmark.svg", tagline: "Spachtel & Füller", href: "/marken/novol" },
+  { name: "FLEX", src: "/images/brands/flex.svg", tagline: "Schleifmaschinen", href: "/shop?marke=flex" },
+];
+
+// Nur Marken mit mehreren Katalogprodukten, die nicht schon in den Kacheln stehen.
+// Standox ist im Slider. Bosch, SATA, Menzerna und Koch-Chemie haben keine eigenen Produkte.
+const MORE = [
+  { name: "Rupes", href: "/marken/rupes" },
+  { name: "Troton", href: "/marken/troton" },
+  { name: "Baslac", href: "/shop?marke=baslac" },
+  { name: "Mirka", href: "/marken/mirka" },
+  { name: "Caramba", href: "/shop?marke=caramba" },
 ];
 
 const GOLD = "#f1eb5b";
+const DESKTOP_QUERY = "(min-width: 768px)";
+
+function useDesktop() {
+  const [desktop, setDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia(DESKTOP_QUERY).matches : true,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(DESKTOP_QUERY);
+    const apply = () => setDesktop(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+  return desktop;
+}
+
+/** Volle Seite ab dem aktiven Index, letzte Seite bleibt voll (gleiche Kachelbreite). */
+function windowStart(active: number, total: number, count: number) {
+  if (total <= count) return 0;
+  const page = Math.floor(active / count) * count;
+  return Math.min(page, total - count);
+}
 
 function BrandCard({
   brand,
@@ -22,6 +72,7 @@ function BrandCard({
   onHover,
   onLeave,
   revealed,
+  intro,
 }: {
   brand: (typeof FEATURED)[0];
   index: number;
@@ -29,16 +80,16 @@ function BrandCard({
   onHover: () => void;
   onLeave: () => void;
   revealed: boolean;
+  intro: boolean;
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40, scale: 0.92 }}
+      initial={intro ? { opacity: 0, y: 40, scale: 0.92 } : false}
       animate={revealed ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 40, scale: 0.92 }}
-      transition={{ duration: 0.65, delay: index * 0.1, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: intro ? 0.65 : 0.35, delay: intro ? index * 0.08 : 0, ease: [0.16, 1, 0.3, 1] }}
       onHoverStart={onHover}
       onHoverEnd={onLeave}
-      className="relative flex flex-col items-center justify-center cursor-default"
-      style={{ flex: "1 1 0", minWidth: 0 }}
+      className="relative flex flex-col items-center justify-center"
     >
       <motion.div
         animate={
@@ -60,8 +111,10 @@ function BrandCard({
       >
         <img
           src={brand.src}
-          alt={brand.name}
+          alt=""
           loading="lazy"
+          decoding="async"
+          draggable={false}
           style={{
             maxWidth: "100%",
             maxHeight: 58,
@@ -82,7 +135,7 @@ function BrandCard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.2 }}
-            className="absolute -bottom-10 flex flex-col items-center"
+            className="absolute -bottom-10 flex flex-col items-center pointer-events-none"
           >
             <p className="text-[13px] font-bold text-white leading-none">{brand.name}</p>
             <p className="text-[11px] mt-0.5" style={{ color: "rgba(241,235,91,0.65)" }}>{brand.tagline}</p>
@@ -107,6 +160,10 @@ export function BrandMarquee() {
   const [autoIndex, setAutoIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const isUserHovering = useRef(false);
+  const intro = useRef(true);
+  const desktop = useDesktop();
+  const visibleCount = desktop ? 7 : 3;
+  const gap = desktop ? 20 : 12;
 
   useEffect(() => {
     if (inView) {
@@ -117,6 +174,14 @@ export function BrandMarquee() {
 
   useEffect(() => {
     if (!revealed) return;
+    const t = setTimeout(() => {
+      intro.current = false;
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [revealed]);
+
+  useEffect(() => {
+    if (!revealed) return;
     const interval = setInterval(() => {
       if (!isUserHovering.current) setAutoIndex((i) => (i + 1) % FEATURED.length);
     }, 1800);
@@ -124,11 +189,12 @@ export function BrandMarquee() {
   }, [revealed]);
 
   const currentActive = activeIndex !== null ? activeIndex : autoIndex;
+  const start = windowStart(autoIndex, FEATURED.length, visibleCount);
+  const visible = FEATURED.slice(start, start + visibleCount);
 
   return (
     <section ref={sectionRef} className="section-dark py-20 sm:py-28 relative">
       <div className="container max-w-5xl">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
@@ -145,50 +211,72 @@ export function BrandMarquee() {
           </h2>
         </motion.div>
 
-        {/* Karten */}
-        <div className="flex items-center gap-3 md:gap-5 mb-14 overflow-hidden" style={{ minHeight: 110 }}>
-          {FEATURED.map((brand, i) => {
-            const distance = Math.abs(i - currentActive);
-            const mobileVisible = distance <= 1;
+        <div
+          className="flex items-center mb-14 overflow-hidden"
+          style={{ minHeight: 110, gap }}
+        >
+          {visible.map((brand, position) => {
+            const index = start + position;
             return (
               <div
                 key={brand.name}
-                className={`md:flex-1 transition-all duration-500 ${
-                  mobileVisible
-                    ? "flex-1"
-                    : "w-0 opacity-0 pointer-events-none md:opacity-100 md:w-auto md:pointer-events-auto"
-                }`}
+                style={{ flex: `0 0 calc((100% - ${(visibleCount - 1) * gap}px) / ${visibleCount})` }}
+                className="min-w-0"
               >
-                <BrandCard
-                  brand={brand}
-                  index={i}
-                  isActive={currentActive === i}
-                  revealed={revealed}
-                  onHover={() => {
+                <Link
+                  to={brand.href}
+                  aria-label={`${brand.name} im Shop`}
+                  className="block w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#f1eb5b] rounded-md"
+                  onMouseEnter={() => {
                     isUserHovering.current = true;
-                    setActiveIndex(i);
+                    setActiveIndex(index);
                   }}
-                  onLeave={() => {
+                  onMouseLeave={() => {
                     isUserHovering.current = false;
                     setActiveIndex(null);
                   }}
-                />
+                  onFocus={() => {
+                    isUserHovering.current = true;
+                    setActiveIndex(index);
+                  }}
+                  onBlur={() => {
+                    isUserHovering.current = false;
+                    setActiveIndex(null);
+                  }}
+                >
+                  <BrandCard
+                    brand={brand}
+                    index={position}
+                    isActive={currentActive === index}
+                    revealed={revealed}
+                    intro={intro.current}
+                    onHover={() => {
+                      isUserHovering.current = true;
+                      setActiveIndex(index);
+                    }}
+                    onLeave={() => {
+                      isUserHovering.current = false;
+                      setActiveIndex(null);
+                    }}
+                  />
+                </Link>
               </div>
             );
           })}
         </div>
 
-        {/* Punkte */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={revealed ? { opacity: 1 } : { opacity: 0 }}
           transition={{ delay: 0.8 }}
-          className="flex items-center justify-center gap-2.5 mt-16"
+          className="flex flex-wrap items-center justify-center gap-2.5 mt-16"
         >
-          {FEATURED.map((_, i) => (
+          {FEATURED.map((brand, i) => (
             <motion.button
-              key={i}
-              aria-label={`Marke ${i + 1}`}
+              key={brand.name}
+              type="button"
+              aria-label={brand.name}
+              aria-current={currentActive === i ? "true" : undefined}
               onClick={() => {
                 setAutoIndex(i);
                 setActiveIndex(i);
@@ -206,14 +294,22 @@ export function BrandMarquee() {
           ))}
         </motion.div>
 
-        {/* Bottom-Text */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={revealed ? { opacity: 1 } : { opacity: 0 }}
           transition={{ delay: 1 }}
           className="text-center text-xs mt-6 text-white/30"
         >
-          + Standox · Bosch · Rupes · SATA · Menzerna · Koch-Chemie und viele mehr
+          +{" "}
+          {MORE.map((brand, i) => (
+            <span key={brand.name}>
+              {i > 0 ? " · " : ""}
+              <Link to={brand.href} className="hover:text-white/60">
+                {brand.name}
+              </Link>
+            </span>
+          ))}
+          {" "}und viele mehr
         </motion.p>
       </div>
     </section>
