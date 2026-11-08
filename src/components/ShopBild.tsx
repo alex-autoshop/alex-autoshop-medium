@@ -30,6 +30,8 @@ export function ShopBild({
   className,
   sizes = "(min-width: 1280px) 18vw, (min-width: 640px) 30vw, 46vw",
   priority = false,
+  width = 800,
+  height = 800,
 }: {
   src: string;
   alt: string;
@@ -37,6 +39,8 @@ export function ShopBild({
   sizes?: string;
   /** Erstes Bild im Sichtbereich: sofort laden, hohe Priorität. */
   priority?: boolean;
+  width?: number;
+  height?: number;
 }) {
   if (!src) return null;
   const laden = priority ? "eager" : "lazy";
@@ -46,8 +50,8 @@ export function ShopBild({
       <img
         src={src}
         alt={alt}
-        width={800}
-        height={800}
+        width={width}
+        height={height}
         className={className}
         loading={laden}
         decoding="async"
@@ -64,8 +68,8 @@ export function ShopBild({
         srcSet={srcset(src)}
         sizes={sizes}
         alt={alt}
-        width={800}
-        height={800}
+        width={width}
+        height={height}
         className={className}
         loading={laden}
         decoding="async"

@@ -12,10 +12,10 @@ export const KARTEN_FELDER = `
   tags
   productType
   priceRange { minVariantPrice { amount currencyCode } }
-  images(first: 5) { edges { node { url altText } } }
+  images(first: 5) { edges { node { url altText width height } } }
   variants(first: 10) {
     edges { node {
-      id title sku
+      id title sku barcode
       price { amount currencyCode }
       availableForSale
       selectedOptions { name value }
@@ -56,10 +56,12 @@ export const PRODUKT_FELDER = `
   tags
   productType
   priceRange { minVariantPrice { amount currencyCode } }
-  images(first: 8) { edges { node { url altText } } }
+  images(first: 8) { edges { node { url altText width height } } }
+  seo { title description }
+  collections(first: 20) { edges { node { handle title } } }
   variants(first: 100) {
     edges { node {
-      id title sku
+      id title sku barcode
       price { amount currencyCode }
       availableForSale
       selectedOptions { name value }
@@ -258,13 +260,16 @@ export function kartenHtml(edges) {
   if (!liste.length) return "";
   return liste.map((p, i) => {
     const node = p.node || p;
-    const bild = node.images?.edges?.[0]?.node?.url;
+    const bildNode = node.images?.edges?.[0]?.node;
+    const bild = bildNode?.url;
     const preis = node.priceRange?.minVariantPrice;
     const src = bild ? bildAdresse(bild, 480, "webp") : "";
     const mehrere = (node.variants?.edges?.length || 0) > 1;
     const prio = i < 2 ? ' fetchpriority="high"' : ' loading="lazy"';
+    const breite = Number(bildNode?.width) > 0 ? Math.round(bildNode.width) : 480;
+    const hoehe = Number(bildNode?.height) > 0 ? Math.round(bildNode.height) : 480;
     return `<a href="/produkt/${htmlText(node.handle)}"><span class="aa-bild">${
-      src ? `<img src="${htmlText(src)}" alt="" width="480" height="480"${prio} decoding="async">` : ""
+      src ? `<img src="${htmlText(src)}" alt="${htmlText(node.title)}" width="${breite}" height="${hoehe}"${prio} decoding="async">` : ""
     }</span><span class="aa-name">${htmlText(node.title)}</span><strong>${mehrere ? "Ab " : ""}${htmlText(euro(preis?.amount, preis?.currencyCode))}</strong></a>`;
   }).join("");
 }

@@ -1,5 +1,5 @@
 /** Namen, die keine Kundenmarke sind (Shop selbst oder Bezugsquelle). */
-const LIEFERANT = [/alex\s*autoshop/i, /ds[\s-]?color/i, /inter\s*cars/i];
+const LIEFERANT = [/alex\s*autoshop/i, /ds[\s-]?color/i, /inter\s*cars/i, /oil[-\s]?center/i];
 
 export function istLieferant(name) {
   const text = String(name || "").trim();

@@ -26,6 +26,8 @@ export interface ShopifyProduct {
         node: {
           url: string;
           altText: string | null;
+          width?: number | null;
+          height?: number | null;
         };
       }>;
     };
@@ -35,6 +37,7 @@ export interface ShopifyProduct {
           id: string;
           title: string;
           sku?: string | null;
+          barcode?: string | null;
           price: {
             amount: string;
             currencyCode: string;
@@ -54,6 +57,8 @@ export interface ShopifyProduct {
       name: string;
       values: string[];
     }>;
+    seo?: { title?: string | null; description?: string | null } | null;
+    collections?: { edges: Array<{ node: { handle: string; title: string } }> };
     lieferzeit?: Array<{ key: string; value: string } | null> | null;
     gefahrstoffMetafelder?: Array<{ key: string; value: string } | null> | null;
     gpsr?: Array<{ key: string; value: string } | null> | null;
@@ -130,6 +135,8 @@ const PRODUCT_CARD_FIELDS = `
       node {
         url
         altText
+        width
+        height
       }
     }
   }
@@ -233,14 +240,20 @@ export const STOREFRONT_PRODUCT_BY_HANDLE_QUERY = `
           node {
             url
             altText
+            width
+            height
           }
         }
       }
+      seo { title description }
+      collections(first: 20) { edges { node { handle title } } }
       variants(first: 100) {
         edges {
           node {
             id
             title
+            sku
+            barcode
             price {
               amount
               currencyCode

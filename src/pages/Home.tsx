@@ -124,7 +124,7 @@ export default function Home() {
                     {bild ? (
                       <ShopBild
                         src={bild}
-                        alt=""
+                        alt={col.label}
                         priority={i < 2}
                         sizes="(min-width: 1024px) 30vw, 46vw"
                         className={cn(

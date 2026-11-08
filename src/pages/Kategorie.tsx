@@ -21,6 +21,7 @@ import type { ShopifyProduct } from "@/lib/shopify";
 import { cn } from "@/lib/utils";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { legacyCategoryRedirect } from "@/lib/categories";
+import { kategorieDokument } from "../../shared/seo-katalog.js";
 
 function Chips({ items, activeHandle }: { items: SubCategory[]; activeHandle?: string }) {
   return (
@@ -120,6 +121,18 @@ export default function Kategorie() {
     return () => window.clearTimeout(t);
   }, [suche, qAusUrl, params, navigate]);
 
+  const kategorieLabel = treffer
+    ? treffer.type === "sub" ? treffer.sub.label : treffer.main.label
+    : "";
+  const seoSeite = useMemo(() => {
+    if (!kategorieLabel) return null;
+    return kategorieDokument({
+      handle,
+      label: kategorieLabel,
+      produkte: products.map((p) => ({ handle: p.node.handle, title: p.node.title })),
+    });
+  }, [handle, kategorieLabel, products]);
+
   if (alt) return <Navigate to={alt} replace />;
 
   if (!treffer) {
@@ -141,7 +154,7 @@ export default function Kategorie() {
 
   const main = treffer.main;
   const sub = treffer.type === "sub" ? treffer.sub : null;
-  const titel = sub ? sub.label : main.label;
+  const titel = kategorieLabel;
 
   const schreibeParams = (next: URLSearchParams) => {
     const roh = next.toString().replace(
@@ -169,8 +182,13 @@ export default function Kategorie() {
   return (
     <div className="container py-8 sm:py-12">
       <Seo
-        title={`${titel} kaufen`}
-        description={`${titel} bei Alex Autoshop Wuppertal: Profi-Qualität für Werkstatt und Lackiererei, schnell abholbereit.`}
+        titelFertig
+        title={seoSeite?.title || titel}
+        description={seoSeite?.description}
+        jsonLd={seoSeite?.jsonLd}
+        canonical={seoSeite?.canonical}
+        noindex={Boolean(qAusUrl)}
+        preloadImage={products[0]?.node.images?.edges?.[0]?.node?.url}
       />
 
       {/* Breadcrumb */}

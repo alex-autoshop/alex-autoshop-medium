@@ -27,7 +27,7 @@ export default function Warenkorb() {
 
   return (
     <div className="container py-8 sm:py-12 max-w-3xl">
-      <Seo title="Warenkorb" description="Warenkorb und Produkt-Abo bei Alex Autoshop." />
+      <Seo title="Warenkorb" description="Warenkorb und Produkt-Abo bei Alex Autoshop." noindex />
       <h1 className="text-3xl sm:text-4xl mb-6">Warenkorb</h1>
       {items.length === 0 ? (
         <p className="text-muted-foreground mb-6">
@@ -44,7 +44,7 @@ export default function Warenkorb() {
             return (
               <li key={item.uid} className="rounded-xl border border-border p-3">
                 <div className="flex gap-3">
-                  {bild && <img src={bild} alt="" className="w-16 h-16 object-contain bg-white rounded-lg" />}
+                  {bild && <img src={bild} alt={node.title} width={64} height={64} className="w-16 h-16 object-contain bg-white rounded-lg" loading="lazy" />}
                   <div className="min-w-0">
                     <p lang="de" className="produkt-titel">{node.title}</p>
                     <p className="text-sm text-muted-foreground">{item.quantity} × {formatPrice(item.price.amount, item.price.currencyCode)}</p>
