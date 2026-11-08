@@ -51,6 +51,7 @@ export const PRODUKT_FELDER = `
   id
   title
   description
+  descriptionHtml
   handle
   vendor
   tags

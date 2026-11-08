@@ -138,9 +138,33 @@ export async function kollektionHolen(vars: {
   }) as Promise<KatalogAntwort | undefined>;
 }
 
+const BESCHREIBUNG_QUERY = `
+  query Beschreibung($handle: String!) {
+    productByHandle(handle: $handle) { descriptionHtml }
+  }
+`;
+
+/** Der gecachte Katalog kann das Feld noch nicht kennen. Dann nur den HTML-Text nachziehen. */
+export async function beschreibungNachziehen<T extends KatalogAntwort | null | undefined>(handle: string, daten: T): Promise<T> {
+  const data = daten?.data;
+  const produkt = data?.productByHandle as { descriptionHtml?: string | null } | null | undefined;
+  if (!handle || !data || !produkt || produkt.descriptionHtml != null) return daten;
+  try {
+    const direkt = await storefrontApiRequest(BESCHREIBUNG_QUERY, { handle }) as KatalogAntwort | undefined;
+    const html = (direkt?.data?.productByHandle as { descriptionHtml?: string | null } | null)?.descriptionHtml;
+    if (!html) return daten;
+    return {
+      ...daten,
+      data: { ...data, productByHandle: { ...produkt, descriptionHtml: html } },
+    } as T;
+  } catch {
+    return daten;
+  }
+}
+
 export async function produktHolen(handle: string, frisch = false) {
   const api = await katalogLesen({ was: "produkt", handle }, { frisch });
-  if (api?.data && "productByHandle" in api.data) return api;
+  if (api?.data && "productByHandle" in api.data) return beschreibungNachziehen(handle, api);
   if (frisch) return null;
   return storefrontApiRequest(STOREFRONT_PRODUCT_BY_HANDLE_QUERY, { handle }) as Promise<KatalogAntwort | undefined>;
 }
