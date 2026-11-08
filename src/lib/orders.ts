@@ -8,6 +8,7 @@ export interface OrderItem {
   image: string;
   price: { amount: string; currencyCode: string };
   quantity: number;
+  attributes?: Array<{ key: string; value: string }>;
 }
 
 export interface Order {

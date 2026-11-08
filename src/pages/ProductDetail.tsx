@@ -14,6 +14,7 @@ import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { useCartStore } from "@/stores/cartStore";
 import { PaintConfigurator } from "@/components/PaintConfigurator";
+import { FARBKONFIGURATOR_HANDLES, istStandardvariante } from "../../shared/farbangabe.js";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
 import { Grundpreis } from "@/components/Grundpreis";
 import { GpsrHinweis } from "@/components/GpsrHinweis";
@@ -38,12 +39,34 @@ function ZurueckZumShop({ className, mitPfeil = false }: { className?: string; m
   );
 }
 
-// Produkte mit Farb-Konfigurator (Marke → System → Menge → Fahrzeug → Farbcode)
-const CONFIGURATOR_HANDLES = new Set([
-  "farben-mix",
-  "individuelle-spraydose-erstellen",
-  "individuellen-lackstift-bestellen-20ml",
-]);
+// Wunschfarbe mit Varianten, plus Sets mit einer Variante (Farbangabe ohne Optionsschritt).
+const CONFIGURATOR_HANDLES = new Set(FARBKONFIGURATOR_HANDLES);
+
+function Mitgliederpreise({ betrag, waehrung }: { betrag: number; waehrung?: string }) {
+  return (
+    <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-5">
+      <p className="font-display font-bold mb-3">Mitgliederpreise</p>
+      <table className="w-full text-sm">
+        <tbody>
+          {MEMBERSHIP_LEVELS.map((m) => {
+            const memberPrice = betrag * (1 - m.discountPercent / 100);
+            return (
+              <tr key={m.level} className="border-b border-primary/10 last:border-0">
+                <td className="py-2 font-medium">{m.name} ({m.discountPercent}%)</td>
+                <td className="py-2 text-right font-bold text-primary">
+                  {waehrung && formatPrice(String(memberPrice), waehrung)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <Link to="/mitgliedschaft" className="text-sm text-primary font-semibold underline mt-3 inline-block min-h-[44px] pt-2">
+        Mitglied werden →
+      </Link>
+    </div>
+  );
+}
 
 type ProductNode = ShopifyProduct["node"] & { vendor?: string };
 
@@ -211,6 +234,9 @@ export default function ProductDetail() {
                   bild: img || undefined,
                 }}
               />
+              {istStandardvariante(product) && (
+                <Mitgliederpreise betrag={priceNum} waehrung={price?.currencyCode} />
+              )}
             </>
           ) : (
           <>
@@ -284,27 +310,7 @@ export default function ProductDetail() {
             }}
           />}
 
-          <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 p-5">
-            <p className="font-display font-bold mb-3">Mitgliederpreise</p>
-            <table className="w-full text-sm">
-              <tbody>
-                {MEMBERSHIP_LEVELS.map((m) => {
-                  const memberPrice = priceNum * (1 - m.discountPercent / 100);
-                  return (
-                    <tr key={m.level} className="border-b border-primary/10 last:border-0">
-                      <td className="py-2 font-medium">{m.name} ({m.discountPercent}%)</td>
-                      <td className="py-2 text-right font-bold text-primary">
-                        {price && formatPrice(String(memberPrice), price.currencyCode)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <Link to="/mitgliedschaft" className="text-sm text-primary font-semibold underline mt-3 inline-block min-h-[44px] pt-2">
-              Mitglied werden →
-            </Link>
-          </div>
+          <Mitgliederpreise betrag={priceNum} waehrung={price?.currencyCode} />
           </>
           )}
 

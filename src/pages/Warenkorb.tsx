@@ -48,6 +48,15 @@ export default function Warenkorb() {
                   <div className="min-w-0">
                     <p lang="de" className="produkt-titel">{node.title}</p>
                     <p className="text-sm text-muted-foreground">{item.quantity} × {formatPrice(item.price.amount, item.price.currencyCode)}</p>
+                    {item.attributes?.length ? (
+                      <ul className="mt-1 space-y-0.5">
+                        {item.attributes.map((angabe) => (
+                          <li key={angabe.key} className="text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                            <span className="font-medium text-foreground">{angabe.key}:</span> {angabe.value}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                 </div>
                 <WarenkorbAboZeile
