@@ -349,28 +349,36 @@ function ketteHinweis(tags) {
   return null;
 }
 
+/** Tücher und Abdeckband begleiten einen Schritt, sie eröffnen ihn nicht. */
+const ZUBEHOER = new Set(["Abdecken", "Verbrauchsmaterial"]);
+
+function schritteDerInhalte(cur) {
+  return [...cur.haupt];
+}
+
 function einsatzAusInhalten(produkt, inhalte) {
   const je = new Map();
   for (const teil of inhalte || []) {
     if (!teil || istSet(teil)) continue;
     const erg = einsatzFuer(teil);
     if (!erg) continue;
-    const cur = je.get(erg.id) || { n: 0, steps: new Set() };
+    const cur = je.get(erg.id) || { n: 0, haupt: new Set() };
     cur.n += 1;
-    for (const id of erg.markiert) cur.steps.add(id);
+    const haupt = !ZUBEHOER.has(teil.productType || "") && erg.markiert.length === 1;
+    if (haupt) {
+      for (const id of erg.markiert) cur.haupt.add(id);
+    }
     je.set(erg.id, cur);
   }
-  if (!je.size) return null;
+  const belegt = [...je].filter(([, cur]) => cur.haupt.size);
+  if (!belegt.length) return null;
   const hint = ketteHinweis(tagsVon(produkt));
-  if (hint && je.get(hint)?.steps.size) return baue(hint, [...je.get(hint).steps]);
-  if (je.size === 1) {
-    const [id, cur] = [...je][0];
-    return baue(id, [...cur.steps]);
-  }
+  if (hint && je.get(hint)?.haupt.size) return baue(hint, schritteDerInhalte(je.get(hint)));
+  if (belegt.length === 1) return baue(belegt[0][0], schritteDerInhalte(belegt[0][1]));
   let bestId = null;
   let bestN = -1;
   let gleich = false;
-  for (const [id, cur] of je) {
+  for (const [id, cur] of belegt) {
     if (cur.n > bestN) {
       bestId = id;
       bestN = cur.n;
@@ -378,7 +386,35 @@ function einsatzAusInhalten(produkt, inhalte) {
     } else if (cur.n === bestN) gleich = true;
   }
   if (gleich || !bestId) return null;
-  return baue(bestId, [...je.get(bestId).steps]);
+  return baue(bestId, schritteDerInhalte(je.get(bestId)));
+}
+
+/**
+ * Set-Zeile ohne Katalogtreffer, wenn der Text den Schritt selbst nennt
+ * (zum Beispiel „Wunschfarbe-Spraydose … Basislack“).
+ */
+export function produktAusZeile(titel) {
+  const n = norm(titel);
+  const lack = ["Kategorie: Lackierbedarf"];
+  if (!n) return null;
+  if (n.includes("klarlack")) return { title: titel, productType: "Klarlack", tags: lack };
+  if (n.includes("wunschfarbe") || n.includes("basislack")) {
+    return { title: titel, productType: "Wunschfarbe & Lackstift", tags: lack };
+  }
+  if (n.includes("silikonentferner")) {
+    return { title: titel, productType: "Verdünnung & Zusätze", tags: [...lack, "Silikonentferner"] };
+  }
+  if (n.includes("schleifschwamm") || n.includes("schleifpapier")) {
+    return { title: titel, productType: "Schleifmittel", tags: lack };
+  }
+  if (n.includes("abdeckband") || n.includes("abdeckpapier")) {
+    return { title: titel, productType: "Abdecken", tags: lack };
+  }
+  if (n.includes("staubbind")) return { title: titel, productType: "Verbrauchsmaterial", tags: lack };
+  if (n.includes("grundierfueller") || /\bfueller\b/.test(n) || /\bfiller\b/.test(n)) {
+    return { title: titel, productType: "Grundierung & Füller", tags: lack };
+  }
+  return null;
 }
 
 /** Zuordnung für eine Produktseite. Ohne sicheren Schritt: null. */

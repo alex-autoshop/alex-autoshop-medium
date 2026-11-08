@@ -4,6 +4,7 @@ import { KARTEN_FELDER, PRODUKT_FELDER } from "../shared/katalog-regeln.js";
 import {
   besterTreffer,
   einsatzFuer,
+  produktAusZeile,
   setInhaltTitel,
   suchanfrage,
 } from "../shared/prozess.js";
@@ -215,6 +216,61 @@ test("Autowäsche-Set markiert die enthaltenen Schritte, nicht Vorwäsche", () =
   assert.equal(erg.label, "Fahrzeugwäsche & Pflege");
   assert.deepEqual(erg.markiert, ["felgen", "waesche", "trocknen", "versiegeln", "innenraum", "scheiben"]);
   assert.equal(erg.markiert.includes("vorwaesche"), false);
+});
+
+const lack = () => kat("Lackierbedarf");
+
+test("Smart-Repair für Anfänger: Wunschfarbe ist Basislack, Füllern bleibt aus", () => {
+  const set = {
+    title: "Smart-Repair-Set für Lackieranfänger",
+    productType: "Sets",
+    tags: ["Bundle", "Kategorie: Sets & Sonstiges", "Lackierbedarf", "Set", "Smart Repair"],
+  };
+  const dose = produktAusZeile("Wunschfarbe-Spraydose 1K Basislack 400 ml");
+  assert.equal(dose.productType, "Wunschfarbe & Lackstift");
+  const erg = einsatzFuer(set, [
+    { title: "Silikonentferner mild 1 L", productType: "Verdünnung & Zusätze", tags: [...lack(), "Silikonentferner"] },
+    { title: "Schleifschwamm P120–P180", productType: "Schleifmittel", tags: lack() },
+    { title: "Abdeckband 19 mm", productType: "Abdecken", tags: lack() },
+    { title: "Abdeckband 30 mm", productType: "Abdecken", tags: lack() },
+    dose,
+    { title: "2K-Klarlack 400 ml", productType: "Klarlack", tags: lack() },
+    { title: "Staubbindetücher, 10 Stück", productType: "Verbrauchsmaterial", tags: lack() },
+  ]);
+  assert.deepEqual(erg.markiert, ["schleifen", "reinigen", "basislack", "klarlack"]);
+});
+
+test("Smart-Repair mit Pistole: Füller ja, Basislack nein", () => {
+  const set = {
+    title: "Smart-Repair-Set mit Lackierpistole",
+    productType: "Sets",
+    tags: ["Bundle", "Kategorie: Sets & Sonstiges", "Lackierbedarf", "Set", "Smart Repair"],
+  };
+  const erg = einsatzFuer(set, [
+    { title: "Anest Iwata Airgunsa", productType: "Lackierpistolen & Zubehör", tags: lack() },
+    { title: "Troton Acryl Filler 4:1", productType: "Grundierung & Füller", tags: lack() },
+    { title: "FRIZ 2K-Klarlack", productType: "Klarlack", tags: lack() },
+    { title: "FRIZ Härter 10", productType: "Härter", tags: lack() },
+    { title: "Mipa V10 Verdünnung", productType: "Verdünnung & Zusätze", tags: lack() },
+    { title: "FRIZ Silikonentferner mild", productType: "Verdünnung & Zusätze", tags: [...lack(), "Silikonentferner"] },
+    { title: "Schleifschwamm", productType: "Schleifmittel", tags: lack() },
+    { title: "Green Tape", productType: "Abdecken", tags: lack() },
+    { title: "Colad Staubbindetücher", productType: "Verbrauchsmaterial", tags: lack() },
+    { title: "Colad Farbsiebe", productType: "Verbrauchsmaterial", tags: lack() },
+  ]);
+  assert.deepEqual(erg.markiert, ["schleifen", "reinigen", "fuellern", "klarlack"]);
+});
+
+test("Nur Tücher und Abdeckband öffnen keine Lackierschritte", () => {
+  const set = {
+    title: "Leeres Zubehör",
+    productType: "Sets",
+    tags: ["Smart Repair", "Lackierbedarf"],
+  };
+  assert.equal(einsatzFuer(set, [
+    { title: "Abdeckband", productType: "Abdecken", tags: lack() },
+    { title: "Staubbindetücher", productType: "Verbrauchsmaterial", tags: lack() },
+  ]), null);
 });
 
 test("Set-Zeile trifft den Klarlack, nicht die Verdünnung", () => {
