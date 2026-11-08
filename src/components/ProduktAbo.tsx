@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
@@ -22,6 +22,7 @@ import { AboProduktKatalog } from "@/components/AboProduktKatalog";
 import { AboVorschau } from "@/components/AboVorschau";
 import { aboBildStil } from "../../shared/abo-bildrahmen.js";
 import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
+import { bildAdresse } from "../../shared/katalog-regeln.js";
 import { BaldVerfuegbar, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
 import { AboLeisteMobil } from "@/components/AboLeisteMobil";
 
@@ -142,6 +143,90 @@ function AboPreis({ normal, mitglied, ab, rabatt, beitrag }: {
   );
 }
 
+const AboKarte = memo(function AboKarte({
+  product,
+  stufe,
+  schon,
+  onStufe,
+  onHinzu,
+  onVorschau,
+}: {
+  product: ShopifyProduct;
+  stufe: number;
+  schon: boolean;
+  onStufe: (id: string, rabatt: number) => void;
+  onHinzu: (product: ShopifyProduct, stufe: number) => void;
+  onVorschau: (product: ShopifyProduct) => void;
+}) {
+  const a = alsAboProdukt(product);
+  const gefahr = gefahrstoffVonKnoten(product.node);
+  const gesperrt = kaufGesperrt(gefahr);
+  const bild = a.bild ? bildAdresse(a.bild, 400, "webp") : "";
+  return (
+    <div className="h-full w-full flex flex-col rounded-lg border border-border p-1.5 lg:p-2 bg-card">
+      <button
+        type="button"
+        className="aspect-[4/3] rounded-md bg-white overflow-hidden mb-1.5 cursor-pointer active:scale-[0.98] transition-transform"
+        onClick={() => onVorschau(product)}
+        aria-haspopup="dialog"
+        aria-label={`Vorschau: ${a.titel}`}
+      >
+        {bild && (
+          <img
+            src={bild}
+            alt=""
+            className="w-full h-full object-contain object-center"
+            style={aboBildStil(a.handle)}
+            loading="lazy"
+            decoding="async"
+          />
+        )}
+      </button>
+      <button
+        type="button"
+        lang="de"
+        className="produkt-titel text-left cursor-pointer hover:text-primary"
+        onClick={() => onVorschau(product)}
+      >
+        {a.titel}
+      </button>
+      {gefahr.ist && !gesperrt && <div className="mt-1"><GefahrstoffKompakt g={gefahr} /></div>}
+      <div className="mt-auto pt-1.5 flex flex-col gap-1.5">
+        {a.preis > 0 && (
+          <div>
+            <p className="text-[11px] text-muted-foreground line-through leading-tight">
+              {formatPrice(String(a.preis), a.waehrung)}
+            </p>
+            <p className="text-[11px] lg:text-xs text-primary font-semibold leading-tight">
+              als Mitglied {euro(a.preis * (1 - stufe / 100))}
+            </p>
+          </div>
+        )}
+        <StufenWahl
+          knapp
+          wert={stufe}
+          label={`Rabatt für ${a.titel}`}
+          onChange={(r) => onStufe(a.id, r)}
+        />
+        {gesperrt ? <BaldVerfuegbar /> : <button
+          type="button"
+          onClick={() => { if (!schon) onHinzu(product, stufe); }}
+          disabled={schon}
+          aria-label={schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`}
+          className={cn(
+            "inline-flex items-center justify-center gap-1 rounded-lg px-2 text-[11px] lg:text-xs font-semibold transition-colors min-h-10 whitespace-nowrap",
+            schon
+              ? "bg-secondary text-muted-foreground cursor-default"
+              : "bg-primary text-primary-foreground hover:brightness-95 cursor-pointer"
+          )}
+        >
+          {schon ? <><CheckCircle className="w-3.5 h-3.5" /> drin</> : <><Plus className="w-3.5 h-3.5" /> Hinzufügen</>}
+        </button>}
+      </div>
+    </div>
+  );
+});
+
 function katalogHinweis(anzahl: number, suche: boolean, laedt: boolean) {
   const kern = suche
     ? (anzahl === 1 ? "1 Treffer" : `${anzahl} Treffer`)
@@ -169,7 +254,11 @@ export function ProduktAbo() {
   const [vorschau, setVorschau] = useState<ShopifyProduct | null>(null);
   const [blatt, setBlatt] = useState(false);
   const listeRef = useRef<HTMLDivElement>(null);
+  const katalogRef = useRef<HTMLDivElement>(null);
   const [listeSichtbar, setListeSichtbar] = useState(false);
+  const [katalogNah, setKatalogNah] = useState(false);
+  const produkteRef = useRef(produkte);
+  produkteRef.current = produkte;
 
   // Auswahl überlebt einen Seitenwechsel — sonst ist die Arbeit weg
   useEffect(() => {
@@ -223,11 +312,44 @@ export function ProduktAbo() {
     };
   }, [blatt]);
 
-  const { products: rohProdukte, isLoading, hasMore, fehler } = useVollerKatalog(suchbegriff);
+  useEffect(() => {
+    if (katalogNah) return;
+    const el = katalogRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setKatalogNah(true);
+      return;
+    }
+    const beobachter = new IntersectionObserver(([eintrag]) => {
+      if (eintrag?.isIntersecting) setKatalogNah(true);
+    }, { rootMargin: "600px 0px" });
+    beobachter.observe(el);
+    return () => beobachter.disconnect();
+  }, [katalogNah]);
+
+  const { products: rohProdukte, isLoading, hasMore, fehler } = useVollerKatalog(suchbegriff, katalogNah);
   const products = useMemo(
     () => rohProdukte.filter((p) => !istAboKonfigurator(p.node.handle)),
     [rohProdukte],
   );
+  const katalogEintraege = useMemo(
+    () => products.map((p) => ({ ...p.node, quelle: p })),
+    [products],
+  );
+  const drinIds = useMemo(() => new Set(produkte.map((p) => p.id)), [produkte]);
+  const onVorschau = useCallback((p: ShopifyProduct) => setVorschau(p), []);
+  const onStufe = useCallback((id: string, rabatt: number) => {
+    setWahl((alt) => ({ ...alt, [id]: rabatt }));
+  }, []);
+  const onHinzu = useCallback((p: ShopifyProduct, stufe: number) => {
+    const liste = produkteRef.current;
+    const neu = { ...alsAboProdukt(p), rabatt: stufe };
+    if (liste.some((x) => x.id === neu.id)) return;
+    if (liste.length >= MAX_PRODUKTE) {
+      toast.error(`Mehr als ${MAX_PRODUKTE} Produkte gehen nicht — ruf uns an, dann machen wir es größer.`);
+      return;
+    }
+    setProdukte((alt) => (alt.some((x) => x.id === neu.id) || alt.length >= MAX_PRODUKTE ? alt : [...alt, neu]));
+  }, []);
 
   const gesamt = aboListeGesamt(produkte.map((p) => istMenge(p)
     ? { art: "menge", rabatt: p.rabatt, einzelpreis: p.einzelpreis, menge: p.menge }
@@ -334,7 +456,7 @@ export function ProduktAbo() {
       </div>
 
         {/* ── Produkte suchen und hinzufügen ──────────────────────────── */}
-        <div className="card-tilt hover:translate-y-0 order-2 p-3 sm:p-4 lg:order-none lg:p-5">
+        <div ref={katalogRef} className="card-tilt hover:translate-y-0 order-2 p-3 sm:p-4 lg:order-none lg:p-5">
           <h3 className="text-lg mb-1">Produkte auswählen</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Such dir die Artikel heraus, die du regelmäßig brauchst.
@@ -368,77 +490,20 @@ export function ProduktAbo() {
 
           {products.length > 0 && (
             <AboProduktKatalog
-              produkte={products.map((p) => ({ ...p.node, quelle: p }))}
+              produkte={katalogEintraege}
               kategorie={kategorie}
               onKategorie={setKategorie}
               karte={(eintrag) => {
                 const p = eintrag.quelle;
-                const a = alsAboProdukt(p);
-                const schon = drin(a.id);
-                const stufe = stufeVon(a.id);
-                const gefahr = gefahrstoffVonKnoten(p.node);
-                const gesperrt = kaufGesperrt(gefahr);
                 return (
-                  <div className="h-full w-full flex flex-col rounded-lg border border-border p-1.5 lg:p-2 bg-card">
-                    <button
-                      type="button"
-                      className="aspect-[4/3] rounded-md bg-white overflow-hidden mb-1.5 cursor-pointer active:scale-[0.98] transition-transform"
-                      onClick={() => setVorschau(p)}
-                      aria-haspopup="dialog"
-                      aria-label={`Vorschau: ${a.titel}`}
-                    >
-                      {a.bild && (
-                        <img
-                          src={a.bild}
-                          alt=""
-                          className="w-full h-full object-contain object-center"
-                          style={aboBildStil(a.handle)}
-                          loading="lazy"
-                        />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      lang="de"
-                      className="produkt-titel text-left cursor-pointer hover:text-primary"
-                      onClick={() => setVorschau(p)}
-                    >
-                      {a.titel}
-                    </button>
-                    {gefahr.ist && !gesperrt && <div className="mt-1"><GefahrstoffKompakt g={gefahr} /></div>}
-                    <div className="mt-auto pt-1.5 flex flex-col gap-1.5">
-                      {a.preis > 0 && (
-                        <div>
-                          <p className="text-[11px] text-muted-foreground line-through leading-tight">
-                            {formatPrice(String(a.preis), a.waehrung)}
-                          </p>
-                          <p className="text-[11px] lg:text-xs text-primary font-semibold leading-tight">
-                            als Mitglied {euro(a.preis * (1 - stufe / 100))}
-                          </p>
-                        </div>
-                      )}
-                      <StufenWahl
-                        knapp
-                        wert={stufe}
-                        label={`Rabatt für ${a.titel}`}
-                        onChange={(r) => setWahl((alt) => ({ ...alt, [a.id]: r }))}
-                      />
-                      {gesperrt ? <BaldVerfuegbar /> : <button
-                        type="button"
-                        onClick={() => { if (!schon) hinzufuegen(p, stufe); }}
-                        disabled={schon}
-                        aria-label={schon ? `${a.titel} ist schon in der Liste` : `${a.titel} hinzufügen`}
-                        className={cn(
-                          "inline-flex items-center justify-center gap-1 rounded-lg px-2 text-[11px] lg:text-xs font-semibold transition-colors min-h-10 whitespace-nowrap",
-                          schon
-                            ? "bg-secondary text-muted-foreground cursor-default"
-                            : "bg-primary text-primary-foreground hover:brightness-95 cursor-pointer"
-                        )}
-                      >
-                        {schon ? <><CheckCircle className="w-3.5 h-3.5" /> drin</> : <><Plus className="w-3.5 h-3.5" /> Hinzufügen</>}
-                      </button>}
-                    </div>
-                  </div>
+                  <AboKarte
+                    product={p}
+                    stufe={stufeVon(p.node.id)}
+                    schon={drinIds.has(p.node.id)}
+                    onStufe={onStufe}
+                    onHinzu={onHinzu}
+                    onVorschau={onVorschau}
+                  />
                 );
               }}
             />

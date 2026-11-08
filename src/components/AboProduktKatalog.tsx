@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { aboGruppen } from "../../shared/abo-kategorien.js";
 import { brandOf, markenZaehlen } from "@/lib/marken";
@@ -14,6 +14,10 @@ export interface AboKatalogProdukt {
   productType?: string;
 }
 
+/** Sichtbare Karten pro Schritt. Klein genug, dass ein Schritt den Faden nicht blockiert. */
+const SCHRITT = 6;
+const ERSTE_REIHEN = 2;
+
 function markeVon(p: AboKatalogProdukt) {
   return brandOf({ node: { title: p.title || p.titel, handle: p.handle || "", vendor: p.vendor } });
 }
@@ -27,30 +31,76 @@ function schieben(el: HTMLDivElement | null, richtung: number) {
   });
 }
 
+function passt(p: AboKatalogProdukt, globaleMarke: string, reihenMarke: string) {
+  const m = markeVon(p);
+  if (globaleMarke && m !== globaleMarke) return false;
+  if (reihenMarke && m !== reihenMarke) return false;
+  return true;
+}
+
 function Reihe({
   titel,
-  anzahl,
+  produkte,
   onAlle,
   marken,
   marke,
   onMarke,
-  kinder,
+  anfangsZahl,
+  karte,
 }: {
   titel: string;
-  anzahl: number;
+  produkte: AboKatalogProdukt[];
   onAlle?: () => void;
   marken: { name: string; anzahl: number }[];
   marke: string;
   onMarke: (name: string) => void;
-  kinder: ReactNode;
+  anfangsZahl: number;
+  karte: (produkt: AboKatalogProdukt) => ReactNode;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const abschnitt = useRef<HTMLElement>(null);
+  const mehr = useRef<HTMLDivElement>(null);
+  const [nah, setNah] = useState(anfangsZahl > 0);
+  const [bis, setBis] = useState(anfangsZahl);
+
+  useEffect(() => {
+    if (nah) return;
+    const el = abschnitt.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setNah(true);
+      return;
+    }
+    const beobachter = new IntersectionObserver(([eintrag]) => {
+      if (eintrag?.isIntersecting) setNah(true);
+    }, { rootMargin: "500px 0px" });
+    beobachter.observe(el);
+    return () => beobachter.disconnect();
+  }, [nah]);
+
+  useEffect(() => {
+    if (!nah || bis > 0 || produkte.length === 0) return;
+    setBis(Math.min(SCHRITT, produkte.length));
+  }, [nah, bis, produkte.length]);
+
+  useEffect(() => {
+    const el = mehr.current;
+    if (!el || bis >= produkte.length || typeof IntersectionObserver === "undefined") return;
+    const beobachter = new IntersectionObserver(([eintrag]) => {
+      if (!eintrag?.isIntersecting) return;
+      setBis((n) => Math.min(produkte.length, n + SCHRITT));
+    }, { rootMargin: "240px 280px" });
+    beobachter.observe(el);
+    return () => beobachter.disconnect();
+  }, [bis, produkte.length]);
+
+  const gezeigt = nah ? produkte.slice(0, bis) : [];
+
   return (
-    <section aria-label={titel} className="relative">
+    <section ref={abschnitt} aria-label={titel} className="relative">
       <div className="flex items-end justify-between gap-2 mb-1.5">
         <h4 className="text-lg lg:text-base font-bold leading-tight min-w-0">
           {titel}
-          <span className="ml-1.5 text-sm font-semibold text-muted-foreground tabular-nums"> {anzahl}</span>
+          <span className="ml-1.5 text-sm font-semibold text-muted-foreground tabular-nums"> {produkte.length}</span>
         </h4>
         {onAlle && (
           <button
@@ -66,7 +116,7 @@ function Reihe({
             type="button"
             className="w-11 h-11 rounded-full border border-border bg-card inline-flex items-center justify-center hover:border-primary"
             aria-label={`${titel} zurück`}
-            onClick={() => schieben(ref.current, -1)}
+            onClick={() => schieben(scroller.current, -1)}
           >
             <ChevronLeft className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -74,7 +124,7 @@ function Reihe({
             type="button"
             className="w-11 h-11 rounded-full border border-border bg-card inline-flex items-center justify-center hover:border-primary"
             aria-label={`${titel} weiter`}
-            onClick={() => schieben(ref.current, 1)}
+            onClick={() => schieben(scroller.current, 1)}
           >
             <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </button>
@@ -84,10 +134,20 @@ function Reihe({
         <MarkenLeiste marken={marken} wert={marke} onWahl={onMarke} label={`Marken in ${titel}`} />
       </div>
       <div
-        ref={ref}
+        ref={scroller}
         className="flex gap-2 overflow-x-auto snap-x snap-mandatory scroll-pl-1 pb-0.5 items-stretch no-scrollbar lg:grid lg:grid-cols-3 lg:overflow-visible lg:snap-none lg:pb-0 lg:gap-2.5 xl:grid-cols-5"
       >
-        {kinder}
+        {gezeigt.map((produkt) => (
+          <div
+            key={produkt.id || produkt.handle || titel}
+            className="snap-start shrink-0 w-[40%] self-stretch flex lg:w-auto lg:shrink"
+          >
+            {karte(produkt)}
+          </div>
+        ))}
+        {nah && bis < produkte.length && (
+          <div ref={mehr} className="w-px shrink-0 self-stretch lg:col-span-full lg:h-px lg:w-full" aria-hidden />
+        )}
       </div>
     </section>
   );
@@ -106,10 +166,24 @@ export function AboProduktKatalog<T extends AboKatalogProdukt>({
 }) {
   const [globaleMarke, setGlobaleMarke] = useState("");
   const [reihenMarke, setReihenMarke] = useState<Record<string, string>>({});
-  const gruppen = aboGruppen(produkte);
+  const gruppen = useMemo(() => aboGruppen(produkte), [produkte]);
   const sichtbar = kategorie === "alle" ? gruppen : gruppen.filter((g) => g.id === kategorie);
-  const alleMarken = markenZaehlen(produkte.map((p) => ({ node: { title: p.title || p.titel, handle: p.handle || "", vendor: p.vendor } })));
-  const chips = [{ id: "alle", label: "Alle" }, ...gruppen.map((g) => ({ id: g.id, label: g.label }))];
+  const alleMarken = useMemo(
+    () => markenZaehlen(produkte.map((p) => ({ node: { title: p.title || p.titel, handle: p.handle || "", vendor: p.vendor } }))),
+    [produkte],
+  );
+  const chips = useMemo(
+    () => [{ id: "alle", label: "Alle" }, ...gruppen.map((g) => ({ id: g.id, label: g.label }))],
+    [gruppen],
+  );
+  const reihen = useMemo(() => sichtbar.map((gruppe) => {
+    const wahl = reihenMarke[gruppe.id] || "";
+    const liste = (gruppe.produkte as T[]).filter((p) => passt(p, globaleMarke, wahl));
+    const marken = markenZaehlen(gruppe.produkte.map((p) => ({
+      node: { title: p.title || p.titel, handle: p.handle || "", vendor: p.vendor },
+    })));
+    return { gruppe, liste, marken, wahl };
+  }), [sichtbar, reihenMarke, globaleMarke]);
 
   return (
     <div>
@@ -147,43 +221,22 @@ export function AboProduktKatalog<T extends AboKatalogProdukt>({
         </div>
       </div>
 
-      {sichtbar.length === 0 ? (
+      {reihen.length === 0 ? (
         <p className="text-sm text-muted-foreground py-6">In dieser Kategorie ist nichts dabei.</p>
       ) : (
         <div className="space-y-3 pt-2">
-          {sichtbar.map((gruppe) => (
+          {reihen.map(({ gruppe, liste, marken, wahl }, index) => (
             <Reihe
               key={gruppe.id}
               titel={gruppe.label}
-              anzahl={(() => {
-                const wahl = reihenMarke[gruppe.id] || "";
-                return gruppe.produkte.filter((p) => {
-                  const m = markeVon(p);
-                  if (globaleMarke && m !== globaleMarke) return false;
-                  if (wahl && m !== wahl) return false;
-                  return true;
-                }).length;
-              })()}
+              produkte={liste}
+              anfangsZahl={index < ERSTE_REIHEN ? SCHRITT : 0}
               onAlle={kategorie === "alle" ? () => onKategorie(gruppe.id) : undefined}
-              marken={markenZaehlen(gruppe.produkte.map((p) => ({ node: { title: p.title || p.titel, handle: p.handle || "", vendor: p.vendor } })))}
-              marke={reihenMarke[gruppe.id] || ""}
+              marken={marken}
+              marke={wahl}
               onMarke={(name) => setReihenMarke((alt) => ({ ...alt, [gruppe.id]: name }))}
-              kinder={
-              gruppe.produkte.filter((p) => {
-                const m = markeVon(p);
-                const wahl = reihenMarke[gruppe.id] || "";
-                if (globaleMarke && m !== globaleMarke) return false;
-                if (wahl && m !== wahl) return false;
-                return true;
-              }).map((produkt) => (
-                <div
-                  key={produkt.id || produkt.handle || gruppe.id}
-                  className="snap-start shrink-0 w-[40%] self-stretch flex lg:w-auto lg:shrink"
-                >
-                  {karte(produkt)}
-                </div>
-              ))
-            } />
+              karte={karte as (produkt: AboKatalogProdukt) => ReactNode}
+            />
           ))}
         </div>
       )}
