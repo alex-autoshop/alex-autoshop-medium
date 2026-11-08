@@ -12,6 +12,8 @@ import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
+import { labelFuer } from "../../shared/listen-zustand.js";
+import { ListenRahmen } from "@/lib/listenRueckkehr";
 
 const MembershipCards = DIENSTLEISTUNG_BUCHBAR
   ? lazy(() => import("@/components/MembershipCards").then((m) => ({ default: m.MembershipCards })))
@@ -113,6 +115,7 @@ export default function Mitgliedschaft() {
   });
 
   return (
+    <ListenRahmen label={labelFuer("/mitgliedschaft")} seite={1} bereit>
     <div>
       <Seo
         title="Mitgliedschaft – bis 40% Rabatt, deutschlandweit"
@@ -279,5 +282,6 @@ export default function Mitgliedschaft() {
         </div>
       </section>
     </div>
+    </ListenRahmen>
   );
 }

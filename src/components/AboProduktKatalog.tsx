@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { aboGruppen } from "../../shared/abo-kategorien.js";
 import { brandOf, markenZaehlen } from "@/lib/marken";
@@ -46,6 +46,9 @@ function Reihe({
   marke,
   onMarke,
   anfangsZahl,
+  startBis = 0,
+  startX = 0,
+  onStand,
   karte,
 }: {
   titel: string;
@@ -55,13 +58,19 @@ function Reihe({
   marke: string;
   onMarke: (name: string) => void;
   anfangsZahl: number;
+  startBis?: number;
+  startX?: number;
+  onStand?: (stand: { bis: number; x: number }) => void;
   karte: (produkt: AboKatalogProdukt) => ReactNode;
 }) {
+  const anfang = Math.max(anfangsZahl, startBis);
   const scroller = useRef<HTMLDivElement>(null);
   const abschnitt = useRef<HTMLElement>(null);
   const mehr = useRef<HTMLDivElement>(null);
-  const [nah, setNah] = useState(anfangsZahl > 0);
-  const [bis, setBis] = useState(anfangsZahl);
+  const stand = useRef(onStand);
+  stand.current = onStand;
+  const [nah, setNah] = useState(anfang > 0);
+  const [bis, setBis] = useState(anfang);
 
   useEffect(() => {
     if (nah) return;
@@ -81,6 +90,15 @@ function Reihe({
     if (!nah || bis > 0 || produkte.length === 0) return;
     setBis(Math.min(SCHRITT, produkte.length));
   }, [nah, bis, produkte.length]);
+
+  useEffect(() => {
+    stand.current?.({ bis, x: scroller.current?.scrollLeft || startX || 0 });
+  }, [bis, startX]);
+
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (el && startX) el.scrollLeft = startX;
+  }, [startX]);
 
   useEffect(() => {
     const el = mehr.current;
@@ -135,6 +153,7 @@ function Reihe({
       </div>
       <div
         ref={scroller}
+        onScroll={() => stand.current?.({ bis, x: scroller.current?.scrollLeft || 0 })}
         className="flex gap-2 overflow-x-auto snap-x snap-mandatory scroll-pl-1 pb-0.5 items-stretch no-scrollbar lg:grid lg:grid-cols-3 lg:overflow-visible lg:snap-none lg:pb-0 lg:gap-2.5 xl:grid-cols-5"
       >
         {gezeigt.map((produkt) => (
@@ -158,14 +177,34 @@ export function AboProduktKatalog<T extends AboKatalogProdukt>({
   kategorie,
   onKategorie,
   karte,
+  marke: markeProp,
+  onMarke,
+  geladen,
+  onGeladen,
+  startReihenMarke,
+  onReihenMarke,
 }: {
   produkte: T[];
   kategorie: string;
   onKategorie: (id: string) => void;
   karte: (produkt: T) => ReactNode;
+  marke?: string;
+  onMarke?: (name: string) => void;
+  geladen?: Record<string, { bis?: number; x?: number }>;
+  onGeladen?: (id: string, stand: { bis: number; x: number }) => void;
+  startReihenMarke?: Record<string, string>;
+  onReihenMarke?: (marken: Record<string, string>) => void;
 }) {
-  const [globaleMarke, setGlobaleMarke] = useState("");
-  const [reihenMarke, setReihenMarke] = useState<Record<string, string>>({});
+  const [eigeneMarke, setEigeneMarke] = useState("");
+  const globaleMarke = onMarke ? (markeProp || "") : eigeneMarke;
+  const setGlobaleMarke = (name: string) => {
+    if (onMarke) onMarke(name);
+    else setEigeneMarke(name);
+  };
+  const [reihenMarke, setReihenMarke] = useState<Record<string, string>>(startReihenMarke || {});
+  const reihenMarkeMelden = useRef(onReihenMarke);
+  reihenMarkeMelden.current = onReihenMarke;
+  useEffect(() => { reihenMarkeMelden.current?.(reihenMarke); }, [reihenMarke]);
   const gruppen = useMemo(() => aboGruppen(produkte), [produkte]);
   const sichtbar = kategorie === "alle" ? gruppen : gruppen.filter((g) => g.id === kategorie);
   const alleMarken = useMemo(
@@ -231,6 +270,9 @@ export function AboProduktKatalog<T extends AboKatalogProdukt>({
               titel={gruppe.label}
               produkte={liste}
               anfangsZahl={index < ERSTE_REIHEN ? SCHRITT : 0}
+              startBis={geladen?.[gruppe.id]?.bis || 0}
+              startX={geladen?.[gruppe.id]?.x || 0}
+              onStand={onGeladen ? (stand) => onGeladen(gruppe.id, stand) : undefined}
               onAlle={kategorie === "alle" ? () => onKategorie(gruppe.id) : undefined}
               marken={marken}
               marke={wahl}

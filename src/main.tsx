@@ -10,6 +10,8 @@ import { istChunkFehler, seiteNeuLaden } from "../shared/abruf.js";
 import App from "./App";
 import "./index.css";
 
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
 window.addEventListener("vite:preloadError", (event) => {
   const fehler = (event as Event & { payload?: unknown }).payload;
   if (fehler && !istChunkFehler(fehler)) return;

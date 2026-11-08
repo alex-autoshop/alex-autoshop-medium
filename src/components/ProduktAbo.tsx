@@ -16,6 +16,7 @@ import {
 import { WunschfarbenLeiste, type MengenEintrag } from "@/components/WunschfarbenLeiste";
 import { istAboKonfigurator } from "../../shared/abo-kategorien.js";
 import { cn } from "@/lib/utils";
+import { useListenRueckkehr, useListenZusatz } from "@/lib/listenRueckkehr";
 import { ABO_EREIGNIS, ABO_SPEICHER, aboListeLesen } from "@/lib/aboListe";
 import { AboAnmeldung } from "@/components/AboAnmeldung";
 import { AboProduktKatalog } from "@/components/AboProduktKatalog";
@@ -163,7 +164,7 @@ const AboKarte = memo(function AboKarte({
   const gesperrt = kaufGesperrt(gefahr);
   const bild = a.bild ? bildAdresse(a.bild, 400, "webp") : "";
   return (
-    <div className="h-full w-full flex flex-col rounded-lg border border-border p-1.5 lg:p-2 bg-card">
+    <div className="h-full w-full flex flex-col rounded-lg border border-border p-1.5 lg:p-2 bg-card" data-produkt={a.handle}>
       <button
         type="button"
         className="aspect-[4/3] rounded-md bg-white overflow-hidden mb-1.5 cursor-pointer active:scale-[0.98] transition-transform"
@@ -239,26 +240,41 @@ const euro = (n: number) =>
 
 export function ProduktAbo() {
   const { user, loading: kontoLaedt } = useAuth();
+  const rueck = useListenRueckkehr();
+  const zusatz = rueck?.zusatz;
   const start = useMemo(liste_laden, []);
   const [standard, setStandard] = useState<number>(start.standard);
   const [wahl, setWahl] = useState<Record<string, number>>({});
   const [produkte, setProdukte] = useState<AboZeile[]>(start.produkte);
-  const [suche, setSuche] = useState("");
-  const [suchbegriff, setSuchbegriff] = useState("");
+  const [suche, setSuche] = useState(zusatz?.q || "");
+  const [suchbegriff, setSuchbegriff] = useState(zusatz?.q || "");
   const [zahlweg, setZahlweg] = useState<"gocardless" | "stripe">("gocardless");
   const [laeuft, setLaeuft] = useState(false);
   const [farbeAuf, setFarbeAuf] = useState(0);
   const [farbeStart, setFarbeStart] = useState("");
   const [anmeldung, setAnmeldung] = useState(false);
-  const [kategorie, setKategorie] = useState("alle");
+  const [kategorie, setKategorie] = useState(zusatz?.kat || "alle");
+  const [marke, setMarke] = useState(zusatz?.marke || "");
+  const reihenAnfang = useRef(zusatz?.reihen ? { ...zusatz.reihen } : {});
+  const reihenRef = useRef<Record<string, { bis: number; x: number }>>(
+    zusatz?.reihen ? { ...zusatz.reihen } : {},
+  );
+  const reihenMarkeRef = useRef<Record<string, string>>(zusatz?.reihenMarke ? { ...zusatz.reihenMarke } : {});
   const [vorschau, setVorschau] = useState<ShopifyProduct | null>(null);
   const [blatt, setBlatt] = useState(false);
   const listeRef = useRef<HTMLDivElement>(null);
   const katalogRef = useRef<HTMLDivElement>(null);
   const [listeSichtbar, setListeSichtbar] = useState(false);
-  const [katalogNah, setKatalogNah] = useState(false);
+  const [katalogNah, setKatalogNah] = useState(() => Boolean(rueck));
   const produkteRef = useRef(produkte);
   produkteRef.current = produkte;
+  useListenZusatz(() => ({
+    kat: kategorie,
+    q: suche,
+    marke,
+    reihen: reihenRef.current,
+    reihenMarke: reihenMarkeRef.current,
+  }));
 
   // Auswahl überlebt einen Seitenwechsel — sonst ist die Arbeit weg
   useEffect(() => {
@@ -283,7 +299,14 @@ export function ProduktAbo() {
     return () => clearTimeout(t);
   }, [suche]);
 
-  useEffect(() => { setKategorie("alle"); }, [suchbegriff]);
+  const sucheStart = useRef(true);
+  useEffect(() => {
+    if (sucheStart.current) {
+      sucheStart.current = false;
+      return;
+    }
+    setKategorie("alle");
+  }, [suchbegriff]);
 
   useEffect(() => {
     const el = listeRef.current;
@@ -493,6 +516,12 @@ export function ProduktAbo() {
               produkte={katalogEintraege}
               kategorie={kategorie}
               onKategorie={setKategorie}
+              marke={marke}
+              onMarke={setMarke}
+              geladen={reihenAnfang.current}
+              onGeladen={(id, stand) => { reihenRef.current[id] = stand; }}
+              startReihenMarke={reihenMarkeRef.current}
+              onReihenMarke={(map) => { reihenMarkeRef.current = map; }}
               karte={(eintrag) => {
                 const p = eintrag.quelle;
                 return (

@@ -15,8 +15,10 @@ import { DeliveryBadge } from "@/components/DeliveryBadge";
 import { Grundpreis } from "@/components/Grundpreis";
 import { BaldVerfuegbar, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
 import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
+import { useListenMerken } from "@/lib/listenRueckkehr";
 
 export function ProductCard({ product, priority = false }: { product: ShopifyProduct; priority?: boolean }) {
+  const merken = useListenMerken();
   const addItem = useCartStore((s) => s.addItem);
   const [qty, setQty] = useState(1);
   const [showPrices, setShowPrices] = useState(false);
@@ -79,11 +81,14 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
     bild: img || undefined,
   };
 
+  const oeffnen = () => merken(node.handle);
+
   return (
-    <div className="card-tilt aa-karte overflow-hidden flex flex-col h-full">
+    <div className="card-tilt aa-karte overflow-hidden flex flex-col h-full" data-produkt={node.handle}>
       <Link
         to={`/produkt/${node.handle}`}
         className="block group"
+        onClick={oeffnen}
         onMouseEnter={() => produktVorholen(node.handle)}
         onFocus={() => produktVorholen(node.handle)}
       >
@@ -99,6 +104,7 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
       <div ref={spalte} className="p-3 sm:p-4 flex flex-col flex-1 gap-2">
         <Link
           to={`/produkt/${node.handle}`}
+          onClick={oeffnen}
           onMouseEnter={() => produktVorholen(node.handle)}
           onFocus={() => produktVorholen(node.handle)}
         >
@@ -175,7 +181,7 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
               </button>
             </div>
           ) : (
-            <Link to={`/produkt/${node.handle}`} className="btn-outline w-full text-sm min-h-[40px]">
+            <Link to={`/produkt/${node.handle}`} onClick={oeffnen} className="btn-outline w-full text-sm min-h-[40px]">
               Varianten wählen
             </Link>
           )}

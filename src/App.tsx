@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation, useNavigationType, Navigate,
 import { empfehlungMerken } from "@/lib/empfehlung";
 import { empfehlungOffen } from "../shared/empfehlung.js";
 import { PRODUKT_WEITERLEITUNG } from "../shared/produkt-weiterleitung.js";
+import { istListenPfad } from "../shared/listen-zustand.js";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
@@ -52,14 +53,13 @@ function ScrollToTop() {
   const { pathname, hash, state } = useLocation();
   const navigationType = useNavigationType();
   useEffect(() => {
-    // Shop stellt Position und Filter selbst wieder her. Ein Sprung nach oben
+    // Listen stellen Position und Filter selbst wieder her. Ein Sprung nach oben
     // würde die Lackierbedarf-Ansicht wie einen frischen Einstieg aussehen lassen.
-    const shopPfad = pathname === "/shop" || pathname.startsWith("/shop/") || pathname.startsWith("/kategorie/");
-    const shopZurueck = shopPfad && (
+    const zurueck = istListenPfad(pathname) && (
       navigationType === "POP"
       || Boolean((state as { shopZurueck?: boolean } | null)?.shopZurueck)
     );
-    if (shopZurueck && !hash) return;
+    if (zurueck && !hash) return;
     if (!hash) {
       window.scrollTo(0, 0);
       return;

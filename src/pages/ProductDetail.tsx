@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { shopZurueckZiel } from "../../shared/shop-zustand.js";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { zurueckZiel } from "../../shared/listen-zustand.js";
 import { ShoppingCart, Minus, Plus, ChevronLeft, Store } from "lucide-react";
 import { toast } from "sonner";
 import { Seo } from "@/components/Seo";
@@ -28,15 +28,38 @@ import { EmpfohleneProdukte } from "@/components/EmpfohleneProdukte";
 import { AnwendungProzess } from "@/components/AnwendungProzess";
 import { produktDokument } from "../../shared/seo-katalog.js";
 
-function ZurueckZumShop({ className, mitPfeil = false }: { className?: string; mitPfeil?: boolean }) {
-  const ziel = useMemo(() => shopZurueckZiel(), []);
+function ZurueckZumShop({
+  className,
+  mitPfeil = false,
+  produktHandle = "",
+  sammlungen,
+}: {
+  className?: string;
+  mitPfeil?: boolean;
+  produktHandle?: string;
+  sammlungen?: Array<{ handle?: string; title?: string } | null>;
+}) {
+  const navigate = useNavigate();
+  const ziel = useMemo(
+    () => zurueckZiel({
+      historyLength: typeof window !== "undefined" ? window.history.length : 0,
+      produktHandle,
+      sammlungen,
+    }),
+    [produktHandle, sammlungen],
+  );
   return (
     <Link
       to={{ pathname: ziel.pathname, search: ziel.search }}
-      state={{ shopZurueck: true }}
+      state={ziel.shopZurueck ? { shopZurueck: true } : undefined}
+      onClick={(e) => {
+        if (!ziel.history || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        navigate(-1);
+      }}
       className={className}
     >
-      {mitPfeil && <ChevronLeft className="w-4 h-4" />} Zurück zum Shop
+      {mitPfeil && <ChevronLeft className="w-4 h-4" />} {ziel.label}
     </Link>
   );
 }
@@ -192,6 +215,8 @@ export default function ProductDetail() {
 
       <ZurueckZumShop
         mitPfeil
+        produktHandle={product.handle}
+        sammlungen={product.collections?.edges?.map((e) => e.node)}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mb-6 min-h-[44px]"
       />
 

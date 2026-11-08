@@ -100,9 +100,9 @@ const Datenschutz = () => {
       <h2>10. Cookies &amp; lokale Speicherung</h2>
       <p>
         Wir setzen technisch notwendige Cookies und localStorage-Einträge ein (Warenkorb, Login,
-        Materialplaner-Stand, Cookie-Auswahl). Damit „Zurück zum Shop“ dieselbe Kategorie und
-        dieselben Filter wieder öffnet, merken wir die Shop-Auswahl in der Adresse und für die
-        Sitzung im sessionStorage. Für Produktempfehlungen speichern wir zuletzt angesehene
+        Materialplaner-Stand, Cookie-Auswahl). Damit „Zurück“ dieselbe Liste wieder öffnet
+        (Kategorie, Filter, geladene Produkte und Scrollposition), merken wir die Auswahl in der
+        Adresse und für die Sitzung im sessionStorage. Für Produktempfehlungen speichern wir zuletzt angesehene
         Produkte, Marken und Kategorien nur auf diesem Gerät (localStorage „aa:gesehen“ und das
         eigene Cookie „aa_gesehen“) — ohne Weitergabe an Dritte. Diese Einträge sind für den
         Betrieb des Shops erforderlich (Art. 6 Abs. 1 lit. f DSGVO bzw. § 25 Abs. 2 TDDDG). Das Übersetzungs-Cookie („googtrans")

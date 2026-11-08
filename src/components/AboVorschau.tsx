@@ -8,6 +8,7 @@ import { BaldVerfuegbar, GefahrstoffBlock } from "@/components/GefahrstoffHinwei
 import { aboBildStil } from "../../shared/abo-bildrahmen.js";
 import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { cn } from "@/lib/utils";
+import { useListenMerken } from "@/lib/listenRueckkehr";
 
 const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
@@ -38,6 +39,7 @@ export function AboVorschau({
   onZu: () => void;
 }) {
   const n = produkt.node;
+  const merken = useListenMerken();
   const bilder = n.images?.edges?.map((e) => e.node.url).filter(Boolean) ?? [];
   const [bild, setBild] = useState(0);
   const preis = parseFloat(n.priceRange?.minVariantPrice?.amount ?? "0");
@@ -158,7 +160,7 @@ export function AboVorschau({
             {schon && misch ? "Öffnen" : schon ? <><CheckCircle className="w-4 h-4" /> drin</> : <><Plus className="w-4 h-4" /> Hinzufügen</>}
           </button>
           )}
-          <Link to={`/produkt/${n.handle}`} className="inline-block text-sm font-semibold text-primary underline underline-offset-2">
+          <Link to={`/produkt/${n.handle}`} onClick={() => merken(n.handle)} className="inline-block text-sm font-semibold text-primary underline underline-offset-2">
             Zur Produktseite
           </Link>
         </div>
