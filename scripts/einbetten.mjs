@@ -6,6 +6,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { storefront } from "../api/_storefront.js";
+import { beliebteHolen } from "../shared/beliebte-produkte.js";
 import {
   QUERY_KOLLEKTION,
   QUERY_PRODUKTE,
@@ -84,11 +85,11 @@ export async function einbetten(basis, dist) {
   let anzahl = 0;
   let home = basis.replace("<!--AA_PRELOAD-->", "");
   try {
-    const data = await storefront(QUERY_PRODUKTE, { first: 8, after: null, query: null });
+    const products = await beliebteHolen(storefront);
     home = seite(basis, {
       daten: {
         meta: { art: "home", schluessel: "home" },
-        data: { products: data.data?.products ?? { edges: [], pageInfo: {} } },
+        data: { products },
       },
     });
     anzahl += 1;

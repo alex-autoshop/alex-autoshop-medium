@@ -5,6 +5,7 @@ import {
   STOREFRONT_PRODUCTS_QUERY,
   storefrontApiRequest,
 } from "@/lib/shopify";
+import { beliebteHolen } from "../../shared/beliebte-produkte.js";
 
 export interface KatalogMeta {
   art?: string;
@@ -126,6 +127,10 @@ export async function produkteHolen(vars: { first: number; after?: string | null
     filter: vars.filter || undefined,
   });
   if (api?.data?.products) return api;
+  if (vars.einbettung === "home") {
+    const products = await beliebteHolen((query) => storefrontApiRequest(query));
+    return { meta: { art: "home", schluessel: "home" }, data: { products } };
+  }
   const text = (vars.suche || "").trim().replace(/["\\*]/g, "").slice(0, 80);
   const filter = vars.filter && vars.filter.length <= 180 && !/[{}]/.test(vars.filter) ? vars.filter : "";
   const query = filter
