@@ -20,6 +20,7 @@ import { GpsrHinweis } from "@/components/GpsrHinweis";
 import { gpsrLesen } from "../../shared/gpsr.js";
 import { AboKnopf } from "@/components/AboKnopf";
 import { BaldVerfuegbar, GefahrstoffBlock, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
+import { TechnischeDokumentation } from "@/components/TechnischeDokumentation";
 import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js";
 import { cn } from "@/lib/utils";
 import { EmpfohleneProdukte } from "@/components/EmpfohleneProdukte";
@@ -288,10 +289,11 @@ export default function ProductDetail() {
           )}
           {(gefahr.ist || hersteller.hat) && (
             <div className="mt-8 space-y-4">
-              <GefahrstoffBlock g={gefahr} titel={product.title} handle={product.handle} />
-              <GpsrHinweis felder={product.gpsr} sdbUrl={gefahr.sdbUrl} />
+              <GefahrstoffBlock g={gefahr} />
+              <GpsrHinweis felder={product.gpsr} />
             </div>
           )}
+          <TechnischeDokumentation g={gefahr} titel={product.title} handle={product.handle} />
 
           <div className="mt-8 flex items-start gap-3 text-sm text-muted-foreground">
             <Store className="w-5 h-5 mt-0.5 shrink-0 text-primary" />
