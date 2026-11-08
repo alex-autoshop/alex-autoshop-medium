@@ -113,6 +113,7 @@ export const navCategories: ShopLink[] = [
     label: "Werkstattchemie",
     slug: "werkstattchemie",
     query: 'tag:"Kategorie: Werkstattchemie"',
+    image: "/images/collection-werkstattchemie.webp",
     contain: true,
     children: [
       { label: "Bremsenreiniger", slug: "bremsenreiniger", query: 'product_type:"Bremsenreiniger"' },
