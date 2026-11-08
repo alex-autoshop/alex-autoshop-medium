@@ -51,17 +51,20 @@ test("Token aus Bearer oder Cookie, sonst 401 ohne Netz", async () => {
   assert.equal(ohne.status, 401);
 });
 
-test("Middleware liefert Hinweis statt Produkt-HTML und eine leere Sitemap", async () => {
+test("Middleware leitet Gäste auf die Startseite und liefert eine leere Sitemap", async () => {
   const seite = await middleware(new Request("https://www.alex-autoshop.de/teile/mann-filter--HU+719~6x"));
-  assert.equal(seite.status, 503);
+  assert.equal(seite.status, 302);
+  assert.equal(seite.headers.get("location"), "https://www.alex-autoshop.de/");
   assert.match(seite.headers.get("x-robots-tag") || "", /noindex/);
   const html = await seite.text();
-  assert.match(html, new RegExp(TEILEBOERSE_HINWEIS));
   assert.equal(html.includes("Artikelnummer"), false);
+  assert.equal(html.includes("Teilebörse"), false);
   assert.equal(html.includes("application/ld+json"), false);
 
   const liste = await middleware(new Request("https://www.alex-autoshop.de/teileboerse"));
-  assert.equal(liste.status, 503);
+  assert.equal(liste.status, 302);
+  assert.equal(liste.headers.get("location"), "https://www.alex-autoshop.de/");
+  assert.match(liste.headers.get("x-robots-tag") || "", /noindex/);
   const map = await middleware(new Request("https://www.alex-autoshop.de/sitemap-teile.xml"));
   assert.equal(map.status, 200);
   assert.equal((await map.text()).includes("<loc>"), false);

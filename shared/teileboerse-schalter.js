@@ -9,7 +9,8 @@
  *   public/sitemap.xml          — sitemap-teile.xml nicht im Index
  *   public/sitemap-seiten.xml   — /teileboerse nicht gelistet
  *   public/robots.txt           — Disallow für /teileboerse und /teile
- * Die Middleware liefert /sitemap-teile.xml leer und die Seiten mit noindex.
+ * Die Middleware leitet Gäste von /teileboerse und /teile auf / um (noindex)
+ * und liefert /sitemap-teile.xml leer.
  */
 
 export const TEILEBOERSE_PUBLIC = false;
