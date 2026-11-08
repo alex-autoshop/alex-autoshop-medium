@@ -42,7 +42,7 @@ const BetaBadge = ({ className = "" }: { className?: string }) => (
   </span>
 );
 
-/** Kategorieleiste (Desktop): 6 Hauptkategorien, Hover öffnet Dropdown mit Unterkategorien. */
+/** Kategorieleiste (Desktop): Hauptkategorien, Hover öffnet die Unterkategorien. */
 function KategorieLeiste() {
   const [offen, setOffen] = useState<string | null>(null);
   return (
@@ -68,7 +68,7 @@ function KategorieLeiste() {
                 aria-expanded={cat.children.length > 0 ? offen === cat.handle : undefined}
                 className={({ isActive }) =>
                   cn(
-                    "flex items-center gap-1 px-3 min-h-[44px] text-sm font-semibold whitespace-nowrap transition-colors border-b-2",
+                    "flex items-center gap-1 px-2 min-h-[44px] text-sm font-semibold whitespace-nowrap transition-colors border-b-2",
                     isActive || offen === cat.handle
                       ? "text-gold-bright border-gold-bright"
                       : "text-white/80 border-transparent hover:text-white"
@@ -80,7 +80,7 @@ function KategorieLeiste() {
               </NavLink>
               {cat.children.length > 0 && offen === cat.handle && (
                 <div className={cn("absolute top-full z-50 pt-1", rechts ? "right-0" : "left-0")}>
-                  <div className="w-72 rounded-2xl border border-border bg-card text-foreground shadow-2xl p-2">
+                  <div className="w-72 max-h-[70vh] overflow-y-auto rounded-2xl border border-border bg-card text-foreground shadow-2xl p-2">
                     <Link
                       to={kategoriePfad(cat.handle)}
                       onClick={() => setOffen(null)}

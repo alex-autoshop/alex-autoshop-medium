@@ -27,6 +27,9 @@ export const SHOP_CATEGORIES: MainCategory[] = [
       { handle: "haerter", label: "Härter" },
       { handle: "verduennung-zusaetze", label: "Verdünnung & Zusätze" },
       { handle: "wunschfarbe-lackstift", label: "Wunschfarbe & Lackstift" },
+      { handle: "lackierpistolen-zubehor", label: "Lackierpistolen & Zubehör" },
+      { handle: "maschinen-werkzeug", label: "Maschinen & Werkzeug" },
+      { handle: "verbrauchsmaterial", label: "Verbrauchsmaterial" },
     ],
   },
   {
@@ -50,6 +53,7 @@ export const SHOP_CATEGORIES: MainCategory[] = [
       { handle: "poliermaschinen-pads", label: "Poliermaschinen & Pads" },
       { handle: "politur-schleifpaste", label: "Politur & Schleifpaste" },
       { handle: "pflegemittel-versiegelung", label: "Pflegemittel & Versiegelung" },
+      { handle: "felgen-reifen", label: "Felgen & Reifen" },
     ],
   },
   {
@@ -57,9 +61,10 @@ export const SHOP_CATEGORIES: MainCategory[] = [
     label: "Öle, Flüssigkeiten & Filter",
     children: [
       { handle: "motoroel", label: "Motoröl" },
-      { handle: "filter", label: "Filter" },
+      { handle: "getriebeoel", label: "Getriebeöl" },
       { handle: "kuehlmittel-scheibenreiniger", label: "Kühlmittel & Scheibenreiniger" },
       { handle: "reiniger-fette", label: "Reiniger & Fette" },
+      { handle: "filter", label: "Filter" },
     ],
   },
   {
@@ -68,6 +73,22 @@ export const SHOP_CATEGORIES: MainCategory[] = [
     children: [
       { handle: "eiskratzer-schneebesen", label: "Eiskratzer & Schneebesen" },
       { handle: "enteiser-frostschutz", label: "Enteiser & Frostschutz" },
+    ],
+  },
+  {
+    handle: "werkstattchemie",
+    label: "Werkstattchemie",
+    children: [
+      { handle: "bremsenreiniger", label: "Bremsenreiniger" },
+      { handle: "rostloeser-multifunktion", label: "Rostlöser & Multifunktion" },
+      { handle: "kontakt-elektrik", label: "Kontakt & Elektrik" },
+      { handle: "schmier-gleitsprays", label: "Schmier- & Gleitsprays" },
+      { handle: "unterboden-hohlraum", label: "Unterboden & Hohlraum" },
+      { handle: "klimaanlage", label: "Klimaanlage" },
+      { handle: "montagepasten", label: "Montagepasten" },
+      { handle: "dichten-sichern", label: "Dichten & Sichern" },
+      { handle: "handreinigung", label: "Handreinigung" },
+      { handle: "werkstatt-reiniger", label: "Reiniger" },
     ],
   },
   {
