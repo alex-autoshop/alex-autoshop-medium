@@ -3,6 +3,7 @@ import { katalogVorholen, produktVorholen } from "@/lib/katalog";
 import { BrowserRouter, Routes, Route, useLocation, useNavigationType, Navigate, useParams } from "react-router-dom";
 import { empfehlungMerken } from "@/lib/empfehlung";
 import { empfehlungOffen } from "../shared/empfehlung.js";
+import { PRODUKT_WEITERLEITUNG } from "../shared/produkt-weiterleitung.js";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
@@ -166,6 +167,9 @@ export default function App() {
                     <Route path="/shop" element={<Shop />} />
                     <Route path="/shop/:category" element={<Shop />} />
                     <Route path="/kategorie/:handle" element={<Kategorie />} />
+                    {Object.entries(PRODUKT_WEITERLEITUNG).map(([handle, ziel]) => (
+                      <Route key={handle} path={`/produkt/${handle}`} element={<Navigate to={ziel} replace />} />
+                    ))}
                     <Route path="/produkt/:handle" element={<ProductDetail />} />
                     <Route path="/warenkorb" element={<Warenkorb />} />
                     <Route path="/mitgliedschaft" element={<Mitgliedschaft />} />

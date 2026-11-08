@@ -13,6 +13,7 @@ import {
   findCategory,
   kategoriePfad,
   SHOP_CATEGORIES,
+  menueKinder,
   unterkategoriePfad,
   type CollectionSort,
   type SubCategory,
@@ -24,10 +25,11 @@ import { legacyCategoryRedirect } from "@/lib/categories";
 import { kategorieDokument } from "../../shared/seo-katalog.js";
 
 function Chips({ items, activeHandle }: { items: SubCategory[]; activeHandle?: string }) {
+  const seite = activeHandle ? kategoriePfad(activeHandle) : "";
   return (
     <div className="flex flex-wrap gap-2">
       {items.map((c) => {
-        const aktiv = !c.to && c.handle === activeHandle;
+        const aktiv = Boolean(seite) && unterkategoriePfad(c) === seite;
         return (
           <Link
             key={c.handle}
@@ -219,7 +221,7 @@ export default function Kategorie() {
               Alle {main.label} <ArrowRight className="w-4 h-4" />
             </Link>
           )}
-          <Chips items={main.children} activeHandle={sub?.handle} />
+          <Chips items={menueKinder(main.children)} activeHandle={sub?.handle} />
         </div>
       )}
 

@@ -10,6 +10,8 @@ export interface SubCategory {
   to?: string;
   /** Dezenter Gold-Akzent, gleicher Ton wie „Alle …“. */
   accent?: boolean;
+  /** Kategorieseite bleibt erreichbar, erscheint aber nicht in Menü oder Chips. */
+  nurSeite?: boolean;
 }
 
 export interface MainCategory {
@@ -39,7 +41,9 @@ export const SHOP_CATEGORIES: MainCategory[] = [
       { handle: "klarlack-produkte", label: "Klarlack" },
       { handle: "haerter", label: "Härter" },
       { handle: "verduennung-zusaetze", label: "Verdünnung & Zusätze" },
-      { handle: "wunschfarbe-lackstift", label: "Wunschfarbe & Lackstift" },
+      // Dieselbe Kollektion wie der Eintrag oben. Nur die Seite bleibt,
+      // im Menü und in den Chips steht sie nicht noch einmal.
+      { handle: "wunschfarbe-lackstift", label: "Wunschfarbe & Lackstift", nurSeite: true },
       { handle: "lackierpistolen-zubehor", label: "Lackierpistolen & Zubehör" },
       { handle: "maschinen-werkzeug", label: "Maschinen & Werkzeug" },
       { handle: "verbrauchsmaterial", label: "Verbrauchsmaterial" },
@@ -112,6 +116,11 @@ export const SHOP_CATEGORIES: MainCategory[] = [
 ];
 
 export const kategoriePfad = (handle: string) => `/kategorie/${handle}`;
+
+/** Unterkategorien für Menü, Filter und Chips. Reine Kategorieseiten fehlen. */
+export function menueKinder<T extends { nurSeite?: boolean }>(items: T[]): T[] {
+  return items.filter((item) => !item.nurSeite);
+}
 
 export function unterkategoriePfad(sub: Pick<SubCategory, "handle" | "to">): string {
   return sub.to || kategoriePfad(sub.handle);

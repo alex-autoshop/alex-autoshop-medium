@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, Search, X, RotateCcw } from "lucide-react";
-import { categoryPath, navCategories } from "@/lib/categories";
+import { categoryPath, menueLinks, navCategories } from "@/lib/categories";
 import { markeAktiv, markeUmschalten, markenName } from "@/lib/marken";
 import { istLieferant } from "../../shared/kundenmarke.js";
 import { cn } from "@/lib/utils";
@@ -196,7 +196,7 @@ export function ShopFilters({
         </p>
         <div className="space-y-3 lg:max-h-[420px] lg:overflow-y-auto lg:pr-1">
           {navCategories.map((group) => {
-            const children = group.children ?? [];
+            const children = menueLinks(group.children);
             const groupHref = group.slug ? `/shop/${group.slug}` : null;
             const groupActive = Boolean(group.slug && activeSlug === group.slug);
             return (

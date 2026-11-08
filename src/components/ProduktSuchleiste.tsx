@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronDown, X, Check, SlidersHorizontal } from "lucide-react";
-import { categoryPath, navCategories, type ShopLink } from "@/lib/categories";
+import { categoryPath, menueLinks, navCategories, type ShopLink } from "@/lib/categories";
 import { MarkenLeiste } from "@/components/MarkenLeiste";
 import { cn } from "@/lib/utils";
 
@@ -138,7 +138,7 @@ export function CategoryDropdown({
             <div className="h-px bg-border/50 mx-3" />
             <div className="p-2 max-h-[62vh] overflow-y-auto">
               {navCategories.map((group) => {
-                const children = group.children ?? [];
+                const children = menueLinks(group.children);
                 const groupHref = ziel(group);
                 const groupActive = Boolean(group.slug && activeSlug === group.slug);
                 return (

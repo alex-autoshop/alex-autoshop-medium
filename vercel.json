@@ -1,6 +1,7 @@
 {
   "regions": ["fra1"],
   "redirects": [
+    { "source": "/produkt/a1-der-wax-schwamm", "destination": "/produkt/a1-speed-polish-dr-wack", "permanent": true },
     { "source": "/product/:slug*", "destination": "/produkt/:slug*", "permanent": true },
     { "source": "/products/:slug*", "destination": "/produkt/:slug*", "permanent": true },
     { "source": "/collections/:slug*", "destination": "/kategorie/:slug*", "permanent": true },
