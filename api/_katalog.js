@@ -4,6 +4,7 @@
  * `frisch=1` ist ungecacht — nur für den Preis direkt vor dem Bezahlen.
  */
 import { storefront } from "./_storefront.js";
+import { beliebteHolen } from "../shared/beliebte-produkte.js";
 import {
   QUERY_KOLLEKTION,
   QUERY_PRODUKT,
@@ -98,21 +99,27 @@ export async function katalogDaten(q) {
     };
   }
 
+  if (q.einbettung === "home") {
+    const products = await beliebteHolen(storefront);
+    return {
+      meta: { art: "home", schluessel: "home" },
+      data: { products },
+      ms: Date.now() - anfang,
+    };
+  }
+
   const first = erste(q.first, 24, 100);
   const after = cursor(q.after);
   const text = suchText(q.suche);
   const filter = suchFilterRoh(q.filter) || suchFilter(text, q.bereich === "tag" ? "tag" : "titel");
   const data = await storefront(QUERY_PRODUKTE, { first, after, query: filter });
   const category = sichererHandle(q.category);
-  const schluessel = q.einbettung === "home"
-    ? "home"
-    : `shop:${category}:${text}`;
   return {
     meta: {
-      art: q.einbettung === "home" ? "home" : "shop",
+      art: "shop",
       category,
       suche: text,
-      schluessel,
+      schluessel: `shop:${category}:${text}`,
     },
     data: data.data,
     ms: Date.now() - anfang,

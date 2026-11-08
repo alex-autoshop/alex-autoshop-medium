@@ -138,7 +138,8 @@
           var p = location.pathname.replace(/\/$/, "") || "/";
           var q = new URLSearchParams(location.search);
           var url = "";
-          if (p === "/") url = "/api/katalog?was=produkte&first=8&einbettung=home";
+          // first=10 entspricht BELIEBTE_ANFRAGE in shared/beliebte-produkte.js
+          if (p === "/") url = "/api/katalog?was=produkte&first=10&einbettung=home";
           else if (p.indexOf("/kategorie/") === 0) {
             url = "/api/katalog?was=kollektion&handle=" + encodeURIComponent(decodeURIComponent(p.split("/")[2] || ""))
               + "&first=100&sort=" + encodeURIComponent(q.get("sort") || "empfohlen");

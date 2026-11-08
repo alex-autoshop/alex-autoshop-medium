@@ -14,6 +14,7 @@ import { SHOP_INFO } from "@/data/shopInfo";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
 import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
+import { BELIEBTE_ANFRAGE } from "../../shared/beliebte-produkte.js";
 
 const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
@@ -47,7 +48,7 @@ const USPS = [
 ];
 
 export default function Home() {
-  const { products, isLoading, error } = useProducts({ pageSize: 8, einbettung: "home" });
+  const { products, isLoading, error } = useProducts({ pageSize: BELIEBTE_ANFRAGE, einbettung: "home" });
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const usps = teileSichtbar ? USPS : USPS.filter((usp) => usp.title !== "Teile per Kennzeichen");
 
