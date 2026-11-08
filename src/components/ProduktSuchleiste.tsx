@@ -185,9 +185,12 @@ export function CategoryDropdown({
                           onClick={() => setOpen(false)}
                           className={cn(
                             "flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors",
-                            active
-                              ? "bg-primary/10 text-primary font-medium"
-                              : "hover:bg-muted/60 text-foreground/80 hover:text-foreground",
+                            child.accent
+                              ? "font-semibold text-primary hover:bg-muted/60"
+                              : active
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "hover:bg-muted/60 text-foreground/80 hover:text-foreground",
+                            child.accent && active && "bg-primary/10",
                           )}
                         >
                           <span>{child.label}</span>

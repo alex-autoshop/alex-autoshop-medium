@@ -20,6 +20,8 @@ export interface ShopLink {
   query?: string;
   /** Direkter Pfad, wenn es keine Kollektion ist (Produktseite). */
   to?: string;
+  /** Dezenter Gold-Akzent in Filtern und Kategorie-Menü. */
+  accent?: boolean;
   image?: string;
   /** Produktfoto auf hellem Grund: in der Kachel vollständig zeigen. */
   contain?: boolean;
@@ -41,6 +43,11 @@ export const navCategories: ShopLink[] = [
     image: "/images/collection-lackierprodukte.webp",
     contain: true,
     children: [
+      {
+        label: "Wunschfarbe: Spraydose & Lackstift",
+        to: "/kategorie/wunschfarbe-lackstift",
+        accent: true,
+      },
       { label: "Grundierung & Füller", slug: "grundierung-fueller", query: 'product_type:"Grundierung & Füller"' },
       { label: "Spachtel", slug: "spachtel", query: 'product_type:"Spachtel"' },
       { label: "Schleifmittel", slug: "schleifmittel-produkte", query: 'product_type:"Schleifmittel"' },

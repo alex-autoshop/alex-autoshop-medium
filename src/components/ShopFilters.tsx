@@ -243,9 +243,12 @@ export function ShopFilters({
                           title={c.label}
                           className={cn(
                             "block px-1.5 lg:px-2 py-1.5 lg:py-1 rounded-md text-[12px] lg:text-[13px] leading-snug break-words transition-colors",
-                            active
-                              ? "bg-primary/10 text-foreground font-semibold"
-                              : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
+                            c.accent
+                              ? "text-primary font-semibold hover:bg-secondary/70"
+                              : active
+                                ? "bg-primary/10 text-foreground font-semibold"
+                                : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
+                            c.accent && active && "bg-primary/10",
                           )}
                         >
                           {c.label}

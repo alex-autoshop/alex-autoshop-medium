@@ -13,6 +13,7 @@ import {
   findCategory,
   kategoriePfad,
   SHOP_CATEGORIES,
+  unterkategoriePfad,
   type CollectionSort,
   type SubCategory,
 } from "@/lib/shopCategories";
@@ -25,17 +26,19 @@ function Chips({ items, activeHandle }: { items: SubCategory[]; activeHandle?: s
   return (
     <div className="flex flex-wrap gap-2">
       {items.map((c) => {
-        const aktiv = c.handle === activeHandle;
+        const aktiv = !c.to && c.handle === activeHandle;
         return (
           <Link
             key={c.handle}
-            to={kategoriePfad(c.handle)}
+            to={unterkategoriePfad(c)}
             aria-current={aktiv ? "page" : undefined}
             className={cn(
               "inline-flex items-center min-h-[40px] px-4 rounded-full border text-sm font-medium transition-colors",
               aktiv
                 ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card border-border hover:border-primary/60 hover:text-primary"
+                : c.accent
+                  ? "bg-card border-primary/40 text-primary font-semibold hover:border-primary"
+                  : "bg-card border-border hover:border-primary/60 hover:text-primary"
             )}
           >
             {c.label}
