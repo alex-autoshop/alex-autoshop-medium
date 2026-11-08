@@ -1,5 +1,5 @@
 import { useMemo, useRef } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useShopKontextMerken } from "@/lib/shopRueckkehr";
 import { PRODUKTLISTE_ID, KATEGORIE_LISTE_ABSTAND, zumProduktanfang } from "@/lib/produktanfang";
 import { ChevronRight, PackageOpen, ArrowRight } from "lucide-react";
@@ -18,6 +18,7 @@ import {
 } from "@/lib/shopCategories";
 import { cn } from "@/lib/utils";
 import { SHOP_INFO } from "@/data/shopInfo";
+import { legacyCategoryRedirect } from "@/lib/categories";
 
 function Chips({ items, activeHandle }: { items: SubCategory[]; activeHandle?: string }) {
   return (
@@ -61,6 +62,7 @@ export default function Kategorie() {
   const sortParam = params.get("sort") as CollectionSort | null;
   const sort: CollectionSort = COLLECTION_SORTS.some((s) => s.value === sortParam) ? sortParam! : "empfohlen";
 
+  const alt = legacyCategoryRedirect(handle);
   const treffer = findCategory(handle);
   const { products, isLoading, error, notFound, hasNextPage } = useCollectionProducts(handle, sort);
   useShopKontextMerken(!isLoading);
@@ -77,6 +79,8 @@ export default function Kategorie() {
   );
   const markenRef = useRef(gewaehlteMarken);
   markenRef.current = gewaehlteMarken;
+
+  if (alt) return <Navigate to={alt} replace />;
 
   if (!treffer) {
     return (

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { type ShopifyProduct } from "@/lib/shopify";
+import { type ShopifyProduct, storefrontApiRequest, STOREFRONT_PRODUCTS_QUERY } from "@/lib/shopify";
 import { kanten, kollektionHolen, leseEinbettung, nimmFrisch, seitenInfo } from "@/lib/katalog";
+import { getCategoryBySlug } from "@/lib/categories";
 import { COLLECTION_SORTS, type CollectionSort } from "@/lib/shopCategories";
 
 /** Alle Produkte einer Kollektion. Die erste Seite kommt aus dem HTML,
@@ -48,9 +49,33 @@ export function useCollectionProducts(handle: string, sort: CollectionSort, page
         if (!aktiv || requestId !== requestIdRef.current) return;
         const collection = erste?.data?.collection;
         if (!collection) {
-          setNotFound(true);
-          setHasNextPage(false);
-          setProducts([]);
+          const regel = getCategoryBySlug(handle);
+          if (!regel?.query) {
+            setNotFound(true);
+            setHasNextPage(false);
+            setProducts([]);
+            return;
+          }
+          let after: string | null = null;
+          let edges: ShopifyProduct[] = [];
+          let more = true;
+          while (more) {
+            const data = await storefrontApiRequest(STOREFRONT_PRODUCTS_QUERY, {
+              first: pageSize,
+              after,
+              query: regel.query,
+            });
+            if (!aktiv || requestId !== requestIdRef.current) return;
+            const dazu = (data?.data?.products?.edges ?? []) as ShopifyProduct[];
+            const info = data?.data?.products?.pageInfo;
+            after = info?.endCursor ?? null;
+            more = Boolean(info?.hasNextPage) && dazu.length > 0;
+            edges = edges.concat(dazu);
+            setProducts(edges);
+            setHasNextPage(more);
+            setIsLoading(false);
+          }
+          setNotFound(edges.length === 0);
           return;
         }
         let edges = (collection.products?.edges ?? []) as ShopifyProduct[];

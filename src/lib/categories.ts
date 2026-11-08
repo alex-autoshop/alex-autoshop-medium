@@ -1,5 +1,5 @@
 /**
- * Shop-Navigation = das Shopify-Menü „Menü“ (6 Hauptkategorien + Unterkategorien).
+ * Shop-Navigation = das Menü (Hauptkategorien + Unterkategorien).
  *
  * Die Storefront-API kann dieses Menü heute nicht lesen
  * (`unauthenticated_read_content` fehlt am Token) und die neuen Smart-Collections
@@ -49,6 +49,9 @@ export const navCategories: ShopLink[] = [
       { label: "Härter", slug: "haerter", query: 'product_type:"Härter"' },
       { label: "Verdünnung & Zusätze", slug: "verduennung-zusaetze", query: 'product_type:"Verdünnung & Zusätze"' },
       { label: "Wunschfarbe & Lackstift", slug: "wunschfarbe-lackstift", query: 'product_type:"Wunschfarbe & Lackstift"' },
+      { label: "Lackierpistolen & Zubehör", slug: "lackierpistolen-zubehor", query: 'product_type:"Lackierpistolen & Zubehör"' },
+      { label: "Maschinen & Werkzeug", slug: "maschinen-werkzeug", query: 'product_type:"Maschinen & Werkzeug"' },
+      { label: "Verbrauchsmaterial", slug: "verbrauchsmaterial", query: 'product_type:"Verbrauchsmaterial"' },
     ],
   },
   {
@@ -78,6 +81,7 @@ export const navCategories: ShopLink[] = [
       { label: "Poliermaschinen & Pads", slug: "poliermaschinen-pads", query: 'product_type:"Poliermaschinen & Pads"' },
       { label: "Politur & Schleifpaste", slug: "politur-schleifpaste", query: 'product_type:"Politur & Schleifpaste"' },
       { label: "Pflegemittel & Versiegelung", slug: "pflegemittel-versiegelung", query: 'product_type:"Pflegemittel & Versiegelung"' },
+      { label: "Felgen & Reifen", slug: "felgen-reifen", query: 'product_type:"Felgen & Reifen"' },
     ],
   },
   {
@@ -88,9 +92,10 @@ export const navCategories: ShopLink[] = [
     contain: true,
     children: [
       { label: "Motoröl", slug: "motoroel", query: 'product_type:"Motoröl"' },
-      { label: "Filter", slug: "filter", query: 'product_type:"Filter"' },
+      { label: "Getriebeöl", slug: "getriebeoel", query: 'product_type:"Getriebeöl"' },
       { label: "Kühlmittel & Scheibenreiniger", slug: "kuehlmittel-scheibenreiniger", query: 'product_type:"Kühlmittel & Scheibenreiniger"' },
       { label: "Reiniger & Fette", slug: "reiniger-fette", query: 'product_type:"Reiniger & Fette"' },
+      { label: "Filter", slug: "filter", query: 'product_type:"Filter"' },
     ],
   },
   {
@@ -102,6 +107,24 @@ export const navCategories: ShopLink[] = [
     children: [
       { label: "Eiskratzer & Schneebesen", slug: "eiskratzer-schneebesen", query: 'product_type:"Eiskratzer & Schneebesen"' },
       { label: "Enteiser & Frostschutz", slug: "enteiser-frostschutz", query: 'product_type:"Enteiser & Frostschutz"' },
+    ],
+  },
+  {
+    label: "Werkstattchemie",
+    slug: "werkstattchemie",
+    query: 'tag:"Kategorie: Werkstattchemie"',
+    contain: true,
+    children: [
+      { label: "Bremsenreiniger", slug: "bremsenreiniger", query: 'product_type:"Bremsenreiniger"' },
+      { label: "Rostlöser & Multifunktion", slug: "rostloeser-multifunktion", query: 'product_type:"Rostlöser & Multifunktion"' },
+      { label: "Kontakt & Elektrik", slug: "kontakt-elektrik", query: 'product_type:"Kontakt & Elektrik"' },
+      { label: "Schmier- & Gleitsprays", slug: "schmier-gleitsprays", query: 'product_type:"Schmier- & Gleitsprays"' },
+      { label: "Unterboden & Hohlraum", slug: "unterboden-hohlraum", query: 'product_type:"Unterboden & Hohlraum"' },
+      { label: "Klimaanlage", slug: "klimaanlage", query: 'product_type:"Klimaanlage"' },
+      { label: "Montagepasten", slug: "montagepasten", query: 'product_type:"Montagepasten"' },
+      { label: "Dichten & Sichern", slug: "dichten-sichern", query: 'product_type:"Dichten & Sichern"' },
+      { label: "Handreinigung", slug: "handreinigung", query: 'product_type:"Handreinigung"' },
+      { label: "Reiniger", slug: "werkstatt-reiniger", query: 'tag:"Kategorie: Werkstattchemie" AND product_type:"Reiniger"' },
     ],
   },
   {
@@ -147,7 +170,7 @@ export function categoryPath(item: Pick<ShopLink, "slug" | "to">): string | null
   return null;
 }
 
-/** Startseiten-Kacheln: die sechs Hauptkategorien, in Menü-Reihenfolge. */
+/** Startseiten-Kacheln: die Hauptkategorien, in Menü-Reihenfolge. */
 export const collections: Array<ShopCategory & { image: string; contain?: boolean }> = navCategories
   .filter((cat): cat is ShopLink & { slug: string; query: string; image: string } =>
     Boolean(cat.slug && cat.query && cat.image)
@@ -177,7 +200,8 @@ const LEGACY_SLUGS: Record<string, string> = {
   "oelfilter-einsatz": "filter",
   "oelfilter-anschraub": "filter",
   hydraulikfilter: "filter",
-  bremsenreiniger: "reiniger-fette",
+  getriebeol: "getriebeoel",
+  "getriebeol-1": "getriebeoel",
   silikonentferner: "reiniger-fette",
   steinschlagschutz: "steinschlag-rostschutz",
   dichtmasse: "dichten-kleben-produkte",

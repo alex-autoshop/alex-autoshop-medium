@@ -11,6 +11,7 @@ const PRODUKTE = [
   { label: "Autopflege & Detailing", to: "/shop/autopflege-detailing" },
   { label: "Öle, Flüssigkeiten & Filter", to: "/shop/oele-fluessigkeiten-filter" },
   { label: "Winter", to: "/shop/winter" },
+  { label: "Werkstattchemie", to: "/shop/werkstattchemie" },
   { label: "Sets & Sonstiges", to: "/shop/sets-sonstiges" },
 ];
 
