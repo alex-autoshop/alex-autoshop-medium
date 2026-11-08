@@ -85,6 +85,41 @@
   .story-kleben { position: static; min-height: 0; }
 }
 
+/* Markenband: eine Markenbreite alle 1,5 s, ohne Pause. 19 Marken = 28,5 s. */
+.aa-marken {
+  container-type: inline-size;
+  --marken-sichtbar: 3;
+  --marken-luecke: 12px;
+}
+@media (min-width: 768px) {
+  .aa-marken { --marken-sichtbar: 7; --marken-luecke: 20px; }
+}
+.aa-marken-lauf {
+  display: flex;
+  width: max-content;
+  animation: aa-marken-lauf var(--marken-dauer, 28.5s) linear infinite;
+}
+.aa-marken-gruppe {
+  display: flex;
+  gap: var(--marken-luecke);
+  padding-right: var(--marken-luecke);
+}
+.aa-marken-kachel {
+  width: calc((100cqi - (var(--marken-sichtbar) - 1) * var(--marken-luecke)) / var(--marken-sichtbar));
+  flex: 0 0 auto;
+}
+@keyframes aa-marken-lauf {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+.aa-marken:hover .aa-marken-lauf,
+.aa-marken:focus-within .aa-marken-lauf {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aa-marken-lauf { animation: none; }
+}
+
 @media (max-width: 639px) {
   h1, h2, h3, h4, h5, h6 {
     overflow-wrap: break-word;
