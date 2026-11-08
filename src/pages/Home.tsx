@@ -29,7 +29,7 @@ const USPS = [
   {
     icon: Paintbrush,
     title: "Profi-Lackierprodukte",
-    text: "Standox, Mipa, Glasurit, SATA & Co. — das volle Sortiment für Lackierer und Karosseriebetriebe.",
+    text: "Glasurit, RM, Cromax, Sikkens, Spies Hecker & Co. — das volle Sortiment für Lackierer und Karosseriebetriebe.",
     badge: "Neues Sortiment",
   },
   {
