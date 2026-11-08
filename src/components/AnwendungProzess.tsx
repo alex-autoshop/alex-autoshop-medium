@@ -4,6 +4,7 @@ import {
   besterTreffer,
   einsatzFuer,
   istSet,
+  produktAusZeile,
   setInhaltTitel,
   suchanfrage,
   type ProzessEinsatz,
@@ -72,6 +73,10 @@ async function inhalteLaden(zeilen: string[]): Promise<ProzessProdukt[]> {
       treffer = besterTreffer(zeilen[i], await suche(weit, 15));
     }
     if (treffer) aus.push(treffer);
+    else {
+      const ersatz = produktAusZeile(zeilen[i]);
+      if (ersatz) aus.push(ersatz);
+    }
   }
   return aus;
 }

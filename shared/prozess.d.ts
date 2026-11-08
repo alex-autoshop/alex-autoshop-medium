@@ -31,6 +31,8 @@ export function einsatzFuer(
 
 export function setInhaltTitel(text: string | null | undefined): string[];
 
+export function produktAusZeile(titel: string): ProzessProdukt | null;
+
 export function suchanfrage(titel: string): string;
 
 export function besterTreffer(
