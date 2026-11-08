@@ -5,11 +5,12 @@
  * /teile/<marke>--<nummer>  → vollständiges HTML, 404 wenn unbekannt
  * /teileboerse/artikel?nr=  → 301 auf die kanonische Adresse
  * /sitemap-teile.xml        → Produkte mit Preis
+ * Gäste (Schalter zu): 302 auf die Startseite, noindex. Sitemap bleibt leer.
  */
 
 import { ausTeileSlug, teilePfad, TEILE_BELIEBT } from "./shared/teile-pfad.js";
 import { markeFuerKunde } from "./shared/grosshaendler.js";
-import { leereTeileSitemap, teileboerseGeschlossenHtml, teileboerseOeffentlich } from "./shared/teileboerse-schalter.js";
+import { leereTeileSitemap, teileboerseOeffentlich } from "./shared/teileboerse-schalter.js";
 import { teileboerseDarf } from "./shared/teileboerse-zugang.js";
 import { katalogAnfrage } from "./shared/seo-auslieferung.js";
 
@@ -146,14 +147,13 @@ function htmlAntwort(html, status = 200, privat = false) {
   });
 }
 
-function geschlossen() {
-  return new Response(teileboerseGeschlossenHtml(), {
-    status: 503,
+function zurStartseite(request) {
+  return new Response(null, {
+    status: 302,
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
+      Location: new URL("/", request.url).href,
       "Cache-Control": "no-store",
       "X-Robots-Tag": "noindex, nofollow",
-      "Retry-After": "86400",
     },
   });
 }
@@ -208,7 +208,7 @@ export default async function middleware(request) {
           },
         });
       }
-      return geschlossen();
+      return zurStartseite(request);
     }
   }
   const privat = !offen;

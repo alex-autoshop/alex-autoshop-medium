@@ -13,6 +13,7 @@ import {
   type AboMerkProdukt,
 } from "@/lib/aboListe";
 import { cn } from "@/lib/utils";
+import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 
 export function useAboListe() {
   const [liste, setListe] = useState(aboListeLesen);
@@ -118,6 +119,7 @@ export function useAboAktiv() {
 /** Kurze Abo-Info. Der Abschluss hängt an „Zur Kasse“, nicht an einem zweiten Knopf. */
 export function AboKasse({ ersparnis }: { ersparnis: number }) {
   const liste = useAboListe();
+  const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const gesamt = aboListeGesamt(liste.produkte);
   if (!liste.produkte.length || !gesamt) return null;
   const anzahl = liste.produkte.length;
@@ -132,7 +134,7 @@ export function AboKasse({ ersparnis }: { ersparnis: number }) {
         <p className="mt-1 leading-relaxed">
           Keine Mindestlaufzeit, monatlich zum Monatsende kündbar über{" "}
           <Link to="/kuendigen" className="underline">Verträge hier kündigen</Link>.
-          Der Rabatt gilt für diese Shop-Produkte, nicht in der Teilebörse.
+          Der Rabatt gilt für diese Shop-Produkte{teileSichtbar ? ", nicht in der Teilebörse" : ""}.
           Stufe je Produkt: 15 % für {euro(PRODUKT_ABO_PREISE[15])}, 28 % für {euro(PRODUKT_ABO_PREISE[28])}, 40 % für {euro(PRODUKT_ABO_PREISE[40])} im Monat.
         </p>
       </details>

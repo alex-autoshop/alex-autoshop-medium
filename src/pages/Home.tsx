@@ -94,7 +94,7 @@ export default function Home() {
 
       {/* USPs */}
       <section className="container py-14 sm:py-20">
-        <div className="grid sm:grid-cols-3 gap-5">
+        <div className={cn("grid gap-5", usps.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
           {usps.map((usp, i) => (
             <motion.div key={usp.title} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.1 }} className="card-tilt p-6 relative">
               <span className="absolute top-4 right-4 inline-flex items-center rounded-full bg-primary/10 text-primary text-xs font-semibold px-3 py-1 border border-primary/20">
