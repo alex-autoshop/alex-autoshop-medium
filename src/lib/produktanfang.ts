@@ -6,9 +6,8 @@ export const PRODUKTLISTE_ID = "produktliste";
 export const SHOP_LISTE_ABSTAND =
   "scroll-mt-[calc(var(--shop-kopf,8.75rem)+var(--shop-leiste,8.5rem))]";
 
-/** Kategorieseite: die Chips kleben nicht, nur der Kopf. */
-export const KATEGORIE_LISTE_ABSTAND =
-  "scroll-mt-[calc(5rem+env(safe-area-inset-top,0px))] sm:scroll-mt-[calc(6rem+env(safe-area-inset-top,0px))]";
+/** Kategorieseite nutzt dieselbe mitlaufende Leiste wie der Shop. */
+export const KATEGORIE_LISTE_ABSTAND = SHOP_LISTE_ABSTAND;
 
 /** Sanft nach oben zum Listenanfang. Liegt der Anfang noch unter dem Sichtfeld, bleibt die Seite stehen. */
 export function zumProduktanfang(el: HTMLElement | null) {
