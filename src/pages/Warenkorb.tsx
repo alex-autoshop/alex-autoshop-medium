@@ -17,6 +17,7 @@ export default function Warenkorb() {
   useEffect(() => {
     if (params.get("status") === "success") aboAktivMerken();
   }, [params]);
+  useEffect(() => { useCartStore.getState().preiseAuffrischen(); }, []);
   const [wahl, setWahl] = useState<Record<string, number>>({});
   const ersparnis = Math.round(items.reduce((summe, item) => {
     const zeile = liste.produkte.find((p) => p.id === item.product.node.id && p.art !== "menge");

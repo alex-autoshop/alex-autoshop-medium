@@ -9,6 +9,7 @@ import {
   updateShopifyCartLine,
   removeLineFromShopifyCart,
 } from '@/lib/shopify';
+import { variantenPreise } from '@/lib/katalog';
 
 export interface CartItem {
   lineId: string | null;
@@ -36,6 +37,8 @@ interface CartStore {
   removeItem: (uid: string) => Promise<void>;
   clearCart: () => void;
   syncCart: () => Promise<void>;
+  /** Aktuelle Variantenpreise, ungecacht. Vor dem Bezahlen aufrufen. */
+  preiseAuffrischen: () => Promise<CartItem[]>;
   getCheckoutUrl: () => string | null;
 }
 
@@ -158,6 +161,35 @@ export const useCartStore = create<CartStore>()(
 
       clearCart: () => set({ items: [], cartId: null, checkoutUrl: null }),
       getCheckoutUrl: () => get().checkoutUrl,
+
+      preiseAuffrischen: async () => {
+        const vorher = get().items;
+        const ids = [...new Set(vorher.map((item) => item.variantId))].slice(0, 50);
+        if (!ids.length) return vorher;
+        const nodes = await variantenPreise(ids);
+        if (!nodes?.length) return get().items;
+        const preise = new Map(nodes.filter((n) => n?.id && n.price?.amount).map((n) => [n!.id, n!.price]));
+        if (!preise.size) return get().items;
+        const items = get().items.map((item) => {
+          const preis = preise.get(item.variantId);
+          if (!preis) return item;
+          const edges = item.product.node.variants?.edges?.map((kante) =>
+            kante.node.id === item.variantId ? { ...kante, node: { ...kante.node, price: preis } } : kante,
+          );
+          return {
+            ...item,
+            price: preis,
+            product: {
+              node: {
+                ...item.product.node,
+                variants: { ...item.product.node.variants, edges: edges ?? item.product.node.variants?.edges },
+              },
+            },
+          };
+        });
+        set({ items });
+        return items;
+      },
 
       syncCart: async () => {
         const { cartId, isSyncing, clearCart } = get();

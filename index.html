@@ -93,6 +93,16 @@
     .aa-lead { color: rgba(255,255,255,.65); font-size: 1.125rem; line-height: 1.6; max-width: 36rem; margin: 1.5rem 0 0; }
     .aa-mitte .aa-lead, .aa-mitte h1 { margin-left: auto; margin-right: auto; }
     .aa-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 2rem; max-width: 36rem; }
+    .aa-liste { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 12px 16px 24px; background: #FAF9F7; }
+    .aa-liste:empty { display: none; }
+    .aa-liste a { display: flex; flex-direction: column; background: #fff; border: 1px solid #E5E2DB; border-radius: 16px; overflow: hidden; text-decoration: none; color: #1a1a1a; }
+    .aa-liste .aa-bild { aspect-ratio: 1; background: #fff; }
+    .aa-liste img { width: 100%; height: 100%; object-fit: contain; }
+    .aa-liste .aa-name { font-weight: 600; font-size: 14px; line-height: 1.25; padding: 8px 12px 0; }
+    .aa-liste strong { padding: 4px 12px 12px; font-size: 18px; }
+    @media (min-width: 768px) {
+      .aa-liste { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
     .aa-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 2rem; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 1.125rem; }
     .aa-goldbtn { background: #f1eb5b; color: #0D0D0D; }
     .aa-ghost { background: rgba(255,255,255,.1); color: #fff; }
@@ -110,6 +120,7 @@
     #aa-cookies .aa-all { background: #f1eb5b; border: 0; }
     #aa-cookies .aa-need { background: #fff; border: 2px solid rgba(13,13,13,.15); }
   </style>
+  <!--AA_PRELOAD-->
   <script>
     try { if (localStorage.getItem("cookie-consent")) document.documentElement.classList.add("aa-cookies-ok"); } catch (e) {}
     function aaCookies(wert) {
@@ -121,6 +132,32 @@
   </script>
   </head>
   <body>
+    <script>
+      (function () {
+        try {
+          var p = location.pathname.replace(/\/$/, "") || "/";
+          var q = new URLSearchParams(location.search);
+          var url = "";
+          if (p === "/") url = "/api/katalog?was=produkte&first=8&einbettung=home";
+          else if (p.indexOf("/kategorie/") === 0) {
+            url = "/api/katalog?was=kollektion&handle=" + encodeURIComponent(decodeURIComponent(p.split("/")[2] || ""))
+              + "&first=100&sort=" + encodeURIComponent(q.get("sort") || "empfohlen");
+          } else if (p.indexOf("/produkt/") === 0) {
+            url = "/api/katalog?was=produkt&handle=" + encodeURIComponent(decodeURIComponent(p.split("/")[2] || ""));
+          } else if (p === "/shop" || p.indexOf("/shop/") === 0) {
+            var suche = (q.get("q") || "").trim();
+            var kat = p === "/shop" ? "" : decodeURIComponent(p.split("/")[2] || "");
+            if (suche) url = "/api/katalog?was=produkte&first=100&suche=" + encodeURIComponent(suche);
+            else if (kat) url = "/api/katalog?was=kollektion&handle=" + encodeURIComponent(kat) + "&first=100&sort=empfohlen";
+            else url = "/api/katalog?was=produkte&first=100";
+          }
+          if (!url) return;
+          window.__aaFrisch = fetch(url, { headers: { Accept: "application/json" } }).then(function (r) {
+            return r.ok ? r.json() : null;
+          }).catch(function () { return null; });
+        } catch (e) {}
+      })();
+    </script>
     <div id="aa-shell">
       <header class="aa-head">
         <a href="/"><img src="/images/logo-cropped.png" alt="Alex Autoshop" width="180" height="56"></a>
@@ -142,6 +179,7 @@
         </div>
         <!--AA_HERO_END-->
       </div>
+      <div id="aa-liste"></div>
     </div>
     <div id="aa-cookies">
       <div class="aa-box">
@@ -154,6 +192,7 @@
       </div>
     </div>
     <div id="root"></div>
+    <script type="application/json" id="aa-daten">null</script>
     <div id="google_translate_element" style="display: none"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

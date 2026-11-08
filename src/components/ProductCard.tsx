@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Minus, Plus, ChevronDown } from "lucide-react";
 import { ShopBild } from "@/components/ShopBild";
+import { produktVorholen } from "@/lib/katalog";
 
 const AboKnopf = lazy(() => import("@/components/AboKnopf").then((m) => ({ default: m.AboKnopf })));
 import { toast } from "sonner";
@@ -54,6 +55,19 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
   const topLevel = MEMBERSHIP_LEVELS[MEMBERSHIP_LEVELS.length - 1];
   const maxSavePerPiece = basePrice * (topLevel.discountPercent / 100);
 
+  useEffect(() => {
+    const el = spalte.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const beobachter = new IntersectionObserver((eintraege) => {
+      if (eintraege.some((e) => e.isIntersecting)) {
+        produktVorholen(node.handle);
+        beobachter.disconnect();
+      }
+    }, { rootMargin: "240px" });
+    beobachter.observe(el);
+    return () => beobachter.disconnect();
+  }, [node.handle]);
+
   const add = async () => {
     if (!firstVariant) return;
     await addItem({
@@ -78,8 +92,13 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
   };
 
   return (
-    <div className="card-tilt overflow-hidden flex flex-col h-full">
-      <Link to={`/produkt/${node.handle}`} className="block group">
+    <div className="card-tilt aa-karte overflow-hidden flex flex-col h-full">
+      <Link
+        to={`/produkt/${node.handle}`}
+        className="block group"
+        onMouseEnter={() => produktVorholen(node.handle)}
+        onFocus={() => produktVorholen(node.handle)}
+      >
         <div className="aspect-square bg-white overflow-hidden">
           {img ? (
             <ShopBild src={img} alt={node.title} priority={priority} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
@@ -90,7 +109,11 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
       </Link>
 
       <div ref={spalte} className="p-3 sm:p-4 flex flex-col flex-1 gap-2">
-        <Link to={`/produkt/${node.handle}`}>
+        <Link
+          to={`/produkt/${node.handle}`}
+          onMouseEnter={() => produktVorholen(node.handle)}
+          onFocus={() => produktVorholen(node.handle)}
+        >
           <p lang="de" className="produkt-titel hover:text-primary transition-colors">
             {node.title}
           </p>

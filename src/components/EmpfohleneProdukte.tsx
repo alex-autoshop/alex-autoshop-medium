@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { type ShopifyProduct, storefrontApiRequest, STOREFRONT_PRODUCTS_QUERY } from "@/lib/shopify";
+import { type ShopifyProduct } from "@/lib/shopify";
+import { produkteHolen } from "@/lib/katalog";
 import { brandOf } from "@/lib/marken";
 import { ProductCard } from "@/components/ProductCard";
 import { useCartStore } from "@/stores/cartStore";
@@ -78,14 +79,14 @@ export function EmpfohleneProdukte({ produkt }: { produkt: ProduktKnoten }) {
     const anfragen = suchanfragen(aktuell);
     Promise.all(
       anfragen.map((query) =>
-        storefrontApiRequest(STOREFRONT_PRODUCTS_QUERY, { first: 24, query }).catch(() => null),
+        produkteHolen({ first: 24, filter: query }).catch(() => null),
       ),
     )
       .then((seiten) => {
         if (!aktiv) return;
         const nachHandle = new Map<string, ShopifyProduct>();
         for (const seite of seiten) {
-          const kanten = seite?.data?.products?.edges ?? [];
+          const kanten = (seite?.data?.products?.edges ?? []) as ShopifyProduct[];
           for (const kante of kanten) {
             if (kante?.node?.handle) nachHandle.set(kante.node.handle, kante);
           }

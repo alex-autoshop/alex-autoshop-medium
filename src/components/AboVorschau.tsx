@@ -43,7 +43,16 @@ export function AboVorschau({
   const preis = parseFloat(n.priceRange?.minVariantPrice?.amount ?? "0");
   const waehrung = n.priceRange?.minVariantPrice?.currencyCode ?? "EUR";
   const dialog = useRef<HTMLDivElement>(null);
-  const text = kurz(n.description || "");
+  const [text, setText] = useState(() => kurz(n.description || ""));
+  useEffect(() => {
+    if (n.description || !n.handle) return;
+    let aktiv = true;
+    import("@/lib/katalog").then(({ produktHolen }) => produktHolen(n.handle)).then((daten) => {
+      const beschreibung = (daten?.data?.productByHandle as { description?: string } | null)?.description || "";
+      if (aktiv && beschreibung) setText(kurz(beschreibung));
+    }).catch(() => {});
+    return () => { aktiv = false; };
+  }, [n.description, n.handle]);
   const gefahr = gefahrstoffVonKnoten(n);
   const gesperrt = kaufGesperrt(gefahr);
 

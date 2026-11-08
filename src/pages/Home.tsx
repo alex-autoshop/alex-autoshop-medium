@@ -47,7 +47,7 @@ const USPS = [
 ];
 
 export default function Home() {
-  const { products, isLoading, error } = useProducts({ pageSize: 8 });
+  const { products, isLoading, error } = useProducts({ pageSize: 8, einbettung: "home" });
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const usps = teileSichtbar ? USPS : USPS.filter((usp) => usp.title !== "Teile per Kennzeichen");
 

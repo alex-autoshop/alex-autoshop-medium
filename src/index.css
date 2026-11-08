@@ -130,6 +130,12 @@
   }
 
   /* Voller Produkttitel: umbrechen statt mit … abschneiden. */
+  /* Unter dem ersten Bildschirm nicht layouten, bis sie sichtbar werden. */
+  .aa-karte {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 460px;
+  }
+
   .produkt-titel {
     overflow-wrap: anywhere;
     hyphens: auto;

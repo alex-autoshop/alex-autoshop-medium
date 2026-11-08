@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  type ShopifyProduct,
-  storefrontApiRequest,
-  STOREFRONT_PRODUCTS_QUERY,
-} from "@/lib/shopify";
+import { type ShopifyProduct } from "@/lib/shopify";
+import { produkteHolen } from "@/lib/katalog";
 
 /**
- * Der ganze veröffentlichte Katalog, Seite für Seite.
- * Vorher lieferte die Auswahl nur die erste Storefront-Seite (etwa ein Dutzend Artikel) und hörte auf.
+ * Der ganze veröffentlichte Katalog, Seite für Seite, über den Cache.
+ * Die erste Seite erscheint sofort, der Rest läuft im Hintergrund.
  */
 export function useVollerKatalog(suchbegriff: string) {
   const [products, setProducts] = useState<ShopifyProduct[]>([]);
@@ -30,17 +27,19 @@ export function useVollerKatalog(suchbegriff: string) {
       let seiten = 0;
       try {
         while (aktiv && id === lauf.current && seiten < 30) {
-          const data = await storefrontApiRequest(STOREFRONT_PRODUCTS_QUERY, {
-            first: 50,
+          const data = await produkteHolen({
+            first: 100,
             after,
-            query: suchbegriff ? `title:*${suchbegriff}* OR tag:*${suchbegriff}*` : null,
+            suche: suchbegriff,
+            bereich: "tag",
           });
           if (!aktiv || id !== lauf.current) return;
           const kante = data?.data?.products;
-          const edges: ShopifyProduct[] = kante?.edges ?? [];
+          const edges = (kante?.edges ?? []) as ShopifyProduct[];
           const info = kante?.pageInfo;
           alle = alle.concat(edges);
           setProducts(alle);
+          if (alle.length) setIsLoading(false);
           after = info?.endCursor ?? null;
           const weiter = Boolean(info?.hasNextPage) && edges.length > 0;
           setHasMore(weiter);
