@@ -17,7 +17,7 @@
 export const config = { runtime: "edge" };
 
 import { mitgliedsbeitrag, rabattName, DIENSTLEISTUNG_BUCHBAR } from "../shared/mitgliedspreise.js";
-import { aboListeGesamt, mengenAngabeNormalisieren, warenMitRabatt } from "../shared/produktabo.js";
+import { aboListeGesamt, istWunschfarbeMenge, mengenAngabeNormalisieren, warenMitRabatt, wunschfarbeAboTitel } from "../shared/produktabo.js";
 import { versandkosten } from "../shared/versand.js";
 import { empfehlungSichtbar } from "../shared/empfehlung.js";
 
@@ -277,14 +277,20 @@ export default async function handler(req) {
     const liste = (Array.isArray(produkte) ? produkte : []).map((p) => {
       const art = p?.art === "menge" || p?.einzelpreis != null ? "menge" : "einzel";
       const norm = art === "menge" ? mengenAngabeNormalisieren({ ...p, art }) : p;
-      return {
+      const zeile = {
         art,
+        handle: norm?.handle,
+        id: norm?.id,
         rabatt: norm?.rabatt,
         preis: norm?.preis,
         einzelpreis: norm?.einzelpreis,
         menge: norm?.menge,
         lacksystem: art === "menge" ? norm?.lacksystem : undefined,
-        titel: String(norm?.titel || norm?.handle || "Produkt").slice(0, 80),
+      };
+      const dyn = istWunschfarbeMenge(zeile) ? wunschfarbeAboTitel(zeile.rabatt, zeile.menge) : null;
+      return {
+        ...zeile,
+        titel: String(dyn || norm?.titel || norm?.handle || "Produkt").slice(0, 120),
       };
     });
     const g = aboListeGesamt(liste);
@@ -293,7 +299,9 @@ export default async function handler(req) {
       return json({ error: "Der Preis hat sich gerade geändert — bitte die Seite neu laden.", preis: g.beitrag }, 409);
     }
     const zeilen = liste.map((p, i) => ({
-      name: [p.titel, p.lacksystem, `${p.rabatt} %`].filter(Boolean).join(" · "),
+      name: istWunschfarbeMenge(p)
+        ? p.titel
+        : [p.titel, p.lacksystem, `${p.rabatt} %`].filter(Boolean).join(" · "),
       betrag: g.zeilen[i].beitrag,
     }));
     const positionen = liste.map((p) => (

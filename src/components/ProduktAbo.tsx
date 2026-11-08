@@ -14,6 +14,7 @@ import { empfehlungOffen } from "../../shared/empfehlung.js";
 import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
   mengenPosition, aboListeGesamt, rabattGueltig,
+  istWunschfarbeMenge, mengeZahl, wunschfarbeAboTitel, wunschfarbeDetail,
 } from "../../shared/produktabo.js";
 import { WunschfarbenLeiste, type MengenEintrag } from "@/components/WunschfarbenLeiste";
 import { istAboKonfigurator } from "../../shared/abo-kategorien.js";
@@ -47,6 +48,21 @@ export interface AboProdukt {
 export type AboZeile = AboProdukt | MengenEintrag;
 
 const istMenge = (z: AboZeile): z is MengenEintrag => (z as MengenEintrag).art === "menge";
+
+/** Titel der Wunschfarbe folgt Stufe und Litern, auch wenn die Zeile schon in der Liste liegt. */
+function anzeigeTitel(p: AboZeile): string {
+  if (istMenge(p) && istWunschfarbeMenge(p)) {
+    return wunschfarbeAboTitel(p.rabatt, p.menge) || p.titel;
+  }
+  return p.titel;
+}
+
+function mengenDetail(p: MengenEintrag): string {
+  if (istWunschfarbeMenge(p)) {
+    return `${wunschfarbeDetail(p.variante, p.menge)} · ${mengeZahl(p.menge)}× / Monat`;
+  }
+  return `${p.variante} · ${p.menge}× / Monat`;
+}
 
 const STUFEN_TEXT: Record<number, string> = {
   15: "Einstieg",
@@ -250,7 +266,7 @@ export function ProduktAbo() {
         aboTyp: "produkt" as const,
         email: mail,
         produkte: produkte.map((p) => istMenge(p)
-          ? { art: "menge" as const, id: p.id, handle: p.handle, titel: p.titel, variante: p.variante, lacksystem: p.lacksystem, menge: p.menge, einzelpreis: p.einzelpreis, rabatt: p.rabatt }
+          ? { art: "menge" as const, id: p.id, handle: p.handle, titel: anzeigeTitel(p), variante: p.variante, lacksystem: p.lacksystem, menge: p.menge, einzelpreis: p.einzelpreis, rabatt: p.rabatt }
           : { art: "einzel" as const, id: p.id, handle: p.handle, titel: p.titel, preis: p.preis, rabatt: p.rabatt }),
         price: gesamt.beitrag,
         ref: empfehlungOffen() ? empfehlungLesen() || undefined : undefined,
@@ -492,10 +508,10 @@ export function ProduktAbo() {
                       {p.bild && <img src={p.bild} alt="" className="w-full h-full object-cover" loading="lazy" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p lang="de" className="produkt-titel">{p.titel}</p>
+                      <p lang="de" className="produkt-titel">{anzeigeTitel(p)}</p>
                       {istMenge(p) && (
                         <p className="text-[11px] text-muted-foreground leading-tight">
-                          {p.variante} · {p.menge}× / Monat
+                          {mengenDetail(p)}
                         </p>
                       )}
                       <AboPreis
@@ -508,7 +524,7 @@ export function ProduktAbo() {
                       <div className="mt-1.5">
                         <StufenWahl
                           wert={p.rabatt}
-                          label={`Rabatt für ${p.titel}`}
+                          label={`Rabatt für ${anzeigeTitel(p)}`}
                           onChange={(r) => setProdukte((alt) => alt.map((x) => (x.id === p.id ? { ...x, rabatt: r } : x)))}
                         />
                       </div>
@@ -516,7 +532,7 @@ export function ProduktAbo() {
                     <button
                       type="button"
                       onClick={() => setProdukte((alt) => alt.filter((x) => x.id !== p.id))}
-                      aria-label={`${p.titel} entfernen`}
+                      aria-label={`${anzeigeTitel(p)} entfernen`}
                       className="shrink-0 w-8 h-8 rounded-lg inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     >
                       <X className="w-4 h-4" />
@@ -577,7 +593,7 @@ export function ProduktAbo() {
         </div>
       </div>
       <AboLeisteMobil
-        produkte={produkte.map((p) => ({ id: p.id, titel: p.titel, bild: p.bild }))}
+        produkte={produkte.map((p) => ({ id: p.id, titel: anzeigeTitel(p), bild: p.bild }))}
         beitrag={gesamt?.beitrag ?? 0}
         mitglied={gesamt ? Math.round(gesamt.zeilen.reduce((s, z) => s + z.mitglied, 0) * 100) / 100 : 0}
         verdeckt={listeSichtbar || blatt}
@@ -618,9 +634,9 @@ export function ProduktAbo() {
                       {p.bild && <img src={p.bild} alt="" className="w-full h-full object-cover" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p lang="de" className="produkt-titel">{p.titel}</p>
+                      <p lang="de" className="produkt-titel">{anzeigeTitel(p)}</p>
                       {istMenge(p) && (
-                        <p className="text-[11px] text-muted-foreground leading-tight">{p.variante}</p>
+                        <p className="text-[11px] text-muted-foreground leading-tight">{mengenDetail(p)}</p>
                       )}
                       <AboPreis
                         normal={m ? m.normal : (p as AboProdukt).preis}
@@ -632,7 +648,7 @@ export function ProduktAbo() {
                       <div className="mt-1.5">
                         <StufenWahl
                           wert={p.rabatt}
-                          label={`Rabatt für ${p.titel}`}
+                          label={`Rabatt für ${anzeigeTitel(p)}`}
                           onChange={(r) => setProdukte((alt) => alt.map((x) => (x.id === p.id ? { ...x, rabatt: r } : x)))}
                         />
                       </div>
@@ -640,7 +656,7 @@ export function ProduktAbo() {
                     <button
                       type="button"
                       onClick={() => setProdukte((alt) => alt.filter((x) => x.id !== p.id))}
-                      aria-label={`${p.titel} entfernen`}
+                      aria-label={`${anzeigeTitel(p)} entfernen`}
                       className="shrink-0 w-11 h-11 rounded-lg inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                     >
                       <X className="w-4 h-4" />

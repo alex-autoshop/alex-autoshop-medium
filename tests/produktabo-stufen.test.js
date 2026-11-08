@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  ABO_2K_AUFSCHLAG, aboListeGesamt, LACKSYSTEM_1K, LACKSYSTEM_2K,
+  ABO_2K_AUFSCHLAG, aboListeGesamt, istWunschfarbeMenge, LACKSYSTEM_1K, LACKSYSTEM_2K,
   listeNormalisieren, mengenPosition, mischBedarf, PRODUKT_ABO_PREISE, warenMitRabatt,
+  wunschfarbeAboTitel, wunschfarbeDetail,
 } from "../shared/produktabo.js";
 
 test("jede Position behält ihre Stufe, der Beitrag ist die Summe", () => {
@@ -113,6 +114,19 @@ test("altes egal wird 1K bevorzugt, alter 2K-Preis bekommt den Aufschlag einmal"
   const nochmal = listeNormalisieren(n);
   assert.equal(nochmal.produkte[1].einzelpreis, 27.5);
   assert.equal(nochmal.produkte[1].variante, "Mipa · 2K bevorzugt · 20 L / Monat");
+});
+
+test("Wunschfarbe-Titel folgt Stufe und Litern, Spraydose bleibt draußen", () => {
+  assert.equal(wunschfarbeAboTitel(40, 4), "40 % auf 4 L Wunschfarbe im Monat");
+  assert.equal(wunschfarbeAboTitel(15, 1.5), "15 % auf 1,5 L Wunschfarbe im Monat");
+  assert.equal(wunschfarbeAboTitel(28, 20), "28 % auf 20 L Wunschfarbe im Monat");
+  assert.equal(wunschfarbeAboTitel(40, 0), null);
+  assert.equal(
+    wunschfarbeDetail("10 % Standox · 90 % Mipa · 1K bevorzugt · 4 L / Monat", 1.5),
+    "10 % Standox · 90 % Mipa · 1K bevorzugt · 1,5 L / Monat",
+  );
+  assert.equal(istWunschfarbeMenge({ art: "menge", handle: "farben-mix", id: "farben-mix::10::1k::L" }), true);
+  assert.equal(istWunschfarbeMenge({ art: "menge", handle: "individuelle-spraydose-erstellen", id: "spray::0::1k::S" }), false);
 });
 
 test("Warenkasse rechnet Abo-Zeilen selbst und lässt andere beim Ladenpreis", () => {

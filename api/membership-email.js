@@ -20,7 +20,7 @@ export const config = { runtime: 'edge' };
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { mitgliedsbeitrag, MODULE } from '../shared/mitgliedspreise.js';
-import { aboListeGesamt, mengenAngabeNormalisieren } from '../shared/produktabo.js';
+import { aboListeGesamt, istWunschfarbeMenge, mengenAngabeNormalisieren, wunschfarbeAboTitel } from '../shared/produktabo.js';
 import { internPruefen } from './_intern.js';
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from '../shared/empfehlung.js';
 
@@ -546,19 +546,28 @@ export default async function handler(req) {
     const liste = (Array.isArray(body.produkte) ? body.produkte : []).map((p) => {
       const art = p?.art === "menge" || p?.einzelpreis != null ? "menge" : "einzel";
       const norm = art === "menge" ? mengenAngabeNormalisieren({ ...p, art }) : p;
-      return {
+      const zeile = {
         art,
+        handle: norm?.handle,
+        id: norm?.id,
         rabatt: norm?.rabatt,
         preis: norm?.preis,
         einzelpreis: norm?.einzelpreis,
         menge: norm?.menge,
         lacksystem: art === "menge" ? norm?.lacksystem : "",
-        titel: String(norm?.titel || norm?.handle || "Produkt"),
+      };
+      const dyn = istWunschfarbeMenge(zeile) ? wunschfarbeAboTitel(zeile.rabatt, zeile.menge) : null;
+      return {
+        ...zeile,
+        titel: String(dyn || norm?.titel || norm?.handle || "Produkt"),
       };
     });
     const g = aboListeGesamt(liste);
     if (!g) return jsonError("Unbekannte Rabattstufe oder leere Produktliste.", 400);
-    const zeilen = liste.map((p, i) => `<tr><td style="padding:6px 0;border-bottom:1px solid #222;">${p.titel}${p.lacksystem ? ` · ${p.lacksystem}` : ""}</td><td style="padding:6px 0;border-bottom:1px solid #222;text-align:right;">${p.rabatt} %</td><td style="padding:6px 0;border-bottom:1px solid #222;text-align:right;">${g.zeilen[i].beitrag.toFixed(2).replace(".", ",")} €</td></tr>`).join("");
+    const zeilen = liste.map((p, i) => {
+      const name = istWunschfarbeMenge(p) ? p.titel : `${p.titel}${p.lacksystem ? ` · ${p.lacksystem}` : ""}`;
+      return `<tr><td style="padding:6px 0;border-bottom:1px solid #222;">${name}</td><td style="padding:6px 0;border-bottom:1px solid #222;text-align:right;">${p.rabatt} %</td><td style="padding:6px 0;border-bottom:1px solid #222;text-align:right;">${g.zeilen[i].beitrag.toFixed(2).replace(".", ",")} €</td></tr>`;
+    }).join("");
     const html = `<p>Deine Abo-Liste, jede Position mit eigener Stufe. Summe ${g.beitrag.toFixed(2).replace(".", ",")} € im Monat.</p><table width="100%">${zeilen}</table>`;
     const mail = await fetch("https://api.resend.com/emails", {
       method: "POST",
