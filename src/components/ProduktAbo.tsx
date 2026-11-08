@@ -289,26 +289,28 @@ export function ProduktAbo() {
 
   return (
     <div className={produkte.length > 0 ? "abo-unten" : undefined}>
+      {/* Rechner links, Abo-Liste rechts auf gleicher Höhe — nicht erst unter dem Katalog. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-y-8 gap-x-6 items-start [&>*]:min-w-0">
+        {/* Auf dem Handy löst sich die Spalte auf: Liste direkt unter dem Rechner, Katalog danach. */}
+        <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-8">
       {/* Eingeklappt ganz oben, damit die Karte nicht unter der Produktliste verschwindet. */}
-      <div className="max-w-3xl mx-auto mb-8">
-        <WunschfarbenLeiste
-          rabatt={15}
-          oeffnen={farbeAuf}
-          start={farbeStart}
-          onHinzufuegen={(e) => {
-            if (produkte.some((p) => p.id === e.id)) {
-              setProdukte((alt) => alt.map((p) => (p.id === e.id && istMenge(p) ? { ...p, menge: p.menge + e.menge } : p)));
-              toast.success("Menge erhöht");
-              return;
-            }
-            if (produkte.length >= MAX_PRODUKTE) { toast.error("Liste ist voll — ruf uns an."); return; }
-            setProdukte((alt) => [...alt, e]);
-          }}
-        />
-      </div>
+      <WunschfarbenLeiste
+        rabatt={15}
+        oeffnen={farbeAuf}
+        start={farbeStart}
+        onHinzufuegen={(e) => {
+          if (produkte.some((p) => p.id === e.id)) {
+            setProdukte((alt) => alt.map((p) => (p.id === e.id && istMenge(p) ? { ...p, menge: p.menge + e.menge } : p)));
+            toast.success("Menge erhöht");
+            return;
+          }
+          if (produkte.length >= MAX_PRODUKTE) { toast.error("Liste ist voll — ruf uns an."); return; }
+          setProdukte((alt) => [...alt, e]);
+        }}
+      />
 
       {/* ── Rabattstufe ───────────────────────────────────────────────── */}
-      <div id="abo-stufen" className="max-w-3xl mx-auto mb-8 scroll-mt-24">
+      <div id="abo-stufen" className="order-2 scroll-mt-40 lg:order-none">
         <p className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
           Die drei Stufen
         </p>
@@ -335,10 +337,8 @@ export function ProduktAbo() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-6 items-start [&>*]:min-w-0">
-        <div className="space-y-6 min-w-0">
         {/* ── Produkte suchen und hinzufügen ──────────────────────────── */}
-        <div className="card-tilt hover:translate-y-0 p-3 sm:p-4 lg:p-5">
+        <div className="card-tilt hover:translate-y-0 order-2 p-3 sm:p-4 lg:order-none lg:p-5">
           <h3 className="text-lg mb-1">Produkte auswählen</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Such dir die Artikel heraus, die du regelmäßig brauchst.
@@ -459,7 +459,12 @@ export function ProduktAbo() {
         </div>
 
         {/* ── Abo-Liste und Rechner ───────────────────────────────────── */}
-        <div id="abo-liste" ref={listeRef} className="lg:sticky lg:top-28 space-y-4 scroll-mt-28">
+        {/* Klebt unter der fixierten Kopfzeile (Logozeile plus Kategorien). Höher als das Fenster: innen scrollen, auch über dem Cookie-Hinweis. */}
+        <div
+          id="abo-liste"
+          ref={listeRef}
+          className="order-1 space-y-4 scroll-mt-40 lg:sticky lg:top-36 lg:z-20 lg:order-none lg:max-h-[calc(100dvh-9.75rem-var(--abo-cookie,0px))] lg:overflow-y-auto lg:overscroll-y-contain"
+        >
           <div className="card-tilt hover:translate-y-0 p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3 mb-4">
               <h3 className="text-lg inline-flex items-center gap-2">
