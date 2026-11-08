@@ -11,11 +11,12 @@ import {
   QUERY_KOLLEKTION,
   QUERY_PRODUKTE,
   htmlText,
-  jsonFuerScript,
   kartenHtml,
   sichererHandle,
   bildAdresse,
 } from "../shared/katalog-regeln.js";
+import { kategorieDokument, produktDokument } from "../shared/seo-katalog.js";
+import { geruest } from "../shared/seo-html.js";
 
 function kategorien() {
   const src = readFileSync(new URL("../src/lib/shopCategories.ts", import.meta.url), "utf8");
@@ -38,36 +39,8 @@ async function pool(aufgaben, gleichzeitig) {
   return aus;
 }
 
-function seite(basis, { klasse, hero, kopf, karten, daten, preload }) {
-  let h = basis;
-  if (klasse != null) {
-    h = h.replace(/<div id="aa-hero" class="aa-hero[^"]*">/, `<div id="aa-hero" class="aa-hero${klasse}">`);
-  }
-  if (hero != null) {
-    h = h.replace(/<!--AA_HERO_START-->[\s\S]*?<!--AA_HERO_END-->/, `<!--AA_HERO_START-->${hero}<!--AA_HERO_END-->`);
-  }
-  if (karten != null) {
-    h = h.replace('<div id="aa-liste"></div>', `<div id="aa-liste">${karten}</div>`);
-  }
-  if (daten) {
-    h = h.replace(
-      '<script type="application/json" id="aa-daten">null</script>',
-      `<script type="application/json" id="aa-daten">${jsonFuerScript(daten)}</script>`,
-    );
-  }
-  const bild = preload
-    ? `<link rel="preload" as="image" href="${htmlText(preload)}" fetchpriority="high">`
-    : "";
-  h = h.replace("<!--AA_PRELOAD-->", bild);
-  if (kopf) {
-    h = h.replace(/<title>[^<]*<\/title>/, `<title>${htmlText(kopf.title)}</title>`);
-    h = h.replace(/(<meta name="description" content=")[^"]*(")/, `$1${htmlText(kopf.description)}$2`);
-    h = h.replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${htmlText(kopf.canonical)}$2`);
-    h = h.replace(/(<meta property="og:url" content=")[^"]*(")/, `$1${htmlText(kopf.canonical)}$2`);
-    h = h.replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${htmlText(kopf.title)}$2`);
-    h = h.replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${htmlText(kopf.description)}$2`);
-  }
-  return h;
+function seite(basis, opts) {
+  return geruest(basis, opts);
 }
 
 function schreiben(dist, pfad, inhalt) {
@@ -150,9 +123,12 @@ export async function einbetten(basis, dist) {
       data: { collection: { handle: kat.handle, title: kat.label, products } },
     };
     const kopfKat = {
-      title: `${kat.label} kaufen | Alex Autoshop Wuppertal`,
-      description: `${kat.label} bei Alex Autoshop Wuppertal: Profi-Qualität für Werkstatt und Lackiererei, schnell abholbereit.`,
-      canonical: `https://www.alex-autoshop.de/kategorie/${kat.handle}`,
+      ...kategorieDokument({
+        handle: kat.handle,
+        label: kat.label,
+        produkte: edges.map((e) => e.node).filter(Boolean),
+      }),
+      imageAlt: kat.label,
     };
     schreiben(dist, `kategorie/${kat.handle}/index.html`, seite(basis, {
       klasse: " aa-hell",
@@ -189,15 +165,11 @@ export async function einbetten(basis, dist) {
       if (!handle || gesehen.has(handle)) continue;
       gesehen.add(handle);
       const bild = node.images?.edges?.[0]?.node?.url;
-      const beschreibung = String(node.title || "").slice(0, 155);
+      const dok = produktDokument(node);
       schreiben(dist, `produkt/${handle}/index.html`, seite(basis, {
         klasse: " aa-hell",
         hero: `<h1>${htmlText(node.title)}</h1>`,
-        kopf: {
-          title: `${node.title} | Alex Autoshop Wuppertal`,
-          description: beschreibung,
-          canonical: `https://www.alex-autoshop.de/produkt/${handle}`,
-        },
+        kopf: { ...dok, imageAlt: node.title },
         karten: kartenHtml([p]),
         daten: {
           meta: { art: "produkt", handle, schluessel: `produkt:${handle}` },

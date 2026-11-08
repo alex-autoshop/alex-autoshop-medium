@@ -114,7 +114,7 @@ export default function Konto() {
 
   return (
     <div className="container py-10 sm:py-16 max-w-md">
-      <Seo title={mode === "register" ? "Registrieren" : mode === "vergessen" ? "Passwort vergessen" : mode === "neu" ? "Neues Passwort" : "Login"} />
+      <Seo title={mode === "register" ? "Registrieren" : mode === "vergessen" ? "Passwort vergessen" : mode === "neu" ? "Neues Passwort" : "Login"} noindex />
 
       <div className="card-tilt hover:translate-y-0 p-6 sm:p-8">
         <h1 className="text-2xl sm:text-3xl mb-1">

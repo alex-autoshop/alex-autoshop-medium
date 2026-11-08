@@ -13,6 +13,7 @@ import {
 } from "@/lib/shopify";
 import { katalogLesen } from "@/lib/katalog";
 import { getCategoryBySlug, getParentCategory, legacyCategoryRedirect } from "@/lib/categories";
+import { findCategory } from "@/lib/shopCategories";
 import { brandOf, brandRank, markeAktiv, markeUmschalten, markenZaehlen } from "@/lib/marken";
 import { ProduktSuchleiste } from "@/components/ProduktSuchleiste";
 import {
@@ -321,7 +322,9 @@ export default function Shop() {
     <div className="mx-auto w-full max-w-[1760px] px-3 sm:px-6 py-8 sm:py-10">
       <Seo
         title={title}
-        description={`${title} bei Alex Autoshop Wuppertal – Lackierprodukte, Autoteile und Werkstattbedarf mit bis zu 40 % Rabatt.`}
+        description={`${title} bei Alex Autoshop in Wuppertal. Lackierprodukte, Autoteile und Werkstattbedarf, Abholung in der Handelstraße.`}
+        noindex={Boolean(submittedSearch.trim())}
+        canonical={category && findCategory(category) ? `https://www.alex-autoshop.de/kategorie/${category}` : undefined}
       />
 
       <h1 className="text-3xl sm:text-4xl mb-6">{title}</h1>
@@ -550,7 +553,7 @@ export default function Shop() {
             return (
               <div key={handle} className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-border bg-card hover:border-primary/30 transition-all">
                 {p.node.images?.edges?.[0]?.node?.url && (
-                  <img src={p.node.images.edges[0].node.url} alt="" width={40} height={40}
+                  <img src={p.node.images.edges[0].node.url} alt={title} width={p.node.images.edges[0].node.width || 40} height={p.node.images.edges[0].node.height || 40} loading="lazy"
                     className="w-10 h-10 object-contain rounded-lg bg-white border border-border/50 p-0.5 shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">

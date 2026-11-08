@@ -582,7 +582,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                     return (
                       <div key={item.uid} className="flex gap-2 py-3">
                         <div className="w-14 h-14 rounded-lg bg-white border border-border shrink-0 overflow-hidden">
-                          {img && <img src={img} alt="" className="w-full h-full object-contain" loading="lazy" />}
+                          {img && <img src={img} alt={node.title} width={56} height={56} className="w-full h-full object-contain" loading="lazy" />}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start gap-2">

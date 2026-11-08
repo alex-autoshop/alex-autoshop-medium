@@ -5,6 +5,8 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { PRODUKT_ABO_PREISE } from "../shared/produktabo.js";
+import { jsonFuerScript } from "../shared/katalog-regeln.js";
+import { startseitenLd } from "../shared/seo-katalog.js";
 import { einbetten } from "./einbetten.mjs";
 
 const dist = "dist";
@@ -20,6 +22,10 @@ const preload = fonts
   .map((f) => `<link rel="preload" href="/assets/${f}" as="font" type="font/woff2" crossorigin>`)
   .join("");
 html = html.replace("</head>", `${preload}</head>`);
+html = html.replace(
+  /<script type="application\/ld\+json">[\s\S]*?<\/script>/,
+  `<script type="application/ld+json">${jsonFuerScript(startseitenLd())}</script>`,
+);
 
 function mitHero(basis, hero, klasse, kopf) {
   let h = basis.replace(
@@ -33,6 +39,8 @@ function mitHero(basis, hero, klasse, kopf) {
     h = h.replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${kopf.canonical}$2`);
     h = h.replace(/(<meta property="og:url" content=")[^"]*(")/, `$1${kopf.canonical}$2`);
     h = h.replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${kopf.title}$2`);
+    h = h.replace(/(<link rel="alternate" hreflang="de-DE" href=")[^"]*(")/, `$1${kopf.canonical}$2`);
+    h = h.replace(/(<link rel="alternate" hreflang="x-default" href=")[^"]*(")/, `$1${kopf.canonical}$2`);
     h = h.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, "");
   }
   return h;

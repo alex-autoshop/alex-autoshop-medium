@@ -26,6 +26,7 @@ import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js"
 import { cn } from "@/lib/utils";
 import { EmpfohleneProdukte } from "@/components/EmpfohleneProdukte";
 import { AnwendungProzess } from "@/components/AnwendungProzess";
+import { produktDokument } from "../../shared/seo-katalog.js";
 
 function ZurueckZumShop({ className, mitPfeil = false }: { className?: string; mitPfeil?: boolean }) {
   const ziel = useMemo(() => shopZurueckZiel(), []);
@@ -116,32 +117,15 @@ export default function ProductDetail() {
 
   const variants = product?.variants?.edges?.map((e) => e.node) ?? [];
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? variants[0];
-  const img =
-    product?.images?.edges?.[0]?.node?.url || (handle ? PRODUCT_IMAGES[handle] : "") || "";
+  const bildNode = product?.images?.edges?.[0]?.node;
+  const img = bildNode?.url || (handle ? PRODUCT_IMAGES[handle] : "") || "";
 
   const price = selectedVariant?.price;
   const priceNum = price ? parseFloat(price.amount) : 0;
 
-  const jsonLd = useMemo(
-    () =>
-      product
-        ? {
-            "@context": "https://schema.org",
-            "@type": "Product",
-            name: product.title,
-            image: img || undefined,
-            description: product.description,
-            offers: {
-              "@type": "Offer",
-              priceCurrency: price?.currencyCode ?? "EUR",
-              price: price?.amount,
-              availability: selectedVariant?.availableForSale
-                ? "https://schema.org/InStock"
-                : "https://schema.org/OutOfStock",
-            },
-          }
-        : undefined,
-    [product, img, price, selectedVariant]
+  const seo = useMemo(
+    () => (product ? produktDokument(product, { variante: selectedVariant }) : null),
+    [product, selectedVariant],
   );
 
   if (isLoading) {
@@ -162,6 +146,7 @@ export default function ProductDetail() {
   if (!product) {
     return (
       <div className="container py-24 text-center">
+        <Seo titelFertig title="Produkt nicht gefunden | Alex Autoshop" noindex />
         <h1 className="text-2xl mb-4">Produkt nicht gefunden</h1>
         <ZurueckZumShop className="btn-primary" />
       </div>
@@ -193,7 +178,16 @@ export default function ProductDetail() {
 
   return (
     <div className="container py-8 sm:py-12">
-      <Seo title={product.title} description={product.description?.slice(0, 155)} jsonLd={jsonLd} />
+      <Seo
+        titelFertig
+        title={seo?.title || product.title}
+        description={seo?.description}
+        image={img || undefined}
+        preloadImage={img || undefined}
+        jsonLd={seo?.jsonLd}
+        canonical={seo?.canonical}
+        ogType="product"
+      />
 
       <ZurueckZumShop
         mitPfeil
@@ -208,6 +202,8 @@ export default function ProductDetail() {
                 src={img}
                 alt={product.title}
                 priority
+                width={bildNode?.width || 800}
+                height={bildNode?.height || 800}
                 sizes="(min-width: 768px) 45vw, 92vw"
                 className="w-full h-full object-contain p-4"
               />

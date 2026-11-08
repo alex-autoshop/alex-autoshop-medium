@@ -5,6 +5,15 @@ Allow: /
 Disallow: /teileboerse
 Disallow: /teile
 
+# Nicht für die Suche: Konto, Warenkorb, Verwaltung, Suche mit Parametern.
+Disallow: /warenkorb
+Disallow: /konto
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /intern
+Disallow: /merkliste
+Disallow: /shop?
+
 # Fahrzeugboerse ist noch nicht oeffentlich
 Disallow: /fahrzeugboerse
 Disallow: /fahrzeugmarkt

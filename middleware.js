@@ -11,6 +11,7 @@ import { ausTeileSlug, teilePfad, TEILE_BELIEBT } from "./shared/teile-pfad.js";
 import { markeFuerKunde } from "./shared/grosshaendler.js";
 import { leereTeileSitemap, teileboerseGeschlossenHtml, teileboerseOeffentlich } from "./shared/teileboerse-schalter.js";
 import { teileboerseDarf } from "./shared/teileboerse-zugang.js";
+import { katalogAnfrage } from "./shared/seo-auslieferung.js";
 
 const SITE = "https://www.alex-autoshop.de";
 
@@ -186,6 +187,9 @@ function kopfWeiter(request) {
 }
 
 export default async function middleware(request) {
+  const katalog = await katalogAnfrage(request);
+  if (katalog) return katalog;
+
   const url = new URL(request.url);
   const offen = teileboerseOeffentlich();
   const kopf = kopfWeiter(request);
@@ -250,5 +254,13 @@ export default async function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/teileboerse", "/teileboerse/:path*", "/teile/:slug", "/sitemap-teile.xml"],
+  matcher: [
+    "/teileboerse",
+    "/teileboerse/:path*",
+    "/teile/:slug",
+    "/sitemap-teile.xml",
+    "/produkt/:handle",
+    "/kategorie/:handle",
+    "/sitemap-produkte.xml",
+  ],
 };

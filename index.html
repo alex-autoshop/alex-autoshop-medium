@@ -13,6 +13,9 @@
     <meta name="description" content="Autolack, Lackierprodukte, Autoteile und Werkstattbedarf in Wuppertal. Mitgliedschaft mit bis zu 40 % Rabatt. Glasurit, RM, Cromax, Sikkens, Spies Hecker u. v. m. – heute bestellt, schnell abholbereit." />
     <meta name="keywords" content="Autolack Wuppertal, Lackierbedarf, Autoteile, Karosserie, Klarlack, Werkstattbedarf, B2B, Standox, Mipa, Lackierbetrieb, Karosseriewerkstatt" />
     <link rel="canonical" href="https://www.alex-autoshop.de/" />
+    <link rel="alternate" hreflang="de-DE" href="https://www.alex-autoshop.de/" />
+    <link rel="alternate" hreflang="x-default" href="https://www.alex-autoshop.de/" />
+    <meta name="robots" content="index, follow" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -21,6 +24,7 @@
     <meta property="og:title" content="Autolack, Autoteile & Werkstattbedarf | Alex Autoshop Wuppertal" />
     <meta property="og:description" content="Lackierbedarf, Autoteile und Werkstattmaterial in Wuppertal. Mitgliedschaft mit bis zu 40 % Rabatt. Glasurit, RM, Cromax, Sikkens, Spies Hecker und mehr." />
     <meta property="og:image" content="https://www.alex-autoshop.de/images/og-image.png" />
+    <meta property="og:image:alt" content="Alex Autoshop" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:url" content="https://www.alex-autoshop.de/" />
@@ -37,32 +41,47 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "AutoPartsStore",
-      "name": "Alex Autoshop",
-      "description": "Fachgroßhandel für Lackierprodukte, Autoteile und Werkstattmaterial in Wuppertal",
-      "url": "https://www.alex-autoshop.de",
-      "telephone": "+49 202 82690",
-      "email": "info@alex-autoshop.de",
-      "image": "https://www.alex-autoshop.de/images/og-image.png",
-      "logo": "https://www.alex-autoshop.de/logo.png",
-      "priceRange": "€€",
-      "currenciesAccepted": "EUR",
-      "paymentAccepted": "Cash, Credit Card, PayPal",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "Handelstraße 64",
-        "postalCode": "42277",
-        "addressLocality": "Wuppertal",
-        "addressRegion": "NRW",
-        "addressCountry": "DE"
-      },
-      "geo": { "@type": "GeoCoordinates", "latitude": 51.2789, "longitude": 7.2173 },
-      "openingHoursSpecification": [
-        { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "09:00", "closes": "17:30" },
-        { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "14:00" }
-      ],
-      "sameAs": [
-        "https://shop.alex-autoshop.de"
+      "@graph": [
+        {
+          "@type": ["AutoPartsStore", "Organization"],
+          "@id": "https://www.alex-autoshop.de/#organization",
+          "name": "Alex Autoshop",
+          "description": "Fachgroßhandel für Lackierprodukte, Autoteile und Werkstattmaterial in Wuppertal",
+          "url": "https://www.alex-autoshop.de/",
+          "telephone": "+49 202 82690",
+          "email": "info@alex-autoshop.de",
+          "image": "https://www.alex-autoshop.de/images/og-image.png",
+          "logo": "https://www.alex-autoshop.de/logo.png",
+          "priceRange": "€€",
+          "currenciesAccepted": "EUR",
+          "paymentAccepted": "Cash, Credit Card, PayPal",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Handelstraße 64",
+            "postalCode": "42277",
+            "addressLocality": "Wuppertal",
+            "addressRegion": "NRW",
+            "addressCountry": "DE"
+          },
+          "geo": { "@type": "GeoCoordinates", "latitude": 51.2789, "longitude": 7.2173 },
+          "openingHoursSpecification": [
+            { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "09:00", "closes": "17:30" },
+            { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "14:00" }
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.alex-autoshop.de/#website",
+          "url": "https://www.alex-autoshop.de/",
+          "name": "Alex Autoshop",
+          "inLanguage": "de-DE",
+          "publisher": { "@id": "https://www.alex-autoshop.de/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": { "@type": "EntryPoint", "urlTemplate": "https://www.alex-autoshop.de/shop?q={search_term_string}" },
+            "query-input": "required name=search_term_string"
+          }
+        }
       ]
     }
     </script>

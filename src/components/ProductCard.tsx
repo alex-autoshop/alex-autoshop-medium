@@ -43,7 +43,8 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
   const eng = breite < 200;
 
   const node = product.node;
-  const img = node.images?.edges?.[0]?.node?.url || PRODUCT_IMAGES[node.handle] || "";
+  const bildNode = node.images?.edges?.[0]?.node;
+  const img = bildNode?.url || PRODUCT_IMAGES[node.handle] || "";
   const base = node.priceRange.minVariantPrice;
   const basePrice = parseFloat(base.amount);
   const cur = base.currencyCode;
@@ -101,7 +102,7 @@ export function ProductCard({ product, priority = false }: { product: ShopifyPro
       >
         <div className="aspect-square bg-white overflow-hidden">
           {img ? (
-            <ShopBild src={img} alt={node.title} priority={priority} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
+            <ShopBild src={img} alt={node.title} priority={priority} width={bildNode?.width || 800} height={bildNode?.height || 800} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">Kein Bild</div>
           )}
