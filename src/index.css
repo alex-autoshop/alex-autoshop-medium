@@ -185,6 +185,66 @@
     }
   }
 
+  /* Produkttext: gleiche Größe und Farbe wie der bisherige Absatz, mit Abstand und Listen. */
+  .produkt-text {
+    @apply text-muted-foreground leading-relaxed;
+    overflow-wrap: anywhere;
+  }
+  .produkt-text p,
+  .produkt-text ul,
+  .produkt-text ol,
+  .produkt-text table {
+    margin: 0.75rem 0;
+  }
+  .produkt-text > :first-child { margin-top: 0; }
+  .produkt-text > :last-child { margin-bottom: 0; }
+  .produkt-text h2,
+  .produkt-text h3,
+  .produkt-text h4 {
+    color: hsl(var(--foreground));
+    font-size: 1rem;
+    line-height: 1.35;
+    margin: 1.15rem 0 0.35rem;
+  }
+  .produkt-text ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .produkt-text ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+  .produkt-text li { margin: 0.15rem 0; }
+  .produkt-text a {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .produkt-text a:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  .produkt-text strong,
+  .produkt-text b {
+    color: hsl(var(--foreground));
+    font-weight: 700;
+  }
+  .produkt-text table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .produkt-text th,
+  .produkt-text td {
+    border: 1px solid hsl(var(--border));
+    padding: 0.4rem 0.55rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  .produkt-text th {
+    color: hsl(var(--foreground));
+    font-weight: 700;
+  }
+
   .prose-legal {
     @apply max-w-3xl mx-auto px-4 py-16 leading-relaxed
       [&_h1]:text-3xl [&_h1]:sm:text-4xl [&_h1]:mb-8

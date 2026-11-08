@@ -112,6 +112,13 @@ export function klartext(wert) {
     .trim();
 }
 
+/** Meta und JSON-LD bleiben Klartext. HTML bekommt Leerzeichen zwischen den Blöcken. */
+export function beschreibungstext(produkt) {
+  const ausHtml = klartext(produkt?.descriptionHtml);
+  if (ausHtml) return ausHtml;
+  return klartext(produkt?.description);
+}
+
 function ohneBezugsquelle(text) {
   return String(text || "")
     .replace(/ds[\s-]?color/gi, "")
@@ -420,7 +427,7 @@ export function produktLd(produkt, opts = {}) {
   const gtin = gtinAus(variante?.barcode);
   const sku = String(variante?.sku || "").trim();
   const preis = variante?.price || produkt.priceRange?.minVariantPrice;
-  const text = ohneBezugsquelle(klartext(produkt.description)).slice(0, 5000);
+  const text = ohneBezugsquelle(beschreibungstext(produkt)).slice(0, 5000);
   const ld = ohneLeer({
     "@type": "Product",
     name: produkt.title,
@@ -488,7 +495,7 @@ export function produktDokument(produkt, opts = {}) {
   const description = metaBeschreibung({
     name: produkt?.title,
     seo: produkt?.seo?.description,
-    beschreibung: produkt?.description,
+    beschreibung: beschreibungstext(produkt),
     preisText: euro(preis?.amount, preis?.currencyCode),
     lieferzeit: lieferzeitText(fenster),
   });

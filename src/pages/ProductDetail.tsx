@@ -8,7 +8,7 @@ import {
   type ShopifyProduct,
   formatPrice,
 } from "@/lib/shopify";
-import { leseEinbettung, nimmFrisch, produktHolen } from "@/lib/katalog";
+import { beschreibungNachziehen, leseEinbettung, nimmFrisch, produktHolen } from "@/lib/katalog";
 import { ShopBild } from "@/components/ShopBild";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { EmpfohleneProdukte } from "@/components/EmpfohleneProdukte";
 import { AnwendungProzess } from "@/components/AnwendungProzess";
 import { produktDokument } from "../../shared/seo-katalog.js";
+import { beschreibungHtml } from "../../shared/html-sicher.js";
 
 function ZurueckZumShop({ className, mitPfeil = false }: { className?: string; mitPfeil?: boolean }) {
   const ziel = useMemo(() => shopZurueckZiel(), []);
@@ -98,8 +99,10 @@ export default function ProductDetail() {
     if (!handle) return;
     let aktiv = true;
     (async () => {
-      const data = await nimmFrisch((m) => m?.schluessel === key)
-        ?? await produktHolen(handle);
+      const data = await beschreibungNachziehen(
+        handle,
+        await nimmFrisch((m) => m?.schluessel === key) ?? await produktHolen(handle),
+      );
       if (!aktiv) return;
       const p = (data?.data?.productByHandle ?? null) as ProductNode | null;
       if (p) {
@@ -126,6 +129,10 @@ export default function ProductDetail() {
   const seo = useMemo(
     () => (product ? produktDokument(product, { variante: selectedVariant }) : null),
     [product, selectedVariant],
+  );
+  const beschreibung = useMemo(
+    () => beschreibungHtml(product?.descriptionHtml),
+    [product?.descriptionHtml],
   );
 
   if (isLoading) {
@@ -312,12 +319,16 @@ export default function ProductDetail() {
           </>
           )}
 
-          {product.description && (
+          {(beschreibung || product.description) && (
             <div className="mt-8">
               <h2 className="text-lg mb-2">Beschreibung</h2>
-              <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
-                {product.description}
-              </p>
+              {beschreibung ? (
+                <div className="produkt-text" dangerouslySetInnerHTML={{ __html: beschreibung }} />
+              ) : (
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {product.description}
+                </p>
+              )}
             </div>
           )}
           <AnwendungProzess key={product.handle} produkt={product} />

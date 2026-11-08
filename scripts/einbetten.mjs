@@ -50,6 +50,29 @@ function schreiben(dist, pfad, inhalt) {
   writeFileSync(ziel, inhalt);
 }
 
+/** Karten haben keine Beschreibung. Für die Produktseite holen wir nur den Text nach. */
+async function beschreibungenDazu(nodes) {
+  const aus = nodes.map((node) => ({ ...node }));
+  for (let i = 0; i < aus.length; i += 8) {
+    const gruppe = aus.slice(i, i + 8);
+    const felder = gruppe
+      .map((node, n) => `p${n}: productByHandle(handle: ${JSON.stringify(node.handle)}) { description descriptionHtml }`)
+      .join("\n");
+    try {
+      const data = await storefront(`query Beschreibungen { ${felder} }`);
+      gruppe.forEach((node, n) => {
+        const extra = data?.data?.[`p${n}`];
+        if (!extra) return;
+        node.description = extra.description || "";
+        node.descriptionHtml = extra.descriptionHtml || "";
+      });
+    } catch (e) {
+      console.warn("Beschreibungen fehlen:", e.message);
+    }
+  }
+  return aus;
+}
+
 function erstesBild(edges) {
   const url = edges?.[0]?.node?.images?.edges?.[0]?.node?.url;
   return url ? bildAdresse(url, 480, "webp") : "";
@@ -160,18 +183,24 @@ export async function einbetten(basis, dist) {
     const data = await storefront(QUERY_PRODUKTE, { first: 100, after, query: null });
     const kante = data.data?.products;
     const edges = kante?.edges ?? [];
+    const roh = [];
     for (const p of edges) {
       const node = p.node;
       const handle = sichererHandle(node?.handle);
       if (!handle || gesehen.has(handle) || produktWeiterleitung(handle)) continue;
       gesehen.add(handle);
+      roh.push(node);
+    }
+    const voll = await beschreibungenDazu(roh);
+    for (const node of voll) {
+      const handle = node.handle;
       const bild = node.images?.edges?.[0]?.node?.url;
       const dok = produktDokument(node);
       schreiben(dist, `produkt/${handle}/index.html`, seite(basis, {
         klasse: " aa-hell",
         hero: `<h1>${htmlText(node.title)}</h1>`,
         kopf: { ...dok, imageAlt: node.title },
-        karten: kartenHtml([p]),
+        karten: kartenHtml([{ node }]),
         daten: {
           meta: { art: "produkt", handle, schluessel: `produkt:${handle}` },
           data: { productByHandle: node },
