@@ -49,21 +49,46 @@ const NotFound = lazySeite(() => import("@/pages/NotFound"));
 const Warenkorb = lazySeite(() => import("@/pages/Warenkorb"));
 const AdminChat = lazySeite(() => import("@/pages/AdminChat"));
 
+/** Scroll einer Produktseite, Schlüssel ist der History-Eintrag. */
+const seitenScroll = new Map<string, number>();
+
+function scrollSofort(y: number) {
+  const top = Math.max(0, Math.round(y));
+  // scrollTop ignoriert scroll-behavior:smooth. Sonst gleitet die kürzere
+  // Produktseite vom Listen-Offset aus und bleibt bei den Empfehlungen stehen.
+  document.documentElement.scrollTop = top;
+  document.body.scrollTop = top;
+}
+
 function ScrollToTop() {
-  const { pathname, hash, state } = useLocation();
+  const { pathname, hash, key, state } = useLocation();
   const navigationType = useNavigationType();
-  useEffect(() => {
-    // Listen stellen Position und Filter selbst wieder her. Ein Sprung nach oben
-    // würde die Lackierbedarf-Ansicht wie einen frischen Einstieg aussehen lassen.
-    const zurueck = istListenPfad(pathname) && (
-      navigationType === "POP"
-      || Boolean((state as { shopZurueck?: boolean } | null)?.shopZurueck)
-    );
-    if (zurueck && !hash) return;
-    if (!hash) {
-      window.scrollTo(0, 0);
-      return;
+  const shopZurueck = Boolean((state as { shopZurueck?: boolean } | null)?.shopZurueck);
+  const listeZurueck = istListenPfad(pathname) && (navigationType === "POP" || shopZurueck);
+
+  // Vor dem ersten Bild: neuer Produktaufruf startet oben. Die CSS-Angabe
+  // scroll-behavior:smooth würde sonst vom tiefen Listen-Offset aus animieren
+  // und auf der kürzeren Produktseite bei den Empfehlungen stehen bleiben.
+  useLayoutEffect(() => {
+    if (hash || listeZurueck) return;
+    if (navigationType === "POP" && !istListenPfad(pathname)) {
+      const gemerkt = seitenScroll.get(key);
+      if (typeof gemerkt === "number") {
+        scrollSofort(gemerkt);
+        return;
+      }
     }
+    scrollSofort(0);
+  }, [pathname, hash, key, navigationType, listeZurueck]);
+
+  useLayoutEffect(() => {
+    return () => {
+      if (!istListenPfad(pathname)) seitenScroll.set(key, window.scrollY);
+    };
+  }, [pathname, key]);
+
+  useEffect(() => {
+    if (!hash) return;
     // Links wie /vermieten#gewerblich: das Ziel steht erst im DOM, wenn die
     // per lazy() geladene Seite gerendert ist — deshalb ein paar Frames warten.
     let versuche = 0;
@@ -75,14 +100,11 @@ function ScrollToTop() {
       } else if (versuche++ < 40) {
         id = window.setTimeout(suchen, 50);
       } else {
-        window.scrollTo(0, 0);
+        scrollSofort(0);
       }
     };
     suchen();
     return () => window.clearTimeout(id);
-    // navigationType/state nur beim Pfadwechsel lesen. Filter ändern die Query
-    // per replace — das darf die Scrollposition nicht nach oben werfen.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, hash]);
   return null;
 }

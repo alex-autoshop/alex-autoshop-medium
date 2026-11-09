@@ -38,6 +38,12 @@ export function useListenZusatz(lese: ZusatzLeser) {
   ctx.zusatz.current = lese;
 }
 
+function sprung(y: number) {
+  const top = Math.max(0, Math.round(y));
+  document.documentElement.scrollTop = top;
+  document.body.scrollTop = top;
+}
+
 function kopfHoehe() {
   const gemessen = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--shop-kopf"));
   if (Number.isFinite(gemessen) && gemessen > 0) return gemessen;
@@ -138,27 +144,20 @@ export function ListenRahmen({
       angewandt.current = rueckId;
       const setzen = () => {
         if (!lebendig()) return;
-        const wurzel = document.documentElement;
-        const vorher = wurzel.style.scrollBehavior;
-        wurzel.style.scrollBehavior = "auto";
-        window.scrollTo({ top: snap.scroll, left: 0, behavior: "auto" });
+        // Zwischenzeitlich eine Produktseite geöffnet: deren Anfang nicht
+        // mit dem Listen-Offset überschreiben.
+        if (window.location.pathname !== snap.pathname) return;
         const el = karteFinden(snap.handle);
         if (el) {
           const kopf = kopfHoehe();
-          const r = el.getBoundingClientRect();
-          if (r.top < kopf || r.bottom > window.innerHeight - 8) {
-            window.scrollTo({
-              top: Math.max(0, r.top + window.scrollY - kopf - 12),
-              left: 0,
-              behavior: "auto",
-            });
-          }
+          const ziel = el.getBoundingClientRect().top + window.scrollY - kopf - 12;
+          sprung(ziel);
+          el.classList.add("aa-zurueck");
+          window.clearTimeout(wegTimer);
+          wegTimer = window.setTimeout(() => el.classList.remove("aa-zurueck"), 1700);
+          return;
         }
-        wurzel.style.scrollBehavior = vorher;
-        if (!el) return;
-        el.classList.add("aa-zurueck");
-        window.clearTimeout(wegTimer);
-        wegTimer = window.setTimeout(() => el.classList.remove("aa-zurueck"), 1700);
+        sprung(snap.scroll);
       };
       setzen();
       requestAnimationFrame(() => requestAnimationFrame(setzen));
