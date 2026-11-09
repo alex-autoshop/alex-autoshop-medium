@@ -3,6 +3,8 @@ import { Seo } from "@/components/Seo";
 import { ProductGrid } from "@/components/ProductGrid";
 import { useVollerKatalog } from "@/hooks/useVollerKatalog";
 import { brandOf, markeAusSlug } from "@/lib/marken";
+import { labelFuer } from "../../shared/listen-zustand.js";
+import { ListenRahmen } from "@/lib/listenRueckkehr";
 
 export default function Marke() {
   const { slug = "" } = useParams();
@@ -21,6 +23,7 @@ export default function Marke() {
   }
 
   return (
+    <ListenRahmen label={labelFuer(`/marken/${slug}`)} bereit={liste.length > 0 || !isLoading}>
     <div className="container py-10">
       <Seo
         title={`${name} kaufen`}
@@ -33,5 +36,6 @@ export default function Marke() {
         <ProductGrid products={liste} isLoading={isLoading} columns={5} />
       )}
     </div>
+    </ListenRahmen>
   );
 }

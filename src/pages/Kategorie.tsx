@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useShopKontextMerken } from "@/lib/shopRueckkehr";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { ListenRahmen } from "@/lib/listenRueckkehr";
+import { LISTEN_SCHRITT, labelFuer, queryMitSeite, seiteAusSuche } from "../../shared/listen-zustand.js";
 import { PRODUKTLISTE_ID, KATEGORIE_LISTE_ABSTAND, zumProduktanfang } from "@/lib/produktanfang";
 import { ChevronRight, PackageOpen, ArrowRight } from "lucide-react";
 import { brandOf, markeAktiv, markeUmschalten, markenName, markenSlug, markenZaehlen } from "@/lib/marken";
@@ -74,14 +75,15 @@ function Hinweis({ titel, text }: { titel: string; text: React.ReactNode }) {
 export default function Kategorie() {
   const { handle = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
+  const seite = seiteAusSuche(location.search);
   const sortParam = params.get("sort") as CollectionSort | null;
   const sort: CollectionSort = COLLECTION_SORTS.some((s) => s.value === sortParam) ? sortParam! : "empfohlen";
 
   const alt = legacyCategoryRedirect(handle);
   const treffer = findCategory(handle);
   const { products, isLoading, error, notFound, hasNextPage } = useCollectionProducts(handle, sort);
-  useShopKontextMerken(!isLoading);
 
   // Markenfilter: ?marke=glasurit,rm — Slug aus Titel/Handle (siehe @/lib/marken)
   const qAusUrl = (params.get("q") || "").trim();
@@ -114,6 +116,7 @@ export default function Kategorie() {
       const wert = suche.trim();
       if (wert) next.set("q", wert);
       else next.delete("q");
+      next.delete("seite");
       const roh = next.toString().replace(
         /(^|&)marke=([^&]*)/g,
         (_, trenner, marke) => `${trenner}marke=${marke.replace(/%2C/gi, ",")}`,
@@ -159,6 +162,7 @@ export default function Kategorie() {
   const titel = kategorieLabel;
 
   const schreibeParams = (next: URLSearchParams) => {
+    next.delete("seite");
     const roh = next.toString().replace(
       /(^|&)marke=([^&]*)/g,
       (_, trenner, wert) => `${trenner}marke=${wert.replace(/%2C/gi, ",")}`,
@@ -181,7 +185,17 @@ export default function Kategorie() {
     schreibeParams(next);
   };
 
+  const noetig = seite * LISTEN_SCHRITT;
+  const bereit = products.length >= noetig || (!isLoading && !hasNextPage);
+  const zeigMehr = () => {
+    navigate(
+      { pathname: location.pathname, search: queryMitSeite(location.search, Math.min(40, seite + 1)) },
+      { replace: true },
+    );
+  };
+
   return (
+    <ListenRahmen label={labelFuer(location.pathname, location.search)} seite={seite} bereit={bereit}>
     <div className="container py-8 sm:py-12">
       <Seo
         titelFertig
@@ -294,8 +308,15 @@ export default function Kategorie() {
           text={<>In dieser Kategorie gibt es keine Produkte von {gewaehlteMarken.map((m) => markenName(m, marken.map((x) => x.name))).join(", ")}. <button type="button" onClick={() => setMarken([])} className="text-primary underline">Filter zurücksetzen</button></>}
         />
       ) : (
-        <ProductGrid products={sichtbar} isLoading={isLoading && products.length === 0} fenster={24} />
+        <ProductGrid
+          products={sichtbar}
+          isLoading={isLoading && products.length === 0}
+          fenster={LISTEN_SCHRITT}
+          seite={seite}
+          onMehr={zeigMehr}
+        />
       )}
     </div>
+    </ListenRahmen>
   );
 }

@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { type ShopifyProduct } from "@/lib/shopify";
 import { ProductCard } from "@/components/ProductCard";
+import { LISTEN_SCHRITT } from "../../shared/listen-zustand.js";
 
 interface ProductGridProps {
   products: ShopifyProduct[];
@@ -12,6 +13,9 @@ interface ProductGridProps {
   columns?: 4 | 5 | 6;
   /** Nur so viele Karten zeichnen, der Rest kommt auf Knopfdruck. */
   fenster?: number;
+  /** 1-basierte Seite. Mit onMehr kommt der Stand aus der Adresse. */
+  seite?: number;
+  onMehr?: () => void;
   /** Überschrift direkt vor dieser Karte, über die ganze Zeile. */
   trennung?: { vorId: string; titel: string };
 }
@@ -36,13 +40,13 @@ function SkeletonCard() {
   );
 }
 
-export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMore, columns = 5, fenster, trennung }: ProductGridProps) {
-  const schluessel = `${fenster ?? 0}:${products.length}:${products[0]?.node.id ?? ""}:${products[products.length - 1]?.node.id ?? ""}`;
-  const [sichtbar, setSichtbar] = useState(fenster ?? products.length);
-  useEffect(() => {
-    setSichtbar(fenster ?? products.length);
-  }, [schluessel, fenster, products.length]);
-  const gezeigt = fenster ? products.slice(0, sichtbar) : products;
+export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMore, columns = 5, fenster, seite = 1, onMehr, trennung }: ProductGridProps) {
+  const schritt = fenster || LISTEN_SCHRITT;
+  const anfang = products[0]?.node.id ?? "";
+  const [lokal, setLokal] = useState(seite);
+  useEffect(() => { setLokal(seite); }, [seite, anfang]);
+  const aktiv = Math.max(1, onMehr ? seite : lokal);
+  const gezeigt = fenster ? products.slice(0, aktiv * schritt) : products;
   if (error) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -69,9 +73,13 @@ export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMor
       {!isLoading && products.length === 0 && (
         <p className="text-center py-12 text-muted-foreground">Keine Produkte gefunden.</p>
       )}
-      {fenster && sichtbar < products.length && (
+      {fenster && gezeigt.length < products.length && (
         <div className="flex justify-center mt-8">
-          <button type="button" onClick={() => setSichtbar((n) => n + fenster)} className="btn-outline">
+          <button
+            type="button"
+            onClick={() => (onMehr ? onMehr() : setLokal((n) => n + 1))}
+            className="btn-outline"
+          >
             Weitere Produkte zeigen
           </button>
         </div>

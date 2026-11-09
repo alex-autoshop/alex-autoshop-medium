@@ -15,6 +15,8 @@ import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { DIENSTLEISTUNG_BUCHBAR } from "../../shared/mitgliedspreise.js";
 import { PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
 import { BELIEBTE_ANFRAGE } from "../../shared/beliebte-produkte.js";
+import { labelFuer } from "../../shared/listen-zustand.js";
+import { ListenRahmen } from "@/lib/listenRueckkehr";
 
 const MembershipCards = DIENSTLEISTUNG_BUCHBAR
   ? lazy(() => import("@/components/MembershipCards").then((m) => ({ default: m.MembershipCards })))
@@ -57,6 +59,7 @@ export default function Home() {
   const usps = teileSichtbar ? USPS : USPS.filter((usp) => usp.title !== "Teile per Kennzeichen");
 
   return (
+    <ListenRahmen label={labelFuer("/", "")} bereit={products.length > 0 || !isLoading}>
     <div>
       <Seo
         title="Autolack, Autoteile & Werkstattbedarf"
@@ -230,5 +233,6 @@ export default function Home() {
         </div>
       </section>
     </div>
+    </ListenRahmen>
   );
 }

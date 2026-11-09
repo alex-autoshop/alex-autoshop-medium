@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Palette, Droplets, Layers, Pipette, FlaskConical, X } from "lucide-react";
 import { Seo } from "@/components/Seo";
@@ -22,8 +22,9 @@ import {
   type ShopFilterState,
 } from "@/components/ShopFilters";
 import { shopZustandSchreiben, sucheAusZustand, zustandAusSuche } from "../../shared/shop-zustand.js";
+import { LISTEN_SCHRITT, labelFuer, queryMitSeite, seiteAusSuche } from "../../shared/listen-zustand.js";
+import { ListenRahmen } from "@/lib/listenRueckkehr";
 import { istOelFilter, OEL_KATEGORIE, oeleVorFiltern } from "../../shared/oel-reihenfolge.js";
-import { useShopKontextMerken } from "@/lib/shopRueckkehr";
 import { PRODUKTLISTE_ID, SHOP_LISTE_ABSTAND, zumProduktanfang } from "@/lib/produktanfang";
 import { Grundpreis } from "@/components/Grundpreis";
 import { cn } from "@/lib/utils";
@@ -139,7 +140,9 @@ const SORT_LABELS: Record<SortMode, string> = {
 // ── Shop Page ─────────────────────────────────────────────────────────────────
 export default function Shop() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { category: rawCategory } = useParams();
+  const seite = seiteAusSuche(location.search);
   const legacyTarget = rawCategory ? legacyCategoryRedirect(rawCategory) : undefined;
   const category = legacyTarget ? undefined : rawCategory;
   const [params, setParams] = useSearchParams();
@@ -229,8 +232,6 @@ export default function Shop() {
         : "shop::",
   });
 
-  useShopKontextMerken(!isLoading);
-
   // Featured konfigurator products
   const [featured, setFeatured] = useState<ShopifyProduct[]>([]);
   useEffect(() => {
@@ -319,7 +320,17 @@ export default function Shop() {
 
   if (legacyTarget) return <Navigate to={legacyTarget} replace />;
 
+  const noetig = seite * LISTEN_SCHRITT;
+  const bereit = sortedGridProducts.length >= noetig || (!isLoading && !hasNextPage);
+  const zeigMehr = () => {
+    navigate(
+      { pathname: location.pathname, search: queryMitSeite(location.search, Math.min(40, seite + 1)) },
+      { replace: true },
+    );
+  };
+
   return (
+    <ListenRahmen label={labelFuer(location.pathname, location.search)} seite={seite} bereit={bereit}>
     <div className="mx-auto w-full max-w-[1760px] px-3 sm:px-6 py-8 sm:py-10">
       <Seo
         title={title}
@@ -606,12 +617,15 @@ export default function Shop() {
         hasNextPage={hasNextPage}
         onLoadMore={loadMore}
         columns={columns}
-        fenster={24}
+        fenster={LISTEN_SCHRITT}
+        seite={seite}
+        onMehr={zeigMehr}
         trennung={filterTrennung}
       />
       )}
         </div>{/* Ende Hauptspalte */}
       </div>{/* Ende Layout-Grid */}
     </div>
+    </ListenRahmen>
   );
 }
