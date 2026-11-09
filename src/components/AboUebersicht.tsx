@@ -1,8 +1,8 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { X } from "lucide-react";
-import { aboLeisteText } from "../../shared/abo-leiste.js";
+import { aboLeisteText, aboProduktPfad } from "../../shared/abo-leiste.js";
 import {
   ABO_RABATTE,
   aboListeGesamt,
@@ -150,6 +150,7 @@ export function AboUebersicht() {
   const leiste = useRef<HTMLDivElement>(null);
   const rahmen = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
+  const sprung = useRef(false);
   const titelId = useId();
   const produkte = liste.produkte;
   const sichtbar = !pathname.startsWith("/mitgliedschaft") && produkte.length > 0;
@@ -231,9 +232,19 @@ export function AboUebersicht() {
       document.removeEventListener("keydown", aufTaste);
       root?.removeAttribute("inert");
       document.body.style.overflow = overflow;
-      if (vorher && document.contains(vorher)) vorher.focus();
+      const nichtFokussieren = sprung.current;
+      sprung.current = false;
+      if (!nichtFokussieren && vorher && document.contains(vorher)) vorher.focus();
     };
   }, [offen]);
+
+  const zumProdukt = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    sprung.current = true;
+    document.getElementById("root")?.removeAttribute("inert");
+    document.body.style.overflow = "";
+    setOffen(false);
+  };
 
   if (!sichtbar) return null;
 
@@ -320,13 +331,41 @@ export function AboUebersicht() {
                 const detail = detailVon(p);
                 const zeile = gesamt?.zeilen[i];
                 const ab = p.ab ? "ab " : "";
+                const pfad = aboProduktPfad(p.handle);
+                const bild = (
+                  <span className="block h-full w-full">
+                    {str(p.bild) && <img src={str(p.bild)} alt="" className="h-full w-full object-contain" />}
+                  </span>
+                );
                 return (
                   <li key={id || titel} className="flex items-center gap-3 rounded-xl bg-[#FAF9F7] p-2.5">
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white">
-                      {str(p.bild) && <img src={str(p.bild)} alt="" className="h-full w-full object-contain" />}
-                    </div>
+                    {pfad ? (
+                      <Link
+                        to={pfad}
+                        onClick={zumProdukt}
+                        aria-label={titel || "Produktseite"}
+                        data-abo-produkt=""
+                        className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      >
+                        {bild}
+                      </Link>
+                    ) : (
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-white">{bild}</div>
+                    )}
                     <div className="min-w-0 flex-1">
-                      <p lang="de" className="produkt-titel">{titel}</p>
+                      {pfad ? (
+                        <Link
+                          to={pfad}
+                          onClick={zumProdukt}
+                          lang="de"
+                          data-abo-produkt=""
+                          className="produkt-titel block text-left hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        >
+                          {titel}
+                        </Link>
+                      ) : (
+                        <p lang="de" className="produkt-titel">{titel}</p>
+                      )}
                       {detail && <p className="text-[11px] leading-tight text-neutral-600">{detail}</p>}
                       {zeile && (
                         <p className="text-[11px] leading-snug text-neutral-600">
