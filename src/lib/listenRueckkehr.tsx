@@ -40,15 +40,11 @@ export function useListenZusatz(lese: ZusatzLeser) {
 
 function sprung(y: number) {
   const top = Math.max(0, Math.round(y));
-  document.documentElement.scrollTop = top;
+  const wurzel = document.documentElement;
+  wurzel.style.scrollBehavior = "auto";
+  wurzel.scrollTop = top;
   document.body.scrollTop = top;
-}
-
-function kopfHoehe() {
-  const gemessen = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--shop-kopf"));
-  if (Number.isFinite(gemessen) && gemessen > 0) return gemessen;
-  const kopf = document.querySelector("header");
-  return kopf ? kopf.getBoundingClientRect().height : 72;
+  window.scrollTo(0, top);
 }
 
 function karteFinden(handle: string) {
@@ -147,17 +143,14 @@ export function ListenRahmen({
         // Zwischenzeitlich eine Produktseite geöffnet: deren Anfang nicht
         // mit dem Listen-Offset überschreiben.
         if (window.location.pathname !== snap.pathname) return;
-        const el = karteFinden(snap.handle);
-        if (el) {
-          const kopf = kopfHoehe();
-          const ziel = el.getBoundingClientRect().top + window.scrollY - kopf - 12;
-          sprung(ziel);
-          el.classList.add("aa-zurueck");
-          window.clearTimeout(wegTimer);
-          wegTimer = window.setTimeout(() => el.classList.remove("aa-zurueck"), 1700);
-          return;
-        }
+        // Genau die gemerkte Stelle. Abseits des Bildschirms ist die
+        // Kartenhöhe nur geschätzt, ein Nachziehen verschiebt die Karte.
         sprung(snap.scroll);
+        const el = karteFinden(snap.handle);
+        if (!el) return;
+        el.classList.add("aa-zurueck");
+        window.clearTimeout(wegTimer);
+        wegTimer = window.setTimeout(() => el.classList.remove("aa-zurueck"), 1700);
       };
       setzen();
       requestAnimationFrame(() => requestAnimationFrame(setzen));
