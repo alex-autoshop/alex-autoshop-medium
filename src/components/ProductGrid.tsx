@@ -18,6 +18,8 @@ interface ProductGridProps {
   onMehr?: () => void;
   /** Überschrift direkt vor dieser Karte, über die ganze Zeile. */
   trennung?: { vorId: string; titel: string };
+  /** Mehrere Gruppen, z. B. Füller dann Klarlack bei mehreren Marken. */
+  trennungen?: { vorId: string; titel: string }[];
 }
 
 // Feste Klassen, damit Tailwind sie beim Build findet (kein String-Zusammenbau!).
@@ -40,13 +42,14 @@ function SkeletonCard() {
   );
 }
 
-export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMore, columns = 5, fenster, seite = 1, onMehr, trennung }: ProductGridProps) {
+export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMore, columns = 5, fenster, seite = 1, onMehr, trennung, trennungen }: ProductGridProps) {
   const schritt = fenster || LISTEN_SCHRITT;
   const anfang = products[0]?.node.id ?? "";
   const [lokal, setLokal] = useState(seite);
   useEffect(() => { setLokal(seite); }, [seite, anfang]);
   const aktiv = Math.max(1, onMehr ? seite : lokal);
   const gezeigt = fenster ? products.slice(0, aktiv * schritt) : products;
+  const koepfe = trennungen ?? (trennung ? [trennung] : []);
   if (error) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -60,11 +63,11 @@ export function ProductGrid({ products, isLoading, error, hasNextPage, onLoadMor
       <div className={`grid ${COLS[columns]} gap-3 sm:gap-4 items-stretch`}>
         {gezeigt.map((p, i) => (
           <Fragment key={p.node.id}>
-            {trennung && p.node.id === trennung.vorId && (
-              <h2 className="col-span-full mt-2 border-t border-border pt-4 text-sm font-semibold text-muted-foreground">
-                {trennung.titel}
+            {koepfe.filter((kopf) => kopf.vorId === p.node.id).map((kopf) => (
+              <h2 key={kopf.titel} className="col-span-full mt-2 border-t border-border pt-4 text-sm font-semibold text-muted-foreground">
+                {kopf.titel}
               </h2>
-            )}
+            ))}
             <ProductCard product={p} priority={i < 2} />
           </Fragment>
         ))}
