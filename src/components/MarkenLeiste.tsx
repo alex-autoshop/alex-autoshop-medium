@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { markeAktiv } from "@/lib/marken";
+import { markeAktiv, markenSlug } from "@/lib/marken";
 
 export function MarkenLeiste({
   marken,
@@ -22,17 +22,22 @@ export function MarkenLeiste({
   const leiste = useRef<HTMLDivElement>(null);
   const zuletzt = useRef("");
   const auswahl = Array.isArray(werte) ? werte.join("|") : wert;
+  const ersteWahl = Array.isArray(werte) ? (werte[0] || "") : wert;
   useEffect(() => {
     const root = leiste.current;
-    const name = zuletzt.current;
+    const name = zuletzt.current || ersteWahl;
     if (!root || !name) return;
-    const knopf = [...root.querySelectorAll("button")].find((b) => (b.textContent || "").startsWith(name));
+    const ziel = markenSlug(name);
+    const knopf = [...root.querySelectorAll("button")].find((b) => {
+      const roh = (b.textContent || "").replace(/\s+\d+\s*$/, "").trim();
+      return roh === name || markenSlug(roh) === ziel;
+    });
     if (!knopf) return;
     const links = knopf.getBoundingClientRect().left - root.getBoundingClientRect().left + root.scrollLeft;
     const rechts = links + knopf.offsetWidth;
     if (links < root.scrollLeft - 1) root.scrollLeft = links;
     else if (rechts > root.scrollLeft + root.clientWidth + 1) root.scrollLeft = rechts - root.clientWidth;
-  }, [auswahl]);
+  }, [auswahl, ersteWahl]);
 
   if (marken.length === 0) return null;
   const mehrfach = Array.isArray(werte);

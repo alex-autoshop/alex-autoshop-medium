@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { legacyCategoryRedirect } from "@/lib/categories";
 import { kategorieDokument } from "../../shared/seo-katalog.js";
+import { nachArtMischen } from "../../shared/marken-vergleich.js";
 
 function Chips({ items, activeHandle }: { items: SubCategory[]; activeHandle?: string }) {
   const seite = activeHandle ? kategoriePfad(activeHandle) : "";
@@ -106,6 +107,17 @@ export default function Kategorie() {
     () => (gewaehlteMarken.length ? suchtreffer.filter((p) => markeAktiv(gewaehlteMarken, brandOf(p))) : suchtreffer),
     [suchtreffer, gewaehlteMarken]
   );
+  // Mehrere Marken: die ganze schon geladene Liste nach Produktart mischen,
+  // nicht die Markenblöcke der Kollektion durchreichen.
+  const vergleich = useMemo(() => {
+    if (gewaehlteMarken.length < 2 || sort !== "empfohlen") return null;
+    return nachArtMischen(sichtbar, {
+      markeVon: (p) => brandOf(p as ShopifyProduct),
+      markenFolge: gewaehlteMarken,
+    });
+  }, [sichtbar, gewaehlteMarken, sort]);
+  const liste = (vergleich?.produkte ?? sichtbar) as ShopifyProduct[];
+  const artKoepfe = vergleich && vergleich.gruppen.length > 1 ? vergleich.gruppen : undefined;
   const markenRef = useRef(gewaehlteMarken);
   markenRef.current = gewaehlteMarken;
 
@@ -188,8 +200,9 @@ export default function Kategorie() {
   const noetig = seite * LISTEN_SCHRITT;
   const bereit = products.length >= noetig || (!isLoading && !hasNextPage);
   const zeigMehr = () => {
+    const jetzt = seiteAusSuche(window.location.search);
     navigate(
-      { pathname: location.pathname, search: queryMitSeite(location.search, Math.min(40, seite + 1)) },
+      { pathname: location.pathname, search: queryMitSeite(window.location.search, Math.min(40, jetzt + 1)) },
       { replace: true },
     );
   };
@@ -309,11 +322,12 @@ export default function Kategorie() {
         />
       ) : (
         <ProductGrid
-          products={sichtbar}
+          products={liste}
           isLoading={isLoading && products.length === 0}
           fenster={LISTEN_SCHRITT}
           seite={seite}
           onMehr={zeigMehr}
+          trennungen={artKoepfe}
         />
       )}
     </div>

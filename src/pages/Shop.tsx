@@ -23,6 +23,7 @@ import {
 } from "@/components/ShopFilters";
 import { shopZustandSchreiben, sucheAusZustand, zustandAusSuche } from "../../shared/shop-zustand.js";
 import { LISTEN_SCHRITT, labelFuer, queryMitSeite, seiteAusSuche } from "../../shared/listen-zustand.js";
+import { nachArtMischen } from "../../shared/marken-vergleich.js";
 import { ListenRahmen } from "@/lib/listenRueckkehr";
 import { istOelFilter, OEL_KATEGORIE, oeleVorFiltern } from "../../shared/oel-reihenfolge.js";
 import { PRODUKTLISTE_ID, SHOP_LISTE_ABSTAND, zumProduktanfang } from "@/lib/produktanfang";
@@ -278,13 +279,24 @@ export default function Shop() {
     });
   }, [gridProducts, filters]);
 
+  const mehrereMarken = filters.brands.length >= 2 && sortMode === "empfohlen";
+  const vergleich = useMemo(() => {
+    if (!mehrereMarken) return null;
+    return nachArtMischen(filteredProducts, {
+      markeVon: (p) => brandOf(p as ShopifyProduct),
+      markenFolge: filters.brands,
+    });
+  }, [filteredProducts, mehrereMarken, filters.brands]);
+
   /** Shop-Sortierung: Wunschfarben ganz oben → Mipa komplett → Eigenmarken
    *  (FRIZ, Master) → übrige Marken als geschlossene Blöcke → Unbekanntes zuletzt.
    *  Innerhalb einer Marke bleibt PRODUCT_PRIORITY erhalten, danach alphabetisch.
+   *  Ab zwei Marken bei „Empfohlen“ stattdessen nach Produktart gemischt.
    *  In „Öle, Flüssigkeiten & Filter“ stehen Öle und Flüssigkeiten vor den Filtern;
    *  die Sortierung gilt jeweils innerhalb der Gruppe und über die ganze Liste. */
   const sortedGridProducts = useMemo(() => {
-    const vergleich = (a: ShopifyProduct, b: ShopifyProduct) => {
+    if (vergleich) return vergleich.produkte as ShopifyProduct[];
+    const vergleichen = (a: ShopifyProduct, b: ShopifyProduct) => {
       if (sortMode === "preis-auf") return productPrice(a) - productPrice(b);
       if (sortMode === "preis-ab") return productPrice(b) - productPrice(a);
       if (sortMode === "name") return (a.node.title || "").localeCompare(b.node.title || "", "de");
@@ -304,16 +316,16 @@ export default function Shop() {
       if (bi !== -1) return 1;
       return (a.node.title || "").localeCompare(b.node.title || "", "de");
     };
-    if (category === OEL_KATEGORIE && !submittedSearch.trim()) return oeleVorFiltern(filteredProducts, vergleich);
-    return [...filteredProducts].sort(vergleich);
-  }, [filteredProducts, sortMode, category, submittedSearch]);
+    if (category === OEL_KATEGORIE && !submittedSearch.trim()) return oeleVorFiltern(filteredProducts, vergleichen);
+    return [...filteredProducts].sort(vergleichen);
+  }, [filteredProducts, sortMode, category, submittedSearch, vergleich]);
 
   const filterTrennung = useMemo(() => {
-    if (category !== OEL_KATEGORIE || submittedSearch.trim()) return undefined;
+    if (vergleich || category !== OEL_KATEGORIE || submittedSearch.trim()) return undefined;
     const idx = sortedGridProducts.findIndex((p) => istOelFilter(p));
     if (idx <= 0) return undefined;
     return { vorId: sortedGridProducts[idx].node.id, titel: "Filter" };
-  }, [sortedGridProducts, category, submittedSearch]);
+  }, [sortedGridProducts, category, submittedSearch, vergleich]);
 
   const title = activeCategory ? activeCategory.label : "Shop";
   const marken = useMemo(() => markenZaehlen(gridProducts), [gridProducts]);
@@ -323,8 +335,9 @@ export default function Shop() {
   const noetig = seite * LISTEN_SCHRITT;
   const bereit = sortedGridProducts.length >= noetig || (!isLoading && !hasNextPage);
   const zeigMehr = () => {
+    const jetzt = seiteAusSuche(window.location.search);
     navigate(
-      { pathname: location.pathname, search: queryMitSeite(location.search, Math.min(40, seite + 1)) },
+      { pathname: location.pathname, search: queryMitSeite(window.location.search, Math.min(40, jetzt + 1)) },
       { replace: true },
     );
   };
@@ -621,6 +634,7 @@ export default function Shop() {
         seite={seite}
         onMehr={zeigMehr}
         trennung={filterTrennung}
+        trennungen={vergleich && vergleich.gruppen.length > 1 ? vergleich.gruppen : undefined}
       />
       )}
         </div>{/* Ende Hauptspalte */}
