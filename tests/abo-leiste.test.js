@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aboLeisteAktion, aboLeisteText } from "../shared/abo-leiste.js";
+import { aboLeisteAktion, aboLeisteText, aboProduktPfad } from "../shared/abo-leiste.js";
 
 test("Klick öffnet die Übersicht und legt nicht doppelt an", () => {
   assert.equal(aboLeisteAktion(true), "oeffnen");
@@ -10,6 +10,18 @@ test("Klick öffnet die Übersicht und legt nicht doppelt an", () => {
   assert.equal(aboLeisteAktion(false, "voll"), "ruhig");
   assert.equal(aboLeisteAktion(false, "leer"), "ruhig");
   assert.equal(aboLeisteAktion(false, "konfigurator"), "ruhig");
+});
+
+test("Produktlink nur bei einem echten Handle, Konfigurator inklusive", () => {
+  assert.equal(aboProduktPfad("mirka-abranet-streifen"), "/produkt/mirka-abranet-streifen");
+  assert.equal(aboProduktPfad("farben-mix"), "/produkt/farben-mix");
+  assert.equal(aboProduktPfad("individuelle-spraydose-erstellen"), "/produkt/individuelle-spraydose-erstellen");
+  assert.equal(aboProduktPfad("individuellen-lackstift-bestellen-20ml"), "/produkt/individuellen-lackstift-bestellen-20ml");
+  assert.equal(aboProduktPfad(""), "");
+  assert.equal(aboProduktPfad("  "), "");
+  assert.equal(aboProduktPfad("../admin"), "");
+  assert.equal(aboProduktPfad("a/b"), "");
+  assert.equal(aboProduktPfad("javascript:alert"), "");
 });
 
 test("Leistentext: ein Produkt, mehrere Produkte, Betrag", () => {
