@@ -260,6 +260,24 @@ export function aboListeErgaenzen(roh, produkt) {
   return { standard: liste.standard, produkte: [...liste.produkte, neu], ergebnis: "neu" };
 }
 
+/**
+ * Rabattstufe einer vorhandenen Zeile ändern, Einzelprodukt oder Menge.
+ * Die Voreinstellung für das nächste Produkt bleibt. Unbekannte Stufen
+ * und fehlende Zeilen bleiben unverändert.
+ */
+export function aboStufeSetzen(roh, id, rabatt) {
+  const liste = listeNormalisieren(roh);
+  const ziel = String(id || "").trim();
+  const stufe = Math.floor(Number(rabatt));
+  if (!ziel || !rabattGueltig(stufe)) return { ...liste, ergebnis: "leer" };
+  const idx = liste.produkte.findIndex((p) => p && p.id === ziel);
+  if (idx < 0) return { ...liste, ergebnis: "leer" };
+  if (liste.produkte[idx].rabatt === stufe) return { ...liste, ergebnis: "schon" };
+  const produkte = liste.produkte.slice();
+  produkte[idx] = { ...produkte[idx], rabatt: stufe };
+  return { standard: liste.standard, produkte, ergebnis: "neu" };
+}
+
 /** Stufe (und optional den Einzelpreis) einer vorhandenen Einzelposition ändern. */
 export function aboEinzelAktualisieren(roh, produkt) {
   const liste = listeNormalisieren(roh);

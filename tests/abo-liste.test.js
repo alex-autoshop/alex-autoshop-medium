@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, aboListeGesamt, aboPositionEntfernen, ABO_RABATTE, listeNormalisieren, mitgliedZeile } from "../shared/produktabo.js";
+import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, aboListeGesamt, aboPositionEntfernen, aboStufeSetzen, ABO_RABATTE, listeNormalisieren, mitgliedZeile, PRODUKT_ABO_PREISE } from "../shared/produktabo.js";
 
 test("Produkt landet mit der Standardstufe in der Abo-Liste, ein zweites Mal nicht", () => {
   const neu = aboListeErgaenzen(null, {
@@ -48,6 +48,40 @@ test("leere Angaben und eine volle Liste werden abgelehnt", () => {
   const abgelehnt = aboListeErgaenzen(voll, { id: "neu", titel: "Noch eins", preis: 1 });
   assert.equal(abgelehnt.ergebnis, "voll");
   assert.equal(abgelehnt.produkte.length, 100);
+});
+
+test("Stufe in der Übersicht gilt je Zeile, die Monatssumme folgt", () => {
+  const start = listeNormalisieren({
+    standard: 40,
+    produkte: [
+      { id: "s", titel: "Schwarz", preis: 59.95, rabatt: 40 },
+      { id: "w", titel: "Weiß", preis: 59.95, rabatt: 40 },
+      { id: "g", titel: "Grau", preis: 59.95, rabatt: 40 },
+      { art: "menge", id: "m", handle: "farben-mix", titel: "Farbe", rabatt: 40, einzelpreis: 88.5, menge: 10 },
+    ],
+  });
+  assert.deepEqual(ABO_RABATTE, [15, 28, 40]);
+  assert.equal(aboListeGesamt(start.produkte).beitrag, 79.8);
+
+  const auf15 = aboStufeSetzen(start, "s", 15);
+  assert.equal(auf15.ergebnis, "neu");
+  assert.equal(auf15.standard, 40);
+  assert.equal(auf15.produkte[0].rabatt, 15);
+  assert.equal(auf15.produkte[1].rabatt, 40);
+  const zeile = aboListeGesamt(auf15.produkte).zeilen[0];
+  assert.equal(zeile.mitglied, 50.96);
+  assert.equal(zeile.beitrag, PRODUKT_ABO_PREISE[15]);
+  assert.equal(aboListeGesamt(auf15.produkte).beitrag, 77.8);
+
+  const menge28 = aboStufeSetzen(auf15, "m", 28);
+  assert.equal(menge28.produkte.find((p) => p.id === "m").rabatt, 28);
+  assert.equal(aboListeGesamt(menge28.produkte).zeilen[3].beitrag, 49.56);
+  assert.equal(aboListeGesamt(menge28.produkte).beitrag, 56.56);
+  assert.equal(aboStufeSetzen(menge28, "m", 28).ergebnis, "schon");
+  assert.equal(aboStufeSetzen(menge28, "fehlt", 15).ergebnis, "leer");
+  const ungueltig = aboStufeSetzen(menge28, "s", 12);
+  assert.equal(ungueltig.ergebnis, "leer");
+  assert.equal(ungueltig.produkte[0].rabatt, 15);
 });
 
 test("Übersicht nimmt eine Zeile heraus, die Monatssumme bleibt die bestehende Rechnung", () => {

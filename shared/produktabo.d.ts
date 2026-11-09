@@ -75,6 +75,16 @@ export declare function aboListeErgaenzen(
   ergebnis: "neu" | "schon" | "voll" | "leer";
 };
 
+export declare function aboStufeSetzen(
+  roh: { rabatt?: number; standard?: number; produkte?: Array<Record<string, unknown>> } | null,
+  id: string,
+  rabatt: number
+): {
+  standard: number;
+  produkte: Array<Record<string, unknown> & { rabatt: number }>;
+  ergebnis: "neu" | "schon" | "leer";
+};
+
 export declare function aboEinzelAktualisieren(
   roh: { rabatt?: number; standard?: number; produkte?: Array<Record<string, unknown>> } | null,
   produkt: { id?: string; rabatt?: number; preis?: number }

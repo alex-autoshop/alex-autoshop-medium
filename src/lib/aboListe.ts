@@ -1,4 +1,4 @@
-import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, aboPositionEntfernen, listeNormalisieren } from "../../shared/produktabo.js";
+import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, aboPositionEntfernen, aboStufeSetzen, listeNormalisieren } from "../../shared/produktabo.js";
 
 export const ABO_SPEICHER = "alex-produktabo-v1";
 export const ABO_EREIGNIS = "alex-abo-liste";
@@ -54,6 +54,14 @@ export function aboEinzelLoeschen(id: string) {
   const bisher = aboListeLesen();
   const neu = aboEinzelEntfernen(bisher, id);
   if (neu.ergebnis === "weg") schreiben(neu.standard, neu.produkte);
+  return neu.ergebnis;
+}
+
+/** Rabattstufe einer Zeile in derselben Liste speichern, die die Kasse liest. */
+export function aboStufeMerken(id: string, rabatt: number) {
+  const bisher = aboListeLesen();
+  const neu = aboStufeSetzen(bisher, id, rabatt);
+  if (neu.ergebnis === "neu") schreiben(neu.standard, neu.produkte);
   return neu.ergebnis;
 }
 
