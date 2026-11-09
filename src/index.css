@@ -49,7 +49,9 @@
   }
 
   html {
-    scroll-behavior: smooth;
+    /* auto, nicht smooth: sonst animiert der Router-Sprung nach oben vom
+       tiefen Listen-Offset und die Produktseite wirkt unten bei den Empfehlungen. */
+    scroll-behavior: auto;
     /* Nichts darf die Seite breiter als den Bildschirm machen (iOS Safari
        zeigt sonst einen hellen Streifen und lässt seitwärts wischen).
        clip statt hidden, damit position:sticky im Header bleibt.

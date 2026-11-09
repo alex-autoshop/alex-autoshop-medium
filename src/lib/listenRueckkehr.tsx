@@ -40,8 +40,11 @@ export function useListenZusatz(lese: ZusatzLeser) {
 
 function sprung(y: number) {
   const top = Math.max(0, Math.round(y));
-  document.documentElement.scrollTop = top;
+  const wurzel = document.documentElement;
+  wurzel.style.scrollBehavior = "auto";
+  wurzel.scrollTop = top;
   document.body.scrollTop = top;
+  window.scrollTo(0, top);
 }
 
 function kopfHoehe() {

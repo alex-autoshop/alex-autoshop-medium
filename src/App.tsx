@@ -55,10 +55,11 @@ const seitenScroll = new Map<string, number>();
 
 function scrollSofort(y: number) {
   const top = Math.max(0, Math.round(y));
-  // scrollTop ignoriert scroll-behavior:smooth. Sonst gleitet die kürzere
-  // Produktseite vom Listen-Offset aus und bleibt bei den Empfehlungen stehen.
-  document.documentElement.scrollTop = top;
+  const wurzel = document.documentElement;
+  wurzel.style.scrollBehavior = "auto";
+  wurzel.scrollTop = top;
   document.body.scrollTop = top;
+  window.scrollTo(0, top);
 }
 
 function ScrollToTop() {
