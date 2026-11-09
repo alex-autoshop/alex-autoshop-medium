@@ -150,17 +150,21 @@ export function ListenRahmen({
         // Zwischenzeitlich eine Produktseite geöffnet: deren Anfang nicht
         // mit dem Listen-Offset überschreiben.
         if (window.location.pathname !== snap.pathname) return;
-        const el = karteFinden(snap.handle);
-        if (el) {
-          const kopf = kopfHoehe();
-          const ziel = el.getBoundingClientRect().top + window.scrollY - kopf - 12;
-          sprung(ziel);
-          el.classList.add("aa-zurueck");
-          window.clearTimeout(wegTimer);
-          wegTimer = window.setTimeout(() => el.classList.remove("aa-zurueck"), 1700);
-          return;
-        }
+        // Zuerst die gemerkte Stelle. Die Kartenhöhe ist abseits des
+        // Bildschirms nur geschätzt, ein Sprung allein nach getBoundingClientRect
+        // landet sonst zu hoch und die Karte bleibt unten.
         sprung(snap.scroll);
+        const el = karteFinden(snap.handle);
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const nah = r.bottom > -window.innerHeight && r.top < window.innerHeight * 2;
+        if (nah) {
+          const kopf = kopfHoehe();
+          if (r.top < kopf || r.bottom > window.innerHeight - 8) sprung(r.top + window.scrollY - kopf - 12);
+        }
+        el.classList.add("aa-zurueck");
+        window.clearTimeout(wegTimer);
+        wegTimer = window.setTimeout(() => el.classList.remove("aa-zurueck"), 1700);
       };
       setzen();
       requestAnimationFrame(() => requestAnimationFrame(setzen));
