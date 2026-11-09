@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import { X } from "lucide-react";
 import { aboLeisteText } from "../../shared/abo-leiste.js";
 import {
+  ABO_RABATTE,
   aboListeGesamt,
   istWunschfarbeMenge,
   mengeZahl,
@@ -15,6 +16,7 @@ import {
   ABO_UEBERSICHT,
   aboListeLesen,
   aboPositionLoeschen,
+  aboStufeMerken,
 } from "@/lib/aboListe";
 import { cn } from "@/lib/utils";
 
@@ -85,6 +87,50 @@ function rechenZeile(p: AboRoh) {
     einzelpreis: p.einzelpreis == null ? undefined : Number(p.einzelpreis),
     menge: p.menge == null ? undefined : Number(p.menge),
   };
+}
+
+/** Bestehende Stufen, keine neuen Preise. Eine Stufe allein ist keine Wahl. */
+function RabattWahl({
+  titel,
+  wert,
+  onWahl,
+}: {
+  titel: string;
+  wert: number;
+  onWahl: (rabatt: number) => void;
+}) {
+  if (ABO_RABATTE.length < 2) return null;
+  return (
+    <div
+      role="group"
+      aria-label={`Rabattstufe für ${titel}`}
+      data-abo-rabatt=""
+      className="mt-1.5 flex w-full overflow-hidden rounded-lg border border-primary/30"
+    >
+      {ABO_RABATTE.map((r) => {
+        const an = wert === r;
+        return (
+          <button
+            key={r}
+            type="button"
+            aria-pressed={an}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!an) onWahl(r);
+            }}
+            className={cn(
+              "min-h-9 min-w-0 flex-1 basis-0 px-1 py-1 text-center text-[11px] font-semibold tabular-nums",
+              "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary",
+              an ? "bg-primary text-white" : "bg-white text-night hover:bg-primary/10",
+            )}
+          >
+            {r} %
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function fokussierbar(bereich: HTMLElement) {
@@ -287,6 +333,13 @@ export function AboUebersicht() {
                           {ab}Dein Preis {euro(zeile.mitglied)} · {p.rabatt} %
                         </p>
                       )}
+                      {id && (
+                        <RabattWahl
+                          titel={titel || "Produkt"}
+                          wert={Number(p.rabatt)}
+                          onWahl={(r) => aboStufeMerken(id, r)}
+                        />
+                      )}
                       <p className="text-sm font-semibold tabular-nums">
                         Abo {zeile ? euro(zeile.beitrag) : "–"} / Monat
                       </p>
@@ -309,7 +362,7 @@ export function AboUebersicht() {
             </ul>
             <div className="border-t border-primary/20 px-4 py-3">
               <p className="text-sm text-neutral-600">Monatlich</p>
-              <p data-abo-summe="" className="font-display text-3xl font-bold tabular-nums leading-none">
+              <p data-abo-summe="" aria-live="polite" className="font-display text-3xl font-bold tabular-nums leading-none">
                 {euro(beitrag)} <span className="text-base font-normal text-neutral-600">/ Monat</span>
               </p>
               <Link
