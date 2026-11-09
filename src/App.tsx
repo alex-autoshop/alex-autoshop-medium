@@ -14,6 +14,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NurAdmin } from "@/components/NurAdmin";
 import { TeileboerseTor } from "@/components/TeileboerseTor";
 import { CookieConsent } from "@/components/CookieConsent";
+import { AboUebersicht } from "@/components/AboUebersicht";
 import { AboRueckkehr } from "@/components/AboAnmeldung";
 
 const Toaster = lazySeite(() => import("sonner").then((m) => ({ default: m.Toaster })));
@@ -255,7 +256,7 @@ export default function App() {
             <Route path="/admin/mitglieder" element={<Suspense fallback={<PageFallback />}><AdminMembers /></Suspense>} />
             {/* Alle anderen Seiten mit normalem Layout */}
             <Route path="*" element={
-              <div className="min-h-screen flex flex-col">
+              <div className="abo-shop-frei min-h-screen flex flex-col">
                 <Header />
                 <main className="flex-1">
                   <Suspense fallback={<PageFallback />}>
@@ -317,6 +318,7 @@ export default function App() {
                     Zeile. Solange nichts eingehaengt ist, entsteht auch keine
                     neue Chat-Sitzung mehr. */}
                 <CookieConsent />
+                <AboUebersicht />
               </div>
             } />
           </Routes>

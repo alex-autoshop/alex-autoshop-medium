@@ -279,6 +279,24 @@ export function aboEinzelAktualisieren(roh, produkt) {
   return { standard: liste.standard, produkte, ergebnis: "neu" };
 }
 
+/**
+ * Eine Zeile aus der Übersicht nehmen, Einzelprodukt oder Mengen-Position.
+ * Dieselbe Geste wie auf der Abo-Seite (Zeile filtern). Der Warenkorb nutzt
+ * weiter aboEinzelEntfernen, das Mengen-Positionen stehen lässt.
+ */
+export function aboPositionEntfernen(roh, id) {
+  const liste = listeNormalisieren(roh);
+  const ziel = String(id || "").trim();
+  if (!ziel || !liste.produkte.some((p) => p && p.id === ziel)) {
+    return { ...liste, ergebnis: "leer" };
+  }
+  return {
+    standard: liste.standard,
+    produkte: liste.produkte.filter((p) => p && p.id !== ziel),
+    ergebnis: "weg",
+  };
+}
+
 /** Einzelposition aus der Liste nehmen. Eine Mengen-Position bleibt. */
 export function aboEinzelEntfernen(roh, id) {
   const liste = listeNormalisieren(roh);
