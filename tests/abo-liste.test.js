@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, ABO_RABATTE, mitgliedZeile } from "../shared/produktabo.js";
+import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, aboListeGesamt, aboPositionEntfernen, ABO_RABATTE, listeNormalisieren, mitgliedZeile } from "../shared/produktabo.js";
 
 test("Produkt landet mit der Standardstufe in der Abo-Liste, ein zweites Mal nicht", () => {
   const neu = aboListeErgaenzen(null, {
@@ -48,4 +48,22 @@ test("leere Angaben und eine volle Liste werden abgelehnt", () => {
   const abgelehnt = aboListeErgaenzen(voll, { id: "neu", titel: "Noch eins", preis: 1 });
   assert.equal(abgelehnt.ergebnis, "voll");
   assert.equal(abgelehnt.produkte.length, 100);
+});
+
+test("Übersicht nimmt eine Zeile heraus, die Monatssumme bleibt die bestehende Rechnung", () => {
+  const liste = listeNormalisieren({
+    standard: 15,
+    produkte: [
+      { id: "a", titel: "Paste", preis: 10, rabatt: 15 },
+      { art: "menge", id: "m", handle: "farben-mix", titel: "Farbe", rabatt: 40, einzelpreis: 88.5, menge: 10, variante: "1K bevorzugt" },
+    ],
+  });
+  assert.equal(aboListeGesamt(liste.produkte).beitrag, 71.8);
+  const ohneMenge = aboPositionEntfernen(liste, "m");
+  assert.equal(ohneMenge.ergebnis, "weg");
+  assert.equal(aboListeGesamt(ohneMenge.produkte).beitrag, 1);
+  assert.equal(aboEinzelEntfernen(liste, "m").ergebnis, "schon");
+  assert.equal(aboEinzelEntfernen(liste, "m").produkte.length, 2);
+  const ohneEinzel = aboPositionEntfernen(liste, "a");
+  assert.equal(aboListeGesamt(ohneEinzel.produkte).beitrag, 70.8);
 });

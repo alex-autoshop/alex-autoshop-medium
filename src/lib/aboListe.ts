@@ -1,7 +1,8 @@
-import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, listeNormalisieren } from "../../shared/produktabo.js";
+import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, aboPositionEntfernen, listeNormalisieren } from "../../shared/produktabo.js";
 
 export const ABO_SPEICHER = "alex-produktabo-v1";
 export const ABO_EREIGNIS = "alex-abo-liste";
+export const ABO_UEBERSICHT = "alex-abo-uebersicht";
 export const ABO_HINWEIS = "alex-abo-entdeckt";
 const ABO_AKTIV = "alex-abo-aktiv";
 
@@ -54,6 +55,19 @@ export function aboEinzelLoeschen(id: string) {
   const neu = aboEinzelEntfernen(bisher, id);
   if (neu.ergebnis === "weg") schreiben(neu.standard, neu.produkte);
   return neu.ergebnis;
+}
+
+/** Zeile aus der Übersicht nehmen, wie die Abo-Seite eine Zeile filtert. */
+export function aboPositionLoeschen(id: string) {
+  const bisher = aboListeLesen();
+  const neu = aboPositionEntfernen(bisher, id);
+  if (neu.ergebnis === "weg") schreiben(neu.standard, neu.produkte);
+  return neu.ergebnis;
+}
+
+/** Die Shop-Übersicht aufklappen. Legt nichts an und löst keine Zahlung aus. */
+export function aboUebersichtOeffnen() {
+  window.dispatchEvent(new Event(ABO_UEBERSICHT));
 }
 
 export function aboHinweisGesehen(): boolean {
