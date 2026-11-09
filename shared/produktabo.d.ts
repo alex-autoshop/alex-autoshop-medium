@@ -84,6 +84,15 @@ export declare function aboEinzelAktualisieren(
   ergebnis: "neu" | "schon" | "leer";
 };
 
+export declare function aboPositionEntfernen(
+  roh: { rabatt?: number; standard?: number; produkte?: Array<Record<string, unknown>> } | null,
+  id: string
+): {
+  standard: number;
+  produkte: Array<Record<string, unknown> & { rabatt: number }>;
+  ergebnis: "weg" | "leer";
+};
+
 export declare function aboEinzelEntfernen(
   roh: { rabatt?: number; standard?: number; produkte?: Array<Record<string, unknown>> } | null,
   id: string

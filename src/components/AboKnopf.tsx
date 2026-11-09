@@ -4,12 +4,13 @@ import { Link } from "react-router-dom";
 import { BadgePercent, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ABO_RABATTE } from "../../shared/produktabo.js";
-import { useAuth } from "@/context/AuthContext";
+import { aboLeisteAktion } from "../../shared/abo-leiste.js";
 import {
   aboHinweisGesehen,
   aboHinweisMerken,
   aboListeLesen,
   aboProduktMerken,
+  aboUebersichtOeffnen,
   ABO_EREIGNIS,
   type AboMerkProdukt,
 } from "@/lib/aboListe";
@@ -17,10 +18,10 @@ import { cn } from "@/lib/utils";
 
 const MAX_RABATT = Math.max(...ABO_RABATTE);
 const prozent = (n: number) => `${n}\u00a0%`;
-const STUFEN = `${prozent(ABO_RABATTE[0])}, ${prozent(ABO_RABATTE[1])} oder ${prozent(ABO_RABATTE[2])}`;
 const HINWEIS = `Ins Produkt-Abo legen – bis zu ${prozent(MAX_RABATT)} Rabatt bei jeder Bestellung`;
 
 let hinweisVergeben = false;
+let hinweisGesperrt = false;
 
 function ruhigeBewegung() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -32,17 +33,13 @@ export function AboKnopf({ produkt, className, kurz = false }: {
   /** Schmale Karte: nur „+ Abo“ statt des langen Textes. */
   kurz?: boolean;
 }) {
-  const { user, profile } = useAuth();
-  const mitglied = !!user && (profile.membership_level ?? 0) >= 1;
   const knopf = useRef<HTMLButtonElement>(null);
   const blase = useRef<HTMLDivElement>(null);
-  const dialog = useRef<HTMLDivElement>(null);
   const hinweisId = useId();
   const [drin, setDrin] = useState(false);
   const [gerade, setGerade] = useState(false);
   const [hinweis, setHinweis] = useState(false);
   const [puls, setPuls] = useState(false);
-  const [blatt, setBlatt] = useState(false);
   const [ort, setOrt] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
@@ -56,7 +53,7 @@ export function AboKnopf({ produkt, className, kurz = false }: {
     const el = knopf.current;
     if (!el || hinweisVergeben || aboHinweisGesehen() || typeof IntersectionObserver === "undefined") return;
     const beobachter = new IntersectionObserver((eintraege) => {
-      if (!eintraege.some((e) => e.isIntersecting) || hinweisVergeben || aboHinweisGesehen()) return;
+      if (!eintraege.some((e) => e.isIntersecting) || hinweisVergeben || hinweisGesperrt || aboHinweisGesehen()) return;
       hinweisVergeben = true;
       aboHinweisMerken();
       setHinweis(true);
@@ -100,33 +97,23 @@ export function AboKnopf({ produkt, className, kurz = false }: {
     };
   }, [hinweis]);
 
-  useEffect(() => {
-    if (!blatt) return;
-    const vorher = document.activeElement as HTMLElement | null;
-    dialog.current?.focus();
-    const zu = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setBlatt(false);
-    };
-    document.addEventListener("keydown", zu);
-    return () => {
-      document.removeEventListener("keydown", zu);
-      vorher?.focus();
-    };
-  }, [blatt]);
-
   const klick = () => {
+    hinweisGesperrt = true;
     setHinweis(false);
+    if (aboLeisteAktion(drin) === "oeffnen") {
+      aboUebersichtOeffnen();
+      return;
+    }
     const ergebnis = aboProduktMerken(produkt);
     if (ergebnis === "voll") {
       toast.error("Die Abo-Liste ist voll.");
       return;
     }
-    if (ergebnis === "leer") return;
+    if (aboLeisteAktion(false, ergebnis) !== "oeffnen") return;
     setGerade(true);
     window.setTimeout(() => setGerade(false), 1600);
     if (ergebnis === "neu") toast.success("In die Abo-Liste gelegt", { description: produkt.titel });
-    else toast.success("Schon in der Abo-Liste", { description: produkt.titel });
-    if (!mitglied) setBlatt(true);
+    aboUebersichtOeffnen();
   };
 
   return (
@@ -134,6 +121,7 @@ export function AboKnopf({ produkt, className, kurz = false }: {
       <button
         ref={knopf}
         type="button"
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); klick(); }}
         aria-label={drin ? "Im Abo" : "Zum Produkt-Abo hinzufügen"}
         aria-describedby={hinweis ? hinweisId : undefined}
@@ -168,32 +156,6 @@ export function AboKnopf({ produkt, className, kurz = false }: {
         document.body
       )}
 
-      {blatt && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-3 sm:p-6">
-          <button type="button" className="absolute inset-0 bg-black/60" aria-label="Schließen" onClick={() => setBlatt(false)} />
-          <div
-            ref={dialog}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="abo-erklaerung"
-            tabIndex={-1}
-            className="relative w-full max-w-md rounded-2xl bg-[#FAF9F7] text-[#1a1a1a] p-5 sm:p-6 shadow-card outline-none"
-          >
-            <h2 id="abo-erklaerung" className="font-display text-xl sm:text-2xl mb-3">Produkt-Abo</h2>
-            <ol className="space-y-2 text-sm leading-relaxed">
-              <li>1. Du suchst dir die Produkte aus.</li>
-              <li>2. Für jedes Produkt wählst du {STUFEN}.</li>
-              <li>3. Du sparst bei jeder Bestellung. Der Versand im Shop ist kostenlos – bei jeder Bestellung, auch für andere Produkte, nicht nur für Abo-Artikel.</li>
-            </ol>
-            <p className="mt-3 text-sm text-neutral-600">„{produkt.titel}“ liegt in deiner Abo-Liste.</p>
-            <div className="mt-5 flex flex-col sm:flex-row gap-2">
-              <Link to="/mitgliedschaft" className="btn-primary text-sm">Zur Mitgliedschaft</Link>
-              <button type="button" onClick={() => setBlatt(false)} className="btn-outline text-sm">Schließen</button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </>
   );
 }

@@ -1,4 +1,15 @@
 /**
+ * Was der Abo-Knopf mit der Übersicht macht.
+ * Schon in der Liste: nur öffnen. Neu hinzugefügt: öffnen.
+ * Voll, leer oder ungeeignet: nichts aufklappen und nichts doppelt anlegen.
+ */
+export function aboLeisteAktion(drin, ergebnis) {
+  if (drin) return "oeffnen";
+  if (ergebnis === "neu" || ergebnis === "schon") return "oeffnen";
+  return "ruhig";
+}
+
+/**
  * Text der mobilen Abo-Leiste. Der Betrag ist der Monatsbeitrag der Liste.
  */
 export function aboLeisteText(anzahl, beitrag) {

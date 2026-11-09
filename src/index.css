@@ -350,6 +350,11 @@ font[style] {
   }
 }
 
+/* Shop-Übersicht: die Leiste setzt die Höhe, die letzten Karten bleiben frei. */
+.abo-shop-frei {
+  padding-bottom: var(--abo-leiste, 0px);
+}
+
 @keyframes prozess-ein {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: none; }
