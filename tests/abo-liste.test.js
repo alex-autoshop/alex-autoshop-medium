@@ -61,7 +61,8 @@ test("Stufe in der Übersicht gilt je Zeile, die Monatssumme folgt", () => {
     ],
   });
   assert.deepEqual(ABO_RABATTE, [15, 28, 40]);
-  assert.equal(aboListeGesamt(start.produkte).beitrag, 79.8);
+  // 59,95 € bei 40 %: Ersparnis 23,98 €, 20 % = 4,80 €, über dem Minimum von 3 €.
+  assert.equal(aboListeGesamt(start.produkte).beitrag, 85.2);
 
   const auf15 = aboStufeSetzen(start, "s", 15);
   assert.equal(auf15.ergebnis, "neu");
@@ -70,13 +71,14 @@ test("Stufe in der Übersicht gilt je Zeile, die Monatssumme folgt", () => {
   assert.equal(auf15.produkte[1].rabatt, 40);
   const zeile = aboListeGesamt(auf15.produkte).zeilen[0];
   assert.equal(zeile.mitglied, 50.96);
-  assert.equal(zeile.beitrag, PRODUKT_ABO_PREISE[15]);
-  assert.equal(aboListeGesamt(auf15.produkte).beitrag, 77.8);
+  // 15 % von 59,95 € sind 8,99 € Ersparnis, 20 % davon 1,80 €, über dem Minimum von 1 €.
+  assert.equal(zeile.beitrag, 1.8);
+  assert.equal(aboListeGesamt(auf15.produkte).beitrag, 82.2);
 
   const menge28 = aboStufeSetzen(auf15, "m", 28);
   assert.equal(menge28.produkte.find((p) => p.id === "m").rabatt, 28);
   assert.equal(aboListeGesamt(menge28.produkte).zeilen[3].beitrag, 49.56);
-  assert.equal(aboListeGesamt(menge28.produkte).beitrag, 56.56);
+  assert.equal(aboListeGesamt(menge28.produkte).beitrag, 60.96);
   assert.equal(aboStufeSetzen(menge28, "m", 28).ergebnis, "schon");
   assert.equal(aboStufeSetzen(menge28, "fehlt", 15).ergebnis, "leer");
   const ungueltig = aboStufeSetzen(menge28, "s", 12);

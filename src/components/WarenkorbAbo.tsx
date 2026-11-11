@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check } from "lucide-react";
 import { toast } from "sonner";
-import { ABO_RABATTE, aboListeGesamt, mitgliedZeile, PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
+import { ABO_RABATTE, aboListeGesamt, mitgliedZeile, produkteMitKorbmenge, PRODUKT_ABO_PREISE } from "../../shared/produktabo.js";
+import { LAUFZEIT_KURZ } from "../../shared/abo-laufzeit.js";
+import { useCartStore } from "@/stores/cartStore";
 import { formatPrice } from "@/lib/shopify";
 import {
   ABO_EREIGNIS,
@@ -119,8 +121,12 @@ export function useAboAktiv() {
 /** Kurze Abo-Info. Der Abschluss hängt an „Zur Kasse“, nicht an einem zweiten Knopf. */
 export function AboKasse({ ersparnis }: { ersparnis: number }) {
   const liste = useAboListe();
+  const korb = useCartStore((s) => s.items);
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
-  const gesamt = aboListeGesamt(liste.produkte);
+  const gesamt = aboListeGesamt(produkteMitKorbmenge(
+    liste.produkte,
+    korb.map((item) => ({ id: item.product.node.id, menge: item.quantity })),
+  ));
   if (!liste.produkte.length || !gesamt) return null;
   const anzahl = liste.produkte.length;
   const titel = anzahl === 1 ? "1 Produkt" : `${anzahl} Produkte`;
@@ -132,10 +138,10 @@ export function AboKasse({ ersparnis }: { ersparnis: number }) {
       <details className="text-[11px] text-muted-foreground mt-1">
         <summary className="cursor-pointer">Details</summary>
         <p className="mt-1 leading-relaxed">
-          Keine Mindestlaufzeit, monatlich zum Monatsende kündbar über{" "}
+          {LAUFZEIT_KURZ} Kündigen über{" "}
           <Link to="/kuendigen" className="underline">Verträge hier kündigen</Link>.
           Der Rabatt gilt für diese Shop-Produkte{teileSichtbar ? ", nicht in der Teilebörse" : ""}.
-          Stufe je Produkt: 15 % für {euro(PRODUKT_ABO_PREISE[15])}, 28 % für {euro(PRODUKT_ABO_PREISE[28])}, 40 % für {euro(PRODUKT_ABO_PREISE[40])} im Monat.
+          Je Position 20 % der Ersparnis, mindestens {euro(PRODUKT_ABO_PREISE[15])} bei 15 %, {euro(PRODUKT_ABO_PREISE[28])} bei 28 % und {euro(PRODUKT_ABO_PREISE[40])} bei 40 %.
         </p>
       </details>
     </div>

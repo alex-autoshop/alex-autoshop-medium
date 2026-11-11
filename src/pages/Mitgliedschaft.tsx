@@ -53,7 +53,7 @@ const ABOS: { id: AboArt; titel: string; text: string; icon: typeof Wrench }[] =
 const FAQ = [
   {
     q: "Gilt die Mitgliedschaft nur in Wuppertal?",
-    a: "Nein — deutschlandweit. Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Die Mitgliedschaft gilt im Shop: dort ist der Versand mit aktiver bezahlter Mitgliedschaft (Level 1–3) kostenlos. In der Teilebörse gilt ein Preis für alle, und DHL kostet 7,49 €, frei ab 150 € Warenwert — auch für Mitglieder.",
+    a: "Nein — deutschlandweit. Jeder kann Mitglied werden: Werkstätten, Aufbereiter, Selbstständige und auch Privatkunden. Die Mitgliedschaft gilt im Shop: dort ist der Versand mit aktiver bezahlter Mitgliedschaft (Level 1–3) kostenlos. In der Teilebörse gilt ein Preis für alle. Jedes Paket kostet 7,49 €, das erste ist ab 150 € Warenwert frei, jedes weitere wird berechnet. Ab vier Paketen nennen wir den Preis der Spedition — auch für Mitglieder.",
   },
   {
     q: "Wie werde ich Mitglied?",
@@ -61,11 +61,11 @@ const FAQ = [
   },
   {
     q: "Kann ich monatlich kündigen?",
-    a: "Ja. Es gibt keine Mindestlaufzeit. Über die Schaltfläche „Verträge hier kündigen“ unten auf jeder Seite können Sie ohne Anmeldung kündigen, außerdem per E-Mail an info@alex-autoshop.de oder per Brief, jeweils zum Ende des laufenden Monats.",
+    a: "Nach einer Mindestlaufzeit von 3 Monaten ja, jeweils zum Monatsende. Innerhalb der 3 Monate bleiben die offenen Monate zahlungspflichtig, und zwar zum höchsten Monatsbeitrag, der bis dahin angefallen ist. Kündigen können Sie über die Schaltfläche „Verträge hier kündigen“, per E-Mail an info@alex-autoshop.de oder per Brief.",
   },
   {
     q: "Gilt der Rabatt auf alles?",
-    a: "Der Rabatt gilt im Shop auf Lack und Werkstattbedarf. In der Teilebörse gibt es keine Mitgliedspreise und keinen Mitglieds-Versand: dort zahlt jeder denselben Preis, DHL 7,49 €, frei ab 150 €.",
+    a: "Der Rabatt gilt im Shop auf Lack und Werkstattbedarf. In der Teilebörse gibt es keine Mitgliedspreise und keinen Mitglieds-Versand: dort zahlt jeder denselben Paketpreis, 7,49 € je Paket, das erste frei ab 150 €.",
   },
   {
     q: "Kann ich den Rabatt später ändern?",
@@ -73,7 +73,7 @@ const FAQ = [
   },
   {
     q: "Für wen lohnt sich welcher Rabatt?",
-    a: `Pro Produkt und Monat: ${euro(PRODUKT_ABO_PREISE[15])} bei 15 %, ${euro(PRODUKT_ABO_PREISE[28])} bei 28 %, ${euro(PRODUKT_ABO_PREISE[40])} bei 40 %. Die Stufe lohnt sich, sobald der Rabatt auf den Einkauf dieses Produkts den Beitrag übersteigt.`,
+    a: `Je Position 20 % Ihrer Ersparnis, mindestens ${euro(PRODUKT_ABO_PREISE[15])} bei 15 %, ${euro(PRODUKT_ABO_PREISE[28])} bei 28 % und ${euro(PRODUKT_ABO_PREISE[40])} bei 40 %. Die Ersparnis selbst kürzen wir nicht. Die Stufe lohnt sich, sobald der Rabatt auf den Einkauf dieser Position den Beitrag übersteigt.`,
   },
 ];
 
@@ -120,8 +120,8 @@ export default function Mitgliedschaft() {
       <Seo
         title="Mitgliedschaft – bis 40% Rabatt, deutschlandweit"
         description={teileSichtbar
-          ? "Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle. Monatlich kündbar."
-          : "Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Monatlich kündbar."}
+          ? "Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Die Teilebörse hat einen Preis für alle. Mindestlaufzeit 3 Monate, danach monatlich kündbar."
+          : "Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Mindestlaufzeit 3 Monate, danach monatlich kündbar."}
         jsonLd={{
           "@context": "https://schema.org",
           "@type": "OfferCatalog",
@@ -131,7 +131,7 @@ export default function Mitgliedschaft() {
             name: `Produkt-Abo ${stufe} %`,
             priceCurrency: "EUR",
             price: PRODUKT_ABO_PREISE[stufe].toFixed(2),
-            description: `${stufe} % Rabatt, ${euro(PRODUKT_ABO_PREISE[stufe])} pro Produkt im Monat`,
+            description: `${stufe} % Rabatt, mindestens ${euro(PRODUKT_ABO_PREISE[stufe])} im Monat, sonst 20 % der Ersparnis`,
           })),
         }}
       />
@@ -145,7 +145,7 @@ export default function Mitgliedschaft() {
             Dein Rabatt. <span className="text-gold-accent">Auf genau das, was du brauchst.</span>
           </h1>
           <p className="text-white/65 text-base sm:text-lg">
-            Du wählst für jedes Produkt selbst, wie viel Rabatt du willst. Ab {euro(PRODUKT_ABO_PREISE[15])} pro Produkt im Monat, bis zu 40 % auf genau diese Produkte. Plus kostenloser Versand im Shop.
+            Du wählst für jedes Produkt selbst, wie viel Rabatt du willst. Der Monatsbeitrag ist 20 % deiner Ersparnis, mindestens {euro(PRODUKT_ABO_PREISE[15])} pro Produkt. Mindestlaufzeit 3 Monate, danach monatlich kündbar. Plus kostenloser Versand im Shop.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             {["🇩🇪 Deutschlandweit verfügbar", "Für jeden abschließbar — Werkstatt wie privat", "Lieferung direkt zu dir"].map((t) => (

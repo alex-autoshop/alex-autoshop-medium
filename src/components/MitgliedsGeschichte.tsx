@@ -25,7 +25,7 @@ const KARTEN = [
 
 const STUFEN = [15, 28, 40] as const;
 const MONATE = ["Jan", "Feb", "Mär", "Apr"];
-const CHIPS = ["Monatlich kündbar", "Keine Mindestabnahme", "Produkte jederzeit austauschbar"];
+const CHIPS = ["3 Monate, dann monatlich", "Keine Mindestabnahme", "Produkte jederzeit austauschbar"];
 
 function smooth(t: number) {
   const x = Math.min(1, Math.max(0, t));
@@ -285,8 +285,8 @@ export function MitgliedsGeschichte({ onDurch, seo = false }: { onDurch?: () => 
       </Szene>
 
       <Szene index={6} setzen={setzen}>
-        <Text schritt="07" titel="Monatlich kündbar.">
-          <p>Keine Mindestlaufzeit. Eine Erhöhung des Beitrags kündigen wir vorher an. Sie gilt nur, wenn du zustimmst.</p>
+        <Text schritt="07" titel="3 Monate, danach monatlich.">
+          <p>Mindestlaufzeit 3 Monate. Kündigst du früher, berechnen wir die offenen Monate zum höchsten bisherigen Monatsbeitrag. Eine Erhöhung des Beitrags über diese Regel hinaus kündigen wir vorher an. Sie gilt nur, wenn du zustimmst.</p>
         </Text>
         <div>
           <a href="#abo-stufen" className="btn-gold-bright text-base px-6 w-full sm:w-auto">

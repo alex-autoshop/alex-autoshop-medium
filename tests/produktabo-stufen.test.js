@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   ABO_2K_AUFSCHLAG, aboListeGesamt, istWunschfarbeMenge, LACKSYSTEM_1K, LACKSYSTEM_2K,
-  listeNormalisieren, mengenPosition, mischBedarf, PRODUKT_ABO_PREISE, warenMitRabatt,
+  aboBeitragFuerKasse, listeNormalisieren, mengenPosition, mischBedarf, PRODUKT_ABO_PREISE, warenMitRabatt,
   wunschfarbeAboTitel, wunschfarbeDetail,
 } from "../shared/produktabo.js";
 
@@ -16,9 +16,9 @@ test("jede Position behält ihre Stufe, der Beitrag ist die Summe", () => {
   assert.equal(g.zeilen[0].mitglied, 8.5);
   assert.equal(g.zeilen[1].beitrag, PRODUKT_ABO_PREISE[40]);
   assert.equal(g.zeilen[1].mitglied, 19.8);
-  // 20 € normal, 28 % → 14,40 Mitglied, Ersparnis 5,60, Beitrag max(1, 1,12) = 1,12
-  assert.equal(g.zeilen[2].beitrag, 1.12);
-  assert.equal(g.beitrag, 5.12);
+  // 20 € normal, 28 % → 14,40 Mitglied, Ersparnis 5,60, 20 % = 1,12, Stufe mindestens 2 €
+  assert.equal(g.zeilen[2].beitrag, 2);
+  assert.equal(g.beitrag, 6);
 });
 
 test("eine alte globale Stufe wandert auf jedes Produkt", () => {
@@ -127,6 +127,23 @@ test("Wunschfarbe-Titel folgt Stufe und Litern, Spraydose bleibt draußen", () =
   );
   assert.equal(istWunschfarbeMenge({ art: "menge", handle: "farben-mix", id: "farben-mix::10::1k::L" }), true);
   assert.equal(istWunschfarbeMenge({ art: "menge", handle: "individuelle-spraydose-erstellen", id: "spray::0::1k::S" }), false);
+});
+
+test("20 Stück einer Einzelposition: 20 % der Ersparnis, ohne Deckel", () => {
+  // 20 × 106,95 €, 40 % → Ersparnis 855,60 €, Beitrag 171,12 €, nicht die 3 € der Stufe.
+  const z = aboListeGesamt([{ art: "einzel", rabatt: 40, preis: 106.95, menge: 20 }]);
+  assert.equal(z.zeilen[0].normal, 2139);
+  assert.equal(z.zeilen[0].ersparnis, 855.6);
+  assert.equal(z.zeilen[0].beitrag, 171.12);
+  assert.equal(z.beitrag, 171.12);
+});
+
+test("Kasse nimmt die Warenmenge, nicht ein mitgeschicktes Einzelstück", () => {
+  const g = aboBeitragFuerKasse(
+    [{ art: "einzel", id: "cc9", rabatt: 40, preis: 106.95, menge: 1 }],
+    [{ id: "cc9", titel: "Klarlack", einzel: 106.95, menge: 20, rabatt: 40 }],
+  );
+  assert.equal(g.beitrag, 171.12);
 });
 
 test("Warenkasse rechnet Abo-Zeilen selbst und lässt andere beim Ladenpreis", () => {

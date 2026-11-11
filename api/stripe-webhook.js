@@ -4,7 +4,7 @@
 //   Events: checkout.session.completed, checkout.session.expired,
 //           checkout.session.async_payment_succeeded, checkout.session.async_payment_failed,
 //           customer.subscription.updated, customer.subscription.deleted,
-//           invoice.payment_failed
+//           invoice.paid, invoice.payment_failed
 //   (expired ist wichtig: dann kommt eingesetztes Empfehlungs-Guthaben zurück)
 //   Abo-Ende nimmt dem Shopify-Kunden das Tag "mitglied". Eine einzelne
 //   fehlgeschlagene Rate, die Stripe noch einmal versucht, tut das nicht.
@@ -13,6 +13,7 @@
 export const config = { runtime: "edge" };
 
 import { activateMembership, activateProduktAbo } from "./_activate-membership.js";
+import { hatMindestlaufzeit, stripeHoechstMerken, stripeMindestSichern } from "./_abo-mindest.js";
 import { shopifyAboStufen, shopifyMitgliedTag } from "./_shopify-order.js";
 import { positionenLesen, teileBestellung } from "./_teile-bestellung.js";
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from "../shared/empfehlung.js";
@@ -233,14 +234,33 @@ export default async function handler(req) {
     if (istMitgliedsMeta(m)) await mitgliedTagEntfernen(m.email, "async_payment_failed");
   }
 
+  // Bezahlter Monat: Höchstbeitrag für die Mindestlaufzeit fortschreiben.
+  if (event.type === "invoice.paid") {
+    try {
+      await stripeHoechstMerken(event.data?.object || {});
+    } catch (e) {
+      console.error("[stripe-webhook] höchstbeitrag:", String(e?.message || e).slice(0, 200));
+    }
+  }
+
   // Abo gekündigt, abgelaufen oder nach fehlender Zahlung beendet.
   // past_due bleibt Mitglied: Stripe versucht die Rate noch einmal.
+  // Mindestlaufzeit: vor Monat 3 nicht einfach auslaufen lassen.
   if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
     const sub = event.data?.object || {};
     const status = String(sub.status || "");
     const ende = event.type === "customer.subscription.deleted"
       || ["canceled", "unpaid", "incomplete_expired"].includes(status);
     const meta = sub.metadata || {};
+    const kuendigt = ende || sub.cancel_at_period_end || sub.cancel_at;
+    if (kuendigt && hatMindestlaufzeit(meta)) {
+      try {
+        await stripeMindestSichern(sub, event.type === "customer.subscription.deleted" || status === "canceled");
+      } catch (e) {
+        console.error("[stripe-webhook] mindestlaufzeit:", String(e?.message || e).slice(0, 200));
+        throw e;
+      }
+    }
     if (ende && (istMitgliedsMeta(meta) || meta.abo === "produkt")) {
       const email = meta.email || await stripeKundenEmail(sub.customer);
       await mitgliedTagEntfernen(email, `${event.type}:${status || "deleted"}`);

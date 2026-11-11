@@ -4,7 +4,7 @@ import {
   storefrontApiRequest, STOREFRONT_PRODUCT_BY_HANDLE_QUERY, type ShopifyProduct,
 } from "@/lib/shopify";
 import {
-  literAus, mischBedarf, mengenPosition, preisMitAufschlag, ABO_RABATTE, ABO_2K_AUFSCHLAG,
+  literAus, mischBedarf, mengenPosition, preisMitAufschlag, beitragSatz, ABO_RABATTE, ABO_2K_AUFSCHLAG,
   LACKSYSTEM_1K, LACKSYSTEM_2K,
 } from "../../shared/produktabo.js";
 import { cn } from "@/lib/utils";
@@ -423,6 +423,7 @@ export function WunschfarbenLeiste({
                   <span className="text-muted-foreground">Dein Beitrag dafür</span>
                   <span className="font-bold tabular-nums">{euro(rechnung.beitrag)} / Monat</span>
                 </div>
+                <p className="text-[11px] text-muted-foreground leading-snug">{beitragSatz(rechnung)}</p>
               </div>
             </div>
           ) : (

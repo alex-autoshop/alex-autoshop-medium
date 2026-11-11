@@ -10,7 +10,7 @@ import { Car, X, Plus, Minus, Trash2, ShoppingCart, MessageCircle, Package, Phon
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
-import { versandkosten, pfandBetrag, DHL_EUR, VERSAND_FREI_AB } from "../../shared/versand.js";
+import { versandPlan, versandMailto, pfandBetrag, DHL_EUR, VERSAND_FREI_AB, VERSAND_ANFRAGE } from "../../shared/versand.js";
 import { formatSpecValue, eur, type MemberLevelId } from "@/components/TeileportalPricing";
 import { icPriceLookup } from "@/lib/livePreis";
 import { adminPreiseHolen, type EkPreis, type AdminFehler } from "@/lib/adminZugang";
@@ -365,7 +365,11 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
   const [agbOk, setAgbOk] = useState(false);
   const holtAb = !!theke || abholung;
   const lieferungOk = holtAb || [lieferung.name, lieferung.strasse, lieferung.ort].every((s) => s.trim().length > 1) && /^\d{5}$/.test(lieferung.plz.trim());
-  const versand = versandkosten({ summe: subtotal, abholung: holtAb });
+  const versandPositionen = mitPreis.map((i) => ({ menge: i.quantity, name: `${i.name} ${i.brand}` }));
+  const planLieferung = versandPlan({ summe: subtotal, positionen: versandPositionen });
+  const plan = holtAb ? versandPlan({ summe: subtotal, abholung: true, positionen: versandPositionen }) : planLieferung;
+  const spedition = !holtAb && planLieferung.art === "spedition";
+  const versand = plan.betrag || 0;
   const pfand = pfandBetrag(mitPreis.map((i) => ({ name: `${i.name} ${i.brand}`, menge: i.quantity })));
   const brutto = Math.round((subtotal + versand + pfand.betrag) * 100) / 100;
   const guthabenDa = !theke && angemeldet && guthabenStand > 0 && brutto > 1;
@@ -381,7 +385,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
     ...items.map((i, n) => `${n + 1}. ${i.quantity}× ${i.brand} ${i.name} — Art.-Nr. ${i.articleNumber}${i.price != null ? ` — ${(stueckPreis(i.price) * i.quantity).toFixed(2)} €` : ""}`),
     "",
     allPriced ? `Teile: ${subtotal.toFixed(2)} €` : "Bitte Preise und Verfügbarkeit bestätigen.",
-    versand > 0 ? `DHL-Versand: ${versand.toFixed(2)} €` : (holtAb ? "Abholung in Wuppertal: 0,00 €" : "Versand: 0,00 €"),
+    spedition ? VERSAND_ANFRAGE : (versand > 0 ? `DHL-Versand: ${versand.toFixed(2)} €` : (holtAb ? "Abholung in Wuppertal: 0,00 €" : "Versand: 0,00 €")),
     pfand.betrag > 0 ? `Batteriepfand: ${pfand.betrag.toFixed(2)} €` : "",
     allPriced ? `Summe: ${brutto.toFixed(2)} €` : "",
   ].filter((l) => l !== null).join("\n");
@@ -531,7 +535,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                         <input type="radio" name="versandart" checked={!abholung} onChange={() => setAbholung(false)} className="accent-primary" />
                         DHL Deutschland
                       </span>
-                      <span className="tabular-nums">{versandkosten({ summe: subtotal, abholung: false }).toFixed(2).replace(".", ",")} €</span>
+                      <span className="tabular-nums">{planLieferung.art === "spedition" ? "auf Anfrage" : `${(planLieferung.betrag ?? 0).toFixed(2).replace(".", ",")} €`}</span>
                     </label>
                     <label className="flex items-center justify-between gap-2 cursor-pointer">
                       <span className="inline-flex items-center gap-2">
@@ -549,7 +553,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                       </div>
                     )}
                     <p className="text-[10.5px] text-muted-foreground leading-snug">
-                      DHL {DHL_EUR.toFixed(2).replace(".", ",")} € für alle, kostenlos ab {VERSAND_FREI_AB} €. Die Mitgliedschaft gilt im Shop, nicht in der Teilebörse.
+                      DHL {DHL_EUR.toFixed(2).replace(".", ",")} € je Paket, das erste frei ab {VERSAND_FREI_AB} €, jedes weitere extra. Ab 4 Paketen: {VERSAND_ANFRAGE}. Die Mitgliedschaft gilt im Shop, nicht in der Teilebörse.
                       Lieferung im Umkreis und Versand nach Österreich oder in die Schweiz auf Anfrage.
                     </p>
                   </div>
@@ -626,10 +630,17 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                     </span>
                   </label>
                 )}
+                {spedition && !theke && (
+                  <p className="text-xs leading-snug">
+                    {VERSAND_ANFRAGE}.{" "}
+                    <a href={versandMailto()} className="underline">Anfrage an info@alex-autoshop.de</a>
+                    {" "}oder 0202 82690.
+                  </p>
+                )}
                 {subtotal > 0 && !theke && (karteDa || sepaDa) && (
                   <>
                     {karteDa && (
-                      <button onClick={() => bezahlen("stripe")} disabled={zahlt !== "" || !agbOk}
+                      <button onClick={() => bezahlen("stripe")} disabled={zahlt !== "" || !agbOk || spedition}
                         className="btn-primary w-full gap-2 disabled:opacity-60">
                         {zahlt === "stripe"
                           ? <><Loader2 className="w-4 h-4 animate-spin" /> Einen Moment …</>
@@ -637,7 +648,7 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
                       </button>
                     )}
                     {sepaDa && (
-                      <button onClick={() => bezahlen("gocardless")} disabled={zahlt !== "" || !agbOk || !lieferungOk}
+                      <button onClick={() => bezahlen("gocardless")} disabled={zahlt !== "" || !agbOk || !lieferungOk || spedition}
                         className={karteDa
                           ? "w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-semibold hover:bg-secondary disabled:opacity-60"
                           : "btn-primary w-full gap-2 disabled:opacity-60"}>
