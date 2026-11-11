@@ -49,8 +49,12 @@ export interface MengenRechnung {
   normal: number;
   mitglied: number;
   ersparnis: number;
+  anteil: number;
+  mindest: number;
   beitrag: number;
 }
+
+export declare function zeilenBeitrag(ersparnis: number, mindest: number): number;
 
 export declare function mengenPosition(pos: {
   einzelpreis: number;
@@ -141,6 +145,18 @@ export declare function aboListeGesamt(positionen: Array<{
   menge?: number;
 }>): { beitrag: number; ersparnis: number; zeilen: MengenRechnung[] } | null;
 
+export declare function produkteMitKorbmenge<T extends Record<string, unknown>>(
+  produkte: T[],
+  zeilen: Array<{ id?: string; menge?: number }> | null | undefined,
+): T[];
+
+export declare function aboBeitragFuerKasse(
+  produkte: Array<{ art?: string; id?: string; titel?: string; rabatt: number; preis?: number; einzelpreis?: number; menge?: number }>,
+  waren: Array<{ id?: string; titel?: string; einzel?: number; menge?: number; rabatt?: number }> | null | undefined,
+): { beitrag: number; ersparnis: number; zeilen: MengenRechnung[] } | null;
+
+export declare function beitragSatz(z: { ersparnis?: number; anteil?: number; mindest?: number; beitrag?: number } | null | undefined): string;
+
 export declare function aboGesamt(liste: {
   rabatt: number;
   einzelAnzahl: number;
@@ -169,5 +185,5 @@ export declare function mischBedarf(wahl: {
   literA: number; literB: number;
   teilA: Kombi; teilB: Kombi;
   literGesamt: number;
-  normal: number; mitglied: number; ersparnis: number; beitrag: number;
+  normal: number; mitglied: number; ersparnis: number; anteil: number; mindest: number; beitrag: number;
 } | null;

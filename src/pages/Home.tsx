@@ -48,8 +48,8 @@ const USPS = [
   {
     icon: BadgePercent,
     title: "Rabatt bis 40 %",
-    text: "Du wählst den Rabatt pro Produkt — monatlich kündbar, sofort im Shop.",
-    badge: "Monatlich kündbar",
+    text: "Du wählst den Rabatt pro Produkt. Mindestlaufzeit 3 Monate, danach monatlich kündbar.",
+    badge: "3 Monate Mindestlaufzeit",
   },
 ];
 
@@ -174,7 +174,7 @@ export default function Home() {
             <h2 className="text-2xl sm:text-3xl mb-3">Ein Lieferant für deine ganze Werkstatt.</h2>
             <p className="text-muted-foreground">
               Lack und Werkstattbedarf im Shop — mit bis zu 40% Mitglieder-Rabatt.
-              {teileSichtbar ? " Die Teilebörse hat einen Preis für alle." : ""} Monatlich kündbar, keine Mindestabnahme.
+              {teileSichtbar ? " Die Teilebörse hat einen Preis für alle." : ""} Mindestlaufzeit 3 Monate, danach monatlich kündbar. Keine Mindestabnahme.
             </p>
           </motion.div>
           {MembershipCards ? (

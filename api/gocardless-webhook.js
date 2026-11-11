@@ -17,6 +17,7 @@
 export const config = { runtime: "edge" };
 
 import { activateMembership, activateProduktAbo } from "./_activate-membership.js";
+import { gocardlessMindestSichern } from "./_abo-mindest.js";
 import { userIdAusPaket } from "../shared/abo-konto.js";
 import { shopifyMitgliedTag } from "./_shopify-order.js";
 import { positionenLesen, teileBestellung, teileBestellungBezahlt } from "./_teile-bestellung.js";
@@ -208,7 +209,11 @@ async function handleBillingRequestFulfilled(billingRequestId) {
               interval_unit: "monthly",
               name: "Alex Autoshop Produkt-Abo",
               links: { mandate: mandateId },
-              metadata: aboMeta(meta),
+              metadata: {
+                email: String(meta.email || ""),
+                paket: String(meta.paket || ""),
+                laufzeit: "3",
+              },
             },
           }),
         });
@@ -381,6 +386,7 @@ export default async function handler(req) {
         }
       }
       if (ev.resource_type === "subscriptions" && ["cancelled", "finished"].includes(ev.action)) {
+        if (ev.action === "cancelled") await gocardlessMindestSichern(ev.links?.subscription);
         await aboTagWeg(ev.links?.subscription, `subscription:${ev.action}`);
       }
       if (ev.resource_type === "mandates" && ["cancelled", "failed", "expired"].includes(ev.action)) {

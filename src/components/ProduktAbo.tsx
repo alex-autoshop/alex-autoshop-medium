@@ -10,7 +10,7 @@ import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { useAuth } from "@/context/AuthContext";
 import {
   ABO_RABATTE, PRODUKT_ABO_PREISE, MAX_PRODUKTE,
-  mengenPosition, aboListeGesamt, rabattGueltig,
+  mengenPosition, aboListeGesamt, beitragSatz, rabattGueltig,
   istWunschfarbeMenge, mengeZahl, wunschfarbeAboTitel, wunschfarbeDetail,
 } from "../../shared/produktabo.js";
 import { WunschfarbenLeiste, type MengenEintrag } from "@/components/WunschfarbenLeiste";
@@ -26,6 +26,7 @@ import { gefahrstoffVonKnoten, kaufGesperrt } from "../../shared/gefahrstoff.js"
 import { bildAdresse } from "../../shared/katalog-regeln.js";
 import { BaldVerfuegbar, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
 import { AboLeisteMobil } from "@/components/AboLeisteMobil";
+import { LAUFZEIT_KURZ_DU } from "../../shared/abo-laufzeit.js";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
  *  localStorage passt und auch ohne erneute Shop-Abfrage anzeigbar bleibt. */
@@ -128,8 +129,8 @@ function alsAboProdukt(p: ShopifyProduct): AboProdukt {
 }
 
 /** Dieselbe Rechnung wie „als Mitglied“ auf der Karte: Normalpreis × (1 − Stufe). */
-function AboPreis({ normal, mitglied, ab, rabatt, beitrag }: {
-  normal: number; mitglied: number; ab?: boolean; rabatt: number; beitrag: number;
+function AboPreis({ normal, mitglied, ab, rabatt, beitrag, satz }: {
+  normal: number; mitglied: number; ab?: boolean; rabatt: number; beitrag: number; satz?: string;
 }) {
   const vor = ab ? "ab " : "";
   return (
@@ -140,6 +141,7 @@ function AboPreis({ normal, mitglied, ab, rabatt, beitrag }: {
         <span className="font-semibold text-primary">Dein Preis {vor}{euro(mitglied)} ({rabatt} %)</span>
       </p>
       <p className="text-[11px] text-muted-foreground">Abo: {euro(beitrag)} / Monat</p>
+      {satz ? <p className="text-[11px] text-muted-foreground leading-snug">{satz}</p> : null}
     </div>
   );
 }
@@ -571,11 +573,11 @@ export function ProduktAbo() {
             ) : (
               <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
                 {produkte.map((p) => {
-                  const m = istMenge(p)
+                  const rechnung = istMenge(p)
                     ? mengenPosition({ einzelpreis: p.einzelpreis, menge: p.menge, rabatt: p.rabatt })
-                    : null;
-                  const mitglied = m ? m.mitglied : (p as AboProdukt).preis * (1 - p.rabatt / 100);
-                  const beitrag = m ? m.beitrag : PRODUKT_ABO_PREISE[p.rabatt];
+                    : aboListeGesamt([{ art: "einzel", rabatt: p.rabatt, preis: (p as AboProdukt).preis }])?.zeilen[0] ?? null;
+                  const mitglied = rechnung ? rechnung.mitglied : (p as AboProdukt).preis * (1 - p.rabatt / 100);
+                  const beitrag = rechnung ? rechnung.beitrag : PRODUKT_ABO_PREISE[p.rabatt];
                   return (
                   <div key={p.id} className="flex items-center gap-3 rounded-xl bg-secondary/50 p-2.5">
                     <div className="w-12 h-12 rounded-lg bg-background shrink-0 overflow-hidden">
@@ -589,11 +591,12 @@ export function ProduktAbo() {
                         </p>
                       )}
                       <AboPreis
-                        normal={m ? m.normal : (p as AboProdukt).preis}
+                        normal={rechnung ? rechnung.normal : (p as AboProdukt).preis}
                         mitglied={mitglied}
-                        ab={!m && (p as AboProdukt).ab}
+                        ab={!istMenge(p) && (p as AboProdukt).ab}
                         rabatt={p.rabatt}
                         beitrag={beitrag}
+                        satz={rechnung ? beitragSatz(rechnung) : ""}
                       />
                       <div className="mt-1.5">
                         <StufenWahl
@@ -628,7 +631,7 @@ export function ProduktAbo() {
               {euro(gesamt?.beitrag ?? 0)} <span className="text-base font-normal text-muted-foreground">/ Monat</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1.5">
-              Summe der Stufen in der Liste. Jedes Produkt zählt einzeln.
+              Summe der Positionen. Jede Position: 20 % der Ersparnis, mindestens 1 €, 2 € oder 3 € je nach Stufe.
             </p>
             {(gesamt?.ersparnis ?? 0) > 0 && (
               <p className="text-sm font-semibold text-red-600 mt-3">
@@ -660,7 +663,7 @@ export function ProduktAbo() {
             </form>
 
             <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
-              Der Rabatt gilt nur für die Produkte in dieser Liste. Monatlich kündbar, Produkte
+              Der Rabatt gilt nur für die Produkte in dieser Liste. {LAUFZEIT_KURZ_DU} Produkte
               kannst du im Kundenkonto jederzeit tauschen.
             </p>
           </motion.div>
@@ -698,10 +701,10 @@ export function ProduktAbo() {
             </div>
             <div className="overflow-y-auto px-4 pb-4 space-y-3">
               {produkte.map((p) => {
-                const m = istMenge(p)
+                const rechnung = istMenge(p)
                   ? mengenPosition({ einzelpreis: p.einzelpreis, menge: p.menge, rabatt: p.rabatt })
-                  : null;
-                const beitrag = m ? m.beitrag : PRODUKT_ABO_PREISE[p.rabatt];
+                  : aboListeGesamt([{ art: "einzel", rabatt: p.rabatt, preis: (p as AboProdukt).preis }])?.zeilen[0] ?? null;
+                const beitrag = rechnung ? rechnung.beitrag : PRODUKT_ABO_PREISE[p.rabatt];
                 return (
                   <div key={p.id} className="flex items-center gap-3 rounded-xl bg-secondary/50 p-2.5">
                     <div className="w-12 h-12 rounded-lg bg-background shrink-0 overflow-hidden">
@@ -713,11 +716,12 @@ export function ProduktAbo() {
                         <p className="text-[11px] text-muted-foreground leading-tight">{mengenDetail(p)}</p>
                       )}
                       <AboPreis
-                        normal={m ? m.normal : (p as AboProdukt).preis}
-                        mitglied={m ? m.mitglied : (p as AboProdukt).preis * (1 - p.rabatt / 100)}
-                        ab={!m && (p as AboProdukt).ab}
+                        normal={rechnung ? rechnung.normal : (p as AboProdukt).preis}
+                        mitglied={rechnung ? rechnung.mitglied : (p as AboProdukt).preis * (1 - p.rabatt / 100)}
+                        ab={!istMenge(p) && (p as AboProdukt).ab}
                         rabatt={p.rabatt}
                         beitrag={beitrag}
+                        satz={rechnung ? beitragSatz(rechnung) : ""}
                       />
                       <div className="mt-1.5">
                         <StufenWahl

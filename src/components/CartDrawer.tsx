@@ -9,9 +9,10 @@ import { bildAdresse } from "../../shared/katalog-regeln.js";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { useAuth } from "@/context/AuthContext";
 import { discountForLevel } from "@/data/memberships";
-import { versandkosten, VERSAND_FREI_AB } from "../../shared/versand.js";
+import { kgAusShopify, VERSAND_ANFRAGE, VERSAND_FREI_AB, versandMailto, versandPlan, versandText } from "../../shared/versand.js";
 import { gefahrstoffVonKnoten } from "../../shared/gefahrstoff.js";
-import { aboListeGesamt, mitgliedZeile } from "../../shared/produktabo.js";
+import { aboListeGesamt, mitgliedZeile, produkteMitKorbmenge } from "../../shared/produktabo.js";
+import { LAUFZEIT_KURZ } from "../../shared/abo-laufzeit.js";
 import { aboEinzelMerken } from "@/lib/aboListe";
 import { aboAbschliessen } from "@/lib/aboAbschluss";
 import { AboKasse, useAboAktiv, useAboListe, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
@@ -227,7 +228,24 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const stufe = Number(profile.membership_level);
   const isMember = !!user && stufe >= 1 && stufe <= 3;
   const mitAbo = aboListe.produkte.length > 0;
-  const shippingCost = mitAbo || !isMember ? versandkosten({ summe: total }) : 0;
+  const aboProdukte = produkteMitKorbmenge(
+    aboListe.produkte,
+    items.map((item) => ({ id: item.product.node.id, menge: item.quantity })),
+  );
+  const aboBeitrag = aboListeGesamt(aboProdukte)?.beitrag || 0;
+  const plan = versandPlan({
+    summe: total,
+    positionen: items.map((item) => {
+      const variante = item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node;
+      const kg = kgAusShopify(variante?.weight, variante?.weightUnit);
+      return { menge: item.quantity, ...(kg ? { kg } : {}), name: `${item.product.node.title} ${item.variantTitle || ""}` };
+    }),
+  });
+  const mitgliedFrei = isMember && !mitAbo && plan.art !== "spedition";
+  const versandPlanEffektiv = mitgliedFrei ? { ...plan, betrag: 0, art: "frei" as const, text: "Versand kostenlos" } : plan;
+  const spedition = versandPlanEffektiv.art === "spedition";
+  const shippingCost = spedition ? 0 : (versandPlanEffektiv.betrag || 0);
+  const shopifyPasst = !spedition && (mitgliedFrei || versandPlanEffektiv.pakete <= 1);
   const liefer = deliveryForCart(items.map((item) => {
     const variante = item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node;
     return deliveryFor(item.product.node, variante);
@@ -266,6 +284,27 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     setPlacing(true);
     const frisch = await preiseAuffrischen();
     const summeFrisch = Math.round(frisch.reduce((summe, item) => summe + parseFloat(item.price.amount) * item.quantity, 0) * 100) / 100;
+    const planFrisch = versandPlan({
+      summe: summeFrisch,
+      positionen: frisch.map((item) => ({
+        menge: item.quantity,
+        name: `${item.product.node.title} ${item.variantTitle || ""}`,
+        ...(kgAusShopify(
+          item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node?.weight,
+          item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node?.weightUnit,
+        ) ? { kg: kgAusShopify(
+          item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node?.weight,
+          item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node?.weightUnit,
+        ) as number } : {}),
+      })),
+    });
+    if (planFrisch.art === "spedition") {
+      toast.error(VERSAND_ANFRAGE, { description: "Schreib an info@alex-autoshop.de oder ruf 0202 82690 an." });
+      setPlacing(false);
+      return;
+    }
+    const versandFrisch = isMember && aboListe.produkte.length === 0 ? 0 : (planFrisch.betrag || 0);
+    const summeMitVersand = Math.round((summeFrisch + versandFrisch) * 100) / 100;
     const count = frisch.reduce((n, i) => n + i.quantity, 0);
     const orderItems = frisch.map((i) => ({
       variantId: i.variantId,
@@ -282,7 +321,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     const { error, orderId } = await recordOrder({
       userId: user.id,
       items: orderItems,
-      total: summeFrisch,
+      total: summeMitVersand,
       currency: waehrung,
       status: "sepa_pending",
     });
@@ -297,11 +336,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       recipient: user.id,
       type: "system",
       title: "Express-Kauf bestätigt ✓ — SEPA-Einzug",
-      body: `Deine Express-Bestellung über ${formatPrice(String(summeFrisch), waehrung)} (${count} Position${count === 1 ? "" : "en"}) ist bestätigt. Der Betrag wird per SEPA-Lastschrift von deinem hinterlegten Bankkonto (••••${profile.iban?.slice(-4)}) eingezogen. Buchungsdatum: 2–3 Werktage.`,
+      body: `Deine Express-Bestellung über ${formatPrice(String(summeMitVersand), waehrung)} (${count} Position${count === 1 ? "" : "en"}) ist bestätigt. Der Betrag wird per SEPA-Lastschrift von deinem hinterlegten Bankkonto (••••${profile.iban?.slice(-4)}) eingezogen. Buchungsdatum: 2–3 Werktage.`,
     });
 
     const snapshot: ConfirmedOrder = {
-      total: summeFrisch, currency: waehrung, count, orderId, items: orderItems, mode: "sepa",
+      total: summeMitVersand, currency: waehrung, count, orderId, items: orderItems, mode: "sepa",
       date: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       companyName: profile?.company_name, email: user.email,
     };
@@ -324,6 +363,27 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     setPlacing(true);
     const frisch = await preiseAuffrischen();
     const summeFrisch = Math.round(frisch.reduce((summe, item) => summe + parseFloat(item.price.amount) * item.quantity, 0) * 100) / 100;
+    const planFrisch = versandPlan({
+      summe: summeFrisch,
+      positionen: frisch.map((item) => ({
+        menge: item.quantity,
+        name: `${item.product.node.title} ${item.variantTitle || ""}`,
+        ...(kgAusShopify(
+          item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node?.weight,
+          item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node?.weightUnit,
+        ) ? { kg: kgAusShopify(
+          item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node?.weight,
+          item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node?.weightUnit,
+        ) as number } : {}),
+      })),
+    });
+    if (planFrisch.art === "spedition") {
+      toast.error(VERSAND_ANFRAGE, { description: "Schreib an info@alex-autoshop.de oder ruf 0202 82690 an." });
+      setPlacing(false);
+      return;
+    }
+    const versandFrisch = isMember && aboListe.produkte.length === 0 ? 0 : (planFrisch.betrag || 0);
+    const summeMitVersand = Math.round((summeFrisch + versandFrisch) * 100) / 100;
     const count = frisch.reduce((n, i) => n + i.quantity, 0);
     const orderItems = frisch.map((i) => ({
       variantId: i.variantId,
@@ -340,7 +400,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     const { error, orderId } = await recordOrder({
       userId: user.id,
       items: orderItems,
-      total: summeFrisch,
+      total: summeMitVersand,
       currency: waehrung,
       status: "auf_rechnung",
     });
@@ -355,11 +415,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
       recipient: user.id,
       type: "system",
       title: "Lieferbestellung auf Rechnung ✓",
-      body: `Deine Bestellung über ${formatPrice(String(summeFrisch), waehrung)} (PLZ ${profilePlz}) wird geliefert. Zahlungsziel: 14 Tage nach Lieferung. Die Bankdaten für die Überweisung erhältst du per E-Mail. Bestellnr: AA-${orderId?.slice(0, 8).toUpperCase() ?? "XXXXXX"}`,
+      body: `Deine Bestellung über ${formatPrice(String(summeMitVersand), waehrung)} (PLZ ${profilePlz}) wird geliefert. Zahlungsziel: 14 Tage nach Lieferung. Die Bankdaten für die Überweisung erhältst du per E-Mail.`,
     });
 
     const snapshot: ConfirmedOrder = {
-      total: summeFrisch, currency: waehrung, count, orderId, items: orderItems, mode: "auf_rechnung",
+      total: summeMitVersand, currency: waehrung, count, orderId, items: orderItems, mode: "auf_rechnung",
       date: new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
       companyName: profile?.company_name, email: user.email,
     };
@@ -378,18 +438,36 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     try {
       const frisch = await preiseAuffrischen();
       const summe = Math.round(frisch.reduce((s, item) => s + zeilenBetrag(item), 0) * 100) / 100;
-      const versand = mitAbo || !isMember ? versandkosten({ summe }) : 0;
+      const planKasse = versandPlan({
+        summe,
+        positionen: frisch.map((item) => {
+          const variante = item.product.node.variants?.edges?.find((kante) => kante.node.id === item.variantId)?.node;
+          const kg = kgAusShopify(variante?.weight, variante?.weightUnit);
+          return { menge: item.quantity, ...(kg ? { kg } : {}), name: `${item.product.node.title} ${item.variantTitle || ""}` };
+        }),
+      });
+      if (planKasse.art === "spedition") {
+        toast.error(VERSAND_ANFRAGE, { description: "Schreib an info@alex-autoshop.de oder ruf 0202 82690 an.", toasterId: "warenkorb" });
+        return;
+      }
+      const versand = planKasse.betrag || 0;
+      const produkte = produkteMitKorbmenge(
+        aboListe.produkte,
+        frisch.map((item) => ({ id: item.product.node.id, menge: item.quantity })),
+      );
       const waren = frisch.map((item) => ({
+        id: item.product.node.id,
         titel: item.product.node.title,
         einzel: parseFloat(item.price.amount),
         menge: item.quantity,
         rabatt: aboDrin(item.product.node.id) ? aboStufe(item.product.node.id) : 0,
+        variante: item.variantId,
       }));
       const erg = await aboAbschliessen({
         email: mail,
         zahlweg: "stripe",
-        produkte: aboListe.produkte,
-        price: aboListeGesamt(aboListe.produkte)?.beitrag || 0,
+        produkte,
+        price: aboListeGesamt(produkte)?.beitrag || 0,
         waren,
         einmalig: Math.round((summe + versand) * 100) / 100,
       });
@@ -407,6 +485,17 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
 
   const handleOnlineCheckout = async () => {
     if (items.length === 0) return;
+    if (spedition) {
+      toast.error(VERSAND_ANFRAGE, { description: "Schreib an info@alex-autoshop.de oder ruf 0202 82690 an.", toasterId: "warenkorb" });
+      return;
+    }
+    if (!shopifyPasst) {
+      toast.error(versandText(versandPlanEffektiv), {
+        description: "Mehrere Pakete rechnen wir nicht über die Standardkasse ab. Schreib an info@alex-autoshop.de, wir schicken den Zahlungslink.",
+        toasterId: "warenkorb",
+      });
+      return;
+    }
     setRedirecting(true);
     const frisch = await preiseAuffrischen();
     // Variant-IDs aus GID extrahieren: "gid://shopify/ProductVariant/12345" → "12345"
@@ -561,7 +650,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             ) : (
             <>
             <div className="flex-1 overflow-y-auto">
-              {items.length > 0 && !isMember && total < VERSAND_FREI_AB && total > 0 && (
+              {items.length > 0 && !mitgliedFrei && !spedition && versandPlanEffektiv.pakete <= 1 && total < VERSAND_FREI_AB && total > 0 && (
                 <p className="px-4 pt-3 text-xs text-muted-foreground">
                   Noch <strong className="text-foreground">{formatPrice(String(remainingForFree), currency)}</strong> bis Gratisversand
                   <span className="ml-2 inline-block align-middle h-1 w-16 rounded-full bg-border overflow-hidden">
@@ -645,7 +734,15 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                     </button>
                   )}
                   <p className="text-xs text-muted-foreground mt-2">
-                    {shippingCost > 0 ? <>Versand {formatPrice(String(shippingCost), currency)}</> : "Versand kostenlos"}
+                    {spedition ? (
+                      <>
+                        {VERSAND_ANFRAGE}.{" "}
+                        <a href={versandMailto()} className="underline">Anfrage an info@alex-autoshop.de</a>
+                      </>
+                    ) : (
+                      versandText(versandPlanEffektiv)
+                    )}
+                    {!spedition && versandPlanEffektiv.pakete > 1 ? " · jedes weitere Paket extra, das erste ab 150 € frei" : ""}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Lieferzeit {liefer.zeit.label}
@@ -674,16 +771,27 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                     {mitAbo ? (
                       <>
                         <p className="text-[11px] text-muted-foreground leading-snug">
-                          Einmalig {formatPrice(String(total + shippingCost), currency)}, dazu {formatPrice(String(aboListeGesamt(aboListe.produkte)?.beitrag || 0), currency)} im Monat. Monatlich kündbar, keine Mindestlaufzeit.
+                          {spedition
+                            ? `${VERSAND_ANFRAGE}. Schreib an info@alex-autoshop.de oder ruf 0202 82690 an.`
+                            : `Einmalig ${formatPrice(String(total + shippingCost), currency)}, dazu ${formatPrice(String(aboBeitrag), currency)} im Monat. ${LAUFZEIT_KURZ}`}
                         </p>
-                        <button type="button" onClick={handleAboKasse} disabled={kasseZu || aboLaeuft} className="btn-primary w-full text-sm min-h-11 disabled:opacity-50">
+                        <button type="button" onClick={handleAboKasse} disabled={kasseZu || aboLaeuft || spedition} className="btn-primary w-full text-sm min-h-11 disabled:opacity-50">
                           {aboLaeuft ? "Einen Moment …" : "Zahlungspflichtig bestellen"}
                         </button>
                       </>
                     ) : (
-                      <button onClick={handleOnlineCheckout} disabled={kasseZu} className="btn-gold-bright w-full text-sm min-h-11 gap-2 disabled:opacity-50">
-                        <CreditCard className="w-4 h-4" /> Jetzt kaufen
-                      </button>
+                      <>
+                        {!shopifyPasst && (
+                          <p className="text-[11px] text-muted-foreground leading-snug">
+                            {spedition
+                              ? <>{VERSAND_ANFRAGE}. <a href={versandMailto()} className="underline">Anfrage senden</a> oder 0202 82690.</>
+                              : <>{versandText(versandPlanEffektiv)}. Mehrere Pakete bitte per <a href={versandMailto("Paketversand")} className="underline">E-Mail</a> oder 0202 82690, wir schicken den Zahlungslink.</>}
+                          </p>
+                        )}
+                        <button onClick={handleOnlineCheckout} disabled={kasseZu || !shopifyPasst} className="btn-gold-bright w-full text-sm min-h-11 gap-2 disabled:opacity-50">
+                          <CreditCard className="w-4 h-4" /> Jetzt kaufen
+                        </button>
+                      </>
                     )}
                     <div className="flex justify-center gap-4 pb-2 text-xs">
                       <button
@@ -720,9 +828,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                 <div className="flex items-center gap-3 px-4 py-3 max-h-[120px]">
                   <div className="min-w-0">
                     <p className="text-[11px] text-muted-foreground leading-none">Gesamt</p>
-                    <p className="text-lg font-bold leading-tight tabular-nums">{formatPrice(String(total + shippingCost), currency)}</p>
+                    <p className="text-lg font-bold leading-tight tabular-nums">{spedition ? formatPrice(String(total), currency) : formatPrice(String(total + shippingCost), currency)}</p>
+                    {spedition && <p className="text-[11px] text-muted-foreground leading-tight">zzgl. Spedition auf Anfrage</p>}
                     {mitAbo && (
-                      <p className="text-[11px] text-muted-foreground leading-tight">inkl. Versand + {formatPrice(String(aboListeGesamt(aboListe.produkte)?.beitrag || 0), currency)}/Monat Abo</p>
+                      <p className="text-[11px] text-muted-foreground leading-tight">inkl. Versand + {formatPrice(String(aboBeitrag), currency)}/Monat Abo</p>
                     )}
                   </div>
                   <button

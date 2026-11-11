@@ -6,11 +6,15 @@ import { aboLeisteText, aboProduktPfad } from "../../shared/abo-leiste.js";
 import {
   ABO_RABATTE,
   aboListeGesamt,
+  beitragSatz,
   istWunschfarbeMenge,
   mengeZahl,
+  produkteMitKorbmenge,
   wunschfarbeAboTitel,
   wunschfarbeDetail,
 } from "../../shared/produktabo.js";
+import { LAUFZEIT_KURZ } from "../../shared/abo-laufzeit.js";
+import { useCartStore } from "@/stores/cartStore";
 import {
   ABO_EREIGNIS,
   ABO_UEBERSICHT,
@@ -81,6 +85,7 @@ function detailVon(p: AboRoh): string {
 
 function rechenZeile(p: AboRoh) {
   return {
+    id: str(p.id),
     art: typeof p.art === "string" ? p.art : undefined,
     rabatt: p.rabatt,
     preis: p.preis == null ? undefined : Number(p.preis),
@@ -153,8 +158,12 @@ export function AboUebersicht() {
   const sprung = useRef(false);
   const titelId = useId();
   const produkte = liste.produkte;
+  const korb = useCartStore((s) => s.items);
   const sichtbar = !pathname.startsWith("/mitgliedschaft") && produkte.length > 0;
-  const gesamt = useMemo(() => aboListeGesamt(produkte.map(rechenZeile)), [produkte]);
+  const gesamt = useMemo(() => aboListeGesamt(produkteMitKorbmenge(
+    produkte.map(rechenZeile),
+    korb.map((item) => ({ id: item.product.node.id, menge: item.quantity })),
+  )), [produkte, korb]);
   const beitrag = gesamt?.beitrag ?? 0;
 
   useEffect(() => {
@@ -277,7 +286,7 @@ export function AboUebersicht() {
             >
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{anzahlText}</span>
-                <span className="block text-xs font-medium text-neutral-600">{euro(beitrag)} / Monat</span>
+                <span className="block text-xs font-medium text-neutral-600">{euro(beitrag)} / Monat · 20 % der Ersparnis, mindestens 1/2/3 €</span>
               </span>
               <span className="inline-flex min-h-11 shrink-0 items-center rounded-lg bg-primary px-3 text-sm font-semibold text-white">
                 Ansehen
@@ -382,6 +391,7 @@ export function AboUebersicht() {
                       <p className="text-sm font-semibold tabular-nums">
                         Abo {zeile ? euro(zeile.beitrag) : "–"} / Monat
                       </p>
+                      {zeile && <p className="text-[11px] leading-snug text-neutral-600">{beitragSatz(zeile)}</p>}
                     </div>
                     <button
                       type="button"
@@ -400,7 +410,8 @@ export function AboUebersicht() {
               })}
             </ul>
             <div className="border-t border-primary/20 px-4 py-3">
-              <p className="text-sm text-neutral-600">Monatlich</p>
+              <p className="text-sm text-neutral-600">Monatlich · Summe der Positionen</p>
+              <p className="text-[11px] leading-snug text-neutral-600 mt-1">{LAUFZEIT_KURZ}</p>
               <p data-abo-summe="" aria-live="polite" className="font-display text-3xl font-bold tabular-nums leading-none">
                 {euro(beitrag)} <span className="text-base font-normal text-neutral-600">/ Monat</span>
               </p>

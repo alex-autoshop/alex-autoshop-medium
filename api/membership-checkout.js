@@ -17,8 +17,10 @@
 export const config = { runtime: "edge" };
 
 import { mitgliedsbeitrag, rabattName, DIENSTLEISTUNG_BUCHBAR } from "../shared/mitgliedspreise.js";
-import { aboListeGesamt, istWunschfarbeMenge, mengenAngabeNormalisieren, warenMitRabatt, wunschfarbeAboTitel } from "../shared/produktabo.js";
-import { versandkosten } from "../shared/versand.js";
+import { aboBeitragFuerKasse, istWunschfarbeMenge, mengenAngabeNormalisieren, warenMitRabatt, wunschfarbeAboTitel } from "../shared/produktabo.js";
+import { kassenText, LAUFZEIT_KURZ, MINDEST_MONATE } from "../shared/abo-laufzeit.js";
+import { kgAusShopify, versandPlan } from "../shared/versand.js";
+import { storefront } from "./_storefront.js";
 import { empfehlungSichtbar } from "../shared/empfehlung.js";
 import { kundeAusAnfrage, paketMitKonto } from "../shared/abo-konto.js";
 
@@ -107,10 +109,18 @@ async function createProduktSession({ email, userId, price, zeilen, positionen, 
   form.set("subscription_data[metadata][abo]", "produkt");
   form.set("subscription_data[metadata][price]", String(price));
   form.set("subscription_data[metadata][positionen]", positionen);
+  form.set("subscription_data[metadata][mindest_monate]", String(MINDEST_MONATE));
+  form.set("subscription_data[metadata][hoechst_cent]", String(Math.round(Number(price) * 100)));
+  const monatText = Number(price).toFixed(2).replace(".", ",");
+  form.set("custom_text[submit][message]", `Zahlungspflichtig bestellen. ${monatText} € im Monat. ${LAUFZEIT_KURZ}`);
   if (ref) form.set("metadata[ref]", ref);
   const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Stripe-Version": "2024-06-20",
+    },
     body: form,
   });
   const data = await res.json().catch(() => null);
@@ -119,7 +129,7 @@ async function createProduktSession({ email, userId, price, zeilen, positionen, 
 }
 
 /** Eine Zahlung: Abo monatlich wiederkehrend, Ware einmalig auf der ersten Rechnung. */
-async function createWarenAboSession({ email, userId, monat, waren, versand, positionen, ref }) {
+async function createWarenAboSession({ email, userId, monat, waren, versand, pakete = 1, positionen, ref }) {
   const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
   if (!/^(sk|rk)_(live|test)_[A-Za-z0-9]{10,}$/.test(key)) return { fallback: true };
   const form = new URLSearchParams();
@@ -132,7 +142,7 @@ async function createWarenAboSession({ email, userId, monat, waren, versand, pos
   form.set("line_items[0][price_data][currency]", "eur");
   form.set("line_items[0][price_data][recurring][interval]", "month");
   form.set("line_items[0][price_data][unit_amount]", String(Math.round(Number(monat) * 100)));
-  form.set("line_items[0][price_data][product_data][name]", "Produkt-Abo, monatlich kündbar");
+  form.set("line_items[0][price_data][product_data][name]", "Produkt-Abo, Mindestlaufzeit 3 Monate");
   let zeile = 1;
   const einmaligDazu = (name, betrag) => {
     form.set(`line_items[${zeile}][quantity]`, "1");
@@ -144,11 +154,9 @@ async function createWarenAboSession({ email, userId, monat, waren, versand, pos
   waren.forEach((w) => {
     einmaligDazu(w.menge > 1 ? `${w.menge}× ${w.titel}` : w.titel, w.betrag);
   });
-  if (versand > 0) einmaligDazu("Versand", versand);
+  if (versand > 0) einmaligDazu(pakete > 1 ? `Versand, ${pakete} Pakete` : "Versand", versand);
   const einmalig = Math.round((waren.reduce((s, w) => s + Number(w.betrag), 0) + Number(versand || 0)) * 100) / 100;
-  const monatText = Number(monat).toFixed(2).replace(".", ",");
-  const wareText = einmalig.toFixed(2).replace(".", ",");
-  form.set("custom_text[submit][message]", `Zahlungspflichtig bestellen. Einmalig ${wareText} €, dazu ${monatText} € im Monat. Monatlich kündbar, keine Mindestlaufzeit.`);
+  form.set("custom_text[submit][message]", kassenText(einmalig, monat));
   form.set("metadata[abo]", "produkt");
   form.set("metadata[price]", String(monat));
   form.set("metadata[einmalig]", String(einmalig));
@@ -156,6 +164,8 @@ async function createWarenAboSession({ email, userId, monat, waren, versand, pos
   form.set("subscription_data[metadata][abo]", "produkt");
   form.set("subscription_data[metadata][price]", String(monat));
   form.set("subscription_data[metadata][positionen]", positionen);
+  form.set("subscription_data[metadata][mindest_monate]", String(MINDEST_MONATE));
+  form.set("subscription_data[metadata][hoechst_cent]", String(Math.round(Number(monat) * 100)));
   if (ref) form.set("metadata[ref]", ref);
   const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
@@ -268,6 +278,36 @@ async function createGoCardlessFlow({ email, userId, level, modules, price, pake
   return { url: flow?.billing_request_flows?.authorisation_url };
 }
 
+async function gewichtNachVariante(ids) {
+  const uniq = [...new Set((ids || []).filter((id) => typeof id === "string" && id.includes("ProductVariant")))].slice(0, 40);
+  const map = new Map();
+  if (!uniq.length) return map;
+  try {
+    const data = await storefront(`query ($ids: [ID!]!) {
+      nodes(ids: $ids) { ... on ProductVariant { id weight weightUnit } }
+    }`, { ids: uniq });
+    for (const n of data?.data?.nodes || []) {
+      if (!n?.id) continue;
+      const kg = kgAusShopify(n.weight, n.weightUnit);
+      if (kg) map.set(n.id, kg);
+    }
+  } catch (e) {
+    console.error("[versand] gewicht:", String(e?.message || e).slice(0, 160));
+  }
+  return map;
+}
+
+/** Paketpreis aus den Varianten-Gewichten. Fehlt das Gewicht, zählt der Name oder 1 kg. */
+async function versandFuerWare(warenEingang, gerechnet) {
+  const gewichte = await gewichtNachVariante(warenEingang.map((w) => w.variante));
+  const positionen = gerechnet.positionen.map((p, i) => {
+    const quelle = warenEingang[i] || {};
+    const kg = gewichte.get(quelle.variante);
+    return { menge: p.menge, ...(kg ? { kg } : {}), name: p.titel || quelle.titel || "" };
+  });
+  return versandPlan({ summe: gerechnet.summe, positionen });
+}
+
 export default async function handler(req) {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -304,7 +344,15 @@ export default async function handler(req) {
         titel: String(dyn || norm?.titel || norm?.handle || "Produkt").slice(0, 120),
       };
     });
-    const g = aboListeGesamt(liste);
+    const warenEingang = (Array.isArray(waren) ? waren : []).map((w) => ({
+      id: w?.id,
+      titel: String(w?.titel || "").slice(0, 120),
+      einzel: w?.einzel,
+      menge: w?.menge,
+      rabatt: w?.rabatt,
+      variante: w?.variante,
+    }));
+    const g = aboBeitragFuerKasse(liste, warenEingang);
     if (!g) return json({ error: "Unbekannte Rabattstufe oder leere Produktliste." }, 400);
     if (price !== undefined && Number(price) !== g.beitrag) {
       return json({ error: "Der Preis hat sich gerade geändert — bitte die Seite neu laden.", preis: g.beitrag }, 409);
@@ -331,13 +379,20 @@ export default async function handler(req) {
           rabatt: w?.rabatt,
         })));
         if (!gerechnet) return json({ error: "Die Warenpreise sind unvollständig." }, 400);
-        const versand = versandkosten({ summe: gerechnet.summe });
+        const plan = await versandFuerWare(warenEingang, gerechnet);
+        if (plan.art === "spedition") {
+          return json({
+            error: "Versand per Spedition – Preis auf Anfrage. Schreib an info@alex-autoshop.de oder ruf 0202 82690 an.",
+            spedition: true,
+          }, 409);
+        }
+        const versand = plan.betrag || 0;
         const summe = Math.round((gerechnet.summe + versand) * 100) / 100;
         if (einmalig !== undefined && Number(einmalig) !== summe) {
           return json({ error: "Der Warenpreis hat sich gerade geändert — bitte die Seite neu laden.", einmalig: summe }, 409);
         }
         const r = await createWarenAboSession({
-          email, userId, monat: g.beitrag, waren: gerechnet.positionen, versand, positionen, ref: refAus(email, refRoh),
+          email, userId, monat: g.beitrag, waren: gerechnet.positionen, versand, pakete: plan.pakete, positionen, ref: refAus(email, refRoh),
         });
         if (r.fallback) return json({ fallback: true, reason: "stripe noch nicht konfiguriert" });
         if (!r.url) return json({ error: "Keine Checkout-URL erhalten" }, 502);

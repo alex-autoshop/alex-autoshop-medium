@@ -1,6 +1,6 @@
 import { Truck, Zap, Package, MapPin, Clock, CheckCircle2, Star, Info } from "lucide-react";
 import { Seo } from "@/components/Seo";
-import { DHL_EUR, VERSAND_FREI_AB } from "../../shared/versand.js";
+import { DHL_EUR, GEWICHT_STUFEN, PAKET_MAX_KG, SPEDITION_AB_PAKET, VERSAND_ANFRAGE, VERSAND_FREI_AB, VERSAND_MAIL } from "../../shared/versand.js";
 import { teileboerseOeffentlich } from "../../shared/teileboerse-schalter.js";
 
 const FREE_THRESHOLD = VERSAND_FREI_AB;
@@ -30,8 +30,8 @@ export default function Versand() {
       <Seo
         title="Versand & Lieferung"
         description={teile
-          ? `Versandkosten bei Alex Autoshop: Teilebörse ${dhl} DHL für alle, frei ab ${FREE_THRESHOLD} €. Im Shop ist der Versand für Mitglieder kostenlos.`
-          : `Versandkosten bei Alex Autoshop: DHL ${dhl}, frei ab ${FREE_THRESHOLD} €. Mit bezahlter Mitgliedschaft ist der Versand im Shop kostenlos.`}
+          ? `Versandkosten bei Alex Autoshop: je Paket ${dhl}, erstes Paket frei ab ${FREE_THRESHOLD} €. Ab ${SPEDITION_AB_PAKET} Paketen Preis auf Anfrage. Im Shop ist der Versand für Mitglieder kostenlos.`
+          : `Versandkosten bei Alex Autoshop: je Paket ${dhl}, erstes Paket frei ab ${FREE_THRESHOLD} €. Ab ${SPEDITION_AB_PAKET} Paketen Preis auf Anfrage. Mit bezahlter Mitgliedschaft ist der Versand im Shop kostenlos.`}
       />
 
       <div className="max-w-3xl mx-auto px-4 py-12 space-y-10">
@@ -57,7 +57,9 @@ export default function Versand() {
             <p className="text-muted-foreground text-sm mt-0.5">
               Mit aktiver bezahlter Mitgliedschaft (Level 1–3) ist der Versand im Shop kostenlos,
               auch unter {FREE_THRESHOLD} €.
-              {teile ? ` Sonst zahlt jeder ${dhl} DHL, frei ab ${FREE_THRESHOLD} €.` : ` Ohne Mitgliedschaft kostet DHL ${dhl}, frei ab ${FREE_THRESHOLD} €.`}
+              {teile
+                ? ` Sonst kostet jedes Paket ${dhl}, das erste ist frei ab ${FREE_THRESHOLD} €. Ab ${SPEDITION_AB_PAKET} Paketen nennen wir den Preis der Spedition.`
+                : ` Ohne Mitgliedschaft kostet jedes Paket ${dhl}, das erste ist frei ab ${FREE_THRESHOLD} €. Ab ${SPEDITION_AB_PAKET} Paketen nennen wir den Preis der Spedition.`}
             </p>
           </div>
         </div>
@@ -78,17 +80,24 @@ export default function Versand() {
                   <p className="text-sm text-muted-foreground">Deutschlandweit · Lieferzeit je Artikel, in der Regel 1–7 Werktage</p>
                 </div>
               </div>
-              <div className="text-right shrink-0">
+                <div className="text-right shrink-0">
                 <p className="font-bold text-lg">{dhl}</p>
-                <p className="text-xs text-muted-foreground">pauschal</p>
+                <p className="text-xs text-muted-foreground">je Paket</p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 pt-1 border-t border-border">
               <ShippingBadge label={teile ? "Teilebörse: für alle gleich" : "Ohne Mitgliedschaft"} highlight />
-              <ShippingBadge label="Ab 150 € kostenlos" highlight />
+              <ShippingBadge label="Erstes Paket ab 150 € frei" highlight />
+              <ShippingBadge label={`Höchstens ${PAKET_MAX_KG} kg je Paket`} />
               <ShippingBadge label="Shop: Mitglieder gratis" />
               <ShippingBadge label="Sendungsverfolgung inklusive" />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Der Preis eines Pakets richtet sich nach dem Gewicht. Zurzeit kostet jede Stufe {dhl}:{" "}
+              {GEWICHT_STUFEN.map((s) => `bis ${String(s.bisKg).replace(".", ",")} kg`).join(", ")}.
+              Das erste Paket ist ab {FREE_THRESHOLD} € Warenwert frei, jedes weitere Paket wird berechnet.
+              Ab {SPEDITION_AB_PAKET} Paketen: {VERSAND_ANFRAGE}. Dann schreib an {VERSAND_MAIL} oder ruf 0202 82690 an.
+            </p>
             <p className="text-xs text-muted-foreground">
               Die voraussichtliche Lieferzeit hängt von der Ware ab. Sie steht auf der Produktseite und im Warenkorb.
             </p>
@@ -196,25 +205,30 @@ export default function Versand() {
                   <>
                     <tr>
                       <td className="py-2.5 pr-4 font-medium">Teilebörse, alle Kunden</td>
-                      <td className="py-2.5 pr-4 text-muted-foreground">Warenwert &lt; 150 €</td>
-                      <td className="py-2.5 text-muted-foreground">{dhl} DHL</td>
+                      <td className="py-2.5 pr-4 text-muted-foreground">Ein Paket, Warenwert &lt; 150 €</td>
+                      <td className="py-2.5 text-muted-foreground">{dhl}</td>
                     </tr>
                     <tr>
                       <td className="py-2.5 pr-4 font-medium">Teilebörse, alle Kunden</td>
-                      <td className="py-2.5 pr-4 text-muted-foreground">Warenwert ≥ 150 €</td>
-                      <td className="py-2.5 font-semibold text-primary">Kostenlos ✓</td>
+                      <td className="py-2.5 pr-4 text-muted-foreground">Erstes Paket ab 150 €, jedes weitere extra</td>
+                      <td className="py-2.5 text-muted-foreground">Erstes Paket frei, weitere je {dhl}</td>
                     </tr>
                   </>
                 )}
                 <tr>
                   <td className="py-2.5 pr-4 font-medium">Online-Shop, bezahlte Mitgliedschaft</td>
-                  <td className="py-2.5 pr-4 text-muted-foreground">Jede Shop-Bestellung</td>
+                  <td className="py-2.5 pr-4 text-muted-foreground">Bis 3 Pakete</td>
                   <td className="py-2.5 font-semibold text-primary">Kostenlos ✓</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 pr-4 font-medium">Online-Shop ohne Mitgliedschaft</td>
                   <td className="py-2.5 pr-4 text-muted-foreground">DHL innerhalb Deutschlands</td>
-                  <td className="py-2.5 text-muted-foreground">{dhl}, frei ab 150 €</td>
+                  <td className="py-2.5 text-muted-foreground">{dhl} je Paket, erstes frei ab 150 €</td>
+                </tr>
+                <tr>
+                  <td className="py-2.5 pr-4 font-medium">Alle</td>
+                  <td className="py-2.5 pr-4 text-muted-foreground">Ab 4 Paketen</td>
+                  <td className="py-2.5 text-muted-foreground">{VERSAND_ANFRAGE}</td>
                 </tr>
               </tbody>
             </table>

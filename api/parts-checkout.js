@@ -44,7 +44,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { adminPruefen } from "./_admin.js";
-import { versandkosten, pfandBetrag, DHL_EUR, VERSAND_FREI_AB } from "../shared/versand.js";
+import { versandPlan, pfandBetrag, VERSAND_FREI_AB, VERSAND_ANFRAGE } from "../shared/versand.js";
 import { markeFuerKunde } from "../shared/grosshaendler.js";
 import { teileboerseDarf } from "../shared/teileboerse-zugang.js";
 
@@ -409,7 +409,7 @@ async function stripeSession({ positionen, summe, email, fahrzeug, vin, theke, u
   if (versand > 0) {
     zeileSetzen(
       "DHL-Versand Deutschland",
-      `Pauschale ${DHL_EUR.toFixed(2).replace(".", ",")} €, kostenlos ab ${VERSAND_FREI_AB} €`,
+      `Paketversand, das erste Paket kostenlos ab ${VERSAND_FREI_AB} €`,
       1,
       versand,
     );
@@ -664,7 +664,18 @@ export default async function handler(req, res) {
     if (method === "gocardless" && !abholung && !lieferung) {
       return send(res, 400, { error: "Für den DHL-Versand brauchen wir Name, Straße, PLZ und Ort." });
     }
-    const versand = versandkosten({ summe, abholung });
+    const plan = versandPlan({
+      summe,
+      abholung,
+      positionen: positionen.map((p) => ({ menge: p.quantity, name: `${p.name || ""} ${p.brand || ""}` })),
+    });
+    if (plan.art === "spedition") {
+      return send(res, 409, {
+        error: `${VERSAND_ANFRAGE}. Schreib an info@alex-autoshop.de oder ruf 0202 82690 an.`,
+        spedition: true,
+      });
+    }
+    const versand = plan.betrag || 0;
     const pfand = pfandBetrag(positionen.map((p) => ({ name: `${p.name || ""} ${p.brand || ""}`, menge: p.quantity })));
     const brutto = rund2(summe + versand + pfand.betrag);
     if (brutto > MAX_SUMME) {

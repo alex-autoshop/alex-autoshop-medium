@@ -21,18 +21,24 @@ export const PRODUKT_ABO_PREISE = {
 };
 
 /**
- * Mengen-Positionen (Wunschfarbe, Spraydose, Lackstift).
+ * Jede Position, Einzelprodukt wie Menge.
  *
- * Für Lackierer taugt ein fester Betrag je Produkt nicht: wer 20 Liter im
- * Monat mischen lässt, spart dreistellig — da wäre 1 € Beitrag geschenkt.
- * Deshalb kostet eine Mengen-Position einen ANTEIL AN DER ERSPARNIS.
- * Der Kunde behält den Rest, und der Beitrag wächst automatisch mit der Menge.
+ * Der Monatsbeitrag ist ein Anteil an der Ersparnis dieser Zeile, mindestens
+ * der Stufenbeitrag (1 € / 2 € / 3 €). Die Ersparnis selbst hat keine Obergrenze:
+ * wer viel kauft, spart den vollen Rabatt und zahlt davon den Anteil.
+ *
+ *   Ersparnis = (Normalpreis − Abo-Preis) × Menge
+ *   Beitrag   = max(Stufenminimum, Ersparnis × ANTEIL_AN_ERSPARNIS)
  *
  * ANTEIL ÄNDERN: hier. 0.2 = der Kunde behält 80 % seiner Ersparnis.
  */
 export const ANTEIL_AN_ERSPARNIS = 0.2;
 
-/** Kleinster Monatsbeitrag für eine Mengen-Position. */
+/**
+ * Früher der feste Boden nur für Mengen-Positionen (1 €, unabhängig von der Stufe).
+ * Der Boden ist jetzt das Stufenminimum. Die Konstante bleibt, damit alte Importe
+ * nicht brechen; die Rechnung nutzt sie nicht mehr.
+ */
 export const MENGE_MINDESTBEITRAG = 1;
 
 /** Mindest- und Höchstzahl an Produkten in einer Abo-Liste. */
@@ -182,28 +188,37 @@ export function produktAboErsparnis(summeNormalpreise, rabatt) {
   return Math.round(p * (r / 100) * 100) / 100;
 }
 
+const cent = (n) => Math.round(n * 100) / 100;
+
+/** max(Stufenminimum, Anteil an der Ersparnis), auf Cent. */
+export function zeilenBeitrag(ersparnis, mindest) {
+  const anteil = cent(Math.max(0, Number(ersparnis) || 0) * ANTEIL_AN_ERSPARNIS);
+  const boden = cent(Math.max(0, Number(mindest) || 0));
+  return cent(Math.max(boden, anteil));
+}
+
 /**
  * Beitrag einer einzelnen Mengen-Position.
  *
  * @param {{ einzelpreis: number, menge: number, rabatt: number }} pos
- *   einzelpreis = Normalpreis einer Einheit (z. B. 1 L Mipa 2K)
+ *   einzelpreis = Normalpreis einer Einheit (z. B. 1 L Lack)
  *   menge       = Einheiten pro Monat
- * @returns {{ normal: number, mitglied: number, ersparnis: number, beitrag: number } | null}
+ * @returns {{ normal: number, mitglied: number, ersparnis: number, anteil: number, mindest: number, beitrag: number } | null}
  */
 export function mengenPosition(pos) {
   const einzel = Number(pos && pos.einzelpreis);
   const menge = Math.floor(Number(pos && pos.menge));
   const rabatt = Math.floor(Number(pos && pos.rabatt));
   if (!Number.isFinite(einzel) || einzel <= 0) return null;
-  if (!Number.isFinite(menge) || menge < 1) return null;
+  if (!Number.isFinite(menge) || menge < 1 || menge > 9999) return null;
   if (PRODUKT_ABO_PREISE[rabatt] === undefined) return null;
 
-  const cent = (n) => Math.round(n * 100) / 100;
   const normal = cent(einzel * menge);
   const mitglied = cent(normal * (1 - rabatt / 100));
   const ersparnis = cent(normal - mitglied);
-  const beitrag = cent(Math.max(MENGE_MINDESTBEITRAG, ersparnis * ANTEIL_AN_ERSPARNIS));
-  return { normal, mitglied, ersparnis, beitrag };
+  const mindest = PRODUKT_ABO_PREISE[rabatt];
+  const anteil = cent(ersparnis * ANTEIL_AN_ERSPARNIS);
+  return { normal, mitglied, ersparnis, anteil, mindest, beitrag: cent(Math.max(mindest, anteil)) };
 }
 
 /**
@@ -373,27 +388,98 @@ export function warenMitRabatt(zeilen) {
   return { summe, positionen };
 }
 
+function istMengenPosition(pos) {
+  return !!(pos && (pos.art === "menge" || (pos.einzelpreis != null && pos.art !== "einzel")));
+}
+
 /**
  * Monatsbeitrag einer Position mit IHRER Stufe.
- * Einzelprodukt: fester Beitrag der Stufe. Mengen-Position (Lack): Anteil an der Ersparnis.
+ * Jede Zeile: max(Stufenminimum, 20 % der Ersparnis). Menge 1, wenn keine dasteht.
  */
 export function beitragPosition(pos) {
   const rabatt = Math.floor(Number(pos && pos.rabatt));
   if (!rabattGueltig(rabatt)) return null;
-  const menge = pos && (pos.art === "menge" || pos.einzelpreis != null);
-  if (menge && pos.art !== "einzel") {
+  if (istMengenPosition(pos)) {
     return mengenPosition({ einzelpreis: pos.einzelpreis, menge: pos.menge, rabatt });
   }
-  const normal = Number(pos && pos.preis);
-  if (!Number.isFinite(normal) || normal < 0) return null;
-  const cent = (n) => Math.round(n * 100) / 100;
+  const einzel = Number(pos && pos.preis);
+  const menge = Math.max(1, Math.floor(Number(pos && pos.menge) || 1));
+  if (!Number.isFinite(einzel) || einzel < 0) return null;
+  if (menge > 9999) return null;
+  const normal = cent(einzel * menge);
   const mitglied = cent(normal * (1 - rabatt / 100));
-  return {
-    normal: cent(normal),
-    mitglied,
-    ersparnis: cent(normal - mitglied),
-    beitrag: PRODUKT_ABO_PREISE[rabatt],
-  };
+  const ersparnis = cent(normal - mitglied);
+  const mindest = PRODUKT_ABO_PREISE[rabatt];
+  const anteil = cent(ersparnis * ANTEIL_AN_ERSPARNIS);
+  return { normal, mitglied, ersparnis, anteil, mindest, beitrag: cent(Math.max(mindest, anteil)) };
+}
+
+/**
+ * Warenkorb-Menge auf Einzelprodukte legen. Mengen-Positionen behalten ihre eigene Menge.
+ * @param {Array<Record<string, unknown>>} produkte
+ * @param {Array<{ id?: string, menge?: number }>} zeilen
+ */
+export function produkteMitKorbmenge(produkte, zeilen) {
+  const summe = new Map();
+  for (const z of zeilen || []) {
+    const id = String(z && z.id || "");
+    const menge = Math.floor(Number(z && z.menge) || 0);
+    if (!id || menge < 1) continue;
+    summe.set(id, (summe.get(id) || 0) + menge);
+  }
+  return (Array.isArray(produkte) ? produkte : []).map((p) => {
+    if (istMengenPosition(p)) return p;
+    const ausKorb = summe.get(String(p && p.id || ""));
+    const menge = ausKorb || Math.max(1, Math.floor(Number(p && p.menge) || 1));
+    return { ...p, menge };
+  });
+}
+
+/**
+ * Beitrag der Kasse. Die Menge einer Einzelposition ist mindestens die Menge
+ * der rabattierten Warenzeile — ein mitgeschickter Beitrag von 1 Stück bei
+ * 20 Stück Ware zählt nicht.
+ */
+export function aboBeitragFuerKasse(produkte, waren) {
+  const rabattWaren = (Array.isArray(waren) ? waren : []).filter((w) => rabattGueltig(w && w.rabatt));
+  const basis = (Array.isArray(produkte) ? produkte : []).map((p) => {
+    if (istMengenPosition(p)) return p;
+    const treffer = rabattWaren.filter((w) => (
+      (w.id && p && p.id && String(w.id) === String(p.id))
+      || (!w.id && w.titel && p && w.titel === p.titel)
+    ));
+    const menge = treffer.reduce((s, w) => s + Math.max(0, Math.floor(Number(w.menge) || 0)), 0);
+    const preis = treffer.length && Number(treffer[0].einzel) > 0 ? Number(treffer[0].einzel) : p.preis;
+    return { ...p, preis, menge: Math.max(1, menge || Math.floor(Number(p && p.menge) || 1)) };
+  });
+  const ids = new Set(basis.map((p) => String(p && p.id || "")));
+  const titel = new Set(basis.filter((p) => !istMengenPosition(p)).map((p) => p && p.titel));
+  const extra = [];
+  for (const w of rabattWaren) {
+    if (w.id && ids.has(String(w.id))) continue;
+    if (!w.id && titel.has(w.titel)) continue;
+    extra.push({
+      art: "einzel",
+      id: w.id,
+      titel: w.titel,
+      preis: w.einzel,
+      menge: w.menge,
+      rabatt: w.rabatt,
+    });
+  }
+  return aboListeGesamt([...basis, ...extra]);
+}
+
+/** Ein Satz für die Leiste: Ersparnis, Anteil, Minimum, Beitrag. */
+export function beitragSatz(z) {
+  if (!z || !Number.isFinite(Number(z.beitrag))) return "";
+  const euro = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+  const prozent = Math.round(ANTEIL_AN_ERSPARNIS * 100);
+  const anteil = Number.isFinite(Number(z.anteil))
+    ? Number(z.anteil)
+    : cent(Number(z.ersparnis) * ANTEIL_AN_ERSPARNIS);
+  const mindest = Number.isFinite(Number(z.mindest)) ? ` · mindestens ${euro.format(z.mindest)}` : "";
+  return `Ersparnis ${euro.format(z.ersparnis)} · ${prozent} % davon ${euro.format(anteil)}${mindest} → ${euro.format(z.beitrag)}`;
 }
 
 /** Summe über eine Liste, in der jedes Produkt seine eigene Stufe hat. */
@@ -542,10 +628,12 @@ export function mischBedarf(wahl) {
   if (!(normal > 0)) return null;
   const mitglied = cent(normal * (1 - rabatt / 100));
   const ersparnis = cent(normal - mitglied);
-  const beitrag = cent(Math.max(MENGE_MINDESTBEITRAG, ersparnis * ANTEIL_AN_ERSPARNIS));
+  const mindest = PRODUKT_ABO_PREISE[rabatt];
+  const anteil = cent(ersparnis * ANTEIL_AN_ERSPARNIS);
+  const beitrag = cent(Math.max(mindest, anteil));
   return {
     literA, literB, teilA, teilB,
     literGesamt: cent(teilA.liter + teilB.liter),
-    normal, mitglied, ersparnis, beitrag,
+    normal, mitglied, ersparnis, anteil, mindest, beitrag,
   };
 }
