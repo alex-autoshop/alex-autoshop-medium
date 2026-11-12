@@ -25,6 +25,7 @@ import { SHOP_INFO } from "@/data/shopInfo";
 import { legacyCategoryRedirect } from "@/lib/categories";
 import { kategorieDokument } from "../../shared/seo-katalog.js";
 import { nachArtMischen } from "../../shared/marken-vergleich.js";
+import { sucheAusgefuehrt } from "@/lib/besuch";
 
 function Chips({ items, activeHandle }: { items: SubCategory[]; activeHandle?: string }) {
   const seite = activeHandle ? kategoriePfad(activeHandle) : "";
@@ -137,6 +138,18 @@ export default function Kategorie() {
     }, 300);
     return () => window.clearTimeout(t);
   }, [suche, qAusUrl, params, navigate]);
+
+  const sucheGemeldet = useRef("");
+  useEffect(() => {
+    if (!qAusUrl) {
+      sucheGemeldet.current = "";
+      return;
+    }
+    const schluessel = `${handle}:${qAusUrl}`;
+    if (sucheGemeldet.current === schluessel) return;
+    sucheGemeldet.current = schluessel;
+    sucheAusgefuehrt(qAusUrl.length, "kategorie", handle);
+  }, [qAusUrl, handle]);
 
   const kategorieLabel = treffer
     ? treffer.type === "sub" ? treffer.sub.label : treffer.main.label

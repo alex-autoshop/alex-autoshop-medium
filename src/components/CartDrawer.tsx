@@ -15,6 +15,7 @@ import { aboListeGesamt, mitgliedZeile, produkteMitKorbmenge } from "../../share
 import { LAUFZEIT_KURZ } from "../../shared/abo-laufzeit.js";
 import { aboEinzelMerken } from "@/lib/aboListe";
 import { aboAbschliessen } from "@/lib/aboAbschluss";
+import { zurKasse } from "@/lib/besuch";
 import { AboKasse, useAboAktiv, useAboListe, WarenkorbAboZeile } from "@/components/WarenkorbAbo";
 import { deliveryFor, deliveryForCart } from "@/lib/delivery";
 import { Grundpreis } from "@/components/Grundpreis";
@@ -530,6 +531,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         currency: frisch[0]?.price.currencyCode ?? currency,
       });
     }
+    zurKasse(frisch.length, "shop");
     setTimeout(() => {
       window.location.href = kasse;
     }, 1800);

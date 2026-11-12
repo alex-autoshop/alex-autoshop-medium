@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { zurueckZiel } from "../../shared/listen-zustand.js";
 import { ShoppingCart, Minus, Plus, ChevronLeft, Store } from "lucide-react";
@@ -13,6 +13,7 @@ import { ShopBild } from "@/components/ShopBild";
 import { PRODUCT_IMAGES } from "@/lib/productImages";
 import { MEMBERSHIP_LEVELS } from "@/data/memberships";
 import { useCartStore } from "@/stores/cartStore";
+import { produktAngesehen } from "@/lib/besuch";
 import { PaintConfigurator } from "@/components/PaintConfigurator";
 import { FARBKONFIGURATOR_HANDLES, istStandardvariante } from "../../shared/farbangabe.js";
 import { DeliveryBadge } from "@/components/DeliveryBadge";
@@ -108,6 +109,7 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const addItem = useCartStore((s) => s.addItem);
   const cartLoading = useCartStore((s) => s.isLoading);
+  const angesehen = useRef("");
 
   if (fuer !== key) {
     const neu = leseEinbettung((m) => m.schluessel === key)?.data?.productByHandle as ProductNode | null;
@@ -140,6 +142,14 @@ export default function ProductDetail() {
     })();
     return () => { aktiv = false; };
   }, [handle, key]);
+
+  useEffect(() => {
+    if (!handle || !product || product.handle !== handle) return;
+    if (angesehen.current === product.handle) return;
+    angesehen.current = product.handle;
+    const sammlung = product.collections?.edges?.find((kante) => kante.node?.handle)?.node.handle;
+    produktAngesehen(product.handle, sammlung || product.productType);
+  }, [handle, product]);
 
   const variants = product?.variants?.edges?.map((e) => e.node) ?? [];
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) ?? variants[0];

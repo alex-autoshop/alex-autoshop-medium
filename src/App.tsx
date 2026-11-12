@@ -13,6 +13,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NurAdmin } from "@/components/NurAdmin";
 import { TeileboerseTor } from "@/components/TeileboerseTor";
+import { Besuch } from "@/components/Besuch";
 import { CookieConsent } from "@/components/CookieConsent";
 import { AboUebersicht } from "@/components/AboUebersicht";
 import { AboRueckkehr } from "@/components/AboAnmeldung";
@@ -243,6 +244,7 @@ function SpaeterToaster() {
 export default function App() {
   return (
     <BrowserRouter>
+      <Besuch />
       <AuthProvider>
         <SchaleWeg />
         <Vorholen />

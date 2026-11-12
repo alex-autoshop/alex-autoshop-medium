@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { ABO_KONTO_HINWEIS } from "../../shared/abo-konto.js";
 import { aboZielLesen, aboZielVergessen } from "@/lib/aboListe";
+import { anmeldungBegonnen } from "@/lib/besuch";
 
 type Modus = "login" | "register" | "vergessen" | "neu";
 
@@ -51,6 +52,7 @@ export default function Konto() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === "login" || mode === "register") anmeldungBegonnen(mode === "login" ? "anmelden" : "registrieren");
     setLoading(true);
     try {
       if (mode === "vergessen") {

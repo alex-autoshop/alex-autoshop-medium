@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { empfehlungLesen } from "@/lib/empfehlung";
 import { empfehlungOffen } from "../../shared/empfehlung.js";
+import { aboGestartet } from "@/lib/besuch";
 
 export type Zahlweg = "gocardless" | "stripe";
 
@@ -26,6 +27,7 @@ export async function aboAbschliessen(opts: {
 }): Promise<Ergebnis> {
   const kopf = await kontoKopf();
   if (!kopf.Authorization) return { art: "anmelden" };
+  aboGestartet(opts.produkte.length, opts.zahlweg);
   const auswahl = {
     aboTyp: "produkt" as const,
     email: opts.email,

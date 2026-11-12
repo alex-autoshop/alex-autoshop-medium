@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ShopifyProduct } from '@/lib/shopify';
+import { inDenWarenkorb, warenkorbGeoeffnet } from '@/lib/besuch';
 
 async function warenkorb() {
   return import('@/lib/shopify');
@@ -50,11 +51,19 @@ export const useCartStore = create<CartStore>()(
       isSyncing: false,
       isOpen: false,
 
-      openCart: () => set({ isOpen: true }),
+      openCart: () => {
+        if (!get().isOpen) warenkorbGeoeffnet();
+        set({ isOpen: true });
+      },
       closeCart: () => set({ isOpen: false }),
 
       addItem: async (item) => {
         const { items, cartId, clearCart } = get();
+        const merken = () => {
+          const node = item.product.node;
+          const sammlung = node.collections?.edges?.find((kante) => kante.node?.handle)?.node.handle;
+          inDenWarenkorb(node.handle, sammlung || node.productType, item.quantity);
+        };
         const hasAttrs = (item.attributes?.length ?? 0) > 0;
         // Konfigurierte Artikel (mit Attributen) NIE zusammenführen — jede Farbe/Variante eigene Position.
         const existingItem = hasAttrs
@@ -75,6 +84,7 @@ export const useCartStore = create<CartStore>()(
                 checkoutUrl: result.checkoutUrl,
                 items: [{ ...item, lineId: result.lineId, uid: newUid() }]
               });
+              merken();
             }
           } else if (existingItem) {
             const newQuantity = existingItem.quantity + item.quantity;
@@ -86,12 +96,14 @@ export const useCartStore = create<CartStore>()(
               console.log('[cartStore] freshResult after clear+recreate:', freshResult);
               if (freshResult) {
                 set({ cartId: freshResult.cartId, checkoutUrl: freshResult.checkoutUrl, items: [{ ...item, lineId: freshResult.lineId, uid: newUid() }] });
+                merken();
               }
               return;
             }
             const result = await updateShopifyCartLine(cartId, existingItem.lineId, newQuantity);
             if (result.success) {
               set({ items: get().items.map(i => i.uid === existingItem.uid ? { ...i, quantity: newQuantity } : i) });
+              merken();
             } else if (result.cartNotFound) {
               clearCart();
             }
@@ -99,6 +111,7 @@ export const useCartStore = create<CartStore>()(
             const result = await addLineToShopifyCart(cartId, { variantId: item.variantId, quantity: item.quantity, attributes: item.attributes });
             if (result.success) {
               set({ items: [...get().items, { ...item, lineId: result.lineId ?? null, uid: newUid() }] });
+              merken();
             } else if (result.cartNotFound) {
               clearCart();
             }

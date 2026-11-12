@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X, Mail, Lock, Building2, User as UserIcon, Loader2, KeyRound, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { anmeldungBegonnen } from "@/lib/besuch";
 
 interface AuthModalProps {
   open: boolean;
@@ -31,6 +32,9 @@ export function AuthModal({ open, onClose, onSuccess, defaultMode = "login" }: A
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === "login" || mode === "register") {
+      anmeldungBegonnen(mode === "login" ? "anmelden" : "registrieren");
+    }
     setLoading(true);
     try {
       if (mode === "vergessen") {
