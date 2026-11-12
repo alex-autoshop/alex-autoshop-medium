@@ -51,6 +51,11 @@ const Datenschutz = () => {
         erfolgt auf Grundlage der EU-Standardvertragsklauseln bzw. des EU-US Data Privacy
         Framework.
       </p>
+      <p>
+        Besucherstatistik und Ladezeiten messen wir mit Vercel Web Analytics und Vercel Speed Insights.
+        Beides arbeitet ohne Cookies und mit anonymisierten Daten. Auftragsverarbeiter ist Vercel Inc.,
+        440 N Barranca Ave #4133, Covina, CA 91723, USA.
+      </p>
 
       <h2>5. Shop &amp; Bezahlung</h2>
       <p>
@@ -109,7 +114,8 @@ const Datenschutz = () => {
         wird nur nach aktiver Nutzung der Übersetzungsfunktion gesetzt.
         Google Analytics 4 laden wir nur, wenn du im Cookie-Hinweis „Alle akzeptieren“ wählst
         (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG). Ein Meta- bzw. Facebook-Pixel ist nicht
-        eingebunden. „Nur notwendige“ lädt kein Analyse-Skript.
+        eingebunden. „Nur notwendige“ lädt kein Google-Analytics-Skript. Vercel Web Analytics
+        und Speed Insights setzen kein Cookie und laden unabhängig von dieser Auswahl.
       </p>
 
       <h2>11. Kommunikation (E-Mail, Telefon, WhatsApp)</h2>

@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { FileText, Mail } from "lucide-react";
 import type { Gefahrstoff } from "../../shared/gefahrstoff.js";
+import { anfrageGesendet } from "@/lib/besuch";
 
 function dateiname(url: string): string {
   try {
@@ -36,6 +37,7 @@ function SdbForm({ titel, handle, onZu }: { titel: string; handle: string; onZu:
         body: JSON.stringify({ name, email, firma, produkt: titel, handle }),
       });
       if (!res.ok) throw new Error();
+      anfrageGesendet("datenblatt", handle);
       setStatus("ok");
     } catch {
       setStatus("fehler");

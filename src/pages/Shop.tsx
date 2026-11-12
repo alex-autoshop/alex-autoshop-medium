@@ -29,6 +29,7 @@ import { istOelFilter, OEL_KATEGORIE, oeleVorFiltern } from "../../shared/oel-re
 import { PRODUKTLISTE_ID, SHOP_LISTE_ABSTAND, zumProduktanfang } from "@/lib/produktanfang";
 import { Grundpreis } from "@/components/Grundpreis";
 import { cn } from "@/lib/utils";
+import { sucheAusgefuehrt } from "@/lib/besuch";
 
 // Eigene-Farbe-Konfiguratoren: ganz oben, wenn man den Shop betritt.
 const FEATURED_HANDLES = [
@@ -212,6 +213,19 @@ export default function Shop() {
     }, 300);
     return () => window.clearTimeout(t);
   }, [search, submittedSearch, sortMode, schreibe]);
+
+  const sucheGemeldet = useRef("");
+  useEffect(() => {
+    const q = submittedSearch.trim();
+    if (!q) {
+      sucheGemeldet.current = "";
+      return;
+    }
+    const schluessel = `${category || ""}:${q}`;
+    if (sucheGemeldet.current === schluessel) return;
+    sucheGemeldet.current = schluessel;
+    sucheAusgefuehrt(q.length, "shop", category);
+  }, [submittedSearch, category]);
 
   const activeCategory = category ? getCategoryBySlug(category) : undefined;
   const parentCategory = category ? getParentCategory(category) : undefined;

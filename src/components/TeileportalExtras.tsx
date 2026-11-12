@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Car, X, Plus, Minus, Trash2, ShoppingCart, MessageCircle, Package, Phone, CreditCard, Landmark, Loader2, Store, QrCode, Printer } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { zurKasse } from "@/lib/besuch";
 import { cn } from "@/lib/utils";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { versandPlan, versandMailto, pfandBetrag, DHL_EUR, VERSAND_FREI_AB, VERSAND_ANFRAGE } from "../../shared/versand.js";
@@ -422,7 +423,11 @@ export function PartsCartDrawer({ open, onClose, cart, vehicleLabel, vehicleVin,
         }),
       });
       const d = await r.json().catch(() => null);
-      if (d?.url) { window.location.href = d.url; return; }
+      if (d?.url) {
+        zurKasse(items.length, "teile");
+        window.location.href = d.url;
+        return;
+      }
       if (d?.fallback) {
         setZahlFehler("Online-Zahlung ist noch nicht freigeschaltet — schick es bitte als Anfrage.");
       } else {

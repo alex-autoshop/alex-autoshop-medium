@@ -9,6 +9,7 @@
  */
 import { useState } from "react";
 import { Loader2, CheckCircle2 } from "lucide-react";
+import { anfrageGesendet } from "@/lib/besuch";
 
 type Typ = "widerruf" | "kuendigung";
 
@@ -30,7 +31,11 @@ export function VertragsErklaerung({ typ }: { typ: Typ }) {
         body: JSON.stringify({ typ, ...d }),
       });
       const j = await r.json().catch(() => ({}));
-      if (r.ok && j.ok) { setZeit(j.zeit || ""); setSchritt("fertig"); }
+      if (r.ok && j.ok) {
+        anfrageGesendet(typ);
+        setZeit(j.zeit || "");
+        setSchritt("fertig");
+      }
       else setFehler(j.error || "Das hat nicht geklappt. Bitte per E-Mail an info@alex-autoshop.de.");
     } catch {
       setFehler("Keine Verbindung. Bitte per E-Mail an info@alex-autoshop.de.");

@@ -1,4 +1,5 @@
 import { aboEinzelAktualisieren, aboEinzelEntfernen, aboListeErgaenzen, aboPositionEntfernen, aboStufeSetzen, listeNormalisieren } from "../../shared/produktabo.js";
+import { aboStufeGewaehlt, zumAboGelegt } from "@/lib/besuch";
 
 export const ABO_SPEICHER = "alex-produktabo-v1";
 export const ABO_EREIGNIS = "alex-abo-liste";
@@ -35,15 +36,20 @@ function schreiben(standard: number, produkte: unknown[]) {
 export function aboProduktMerken(produkt: AboMerkProdukt & { rabatt?: number }) {
   const bisher = aboListeLesen();
   const neu = aboListeErgaenzen(bisher, produkt);
-  if (neu.ergebnis === "neu") schreiben(neu.standard, neu.produkte);
+  if (neu.ergebnis === "neu") {
+    schreiben(neu.standard, neu.produkte);
+    zumAboGelegt(produkt.handle);
+  }
   return neu.ergebnis;
 }
 
 export function aboEinzelMerken(produkt: AboMerkProdukt & { rabatt: number }) {
   const bisher = aboListeLesen();
   const neu = aboListeErgaenzen(bisher, produkt);
-  if (neu.ergebnis === "neu") schreiben(neu.standard, neu.produkte);
-  else if (neu.ergebnis === "schon") {
+  if (neu.ergebnis === "neu") {
+    schreiben(neu.standard, neu.produkte);
+    zumAboGelegt(produkt.handle);
+  } else if (neu.ergebnis === "schon") {
     const aktualisiert = aboEinzelAktualisieren(neu, produkt);
     if (aktualisiert.ergebnis === "neu") schreiben(aktualisiert.standard, aktualisiert.produkte);
   }
@@ -61,7 +67,10 @@ export function aboEinzelLoeschen(id: string) {
 export function aboStufeMerken(id: string, rabatt: number) {
   const bisher = aboListeLesen();
   const neu = aboStufeSetzen(bisher, id, rabatt);
-  if (neu.ergebnis === "neu") schreiben(neu.standard, neu.produkte);
+  if (neu.ergebnis === "neu") {
+    schreiben(neu.standard, neu.produkte);
+    aboStufeGewaehlt(rabatt);
+  }
   return neu.ergebnis;
 }
 

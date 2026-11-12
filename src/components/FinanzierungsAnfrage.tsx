@@ -6,6 +6,7 @@ import {
   RECHTSFORMEN, brauchtHandelsregister, anfrageSenden, zahl, euro,
   type Finanzierungsanfrage,
 } from "@/lib/youlend";
+import { anfrageGesendet } from "@/lib/besuch";
 import { cn } from "@/lib/utils";
 
 const LEER: Finanzierungsanfrage = {
@@ -51,6 +52,7 @@ export function FinanzierungsAnfrage() {
     setLaeuft(true);
     try {
       const a = await anfrageSenden(d);
+      anfrageGesendet("finanzierung");
       setFertig({ leadId: a.leadId, hinweis: a.hinweis });
     } catch (err) {
       setFehler(err instanceof Error ? err.message : "Unbekannter Fehler");

@@ -27,6 +27,7 @@ import { bildAdresse } from "../../shared/katalog-regeln.js";
 import { BaldVerfuegbar, GefahrstoffKompakt } from "@/components/GefahrstoffHinweis";
 import { AboLeisteMobil } from "@/components/AboLeisteMobil";
 import { LAUFZEIT_KURZ_DU } from "../../shared/abo-laufzeit.js";
+import { aboStufeGewaehlt, sucheAusgefuehrt, zumAboGelegt } from "@/lib/besuch";
 
 /** Ein Produkt in der Abo-Liste — nur das Nötigste, damit es in den
  *  localStorage passt und auch ohne erneute Shop-Abfrage anzeigbar bleibt. */
@@ -310,6 +311,17 @@ export function ProduktAbo() {
     setKategorie("alle");
   }, [suchbegriff]);
 
+  const sucheGemeldet = useRef<string | null>(null);
+  useEffect(() => {
+    if (!suchbegriff) {
+      sucheGemeldet.current = "";
+      return;
+    }
+    if (sucheGemeldet.current === suchbegriff) return;
+    sucheGemeldet.current = suchbegriff;
+    sucheAusgefuehrt(suchbegriff.length, "abo");
+  }, [suchbegriff]);
+
   useEffect(() => {
     const el = listeRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
@@ -362,8 +374,13 @@ export function ProduktAbo() {
   );
   const drinIds = useMemo(() => new Set(produkte.map((p) => p.id)), [produkte]);
   const onVorschau = useCallback((p: ShopifyProduct) => setVorschau(p), []);
+  const stufeStand = useRef({ wahl, standard });
+  stufeStand.current = { wahl, standard };
   const onStufe = useCallback((id: string, rabatt: number) => {
-    setWahl((alt) => ({ ...alt, [id]: rabatt }));
+    const { wahl: aktuell, standard: basis } = stufeStand.current;
+    const bisher = rabattGueltig(aktuell[id]) ? aktuell[id] : basis;
+    if (bisher !== rabatt) aboStufeGewaehlt(rabatt);
+    setWahl((alt) => (alt[id] === rabatt ? alt : { ...alt, [id]: rabatt }));
   }, []);
   const onHinzu = useCallback((p: ShopifyProduct, stufe: number) => {
     const liste = produkteRef.current;
@@ -374,6 +391,7 @@ export function ProduktAbo() {
       return;
     }
     setProdukte((alt) => (alt.some((x) => x.id === neu.id) || alt.length >= MAX_PRODUKTE ? alt : [...alt, neu]));
+    zumAboGelegt(p.node.handle);
   }, []);
 
   const gesamt = aboListeGesamt(produkte.map((p) => istMenge(p)
@@ -395,6 +413,7 @@ export function ProduktAbo() {
       return;
     }
     setProdukte((alt) => [...alt, neu]);
+    zumAboGelegt(p.node.handle);
   }
 
   async function abschliessen(e: React.FormEvent) {
@@ -449,6 +468,7 @@ export function ProduktAbo() {
           }
           if (produkte.length >= MAX_PRODUKTE) { toast.error("Liste ist voll — ruf uns an."); return; }
           setProdukte((alt) => [...alt, e]);
+          zumAboGelegt(e.handle);
         }}
       />
 
@@ -602,7 +622,10 @@ export function ProduktAbo() {
                         <StufenWahl
                           wert={p.rabatt}
                           label={`Rabatt für ${anzeigeTitel(p)}`}
-                          onChange={(r) => setProdukte((alt) => alt.map((x) => (x.id === p.id ? { ...x, rabatt: r } : x)))}
+                          onChange={(r) => {
+                            if (r !== p.rabatt) aboStufeGewaehlt(r);
+                            setProdukte((alt) => alt.map((x) => (x.id === p.id ? { ...x, rabatt: r } : x)));
+                          }}
                         />
                       </div>
                     </div>
@@ -727,7 +750,10 @@ export function ProduktAbo() {
                         <StufenWahl
                           wert={p.rabatt}
                           label={`Rabatt für ${anzeigeTitel(p)}`}
-                          onChange={(r) => setProdukte((alt) => alt.map((x) => (x.id === p.id ? { ...x, rabatt: r } : x)))}
+                          onChange={(r) => {
+                            if (r !== p.rabatt) aboStufeGewaehlt(r);
+                            setProdukte((alt) => alt.map((x) => (x.id === p.id ? { ...x, rabatt: r } : x)));
+                          }}
                         />
                       </div>
                     </div>

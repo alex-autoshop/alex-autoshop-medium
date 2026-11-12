@@ -10,6 +10,7 @@ import {
 import { Seo } from "@/components/Seo";
 import { SHOP_INFO, whatsappLink } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
+import { sucheAusgefuehrt } from "@/lib/besuch";
 import { PartnerStrip } from "@/components/PartnerStrip";
 import { TeileWorkspace } from "@/components/TeileWorkspace";
 import { apVehiclesByKba, apResolveVin, apArticlesForVehicle, apArticlesByNumber, apCategoryTree, apArticlesByCategory, apEnrichVehicle, type ApArticle, type ApCategoryNode, type ApVinCandidate } from "@/lib/autoparts";
@@ -813,9 +814,11 @@ export default function Teileportal() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!partQuery.trim()) return;
+    const q = partQuery.trim();
+    if (!q) return;
+    sucheAusgefuehrt(q.length, "teile");
     setActiveCat(null); setSubName(""); setPhase('articles');
-    loadParts(partQuery.trim());
+    loadParts(q);
   };
 
   const allBrands = useMemo(() => [...new Set(articles.map(a => a.brand).filter(Boolean))].sort(), [articles]);
