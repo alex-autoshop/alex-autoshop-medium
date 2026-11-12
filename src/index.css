@@ -52,6 +52,8 @@
     /* auto, nicht smooth: sonst animiert der Router-Sprung nach oben vom
        tiefen Listen-Offset und die Produktseite wirkt unten bei den Empfehlungen. */
     scroll-behavior: auto;
+    /* Gleiche Breite, ob die Leiste da ist oder nicht — sonst springt der Cookie-Hinweis. */
+    scrollbar-gutter: stable;
     /* Nichts darf die Seite breiter als den Bildschirm machen (iOS Safari
        zeigt sonst einen hellen Streifen und lässt seitwärts wischen).
        clip statt hidden, damit position:sticky im Header bleibt.

@@ -9,13 +9,13 @@ import { PRODUKT_WEITERLEITUNG } from "../shared/produkt-weiterleitung.js";
 import { istListenPfad } from "../shared/listen-zustand.js";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { AboUebersicht } from "@/components/AboUebersicht";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { NurAdmin } from "@/components/NurAdmin";
 import { TeileboerseTor } from "@/components/TeileboerseTor";
 import { Besuch } from "@/components/Besuch";
 import { CookieConsent } from "@/components/CookieConsent";
-import { AboUebersicht } from "@/components/AboUebersicht";
 import { AboRueckkehr } from "@/components/AboAnmeldung";
 
 const Toaster = lazySeite(() => import("sonner").then((m) => ({ default: m.Toaster })));
@@ -120,8 +120,9 @@ function EmpfehlungMerken() {
   return null;
 }
 
+/** Volle Bildschirmhöhe: der Footer bleibt unter dem Falz, bis die Seite da ist. */
 const PageFallback = () => (
-  <div className="min-h-[50vh] flex items-center justify-center text-muted-foreground">
+  <div className="min-h-[100dvh] flex items-center justify-center text-muted-foreground">
     Lädt …
   </div>
 );

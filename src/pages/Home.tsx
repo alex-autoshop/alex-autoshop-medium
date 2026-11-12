@@ -1,6 +1,5 @@
-﻿import { lazy, Suspense } from "react";
+﻿import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { ArrowRight, Phone, MapPin, Clock, Paintbrush, Wrench, BadgePercent } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { BrandMarquee } from "@/components/BrandMarquee";
@@ -25,12 +24,44 @@ const MembershipCards = DIENSTLEISTUNG_BUCHBAR
 const euro = (n: number) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format(n);
 
-const fadeUp = {
-  initial: { opacity: 0, y: 24 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: "-80px" },
-  transition: { duration: 0.5 },
-};
+/** Einblendung wie zuvor, ohne die Animationsbibliothek im ersten Ladeweg. */
+function Einblend({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [an, setAn] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setAn(true);
+      return;
+    }
+    const zeigen = () => setAn(true);
+    const io = new IntersectionObserver(([eintrag]) => {
+      if (!eintrag?.isIntersecting) return;
+      zeigen();
+      io.disconnect();
+    }, { rootMargin: "-80px" });
+    io.observe(el);
+    const timer = window.setTimeout(zeigen, 1200);
+    return () => {
+      io.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: an ? 1 : 0,
+        transform: an ? "none" : "translateY(24px)",
+        transition: `opacity .5s ease ${delay}s, transform .5s ease ${delay}s`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 const USPS = [
   {
@@ -76,7 +107,7 @@ export default function Home() {
           }}
         />
         <div className="container py-20 sm:py-28 relative">
-          <motion.div initial={false} animate={{ opacity: 1, y: 0 }}>
+          <div>
             <p className="text-gold-accent font-semibold tracking-wide uppercase text-sm mb-4">
               Fachgroßhandel in Wuppertal
             </p>
@@ -95,7 +126,7 @@ export default function Home() {
                 Bis 40% Rabatt sichern
               </Link>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -103,29 +134,29 @@ export default function Home() {
       <section className="container py-14 sm:py-20">
         <div className={cn("grid gap-5", usps.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
           {usps.map((usp, i) => (
-            <motion.div key={usp.title} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.1 }} className="card-tilt p-6 relative">
+            <Einblend key={usp.title} delay={i * 0.1} className="card-tilt p-6 relative">
               <span className="absolute top-4 right-4 inline-flex items-center rounded-full bg-primary/10 text-primary text-xs font-semibold px-3 py-1 border border-primary/20">
                 {usp.badge}
               </span>
               <usp.icon className="w-10 h-10 text-primary mb-4" />
               <h2 className="text-lg mb-2">{usp.title}</h2>
               <p className="text-sm text-muted-foreground leading-relaxed">{usp.text}</p>
-            </motion.div>
+            </Einblend>
           ))}
         </div>
       </section>
 
       {/* Kategorien */}
       <section className="container pb-14 sm:pb-20">
-        <motion.div {...fadeUp}>
+        <Einblend>
           <h2 className="text-2xl sm:text-3xl mb-6">Kategorien</h2>
-        </motion.div>
+        </Einblend>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           {SHOP_CATEGORIES.map((col, i) => {
             const statisch = collections.find((c) => c.slug === col.handle);
             const bild = statisch?.image;
             return (
-              <motion.div key={col.handle} {...fadeUp} transition={{ duration: 0.5, delay: i * 0.05 }}>
+              <Einblend key={col.handle} delay={i * 0.05}>
                 <Link to={kategoriePfad(col.handle)} className="card-tilt overflow-hidden group block">
                   <div className={cn("aspect-[4/3] overflow-hidden", statisch?.contain ? "bg-white" : "bg-secondary")}>
                     {bild ? (
@@ -148,7 +179,7 @@ export default function Home() {
                     <ArrowRight className="w-5 h-5 text-primary shrink-0" />
                   </div>
                 </Link>
-              </motion.div>
+              </Einblend>
             );
           })}
         </div>
@@ -158,25 +189,25 @@ export default function Home() {
 
       {/* Bestseller */}
       <section className="container py-14 sm:py-20">
-        <motion.div {...fadeUp} className="flex items-end justify-between mb-6">
+        <Einblend className="flex items-end justify-between mb-6">
           <h2 className="text-2xl sm:text-3xl">Beliebte Produkte</h2>
           <Link to="/shop" className="text-primary font-semibold text-sm hover:underline flex items-center gap-1 min-h-[44px]">
             Alle ansehen <ArrowRight className="w-4 h-4" />
           </Link>
-        </motion.div>
+        </Einblend>
         <ProductGrid products={products} isLoading={isLoading} error={error} />
       </section>
 
       {/* Mitgliedschaft */}
       <section className="bg-secondary/60 py-14 sm:py-20">
         <div className="container">
-          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-10">
+          <Einblend className="text-center max-w-2xl mx-auto mb-10">
             <h2 className="text-2xl sm:text-3xl mb-3">Ein Lieferant für deine ganze Werkstatt.</h2>
             <p className="text-muted-foreground">
               Lack und Werkstattbedarf im Shop — mit bis zu 40% Mitglieder-Rabatt.
               {teileSichtbar ? " Die Teilebörse hat einen Preis für alle." : ""} Mindestlaufzeit 3 Monate, danach monatlich kündbar. Keine Mindestabnahme.
             </p>
-          </motion.div>
+          </Einblend>
           {MembershipCards ? (
             <Suspense fallback={null}>
               <MembershipCards />
@@ -189,14 +220,14 @@ export default function Home() {
               <Link to="/mitgliedschaft" className="btn-gold-bright text-lg px-8">Zum Produkt-Abo</Link>
             </div>
           )}
-          <motion.div {...fadeUp} className="text-center mt-8">
+          <Einblend className="text-center mt-8">
             <Link
               to="/mitgliedschaft"
               className="text-primary font-semibold text-sm hover:underline inline-flex items-center gap-1 min-h-[44px]"
             >
               Alle Details zur Mitgliedschaft <ArrowRight className="w-4 h-4" />
             </Link>
-          </motion.div>
+          </Einblend>
         </div>
       </section>
 
