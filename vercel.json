@@ -43,6 +43,7 @@
     { "source": "/foerdermittel", "destination": "/index.html" },
     { "source": "/merkliste", "destination": "/index.html" },
     { "source": "/laden", "destination": "/index.html" },
+    { "source": "/teile-agent", "destination": "/index.html" },
     { "source": "/konto", "destination": "/index.html" },
     { "source": "/dashboard", "destination": "/index.html" },
     { "source": "/impressum", "destination": "/index.html" },

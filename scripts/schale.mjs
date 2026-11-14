@@ -5,8 +5,18 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { PRODUKT_ABO_PREISE } from "../shared/produktabo.js";
-import { jsonFuerScript } from "../shared/katalog-regeln.js";
+import { htmlText, jsonFuerScript } from "../shared/katalog-regeln.js";
 import { startseitenLd } from "../shared/seo-katalog.js";
+import {
+  TEILE_AGENT_BESCHREIBUNG,
+  TEILE_AGENT_CLAIMS,
+  TEILE_AGENT_FAQ_LD,
+  TEILE_AGENT_H1,
+  TEILE_AGENT_LEAD,
+  TEILE_AGENT_TITEL,
+  TEILE_AGENT_URL,
+} from "../shared/teile-agent.js";
+import { WHATSAPP_ANZEIGE, whatsappChatUrl } from "../shared/whatsapp-anfrage.js";
 import { einbetten } from "./einbetten.mjs";
 
 const dist = "dist";
@@ -39,9 +49,18 @@ function mitHero(basis, hero, klasse, kopf) {
     h = h.replace(/(<link rel="canonical" href=")[^"]*(")/, `$1${kopf.canonical}$2`);
     h = h.replace(/(<meta property="og:url" content=")[^"]*(")/, `$1${kopf.canonical}$2`);
     h = h.replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${kopf.title}$2`);
+    h = h.replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${kopf.description}$2`);
+    h = h.replace(/(<meta name="twitter:title" content=")[^"]*(")/, `$1${kopf.title}$2`);
+    h = h.replace(/(<meta name="twitter:description" content=")[^"]*(")/, `$1${kopf.description}$2`);
     h = h.replace(/(<link rel="alternate" hreflang="de-DE" href=")[^"]*(")/, `$1${kopf.canonical}$2`);
     h = h.replace(/(<link rel="alternate" hreflang="x-default" href=")[^"]*(")/, `$1${kopf.canonical}$2`);
     h = h.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/, "");
+    if (kopf.jsonLd) {
+      h = h.replace(
+        "</head>",
+        `<script type="application/ld+json" id="aa-ld">${jsonFuerScript(kopf.jsonLd)}</script></head>`,
+      );
+    }
   }
   return h;
 }
@@ -55,6 +74,17 @@ const routen = [
       title: "Mitgliedschaft – bis 40% Rabatt, deutschlandweit | Alex Autoshop Wuppertal",
       description: "Mitgliedschaft im Shop: Rabatt auf Lack und Werkstattbedarf, kostenloser Versand für Mitglieder. Monatlich kündbar.",
       canonical: "https://www.alex-autoshop.de/mitgliedschaft",
+    },
+  },
+  {
+    pfad: "teile-agent/index.html",
+    klasse: " aa-mitte",
+    hero: `<p class="aa-kicker">WhatsApp · Autoteile</p><h1>${htmlText(TEILE_AGENT_H1)}</h1><p class="aa-lead">${htmlText(TEILE_AGENT_LEAD)} ${htmlText(TEILE_AGENT_CLAIMS[0])}.</p><p class="aa-lead">${htmlText(WHATSAPP_ANZEIGE)}</p><div class="aa-actions"><a class="aa-goldbtn" href="${htmlText(whatsappChatUrl())}">WhatsApp-Chat öffnen</a></div>`,
+    kopf: {
+      title: TEILE_AGENT_TITEL,
+      description: TEILE_AGENT_BESCHREIBUNG,
+      canonical: TEILE_AGENT_URL,
+      jsonLd: TEILE_AGENT_FAQ_LD,
     },
   },
 ];
@@ -84,6 +114,7 @@ function seitenQuelle(rel) {
   if (rel.startsWith("kategorie/")) return "src/pages/Kategorie.tsx";
   if (rel.startsWith("produkt/")) return "src/pages/ProductDetail.tsx";
   if (rel.startsWith("mitgliedschaft/")) return "src/pages/Mitgliedschaft.tsx";
+  if (rel.startsWith("teile-agent/")) return "src/pages/TeileAgent.tsx";
   if (rel.startsWith("shop/")) return "src/pages/Shop.tsx";
   return "";
 }
