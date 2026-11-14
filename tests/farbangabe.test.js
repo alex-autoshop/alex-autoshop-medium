@@ -47,6 +47,7 @@ test("Wunschfarbe bleibt bei Marke und System, der Lackfarben-Rabatt gilt dort w
   assert.ok(FARBKONFIGURATOR_HANDLES.includes("individuelle-spraydose-erstellen"));
   assert.ok(FARBKONFIGURATOR_HANDLES.includes("farben-mix"));
   assert.ok(FARBKONFIGURATOR_HANDLES.includes("individuellen-lackstift-bestellen-20ml"));
+  assert.ok(FARBKONFIGURATOR_HANDLES.includes("lackstift-wunschfarbe-20ml-pinsel-nadel"));
   assert.equal(istStandardvariante(wunschfarbe), false);
   assert.deepEqual(sichtbareOptionen(wunschfarbe), ["Hersteller", "Komponenten"]);
   assert.equal(anzeigePreis(22.5, 2, 40, false), 27);

@@ -9,12 +9,14 @@ import {
 } from "../../shared/produktabo.js";
 import { cn } from "@/lib/utils";
 
-/** Die drei Misch-Produkte. Preise und Gebinde kommen aus Shopify — hier steht
- *  nur, welches Produkt gemeint ist, damit nichts doppelt gepflegt wird. */
+/** Misch-Produkte. Preise und Gebinde kommen aus dem Shop — hier steht
+ *  nur, welches Produkt gemeint ist, damit nichts doppelt gepflegt wird.
+ *  Ein Handle ohne Produkt in der Antwort erscheint nicht in der Leiste. */
 export const MISCH_PRODUKTE = [
-  { id: "farbe", handle: "farben-mix",                             label: "Wunschfarbe", knopf: "Wunschfarben", icon: Palette,  einheit: "Liter" },
-  { id: "spray", handle: "individuelle-spraydose-erstellen",       label: "Spraydose",   knopf: "Spraydosen",   icon: SprayCan, einheit: "Dosen" },
-  { id: "stift", handle: "individuellen-lackstift-bestellen-20ml", label: "Lackstift",   knopf: "Lackstifte",   icon: Pencil,   einheit: "Stifte" },
+  { id: "farbe", handle: "farben-mix",                             label: "Wunschfarbe",                 knopf: "Wunschfarben",    icon: Palette, einheit: "Liter" },
+  { id: "spray", handle: "individuelle-spraydose-erstellen",       label: "Spraydose",                   knopf: "Spraydosen",      icon: SprayCan, einheit: "Dosen" },
+  { id: "stift", handle: "individuellen-lackstift-bestellen-20ml", label: "Lackstift",                   knopf: "Lackstifte",      icon: Pencil,   einheit: "Stifte" },
+  { id: "pinsel", handle: "lackstift-wunschfarbe-20ml-pinsel-nadel", label: "Lackstift Pinsel & Nadel", knopf: "Pinsel & Nadel", icon: Pencil,   einheit: "Stifte" },
 ] as const;
 
 export interface MengenEintrag {
@@ -67,7 +69,7 @@ export function WunschfarbenLeiste({
   onHinzufuegen: (e: MengenEintrag) => void;
   /** Steigt, wenn die Leiste von außen aufgeklappt werden soll (z. B. Klick auf Wunschfarbe in der Produktliste). */
   oeffnen?: number;
-  /** Produktart, die dabei aktiv sein soll: farbe, spray oder stift. */
+  /** Produktart, die dabei aktiv sein soll: farbe, spray, stift oder pinsel. */
   start?: string;
 }) {
   const [offen, setOffen] = useState(false);
@@ -79,7 +81,15 @@ export function WunschfarbenLeiste({
   const [lackRabatt, setLackRabatt] = useState(15);
   const [bedarf, setBedarf] = useState(4);
 
-  const eintrag = MISCH_PRODUKTE.find((m) => m.id === aktiv)!;
+  const sichtbar = useMemo(
+    () => MISCH_PRODUKTE.filter((m) => produkte[m.handle]),
+    [produkte],
+  );
+  const eintrag =
+    sichtbar.find((m) => m.id === aktiv) ??
+    sichtbar[0] ??
+    MISCH_PRODUKTE.find((m) => m.id === aktiv) ??
+    MISCH_PRODUKTE[0];
   const produkt = produkte[eintrag.handle];
 
   useEffect(() => {
@@ -246,19 +256,25 @@ export function WunschfarbenLeiste({
       </button>
 
       <div id="farbe-nach-monatsbedarf" hidden={!offen} className="px-4 pb-5">
-      <div className="grid grid-cols-3 gap-2 mb-5" role="group" aria-label="Produktart wählen">
-        {MISCH_PRODUKTE.map((m) => {
-          const an = m.id === aktiv;
-          return (
-            <button key={m.id} type="button" onClick={() => setAktiv(m.id)} aria-pressed={an}
-              className={cn("cursor-pointer rounded-xl border-2 px-2 py-3 text-center transition-all min-h-[68px]",
-                an ? "border-primary bg-primary/15" : "border-border bg-card hover:border-primary/50")}>
-              <m.icon className={cn("w-5 h-5 mx-auto mb-1", an ? "text-primary" : "text-muted-foreground")} />
-              <span className="block text-[11px] sm:text-xs font-semibold leading-tight">{m.knopf}</span>
-            </button>
-          );
-        })}
-      </div>
+      {sichtbar.length > 0 && (
+        <div
+          className={cn("grid gap-2 mb-5", sichtbar.length > 3 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3")}
+          role="group"
+          aria-label="Produktart wählen"
+        >
+          {sichtbar.map((m) => {
+            const an = m.id === eintrag.id;
+            return (
+              <button key={m.id} type="button" onClick={() => setAktiv(m.id)} aria-pressed={an}
+                className={cn("cursor-pointer rounded-xl border-2 px-2 py-3 text-center transition-all min-h-[68px]",
+                  an ? "border-primary bg-primary/15" : "border-border bg-card hover:border-primary/50")}>
+                <m.icon className={cn("w-5 h-5 mx-auto mb-1", an ? "text-primary" : "text-muted-foreground")} />
+                <span className="block text-[11px] sm:text-xs font-semibold leading-tight">{m.knopf}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {laedt && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground py-6 justify-center">

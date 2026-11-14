@@ -68,8 +68,8 @@ const CATEGORIES: { label: string; items: string[] }[] = [
 // Reihenfolge: spezifischer zuerst, allgemeiner zuletzt
 const SUGGESTION_MAP: Array<[string, string[]]> = [
   ["basislack",      ["farben-mix", "mipa-acryl-lack-spray"]],
-  ["wunschfarbe",    ["farben-mix", "individuelle-spraydose-erstellen", "individuellen-lackstift-bestellen-20ml"]],
-  ["lackstift",      ["individuellen-lackstift-bestellen-20ml"]],
+  ["wunschfarbe",    ["farben-mix", "individuelle-spraydose-erstellen", "individuellen-lackstift-bestellen-20ml", "lackstift-wunschfarbe-20ml-pinsel-nadel"]],
+  ["lackstift",      ["individuellen-lackstift-bestellen-20ml", "lackstift-wunschfarbe-20ml-pinsel-nadel"]],
   ["spraydose",      ["individuelle-spraydose-erstellen", "mipa-acryl-lack-spray"]],
   ["klarlack",       ["mipa-cx4-express-klarlack", "mipa-cc9-2k-hs-klarlack-5l", "master-hs-2-1-klarlack-5l"]],
   ["klarlack 1k",    ["mipa-acryl-lack-spray"]],

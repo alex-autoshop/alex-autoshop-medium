@@ -7,6 +7,7 @@ test("Lack-Konfiguratoren und echte Typen landen in den Reihen", () => {
   assert.equal(aboKategorie({ handle: "farben-mix", productType: "Wunschfarbe & Lackstift" }), "wunschfarben");
   assert.equal(aboKategorie({ handle: "individuelle-spraydose-erstellen", productType: "Wunschfarbe & Lackstift" }), "spraydosen");
   assert.equal(aboKategorie({ handle: "individuellen-lackstift-bestellen-20ml", productType: "Wunschfarbe & Lackstift" }), "lackstifte");
+  assert.equal(aboKategorie({ handle: "lackstift-wunschfarbe-20ml-pinsel-nadel", productType: "Wunschfarbe & Lackstift" }), "lackstifte");
   assert.equal(aboKategorie({ handle: "x", productType: "Klarlack" }), "klarlack");
   assert.equal(aboKategorie({ handle: "y", productType: "Härter" }), "klarlack");
   assert.equal(aboKategorie({ handle: "z", productType: "Politur & Schleifpaste" }), "pflege");
