@@ -10,8 +10,13 @@ export const TEILE_AGENT_BESCHREIBUNG =
   "Autoteile per WhatsApp anfragen. Unser KI-Teileagent prüft Angebote aus über 20 Partnerlieferanten und antwortet direkt im Chat.";
 export const TEILE_AGENT_H1 = "Autoteile per WhatsApp anfragen";
 export const TEILE_AGENT_LEAD = "Unser KI-Teileagent antwortet dir direkt im Chat.";
+export const TEILE_AGENT_PLATZHALTER =
+  "Schreib einfach, was du brauchst, z.B. Bremsscheiben vorne für VW Golf 7, Bj. 2016";
+export const TEILE_AGENT_BUTTON = "Abschicken & per WhatsApp weiter";
+export const TEILE_AGENT_HINWEIS =
+  "Ein Foto vom Fahrzeugschein kannst du danach direkt im Chat schicken. Das hilft bei der Zuordnung.";
 export const TEILE_AGENT_DATENSCHUTZ =
-  "Mit „Per WhatsApp anfragen“ öffnet sich WhatsApp (Meta). Das Formular speichert nichts auf dieser Seite. Die Angaben stehen nur in der Nachricht. Details stehen in der Datenschutzerklärung.";
+  "Mit „Abschicken & per WhatsApp weiter“ öffnet sich WhatsApp (Meta). Das Textfeld speichert nichts auf dieser Seite. Dein Text steht nur in der Nachricht. Details stehen in der Datenschutzerklärung.";
 
 export const TEILE_AGENT_CLAIMS = [
   "Top-Preise aus über 20 Partnerlieferanten",
@@ -21,7 +26,7 @@ export const TEILE_AGENT_CLAIMS = [
 export const TEILE_AGENT_SCHRITTE = [
   {
     titel: "Anfrage schicken",
-    text: "Marke, Modell und das gesuchte Teil eintragen — oder den Chat direkt öffnen.",
+    text: "Schreib ins Feld, was du brauchst, und schick die Anfrage per WhatsApp.",
   },
   {
     titel: "KI-Teileagent prüft Angebote aus über 20 Partnerlieferanten",
@@ -36,11 +41,11 @@ export const TEILE_AGENT_SCHRITTE = [
 export const TEILE_AGENT_FAQ = [
   {
     q: "Welche Angaben helfen bei der Suche?",
-    a: "Marke, Modell und Baujahr. HSN und TSN aus dem Fahrzeugschein oder die FIN machen die Zuordnung genauer. Das gesuchte Teil ist nötig, damit wir wissen, wonach wir schauen.",
+    a: "Marke, Modell, Baujahr und das gesuchte Teil im Text. HSN, TSN oder die FIN machen die Zuordnung genauer. Ein Foto vom Fahrzeugschein kannst du im Chat schicken.",
   },
   {
     q: "Kann ich ein Foto vom Fahrzeugschein schicken?",
-    a: "Ja. Im WhatsApp-Chat kannst du ein Foto der Zulassungsbescheinigung senden. Das Formular auf dieser Seite speichert keine Daten.",
+    a: "Ja. Im WhatsApp-Chat kannst du ein Foto der Zulassungsbescheinigung senden. Das Textfeld auf dieser Seite speichert keine Daten.",
   },
   {
     q: "Wie läuft Versand oder Abholung?",
@@ -68,6 +73,9 @@ export function teileAgentKundentexte() {
     TEILE_AGENT_BESCHREIBUNG,
     TEILE_AGENT_H1,
     TEILE_AGENT_LEAD,
+    TEILE_AGENT_PLATZHALTER,
+    TEILE_AGENT_BUTTON,
+    TEILE_AGENT_HINWEIS,
     TEILE_AGENT_DATENSCHUTZ,
     ...TEILE_AGENT_CLAIMS,
     ...TEILE_AGENT_SCHRITTE.flatMap((schritt) => [schritt.titel, schritt.text]),

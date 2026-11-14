@@ -1,64 +1,49 @@
-import { type ChangeEvent, type FormEvent, useState } from "react";
+import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, MessageCircle, Shield } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { cn } from "@/lib/utils";
 import {
-  FELD_MAX,
+  NACHRICHT_MAX,
   WHATSAPP_ANZEIGE,
   WHATSAPP_TEL,
-  type AnfrageAngaben,
   anfrageBereit,
   whatsappAnfrageUrl,
   whatsappChatUrl,
 } from "../../shared/whatsapp-anfrage.js";
 import {
   TEILE_AGENT_BESCHREIBUNG,
+  TEILE_AGENT_BUTTON,
   TEILE_AGENT_CLAIMS,
   TEILE_AGENT_DATENSCHUTZ,
   TEILE_AGENT_FAQ,
   TEILE_AGENT_FAQ_LD,
   TEILE_AGENT_H1,
+  TEILE_AGENT_HINWEIS,
   TEILE_AGENT_LEAD,
+  TEILE_AGENT_PLATZHALTER,
   TEILE_AGENT_SCHRITTE,
   TEILE_AGENT_TITEL,
   TEILE_AGENT_URL,
 } from "../../shared/teile-agent.js";
 
-const LEER: Required<AnfrageAngaben> = {
-  marke: "",
-  modell: "",
-  baujahr: "",
-  hsn: "",
-  tsn: "",
-  fin: "",
-  teil: "",
-  anmerkung: "",
-  plz: "",
-};
-
 const CHAT = whatsappChatUrl();
 
 export default function TeileAgent() {
-  const [werte, setWerte] = useState(LEER);
+  const [text, setText] = useState("");
   const [fehler, setFehler] = useState("");
   const [offen, setOffen] = useState<number | null>(0);
-
-  function aendern(event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    const { name, value } = event.target;
-    setWerte((alt) => ({ ...alt, [name]: value }));
-    if (name === "teil") setFehler("");
-  }
+  const bereit = anfrageBereit(text);
 
   function senden(event: FormEvent) {
     event.preventDefault();
-    if (!anfrageBereit(werte)) {
-      setFehler("Bitte das gesuchte Teil eintragen.");
-      document.getElementById("teil")?.focus();
+    if (!anfrageBereit(text)) {
+      setFehler("Bitte schreib kurz, was du brauchst.");
+      document.getElementById("anfrage-text")?.focus();
       return;
     }
     setFehler("");
-    window.open(whatsappAnfrageUrl(werte), "_blank", "noopener,noreferrer");
+    window.location.assign(whatsappAnfrageUrl(text));
   }
 
   return (
@@ -121,75 +106,42 @@ export default function TeileAgent() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl sm:text-3xl mb-2">Was brauchst du?</h2>
           <p className="text-muted-foreground mb-6">
-            Das Formular bleibt im Browser. Gespeichert wird nichts — die Angaben stehen in der WhatsApp-Nachricht.
+            Schreib einfach in das Feld. Gespeichert wird nichts — dein Text steht in der WhatsApp-Nachricht.
           </p>
           <form onSubmit={senden} className="card-tilt hover:translate-y-0 p-5 sm:p-8" noValidate>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <Feld id="marke" name="marke" label="Automarke" value={werte.marke} maxLength={FELD_MAX.marke} onChange={aendern} autoComplete="off" />
-              <Feld id="modell" name="modell" label="Modell" value={werte.modell} maxLength={FELD_MAX.modell} onChange={aendern} autoComplete="off" />
-              <Feld id="baujahr" name="baujahr" label="Baujahr" value={werte.baujahr} maxLength={FELD_MAX.baujahr} onChange={aendern} inputMode="numeric" autoComplete="off" />
-              <Feld id="plz" name="plz" label="PLZ" value={werte.plz} maxLength={FELD_MAX.plz} onChange={aendern} inputMode="numeric" autoComplete="postal-code" optional />
-              <Feld id="hsn" name="hsn" label="HSN" value={werte.hsn} maxLength={FELD_MAX.hsn} onChange={aendern} inputMode="numeric" autoComplete="off" optional hint="Schlüsselnummer aus dem Fahrzeugschein" />
-              <Feld id="tsn" name="tsn" label="TSN" value={werte.tsn} maxLength={FELD_MAX.tsn} onChange={aendern} autoComplete="off" optional />
-            </div>
-            <div className="mt-4">
-              <Feld
-                id="fin"
-                name="fin"
-                label="FIN"
-                value={werte.fin}
-                maxLength={24}
-                onChange={aendern}
-                autoComplete="off"
-                optional
-                hint="Alternativ zu HSN und TSN, 17 Stellen"
-                className="uppercase"
-              />
-            </div>
-            <div className="mt-4">
-              <Feld
-                id="teil"
-                name="teil"
-                label="Gesuchtes Teil"
-                value={werte.teil}
-                maxLength={FELD_MAX.teil}
-                onChange={aendern}
-                autoComplete="off"
-                pflicht
-                fehler={fehler}
-              />
-            </div>
-            <label className="block mt-4" htmlFor="anmerkung">
-              <span className="mb-1.5 flex items-baseline justify-between gap-2 text-sm font-semibold">
-                Anmerkung
-                <span className="font-normal text-muted-foreground">optional</span>
-              </span>
-              <textarea
-                id="anmerkung"
-                name="anmerkung"
-                value={werte.anmerkung}
-                onChange={aendern}
-                maxLength={FELD_MAX.anmerkung}
-                rows={3}
-                className="input-base py-3"
-              />
+            <label htmlFor="anfrage-text" className="mb-2 block text-sm font-semibold">
+              Deine Anfrage
             </label>
-            <div className="mt-6 flex flex-col gap-3">
-              <button type="submit" className="btn-gold-bright w-full">
-                <MessageCircle className="w-5 h-5" /> Per WhatsApp anfragen
-              </button>
-              <a
-                href={CHAT}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-outline w-full"
-              >
-                WhatsApp-Chat öffnen
-              </a>
-              <p className="text-center text-sm text-muted-foreground">
-                WhatsApp {WHATSAPP_ANZEIGE}
+            <textarea
+              id="anfrage-text"
+              name="anfrage"
+              value={text}
+              onChange={(event) => {
+                setText(event.target.value);
+                if (fehler) setFehler("");
+              }}
+              maxLength={NACHRICHT_MAX}
+              rows={6}
+              required
+              placeholder={TEILE_AGENT_PLATZHALTER}
+              aria-invalid={fehler ? true : undefined}
+              aria-describedby={fehler ? "anfrage-hinweis anfrage-fehler" : "anfrage-hinweis"}
+              className="input-base min-h-40 py-3 text-base leading-relaxed"
+            />
+            <p id="anfrage-hinweis" className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              {TEILE_AGENT_HINWEIS}
+            </p>
+            {fehler ? (
+              <p id="anfrage-fehler" role="alert" className="mt-2 text-sm font-semibold text-destructive">
+                {fehler}
               </p>
-            </div>
+            ) : null}
+            <button type="submit" className="btn-gold-bright mt-6 w-full" disabled={!bereit}>
+              <MessageCircle className="w-5 h-5" /> {TEILE_AGENT_BUTTON}
+            </button>
+            <p className="mt-3 text-center text-sm text-muted-foreground">
+              WhatsApp {WHATSAPP_ANZEIGE}
+            </p>
           </form>
         </div>
       </section>
@@ -251,73 +203,5 @@ export default function TeileAgent() {
         </div>
       </section>
     </div>
-  );
-}
-
-function Feld({
-  id,
-  name,
-  label,
-  value,
-  onChange,
-  maxLength,
-  autoComplete,
-  inputMode,
-  hint,
-  optional,
-  pflicht,
-  fehler,
-  className,
-}: {
-  id: string;
-  name: string;
-  label: string;
-  value: string;
-  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-  maxLength: number;
-  autoComplete?: string;
-  inputMode?: "numeric" | "text";
-  hint?: string;
-  optional?: boolean;
-  pflicht?: boolean;
-  fehler?: string;
-  className?: string;
-}) {
-  const hinweisId = hint ? `${id}-hinweis` : undefined;
-  const fehlerId = fehler ? `${id}-fehler` : undefined;
-  return (
-    <label className="block" htmlFor={id}>
-      <span className="mb-1.5 flex items-baseline justify-between gap-2 text-sm font-semibold">
-        {label}
-        {pflicht ? (
-          <span className="text-primary">Pflicht</span>
-        ) : optional ? (
-          <span className="font-normal text-muted-foreground">optional</span>
-        ) : null}
-      </span>
-      <input
-        id={id}
-        name={name}
-        value={value}
-        onChange={onChange}
-        maxLength={maxLength}
-        autoComplete={autoComplete}
-        inputMode={inputMode}
-        required={pflicht}
-        aria-invalid={fehler ? true : undefined}
-        aria-describedby={[hinweisId, fehlerId].filter(Boolean).join(" ") || undefined}
-        className={cn("input-base", className)}
-      />
-      {hint ? (
-        <span id={hinweisId} className="mt-1 block text-xs text-muted-foreground">
-          {hint}
-        </span>
-      ) : null}
-      {fehler ? (
-        <span id={fehlerId} role="alert" className="mt-1 block text-sm font-semibold text-destructive">
-          {fehler}
-        </span>
-      ) : null}
-    </label>
   );
 }
