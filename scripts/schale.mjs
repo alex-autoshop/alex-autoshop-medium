@@ -25,13 +25,22 @@ const euro = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR"
 let html = readFileSync(join(dist, "index.html"), "utf8");
 
 const assets = readdirSync(join(dist, "assets"));
-const fonts = ["syne-latin-700-normal", "dm-sans-latin-400-normal"]
+const fonts = ["syne-latin-700-normal", "dm-sans-latin-400-normal", "dm-sans-latin-600-normal"]
   .map((name) => assets.find((f) => f.startsWith(name) && f.endsWith(".woff2")))
   .filter(Boolean);
 const preload = fonts
   .map((f) => `<link rel="preload" href="/assets/${f}" as="font" type="font/woff2" crossorigin>`)
   .join("");
-html = html.replace("</head>", `${preload}</head>`);
+if (html.includes("<!--AA_EARLY-->")) html = html.replace("<!--AA_EARLY-->", `<!--AA_EARLY-->${preload}`);
+else html = html.replace("</head>", `${preload}</head>`);
+html = html.replace(
+  /<script type="module" crossorigin src="(\/assets\/[^"]+\.js)"><\/script>/,
+  `<link rel="modulepreload" fetchpriority="low" crossorigin href="$1"><script>(function(){var src="$1";var start=function(){var s=document.createElement("script");s.type="module";s.src=src;document.body.appendChild(s);};requestAnimationFrame(function(){requestAnimationFrame(start);});})();</script>`,
+);
+html = html.replace(/<link rel="stylesheet"([^>]*href="\/assets\/[^"]+\.css"[^>]*)>/g, (voll, attrs) => (
+  `<link rel="preload" as="style" data-aa-css${attrs} onload="this.onload=null;this.rel='stylesheet';window.__aaCss=1">` +
+  `<noscript><link rel="stylesheet"${attrs}></noscript>`
+));
 html = html.replace(
   /<script type="application\/ld\+json">[\s\S]*?<\/script>/,
   `<script type="application/ld+json">${jsonFuerScript(startseitenLd())}</script>`,
@@ -126,8 +135,16 @@ function linksFuer(manifest, quelle) {
   return [...dateien].map((datei) => (
     datei.endsWith(".css")
       ? `<link rel="preload" href="/${datei}" as="style">`
-      : `<link rel="modulepreload" crossorigin href="/${datei}">`
+      : `<link rel="modulepreload" fetchpriority="low" crossorigin href="/${datei}">`
   )).join("");
+}
+
+function dynamischeDateien(manifest) {
+  const dateien = new Set();
+  for (const eintrag of Object.values(manifest)) {
+    if (eintrag?.isDynamicEntry && eintrag.file) dateien.add(eintrag.file);
+  }
+  return dateien;
 }
 
 function htmlDateien(ordner, basis = ordner) {
@@ -143,15 +160,24 @@ function htmlDateien(ordner, basis = ordner) {
 function seitenVorladen(wurzel) {
   const manifest = manifestLesen();
   if (!manifest) return 0;
+  const dynamisch = dynamischeDateien(manifest);
   let n = 0;
   for (const rel of htmlDateien(wurzel)) {
-    const links = linksFuer(manifest, seitenQuelle(rel.replaceAll("\\", "/")));
-    if (!links) continue;
     const abs = join(wurzel, rel);
-    const inhalt = readFileSync(abs, "utf8");
-    if (inhalt.includes(links)) continue;
-    writeFileSync(abs, inhalt.replace("</head>", `${links}</head>`));
-    n += 1;
+    let inhalt = readFileSync(abs, "utf8");
+    inhalt = inhalt.replace(/<link rel="modulepreload"[^>]*href="(\/assets\/[^"]+)"[^>]*>/g, (voll, href) => (
+      dynamisch.has(href.slice(1)) ? "" : voll
+    ));
+    inhalt = inhalt.replaceAll(
+      'rel="modulepreload" crossorigin',
+      'rel="modulepreload" fetchpriority="low" crossorigin',
+    );
+    const links = linksFuer(manifest, seitenQuelle(rel.replaceAll("\\", "/")));
+    if (links && !inhalt.includes(links)) inhalt = inhalt.replace("</head>", `${links}</head>`);
+    if (inhalt !== readFileSync(abs, "utf8")) {
+      writeFileSync(abs, inhalt);
+      n += 1;
+    }
   }
   return n;
 }

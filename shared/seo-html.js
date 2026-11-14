@@ -63,6 +63,21 @@ export function kopfErsetzen(html, kopf) {
   return aus;
 }
 
+function preloadTag(preload) {
+  if (!preload) return "";
+  const liste = Array.isArray(preload) ? preload : [preload];
+  return liste.map((eintrag) => {
+    if (!eintrag) return "";
+    if (typeof eintrag === "string") {
+      return `<link rel="preload" as="image" href="${htmlText(eintrag)}" fetchpriority="high">`;
+    }
+    const set = eintrag.srcSet ? ` imagesrcset="${htmlText(eintrag.srcSet)}"` : "";
+    const sizes = eintrag.sizes ? ` imagesizes="${htmlText(eintrag.sizes)}"` : "";
+    const media = eintrag.media ? ` media="${htmlText(eintrag.media)}"` : "";
+    return `<link rel="preload" as="image" href="${htmlText(eintrag.href)}"${set}${sizes}${media} fetchpriority="high">`;
+  }).join("");
+}
+
 /** Hero, Karten, eingebettete Daten und Kopf in einem Durchgang. */
 export function geruest(html, { klasse, hero, karten, daten, preload, kopf } = {}) {
   let h = html;
@@ -81,10 +96,9 @@ export function geruest(html, { klasse, hero, karten, daten, preload, kopf } = {
       `<script type="application/json" id="aa-daten">${jsonFuerScript(daten)}</script>`,
     );
   }
-  const bild = preload
-    ? `<link rel="preload" as="image" href="${htmlText(preload)}" fetchpriority="high">`
-    : "";
-  if (h.includes("<!--AA_PRELOAD-->")) h = h.replace("<!--AA_PRELOAD-->", bild);
+  const bild = preloadTag(preload);
+  if (bild && h.includes("<!--AA_EARLY-->")) h = h.replace("<!--AA_EARLY-->", `${bild}<!--AA_EARLY-->`);
+  else if (h.includes("<!--AA_PRELOAD-->")) h = h.replace("<!--AA_PRELOAD-->", bild);
   else if (bild) h = h.replace("</head>", `${bild}</head>`);
   if (kopf) h = kopfErsetzen(h, kopf);
   return h;

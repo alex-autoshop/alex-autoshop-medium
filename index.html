@@ -8,6 +8,8 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://cdn.shopify.com" />
+    <link rel="preconnect" href="https://j1a6sr-q2.myshopify.com" crossorigin />
+    <!--AA_EARLY-->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
     <title>Alex Autoshop Wuppertal – Autolack, Autoteile und Werkstattbedarf</title>
@@ -88,19 +90,21 @@
     </script>
   <style>
     html.aa-cookies-ok #aa-cookies { display: none !important; }
-    body { margin: 0; background: #FAF9F7; color: #1a1a1a; font-family: "DM Sans", "AA Fallback", system-ui, sans-serif; }
+    html { box-sizing: border-box; scrollbar-gutter: stable; }
+    *, *::before, *::after { box-sizing: inherit; }
+    body { margin: 0; background: #FAF9F7; color: #1a1a1a; font-family: "DM Sans", "AA Fallback", system-ui, sans-serif; line-height: 1.5; }
     #aa-shell { position: absolute; left: 0; right: 0; top: 0; z-index: 20; background: #FAF9F7; }
     #aa-shell, #aa-shell * { font-family: system-ui, sans-serif; }
     #aa-cookies, #aa-cookies * { font-family: system-ui, sans-serif; }
     #aa-shell.aa-weg { visibility: hidden; pointer-events: none; }
     .aa-head { display: flex; align-items: center; justify-content: space-between; height: calc(80px + env(safe-area-inset-top, 0px)); padding: env(safe-area-inset-top, 0px) 1rem 0; background: #0D0D0D; color: #fff; border-bottom: 1px solid rgba(255,255,255,.1); }
-    .aa-head img { height: 44px; width: auto; }
+    .aa-head img { height: 44px; width: 84px; }
     .aa-nav { display: none; gap: 4px; }
     .aa-nav a, .aa-login { color: rgba(255,255,255,.75); text-decoration: none; font-weight: 600; font-size: 16px; padding: 12px; }
     .aa-login { border: 1px solid rgba(255,255,255,.2); border-radius: 8px; }
     @media (min-width: 1280px) {
       .aa-head { height: calc(96px + env(safe-area-inset-top, 0px)); }
-      .aa-head img { height: 56px; }
+      .aa-head img { height: 56px; width: 107px; }
       .aa-nav { display: flex; }
     }
     .aa-hero { background: #0D0D0D; color: #EDE9E3; padding: 5rem 1rem 4rem; text-align: left; }
@@ -132,7 +136,7 @@
     }
     #aa-cookies { position: fixed; left: 0; right: 0; bottom: 0; z-index: 300; padding: 12px; }
     #aa-cookies .aa-box { max-width: 48rem; margin: 0 auto; background: #fff; border: 1px solid #E5E2DB; border-radius: 16px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,.12); }
-    #aa-cookies h2 { font-size: 1.125rem; margin: 0 0 .25rem; }
+    #aa-cookies h2 { font-size: 1.125rem; line-height: 1.5; margin: 0 0 .25rem; }
     #aa-cookies p { font-size: .875rem; color: #6b6b6b; margin: 0; line-height: 1.5; }
     #aa-cookies a { color: #876308; font-weight: 600; }
     #aa-cookies .aa-row { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
