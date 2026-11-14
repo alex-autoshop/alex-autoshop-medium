@@ -36,6 +36,7 @@ const FEATURED_HANDLES = [
   "farben-mix",
   "individuelle-spraydose-erstellen",
   "individuellen-lackstift-bestellen-20ml",
+  "lackstift-wunschfarbe-20ml-pinsel-nadel",
 ];
 
 // Produkte die komplett ausgeblendet werden (FRIZ + grau UBS)
@@ -71,6 +72,7 @@ const PRODUCT_PRIORITY: string[] = [
   "master-hs-2-1-klarlack-5l",
   "mipa-cc-9-klarlack-1-l",
   "individuellen-lackstift-bestellen-20ml",
+  "lackstift-wunschfarbe-20ml-pinsel-nadel",
   "mipa-hs-25-2k-harter-normal",
   "mipa-hs25-harter-normal",
   "mipa-hs-10-2k-hs-harter-kurz",
@@ -253,7 +255,7 @@ export default function Shop() {
     let aktiv = true;
     (async () => {
       const cache = await katalogLesen({ was: "handles", handles: FEATURED_HANDLES.join(",") });
-      let liste = (cache?.data?.products?.edges ?? []) as ShopifyProduct[];
+      let liste = ((cache?.data?.products?.edges ?? []) as ShopifyProduct[]).filter((p) => p?.node?.id);
       if (!liste.length) {
         const nodes = await Promise.all(
           FEATURED_HANDLES.map((h) =>

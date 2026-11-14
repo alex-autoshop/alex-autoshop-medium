@@ -9,6 +9,7 @@ export const FARBKONFIGURATOR_HANDLES = [
   "farben-mix",
   "individuelle-spraydose-erstellen",
   "individuellen-lackstift-bestellen-20ml",
+  "lackstift-wunschfarbe-20ml-pinsel-nadel",
   "smart-repair-set-fur-lackieranfanger",
 ];
 
