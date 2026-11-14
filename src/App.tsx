@@ -36,6 +36,7 @@ const Kreditvermittlung = lazySeite(() => import("@/pages/Kreditvermittlung"));
 const Foerdermittel = lazySeite(() => import("@/pages/Foerdermittel"));
 const Merkliste = lazySeite(() => import("@/pages/Merkliste"));
 const Laden = lazySeite(() => import("@/pages/Laden"));
+const TeileAgent = lazySeite(() => import("@/pages/TeileAgent"));
 const Konto = lazySeite(() => import("@/pages/Konto"));
 const Dashboard = lazySeite(() => import("@/pages/Dashboard"));
 const Impressum = lazySeite(() => import("@/pages/Impressum"));
@@ -288,6 +289,7 @@ export default function App() {
                     {/* alte Adressen bleiben gueltig */}
                     <Route path="/fahrzeugmarkt" element={<Navigate to="/fahrzeugboerse" replace />} />
                     <Route path="/fahrzeugmarkt/:slug" element={<AltesFahrzeug />} />
+                    <Route path="/teile-agent" element={<TeileAgent />} />
                     <Route path="/laden" element={<Laden />} />
                     <Route path="/konto" element={<Konto />} />
                     <Route

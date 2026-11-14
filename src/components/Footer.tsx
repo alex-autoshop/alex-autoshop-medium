@@ -16,6 +16,7 @@ const PRODUKTE = [
 ];
 
 const SERVICE = [
+  { label: "Teile-Agent", to: "/teile-agent" },
   { label: "Teilebörse", to: "/teileboerse" },
   { label: "Materialplaner", to: "/dashboard" },
   { label: "Mitgliedschaften", to: "/mitgliedschaft" },

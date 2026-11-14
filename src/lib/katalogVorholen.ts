@@ -90,6 +90,7 @@ function seiteVorholen(pfad: string) {
   else if (pfad === "/shop" || pfad.startsWith("/shop/")) void import("@/pages/Shop");
   else if (pfad === "/mitgliedschaft") void import("@/pages/Mitgliedschaft");
   else if (pfad === "/laden") void import("@/pages/Laden");
+  else if (pfad === "/teile-agent") void import("@/pages/TeileAgent");
   else if (pfad === "/konto") void import("@/pages/Konto");
   else if (pfad === "/warenkorb") void import("@/pages/Warenkorb");
   else if (pfad === "/") void import("@/pages/Home");

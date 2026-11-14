@@ -23,6 +23,7 @@ const NAV_ADMIN: NavPunkt[] = [
 
 const NAV: NavPunkt[] = [
   { to: "/shop", label: "Shop" },
+  { to: "/teile-agent", label: "Teile-Agent" },
   { to: "/teileboerse", label: "Teilebörse" },
   { to: "/mitgliedschaft", label: "Mitgliedschaft" },
   { to: "/laden", label: "Laden & Kontakt" },
