@@ -75,12 +75,23 @@ test("Kundentext bleibt rechtssicher und die Seite hat nur ein Textfeld", () => 
   assert.equal(verboten.test(anfrageText("Spiegel")), false);
 
   const seite = readFileSync(new URL("../src/pages/TeileAgent.tsx", import.meta.url), "utf8");
+  const film = readFileSync(new URL("../src/components/TeileAgentFilm.tsx", import.meta.url), "utf8");
   assert.match(seite, /id="anfrage-text"/);
   assert.equal(seite.includes('id="marke"'), false);
   assert.equal(seite.includes('id="hsn"'), false);
   assert.equal(seite.includes('id="fin"'), false);
   assert.match(seite, /whatsappAnfrageUrl\(text\)/);
   assert.match(seite, /location\.assign/);
+  assert.match(seite, /TeileAgentFilm/);
+  assert.match(seite, /TEILE_AGENT_VERGLEICH/);
+  assert.match(seite, /TEILE_AGENT_BEISPIEL/);
+  assert.match(seite, /SHOP_INFO/);
+  assert.match(seite, /label: "Teile-Agent"|Wer steckt dahinter/);
+  assert.match(film, /prefers-reduced-motion/);
+  assert.match(film, /preload="metadata"/);
+  assert.match(film, /playsInline/);
+  assert.match(film, /teile-agent\.mp4/);
+  assert.equal(/shopify|\bbeta\b/i.test(seite + film), false);
 
   const sitemap = readFileSync(new URL("../public/sitemap-seiten.xml", import.meta.url), "utf8");
   const vercel = readFileSync(new URL("../vercel.json", import.meta.url), "utf8");

@@ -1,7 +1,9 @@
 import { type FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, MessageCircle, Shield } from "lucide-react";
+import { Check, ChevronDown, MapPin, MessageCircle, Phone, Shield } from "lucide-react";
 import { Seo } from "@/components/Seo";
+import { TeileAgentFilm } from "@/components/TeileAgentFilm";
+import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import {
   NACHRICHT_MAX,
@@ -12,22 +14,28 @@ import {
   whatsappChatUrl,
 } from "../../shared/whatsapp-anfrage.js";
 import {
+  TEILE_AGENT_BEISPIEL,
   TEILE_AGENT_BESCHREIBUNG,
   TEILE_AGENT_BUTTON,
   TEILE_AGENT_CLAIMS,
   TEILE_AGENT_DATENSCHUTZ,
   TEILE_AGENT_FAQ,
   TEILE_AGENT_FAQ_LD,
+  TEILE_AGENT_FILM_LD,
   TEILE_AGENT_H1,
+  TEILE_AGENT_HINTER,
   TEILE_AGENT_HINWEIS,
   TEILE_AGENT_LEAD,
   TEILE_AGENT_PLATZHALTER,
   TEILE_AGENT_SCHRITTE,
+  TEILE_AGENT_TIPPS,
   TEILE_AGENT_TITEL,
   TEILE_AGENT_URL,
+  TEILE_AGENT_VERGLEICH,
 } from "../../shared/teile-agent.js";
 
 const CHAT = whatsappChatUrl();
+const POSTER = "/media/teile-agent-poster.jpg";
 
 export default function TeileAgent() {
   const [text, setText] = useState("");
@@ -53,51 +61,64 @@ export default function TeileAgent() {
         title={TEILE_AGENT_TITEL}
         description={TEILE_AGENT_BESCHREIBUNG}
         canonical={TEILE_AGENT_URL}
-        jsonLd={TEILE_AGENT_FAQ_LD}
+        jsonLd={[TEILE_AGENT_FAQ_LD, TEILE_AGENT_FILM_LD]}
+        preloadImage={POSTER}
+        imageSizes="(min-width: 1024px) 380px, 92vw"
       />
 
       <section className="section-dark">
-        <div className="container py-12 sm:py-20 max-w-3xl">
-          <p className="text-gold-accent font-semibold tracking-wide uppercase text-sm mb-4">
-            WhatsApp · Autoteile
-          </p>
-          <h1 className="text-3xl sm:text-5xl leading-tight mb-4">{TEILE_AGENT_H1}</h1>
-          <p className="text-white/70 text-base sm:text-lg leading-relaxed max-w-xl">{TEILE_AGENT_LEAD}</p>
-          <ul className="mt-6 flex flex-col gap-2">
-            {TEILE_AGENT_CLAIMS.map((claim) => (
-              <li key={claim} className="flex items-start gap-2 text-sm sm:text-base font-semibold text-white/90">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gold-bright" aria-hidden="true" />
-                {claim}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-6 text-white/70">
-            WhatsApp{" "}
-            <a
-              href={CHAT}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gold-accent font-bold text-xl tracking-wide hover:underline"
-            >
-              {WHATSAPP_ANZEIGE}
-            </a>
-            <span className="mx-2 text-white/30">·</span>
-            <a href={`tel:${WHATSAPP_TEL}`} className="underline underline-offset-2 hover:text-white">
-              Anrufen
-            </a>
-          </p>
-          <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <a href="#anfrage" className="btn-gold-bright">
-              Anfrage starten
-            </a>
-            <a
-              href={CHAT}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn bg-white/10 text-white hover:bg-white/20"
-            >
-              <MessageCircle className="w-5 h-5" /> WhatsApp-Chat öffnen
-            </a>
+        <div className="container py-10 sm:py-16">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,380px)] lg:items-center lg:gap-x-12">
+            <div className="lg:col-start-1 lg:row-start-1">
+              <p className="text-gold-accent font-semibold tracking-wide uppercase text-sm mb-4">
+                WhatsApp · Autoteile
+              </p>
+              <h1 className="text-3xl sm:text-5xl leading-tight mb-4">{TEILE_AGENT_H1}</h1>
+              <p className="text-white/70 text-base sm:text-lg leading-relaxed max-w-xl">{TEILE_AGENT_LEAD}</p>
+            </div>
+
+            <div className="lg:col-start-2 lg:row-start-1 lg:row-span-2">
+              <TeileAgentFilm />
+            </div>
+
+            <div className="lg:col-start-1 lg:row-start-2">
+              <ul className="flex flex-col gap-2">
+                {TEILE_AGENT_CLAIMS.map((claim) => (
+                  <li key={claim} className="flex items-start gap-2 text-sm sm:text-base font-semibold text-white/90">
+                    <Check className="mt-0.5 h-5 w-5 shrink-0 text-gold-bright" aria-hidden="true" />
+                    {claim}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-6 text-white/70">
+                WhatsApp{" "}
+                <a
+                  href={CHAT}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gold-accent font-bold text-xl tracking-wide hover:underline"
+                >
+                  {WHATSAPP_ANZEIGE}
+                </a>
+                <span className="mx-2 text-white/30">·</span>
+                <a href={`tel:${WHATSAPP_TEL}`} className="underline underline-offset-2 hover:text-white">
+                  Anrufen
+                </a>
+              </p>
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <a href="#anfrage" className="btn-gold-bright">
+                  Anfrage starten
+                </a>
+                <a
+                  href={CHAT}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn bg-white/10 text-white hover:bg-white/20"
+                >
+                  <MessageCircle className="w-5 h-5" /> WhatsApp-Chat öffnen
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -136,13 +157,135 @@ export default function TeileAgent() {
                 {fehler}
               </p>
             ) : null}
-            <button type="submit" className="btn-gold-bright mt-6 w-full" disabled={!bereit}>
+            <button type="submit" className="btn-gold-bright mt-6 w-full text-balance" disabled={!bereit}>
               <MessageCircle className="w-5 h-5" /> {TEILE_AGENT_BUTTON}
             </button>
             <p className="mt-3 text-center text-sm text-muted-foreground">
               WhatsApp {WHATSAPP_ANZEIGE}
             </p>
           </form>
+        </div>
+      </section>
+
+      <section className="container pb-12 sm:pb-16" aria-labelledby="beispiel-titel">
+        <div className="max-w-3xl mx-auto">
+          <h2 id="beispiel-titel" className="text-2xl sm:text-3xl mb-2">{TEILE_AGENT_BEISPIEL.titel}</h2>
+          <p className="text-muted-foreground mb-6">{TEILE_AGENT_BEISPIEL.hinweis}</p>
+          <div className="overflow-hidden rounded-3xl border border-[#d7d0c4] bg-[#ECE5DD]">
+            <div className="flex items-center gap-3 bg-[#075E54] px-4 py-3 text-white">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gold-bright font-display text-sm font-bold text-night">
+                AA
+              </span>
+              <div className="min-w-0">
+                <p className="font-semibold leading-tight">Alex Autoshop</p>
+                <p className="text-sm text-white/80">Teile-Agent</p>
+              </div>
+              <span className="ml-auto rounded-full bg-gold-bright px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-night">
+                Beispiel
+              </span>
+            </div>
+            <div className="flex flex-col gap-3 p-3 sm:p-5">
+              <div className="ml-auto max-w-[88%] rounded-2xl rounded-br-md bg-[#DCF8C6] px-4 py-3 text-sm sm:text-base leading-relaxed text-[#1A1A1A]">
+                {TEILE_AGENT_BEISPIEL.kunde}
+              </div>
+              <div className="ml-auto max-w-[88%] rounded-2xl rounded-br-md bg-[#DCF8C6] p-2.5">
+                <div className="rounded-xl bg-[#F6F1E6] p-3 text-[#1A1A1A]">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#9F2D22]">Beispiel</p>
+                  <p className="mt-1 font-display text-lg leading-tight">{TEILE_AGENT_BEISPIEL.schein}</p>
+                  <p className="mt-1 text-sm text-[#6B675E]">{TEILE_AGENT_BEISPIEL.scheinHinweis}</p>
+                  <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                    <dt className="text-[#8A8478]">HSN</dt>
+                    <dd>••••</dd>
+                    <dt className="text-[#8A8478]">TSN</dt>
+                    <dd>•••</dd>
+                    <dt className="text-[#8A8478]">FIN</dt>
+                    <dd>•••••••••</dd>
+                  </dl>
+                </div>
+              </div>
+              <div className="max-w-[92%] rounded-2xl rounded-bl-md bg-white px-4 py-3 text-sm sm:text-base leading-relaxed text-[#1A1A1A]">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#075E54]">Teile-Agent</p>
+                <p>{TEILE_AGENT_BEISPIEL.agent}</p>
+              </div>
+              <ul className="grid gap-3">
+                {TEILE_AGENT_BEISPIEL.optionen.map((option) => (
+                  <li key={option.nummer} className="flex gap-3 rounded-2xl bg-white p-2.5 shadow-sm">
+                    <img
+                      src={option.bild}
+                      alt={`${option.marke} ${option.nummer}, Produktfoto`}
+                      width={900}
+                      height={676}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-24 w-24 shrink-0 rounded-xl bg-white object-contain sm:h-28 sm:w-28"
+                    />
+                    <div className="min-w-0 py-1">
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#075E54]">{option.stufe}</p>
+                      <p className="font-semibold leading-tight">{option.marke}</p>
+                      <p className="text-sm text-[#5C6560]">{option.nummer}</p>
+                      <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                        <span className="font-display text-2xl leading-none">{option.preis}</span>
+                        <span className="text-xs uppercase tracking-wide text-[#5C6560]">{TEILE_AGENT_BEISPIEL.preisHinweis}</span>
+                      </p>
+                      {option.zeit ? <p className="mt-1 text-sm">{option.zeit}</p> : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-[#3E4742]">{TEILE_AGENT_BEISPIEL.lieferHinweis}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="container pb-12 sm:pb-16" aria-labelledby="vergleich-titel">
+        <div className="max-w-3xl mx-auto">
+          <h2 id="vergleich-titel" className="text-2xl sm:text-3xl mb-2">{TEILE_AGENT_VERGLEICH.titel}</h2>
+          <p className="text-muted-foreground mb-6 leading-relaxed">{TEILE_AGENT_VERGLEICH.lead}</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <article className="card-tilt hover:translate-y-0 p-5 sm:p-6">
+              <h3 className="text-lg mb-3">{TEILE_AGENT_VERGLEICH.klassischTitel}</h3>
+              <ul className="grid gap-3">
+                {TEILE_AGENT_VERGLEICH.klassisch.map((punkt) => (
+                  <li key={punkt} className="flex items-start gap-2 text-sm leading-relaxed">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/40" aria-hidden="true" />
+                    {punkt}
+                  </li>
+                ))}
+              </ul>
+            </article>
+            <article className="card-tilt hover:translate-y-0 border-primary/40 p-5 sm:p-6">
+              <h3 className="text-lg mb-3">{TEILE_AGENT_VERGLEICH.agentTitel}</h3>
+              <ul className="grid gap-3">
+                {TEILE_AGENT_VERGLEICH.agent.map((punkt) => (
+                  <li key={punkt} className="flex items-start gap-2 text-sm leading-relaxed">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                    {punkt}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="container pb-12 sm:pb-16" aria-labelledby="tipps-titel">
+        <div className="max-w-3xl mx-auto">
+          <h2 id="tipps-titel" className="text-2xl sm:text-3xl mb-2">{TEILE_AGENT_TIPPS.titel}</h2>
+          <p className="text-muted-foreground mb-6">{TEILE_AGENT_TIPPS.lead}</p>
+          <ol className="grid gap-4">
+            {TEILE_AGENT_TIPPS.punkte.map((punkt, index) => (
+              <li key={punkt.titel} className="card-tilt hover:translate-y-0 flex gap-4 p-5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
+                  {index + 1}
+                </span>
+                <div>
+                  <h3 className="text-base font-bold leading-snug mb-1">{punkt.titel}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{punkt.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
@@ -160,6 +303,53 @@ export default function TeileAgent() {
               </li>
             ))}
           </ol>
+        </div>
+      </section>
+
+      <section className="container pb-12 sm:pb-16" aria-labelledby="hinter-titel">
+        <div className="max-w-3xl mx-auto">
+          <h2 id="hinter-titel" className="text-2xl sm:text-3xl mb-2">Wer steckt dahinter</h2>
+          <p className="text-muted-foreground mb-6 leading-relaxed">{TEILE_AGENT_HINTER}</p>
+          <div className="card-tilt hover:translate-y-0 p-5 sm:p-6 grid gap-5 sm:grid-cols-2">
+            <div>
+              <p className="font-display text-2xl leading-tight">{SHOP_INFO.name}</p>
+              <p className="mt-2 text-sm text-muted-foreground">Inhaber: {SHOP_INFO.owner}</p>
+              <p className="mt-4 flex items-start gap-2 text-sm leading-relaxed">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <span>
+                  {SHOP_INFO.street}
+                  <br />
+                  {SHOP_INFO.zip} {SHOP_INFO.city}
+                </span>
+              </p>
+              <p className="mt-3 flex items-center gap-2 text-sm">
+                <Phone className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                <a href={`tel:${SHOP_INFO.phoneIntl}`} className="font-semibold text-primary hover:underline">
+                  {SHOP_INFO.phone}
+                </a>
+              </p>
+              <p className="mt-2 text-sm">
+                <a href={`mailto:${SHOP_INFO.email}`} className="font-semibold text-primary hover:underline">
+                  {SHOP_INFO.email}
+                </a>
+              </p>
+            </div>
+            <div>
+              <p className="font-semibold mb-2">Öffnungszeiten</p>
+              <ul className="grid gap-1 text-sm text-muted-foreground">
+                {SHOP_INFO.hours.map((zeit) => (
+                  <li key={zeit.days} className="flex justify-between gap-4">
+                    <span>{zeit.days}</span>
+                    <span className="text-foreground">{zeit.time}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <Link to="/laden" className="btn-outline">Laden & Kontakt</Link>
+                <Link to="/impressum" className="btn-outline">Impressum</Link>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

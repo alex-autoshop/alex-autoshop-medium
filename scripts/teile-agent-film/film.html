@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Teile-Agent Film</title>
+    <style>
+      html, body { margin: 0; padding: 0; background: #0d0d0d; overflow: hidden; }
+      canvas { display: block; width: 1080px; height: 1440px; }
+      #logo, #bild-aspl, #bild-seg, #bild-bosch { position: absolute; left: -2000px; top: 0; width: 32px; height: auto; }
+      @font-face {
+        font-family: Syne;
+        src: url("file:///workspace/node_modules/@fontsource/syne/files/syne-latin-700-normal.woff") format("woff");
+        font-weight: 700;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "DM Sans";
+        src: url("file:///workspace/node_modules/@fontsource/dm-sans/files/dm-sans-latin-400-normal.woff") format("woff");
+        font-weight: 400;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "DM Sans";
+        src: url("file:///workspace/node_modules/@fontsource/dm-sans/files/dm-sans-latin-600-normal.woff") format("woff");
+        font-weight: 600;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "DM Sans";
+        src: url("file:///workspace/node_modules/@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff") format("woff");
+        font-weight: 700;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: Inter;
+        src: url("file:///usr/share/fonts/truetype/macos/Inter-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: Inter;
+        src: url("file:///usr/share/fonts/truetype/macos/Inter-SemiBold.ttf") format("truetype");
+        font-weight: 600;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: Inter;
+        src: url("file:///usr/share/fonts/truetype/macos/Inter-Bold.ttf") format("truetype");
+        font-weight: 700;
+        font-style: normal;
+        font-display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c" width="1080" height="1440"></canvas>
+    <img id="logo" alt="" src="file:///workspace/public/images/logo-cropped.png" />
+    <img id="bild-aspl" alt="" src="file:///workspace/public/media/anlasser-aspl.jpg" />
+    <img id="bild-seg" alt="" src="file:///workspace/public/media/anlasser-seg.jpg" />
+    <img id="bild-bosch" alt="" src="file:///workspace/public/media/anlasser-bosch.jpg" />
+    <script src="film.js"></script>
+  </body>
+</html>
