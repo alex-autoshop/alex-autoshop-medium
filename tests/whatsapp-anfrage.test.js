@@ -68,7 +68,7 @@ test("Kundentext bleibt rechtssicher und die Seite hat nur ein Textfeld", () => 
   assert.match(TEILE_AGENT_HINWEIS, /Fahrzeugschein/);
   assert.equal(TEILE_AGENT_FAQ_LD["@type"], "FAQPage");
   assert.equal(TEILE_AGENT_FAQ_LD.mainEntity.length, TEILE_AGENT_FAQ.length);
-  const verboten = /shopify|\bbeta\b|g[üu]nstigster|schnellste|\bminuten\b|inter\s*cars|tecdoc|ds[\s-]?color|oil[-\s]?center/i;
+  const verboten = /shopify|\bbeta\b|g[üu]nstigster|schnellste|bester\s+preis|nur bei uns|inter\s*cars|tecdoc|ds[\s-]?color|oil[-\s]?center/i;
   for (const text of teileAgentKundentexte()) {
     assert.equal(verboten.test(text), false, text);
   }
@@ -80,7 +80,9 @@ test("Kundentext bleibt rechtssicher und die Seite hat nur ein Textfeld", () => 
   assert.equal(seite.includes('id="marke"'), false);
   assert.equal(seite.includes('id="hsn"'), false);
   assert.equal(seite.includes('id="fin"'), false);
-  assert.match(seite, /whatsappAnfrageUrl\(text\)/);
+  assert.match(seite, /whatsappAnfrageUrl\(nachrichtMitCode\(text\)\)/);
+  assert.match(seite, /BESTERMANN15/);
+  assert.match(seite, /TEILE_AGENT_BESTPREIS/);
   assert.match(seite, /location\.assign/);
   assert.match(seite, /TeileAgentFilm/);
   assert.match(seite, /TEILE_AGENT_VERGLEICH/);

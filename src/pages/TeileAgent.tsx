@@ -12,10 +12,13 @@ import {
   WHATSAPP_TEL,
   anfrageBereit,
   whatsappAnfrageUrl,
-  whatsappChatUrl,
 } from "../../shared/whatsapp-anfrage.js";
 import {
+  TEILE_AGENT_BESTPREIS,
   TEILE_AGENT_BESCHREIBUNG,
+  TEILE_AGENT_CODE_CTA,
+  TEILE_AGENT_CODE_KLEIN,
+  TEILE_AGENT_CODE_VORGABE,
   TEILE_AGENT_BUTTON,
   TEILE_AGENT_CLAIMS,
   TEILE_AGENT_DATENSCHUTZ,
@@ -34,7 +37,12 @@ import {
   TEILE_AGENT_VERGLEICH,
 } from "../../shared/teile-agent.js";
 
-const CHAT = whatsappChatUrl();
+const CHAT = whatsappAnfrageUrl(TEILE_AGENT_CODE_VORGABE);
+
+function nachrichtMitCode(wert: string) {
+  if (/BESTERMANN15/i.test(wert)) return wert;
+  return `${wert.trim()}\nCode: BESTERMANN15`;
+}
 const POSTER = "/media/teile-agent-poster.jpg";
 
 export default function TeileAgent() {
@@ -51,7 +59,7 @@ export default function TeileAgent() {
       return;
     }
     setFehler("");
-    window.location.assign(whatsappAnfrageUrl(text));
+    window.location.assign(whatsappAnfrageUrl(nachrichtMitCode(text)));
   }
 
   return (
@@ -75,6 +83,9 @@ export default function TeileAgent() {
               </p>
               <h1 className="text-3xl sm:text-5xl leading-tight mb-4">{TEILE_AGENT_H1}</h1>
               <p className="text-white/70 text-base sm:text-lg leading-relaxed max-w-xl">{TEILE_AGENT_LEAD}</p>
+              <p className="mt-5 max-w-xl rounded-xl border border-gold-bright/50 bg-white/10 px-4 py-3 text-base font-semibold leading-snug text-white sm:text-lg">
+                {TEILE_AGENT_BESTPREIS}
+              </p>
             </div>
 
             <div className="lg:col-start-2 lg:row-start-1 lg:row-span-2">
@@ -164,6 +175,13 @@ export default function TeileAgent() {
               WhatsApp {WHATSAPP_ANZEIGE}
             </p>
           </form>
+          <aside className="mt-6 rounded-2xl border border-primary/30 bg-card p-5 sm:p-6">
+            <p className="text-lg font-semibold leading-snug">{TEILE_AGENT_CODE_CTA}</p>
+            <a href={CHAT} target="_blank" rel="noopener noreferrer" className="btn-gold-bright mt-4 w-full">
+              <MessageCircle className="w-5 h-5" /> WhatsApp mit Code öffnen
+            </a>
+            <p className="mt-3 text-sm text-muted-foreground">{TEILE_AGENT_CODE_KLEIN}</p>
+          </aside>
         </div>
       </section>
 

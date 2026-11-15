@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Mic, Paperclip, Smile } from "lucide-react";
-import { TEILE_AGENT_CHATS, TEILE_AGENT_CHAT_HINWEIS } from "../../shared/teile-agent.js";
+import { TEILE_AGENT_CHATS, TEILE_AGENT_CHAT_HINWEIS, TEILE_AGENT_CODE_VORGABE } from "../../shared/teile-agent.js";
+import { whatsappAnfrageUrl } from "../../shared/whatsapp-anfrage.js";
 
 type Nachricht = (typeof TEILE_AGENT_CHATS)[number]["nachrichten"][number];
 
@@ -48,11 +49,33 @@ function Blase({ nachricht }: { nachricht: Nachricht }) {
           <div>{angebot.stufe}</div>
           <div>{zeile}</div>
           <div>
+            {angebot.altPreis ? <s className="mr-1 text-[#667781]">{angebot.altPreis}</s> : null}
             {angebot.preis} inkl. MwSt
             {angebot.zeit ? ` · ${angebot.zeit}` : ""}
             <Meta zeit={nachricht.zeit} aus={false} />
           </div>
         </div>
+      </div>
+    );
+  }
+  if (nachricht.art === "korb" && nachricht.korb) {
+    const korb = nachricht.korb;
+    return (
+      <div className={`${klasse} px-2 pb-1 pt-1.5 text-[15px] leading-snug text-[#111b21]`}>
+        <div>{korb.titel}</div>
+        {korb.zeilen.map((zeile) => (
+          <div key={zeile.name}>
+            {zeile.name}
+            <br />
+            <s className="text-[#667781]">{zeile.alt}</s> {zeile.preis}
+          </div>
+        ))}
+        <div>{korb.rabatt}</div>
+        <div>Summe {korb.summe} inkl. MwSt</div>
+        <a href={whatsappAnfrageUrl(TEILE_AGENT_CODE_VORGABE)} className="font-semibold text-[#027eb5] underline">
+          {korb.linkText}
+        </a>
+        <Meta zeit={nachricht.zeit} aus={false} />
       </div>
     );
   }

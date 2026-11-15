@@ -10,6 +10,13 @@ export const TEILE_AGENT_BESCHREIBUNG =
   "Autoteile per WhatsApp anfragen. Unser KI-Teileagent prüft Angebote aus über 20 Partnerlieferanten und antwortet direkt im Chat.";
 export const TEILE_AGENT_H1 = "Autoteile per WhatsApp anfragen";
 export const TEILE_AGENT_LEAD = "Unser KI-Teileagent antwortet dir direkt im Chat.";
+export const TEILE_AGENT_BESTPREIS =
+  "Wir fragen über 20 Lieferanten gleichzeitig ab – dein Bestpreis in Minuten, deutschlandweit.";
+export const TEILE_AGENT_CODE = "BESTERMANN15";
+export const TEILE_AGENT_CODE_VORGABE = "Hallo, ich suche ein Teil. Code: BESTERMANN15";
+export const TEILE_AGENT_CODE_CTA =
+  "Starte den WhatsApp-Chat mit deinem Teil, der Teilenummer, deinem Fahrzeugschein oder einem Foto und schreib BESTERMANN15 dazu – du bekommst 15 % auf deine erste Teilebestellung, auf den ganzen Warenkorb.";
+export const TEILE_AGENT_CODE_KLEIN = "Einmal pro Kunde, gilt für die erste Teilebestellung.";
 export const TEILE_AGENT_PLATZHALTER =
   "Schreib einfach, was du brauchst, z.B. Bremsscheiben vorne für VW Golf 7, Bj. 2016";
 export const TEILE_AGENT_BUTTON = "Abschicken & per WhatsApp weiter";
@@ -63,9 +70,9 @@ const anlasser = [
 ];
 
 const scheiben = [
-  { stufe: "Budget", marke: "NK", nummer: "", preis: "46,90 €", zeit: "pro Stück", bild: "/media/scheibe-budget.jpg" },
-  { stufe: "OE-Qualität", marke: "ATE", nummer: "", preis: "74,90 €", zeit: "pro Stück", bild: "/media/scheibe-oe.jpg" },
-  { stufe: "Premium", marke: "Zimmermann", nummer: "", preis: "96,90 €", zeit: "pro Stück", bild: "/media/scheibe-premium.jpg" },
+  { stufe: "Budget", marke: "NK", nummer: "", altPreis: "46,90 €", preis: "39,87 €", zeit: "pro Stück", bild: "/media/scheibe-budget.jpg" },
+  { stufe: "OE-Qualität", marke: "ATE", nummer: "", altPreis: "74,90 €", preis: "63,67 €", zeit: "pro Stück", bild: "/media/scheibe-oe.jpg" },
+  { stufe: "Premium", marke: "Zimmermann", nummer: "", altPreis: "96,90 €", preis: "82,37 €", zeit: "pro Stück", bild: "/media/scheibe-premium.jpg" },
 ];
 
 const drossel = [
@@ -115,8 +122,23 @@ export const TEILE_AGENT_CHATS = [
         zeit: "11:07",
         key: "t0",
       },
-      { von: "agent", art: "text", text: "golf 7, vorne, 1.6 tdi. drei stückpreise, beispiel, inkl. mwst", zeit: "11:08", key: "t1" },
+      { von: "kunde", art: "text", text: "BESTERMANN15", zeit: "11:07", key: "tcode" },
+      { von: "agent", art: "text", text: "code ist drin. 15% auf den ganzen warenkorb. drei stückpreise, beispiel, inkl. mwst", zeit: "11:08", key: "t1" },
       ...angebote(scheiben, "11:09"),
+      { von: "kunde", art: "text", text: "nehm die ate", zeit: "11:10", key: "twahl" },
+      {
+        von: "agent",
+        art: "korb",
+        zeit: "11:11",
+        key: "tkorb",
+        korb: {
+          titel: "Übersicht",
+          zeilen: [{ name: "Bremsscheibe ATE, pro Stück", alt: "74,90 €", preis: "63,67 €" }],
+          rabatt: "Rabatt −15 %",
+          summe: "63,67 €",
+          linkText: "Jetzt bestellen",
+        },
+      },
     ],
   },
   {
@@ -168,7 +190,7 @@ export const TEILE_AGENT_FILM_ALT =
 export const TEILE_AGENT_FILM_LABEL =
   "Erklärfilm mit Stimme. Der Ton ist aus, bis du ihn einschaltest.";
 export const TEILE_AGENT_FILM_TEXT =
-  "Der Film zeigt drei Wege: Fahrzeugschein, kurze Nachricht oder Foto vom Teil. Über 20 Partner werden gleichzeitig gefragt, deutschlandweit. Danach drei Angebote, günstig, OE-Qualität und Premium, mit Bild. Der Code BESTERMANN15 gibt 15 Prozent auf die erste Teilebestellung, auf den ganzen Warenkorb. Die Übersicht und der Bestelllink kommen im Chat. Abholung in der Handelstraße 64 in Wuppertal oder Lieferung.";
+  "Der Film zeigt drei Wege: Fahrzeugschein, kurze Nachricht oder Foto vom Teil. Wir fragen über 20 Lieferanten gleichzeitig ab, dein Bestpreis in Minuten, deutschlandweit. Danach drei Angebote, günstig, OE-Qualität und Premium, mit Bild. Der Code BESTERMANN15 gibt 15 Prozent auf die erste Teilebestellung, auf den ganzen Warenkorb. Die Übersicht und der Bestelllink kommen im Chat. Abholung in der Handelstraße 64 in Wuppertal oder Lieferung.";
 
 export const TEILE_AGENT_FILM_LD = {
   "@context": "https://schema.org",
@@ -177,7 +199,7 @@ export const TEILE_AGENT_FILM_LD = {
   description: TEILE_AGENT_BESCHREIBUNG,
   thumbnailUrl: "https://www.alex-autoshop.de/media/teile-agent-poster.jpg",
   uploadDate: "2026-11-14",
-  duration: "PT59S",
+  duration: "PT60S",
   contentUrl: "https://www.alex-autoshop.de/media/teile-agent.mp4",
   embedUrl: TEILE_AGENT_URL,
 };
@@ -221,6 +243,11 @@ export function teileAgentKundentexte() {
     TEILE_AGENT_BESCHREIBUNG,
     TEILE_AGENT_H1,
     TEILE_AGENT_LEAD,
+    TEILE_AGENT_BESTPREIS,
+    TEILE_AGENT_CODE,
+    TEILE_AGENT_CODE_VORGABE,
+    TEILE_AGENT_CODE_CTA,
+    TEILE_AGENT_CODE_KLEIN,
     TEILE_AGENT_PLATZHALTER,
     TEILE_AGENT_BUTTON,
     TEILE_AGENT_HINWEIS,
@@ -249,8 +276,14 @@ export function teileAgentKundentexte() {
         nachricht.angebot?.stufe || "",
         nachricht.angebot?.marke || "",
         nachricht.angebot?.nummer || "",
+        nachricht.angebot?.altPreis || "",
         nachricht.angebot?.preis || "",
         nachricht.angebot?.zeit || "",
+        nachricht.korb?.titel || "",
+        nachricht.korb?.rabatt || "",
+        nachricht.korb?.summe || "",
+        nachricht.korb?.linkText || "",
+        ...(nachricht.korb?.zeilen.flatMap((zeile) => [zeile.name, zeile.alt, zeile.preis]) || []),
       ]),
     ]),
     TEILE_AGENT_TIPPS.titel,

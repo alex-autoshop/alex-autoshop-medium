@@ -4,6 +4,11 @@ export const TEILE_AGENT_TITEL: string;
 export const TEILE_AGENT_BESCHREIBUNG: string;
 export const TEILE_AGENT_H1: string;
 export const TEILE_AGENT_LEAD: string;
+export const TEILE_AGENT_BESTPREIS: string;
+export const TEILE_AGENT_CODE: string;
+export const TEILE_AGENT_CODE_VORGABE: string;
+export const TEILE_AGENT_CODE_CTA: string;
+export const TEILE_AGENT_CODE_KLEIN: string;
 export const TEILE_AGENT_PLATZHALTER: string;
 export const TEILE_AGENT_BUTTON: string;
 export const TEILE_AGENT_HINWEIS: string;
@@ -29,7 +34,14 @@ export const TEILE_AGENT_CHATS: readonly {
     alt?: string;
     zeit: string;
     key: string;
-    angebot?: { stufe: string; marke: string; nummer: string; preis: string; zeit: string; bild: string };
+    angebot?: { stufe: string; marke: string; nummer: string; altPreis?: string; preis: string; zeit: string; bild: string };
+    korb?: {
+      titel: string;
+      zeilen: readonly { name: string; alt: string; preis: string }[];
+      rabatt: string;
+      summe: string;
+      linkText: string;
+    };
   }[];
 }[];
 export const TEILE_AGENT_CHAT_HINWEIS: string;
