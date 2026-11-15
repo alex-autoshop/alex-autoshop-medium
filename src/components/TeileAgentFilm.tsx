@@ -17,6 +17,7 @@ export function TeileAgentFilm() {
   const [ruhe, setRuhe] = useState(bewegungReduziert);
   const [gestartet, setGestartet] = useState(false);
   const [laeuft, setLaeuft] = useState(false);
+  const [ton, setTon] = useState(false);
   const zeigen = !ruhe || gestartet;
 
   useEffect(() => {
@@ -45,11 +46,19 @@ export function TeileAgentFilm() {
     const el = videoRef.current;
     if (!el) return;
     if (el.paused) {
-      el.muted = true;
       el.play().catch(() => {});
     } else {
       el.pause();
     }
+  }
+
+  function tonSchalten() {
+    const el = videoRef.current;
+    if (!el) return;
+    const an = el.muted;
+    el.muted = !an;
+    setTon(an);
+    if (an) el.play().catch(() => {});
   }
 
   if (!zeigen) {
@@ -93,14 +102,24 @@ export function TeileAgentFilm() {
       </div>
       <div className="mt-3 flex items-center justify-between gap-3">
         <figcaption className="text-sm leading-snug text-white/70">{TEILE_AGENT_FILM_LABEL}</figcaption>
-        <button
-          type="button"
-          onClick={umschalten}
-          className="min-h-12 shrink-0 rounded-lg border border-white/20 px-4 text-sm font-semibold text-white hover:bg-white/10"
-          aria-pressed={laeuft}
-        >
-          {laeuft ? "Pause" : "Abspielen"}
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={tonSchalten}
+            className="min-h-12 rounded-lg border border-white/20 px-4 text-sm font-semibold text-white hover:bg-white/10"
+            aria-pressed={ton}
+          >
+            {ton ? "Ton aus" : "Ton an"}
+          </button>
+          <button
+            type="button"
+            onClick={umschalten}
+            className="min-h-12 rounded-lg border border-white/20 px-4 text-sm font-semibold text-white hover:bg-white/10"
+            aria-pressed={laeuft}
+          >
+            {laeuft ? "Pause" : "Abspielen"}
+          </button>
+        </div>
       </div>
       <p className="sr-only">{TEILE_AGENT_FILM_TEXT}</p>
     </figure>

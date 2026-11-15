@@ -56,42 +56,90 @@ export const TEILE_AGENT_VERGLEICH = {
   ],
 };
 
-export const TEILE_AGENT_BEISPIEL = {
-  titel: "So kann ein Chat aussehen",
-  hinweis: "Beispiel aus einem Test-Chat vom 14.11.2026: Anlasser für einen BMW X3 (E83). Kein aktuelles Angebot. Preise inkl. MwSt.",
-  kunde: "Anlasser für BMW X3 (E83)",
-  schein: "Foto vom Fahrzeugschein",
-  scheinHinweis: "Beispiel-Schein. Keine echten Daten.",
-  agent: "Passform über HSN, TSN und FIN geprüft. Drei Optionen:",
-  optionen: [
-    {
-      stufe: "Budget",
-      marke: "AS-PL",
-      nummer: "S0291",
-      preis: "104,90 €",
-      zeit: "Lieferung bis 18.11.",
-      bild: "/media/anlasser-aspl.jpg",
-    },
-    {
-      stufe: "OE-Qualität",
-      marke: "SEG Automotive",
-      nummer: "0001148033",
-      preis: "176,90 €",
-      zeit: "",
-      bild: "/media/anlasser-seg.jpg",
-    },
-    {
-      stufe: "Premium",
-      marke: "Bosch",
-      nummer: "0 986 022 020",
-      preis: "179,90 €",
-      zeit: "",
-      bild: "/media/anlasser-bosch.jpg",
-    },
-  ],
-  preisHinweis: "inkl. MwSt",
-  lieferHinweis: "Die Lieferzeit steht nur dort, wo sie im Test-Chat genannt war.",
-};
+const anlasser = [
+  { stufe: "Budget", marke: "AS-PL", nummer: "S0291", preis: "104,90 €", zeit: "bis 18.11.", bild: "/media/anlasser-aspl.jpg" },
+  { stufe: "OE-Qualität", marke: "SEG Automotive", nummer: "0001148033", preis: "176,90 €", zeit: "", bild: "/media/anlasser-seg.jpg" },
+  { stufe: "Premium", marke: "Bosch", nummer: "0 986 022 020", preis: "179,90 €", zeit: "", bild: "/media/anlasser-bosch.jpg" },
+];
+
+const scheiben = [
+  { stufe: "Budget", marke: "NK", nummer: "", preis: "46,90 €", zeit: "pro Stück", bild: "/media/scheibe-budget.jpg" },
+  { stufe: "OE-Qualität", marke: "ATE", nummer: "", preis: "74,90 €", zeit: "pro Stück", bild: "/media/scheibe-oe.jpg" },
+  { stufe: "Premium", marke: "Zimmermann", nummer: "", preis: "96,90 €", zeit: "pro Stück", bild: "/media/scheibe-premium.jpg" },
+];
+
+const drossel = [
+  { stufe: "Budget", marke: "ESEN", nummer: "", preis: "114,90 €", zeit: "", bild: "/media/drossel-esen.jpg" },
+  { stufe: "OE-Qualität", marke: "Meat & Doria", nummer: "", preis: "124,90 €", zeit: "", bild: "/media/drossel-meat.jpg" },
+  { stufe: "Premium", marke: "Trucktec", nummer: "", preis: "152,90 €", zeit: "", bild: "/media/drossel-trucktec.jpg" },
+];
+
+function angebote(liste, basis) {
+  return liste.map((eintrag, index) => ({
+    von: "agent",
+    art: "angebot",
+    zeit: basis,
+    angebot: eintrag,
+    alt: `${eintrag.marke} ${eintrag.nummer}`.trim(),
+    key: `${eintrag.marke}-${index}`,
+  }));
+}
+
+export const TEILE_AGENT_CHATS = [
+  {
+    id: "schein",
+    tab: "Fahrzeugschein",
+    nachrichten: [
+      {
+        von: "kunde",
+        art: "bild",
+        bild: "/media/fahrzeugschein-beispiel.jpg",
+        alt: "Foto einer erfundenen Zulassungsbescheinigung, Jonas Keller, Dortmund",
+        zeit: "18:41",
+        key: "schein",
+      },
+      { von: "agent", art: "text", text: "schein ist da. welches teil?", zeit: "18:41", key: "s1" },
+      { von: "kunde", art: "text", text: "anlasser", zeit: "18:42", key: "s2" },
+      { von: "agent", art: "text", text: "bmw x3 e83, passt. drei preise, sind beispiele, inkl. mwst", zeit: "18:42", key: "s3" },
+      ...angebote(anlasser, "18:43"),
+    ],
+  },
+  {
+    id: "text",
+    tab: "Nachricht",
+    nachrichten: [
+      {
+        von: "kunde",
+        art: "text",
+        text: "hi brauche bremsscheiben vorne für meinen golf 7 1.6 tdi was kostet das",
+        zeit: "11:07",
+        key: "t0",
+      },
+      { von: "agent", art: "text", text: "golf 7, vorne, 1.6 tdi. drei stückpreise, beispiel, inkl. mwst", zeit: "11:08", key: "t1" },
+      ...angebote(scheiben, "11:09"),
+    ],
+  },
+  {
+    id: "foto",
+    tab: "Teilefoto",
+    nachrichten: [
+      {
+        von: "kunde",
+        art: "bild",
+        bild: "/media/teilefoto-drosselklappe.jpg",
+        alt: "Foto einer gebrauchten Drosselklappe auf einer Werkbank",
+        zeit: "16:22",
+        key: "f0",
+      },
+      { von: "kunde", art: "text", text: "die hier, bmw x3", zeit: "16:22", key: "f1" },
+      { von: "agent", art: "text", text: "drosselklappe. drei preise, beispiel, inkl. mwst", zeit: "16:23", key: "f2" },
+      ...angebote(drossel, "16:24"),
+    ],
+  },
+];
+
+export const TEILE_AGENT_CHAT_HINWEIS =
+  "Drei Beispiele, kein aktuelles Angebot. Preise inkl. MwSt. Der Fahrzeugschein ist erfunden. Lieferzeit nur, wo sie im Test-Chat stand.";
 
 export const TEILE_AGENT_TIPPS = {
   titel: "Drei Tipps für Preis und Lieferzeit",
@@ -116,11 +164,11 @@ export const TEILE_AGENT_HINTER =
   "Hinter dem Teile-Agent steht der Laden Alex Autoshop in Wuppertal. Die Anfrage kommt bei uns an. Die Angebote stellen wir aus über 20 Partnerlieferanten zusammen.";
 
 export const TEILE_AGENT_FILM_ALT =
-  "Standbild: drei Anlasser-Angebote für einen BMW X3, AS-PL, SEG Automotive und Bosch. Beispiel aus einem Test-Chat.";
+  "Standbild aus dem Erklärfilm: WhatsApp-Chat mit drei Beispiel-Angeboten.";
 export const TEILE_AGENT_FILM_LABEL =
-  "Erklärfilm ohne Ton. Die Texte stehen im Bild.";
+  "Erklärfilm mit Stimme. Der Ton ist aus, bis du ihn einschaltest.";
 export const TEILE_AGENT_FILM_TEXT =
-  "Der Film zeigt eine Beispiel-Anfrage nach einem Anlasser für einen BMW X3 (E83) und einen stilisierten Fahrzeugschein ohne echte Daten. Der Teile-Agent prüft die Passform über HSN, TSN und FIN und sucht drei Optionen. Danach: AS-PL S0291 für 104,90 Euro inklusive MwSt mit Lieferung bis 18.11., SEG Automotive 0001148033 für 176,90 Euro und Bosch 0 986 022 020 für 179,90 Euro. Für SEG und Bosch nennt der Test-Chat keine Lieferzeit. Am Ende die Anfrage bei Alex Autoshop, +49 202 82690.";
+  "Der Film zeigt drei Wege: Foto vom Fahrzeugschein, eine kurze Nachricht, oder ein Foto vom alten Teil. Danach drei Beispiel-Angebote mit Marke, Preis und Bild. Abholung in der Handelstraße 64 in Wuppertal oder Lieferung. WhatsApp +49 202 82690.";
 
 export const TEILE_AGENT_FILM_LD = {
   "@context": "https://schema.org",
@@ -129,7 +177,7 @@ export const TEILE_AGENT_FILM_LD = {
   description: TEILE_AGENT_BESCHREIBUNG,
   thumbnailUrl: "https://www.alex-autoshop.de/media/teile-agent-poster.jpg",
   uploadDate: "2026-11-14",
-  duration: "PT38S",
+  duration: "PT48S",
   contentUrl: "https://www.alex-autoshop.de/media/teile-agent.mp4",
   embedUrl: TEILE_AGENT_URL,
 };
@@ -153,7 +201,7 @@ export const TEILE_AGENT_FAQ = [
   },
   {
     q: "Sind die Beispiele auf dieser Seite echte Angebote?",
-    a: "Nein. Der Anlasser im Beispiel stammt aus einem Test-Chat und ist kein aktuelles Angebot. Die Lieferzeit steht nur dort, wo sie im Chat genannt war.",
+    a: "Nein. Die Chats sind Beispiele. Der Anlasser stammt aus einem Test-Chat, die anderen Preise sind Beispielpreise. Die Lieferzeit steht nur dort, wo sie genannt war.",
   },
 ];
 
@@ -192,15 +240,19 @@ export function teileAgentKundentexte() {
     TEILE_AGENT_VERGLEICH.agentTitel,
     ...TEILE_AGENT_VERGLEICH.klassisch,
     ...TEILE_AGENT_VERGLEICH.agent,
-    TEILE_AGENT_BEISPIEL.titel,
-    TEILE_AGENT_BEISPIEL.hinweis,
-    TEILE_AGENT_BEISPIEL.kunde,
-    TEILE_AGENT_BEISPIEL.schein,
-    TEILE_AGENT_BEISPIEL.scheinHinweis,
-    TEILE_AGENT_BEISPIEL.agent,
-    TEILE_AGENT_BEISPIEL.preisHinweis,
-    TEILE_AGENT_BEISPIEL.lieferHinweis,
-    ...TEILE_AGENT_BEISPIEL.optionen.flatMap((option) => [option.stufe, option.marke, option.nummer, option.preis, option.zeit]),
+    TEILE_AGENT_CHAT_HINWEIS,
+    ...TEILE_AGENT_CHATS.flatMap((chat) => [
+      chat.tab,
+      ...chat.nachrichten.flatMap((nachricht) => [
+        nachricht.text || "",
+        nachricht.alt || "",
+        nachricht.angebot?.stufe || "",
+        nachricht.angebot?.marke || "",
+        nachricht.angebot?.nummer || "",
+        nachricht.angebot?.preis || "",
+        nachricht.angebot?.zeit || "",
+      ]),
+    ]),
     TEILE_AGENT_TIPPS.titel,
     TEILE_AGENT_TIPPS.lead,
     ...TEILE_AGENT_TIPPS.punkte.flatMap((punkt) => [punkt.titel, punkt.text]),

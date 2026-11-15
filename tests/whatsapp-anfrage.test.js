@@ -84,7 +84,7 @@ test("Kundentext bleibt rechtssicher und die Seite hat nur ein Textfeld", () => 
   assert.match(seite, /location\.assign/);
   assert.match(seite, /TeileAgentFilm/);
   assert.match(seite, /TEILE_AGENT_VERGLEICH/);
-  assert.match(seite, /TEILE_AGENT_BEISPIEL/);
+  assert.match(seite, /WhatsAppBeispiel/);
   assert.match(seite, /SHOP_INFO/);
   assert.match(seite, /label: "Teile-Agent"|Wer steckt dahinter/);
   assert.match(film, /prefers-reduced-motion/);

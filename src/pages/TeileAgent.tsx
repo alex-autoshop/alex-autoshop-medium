@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Check, ChevronDown, MapPin, MessageCircle, Phone, Shield } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { TeileAgentFilm } from "@/components/TeileAgentFilm";
+import { WhatsAppBeispiel } from "@/components/WhatsAppBeispiel";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { cn } from "@/lib/utils";
 import {
@@ -14,7 +15,6 @@ import {
   whatsappChatUrl,
 } from "../../shared/whatsapp-anfrage.js";
 import {
-  TEILE_AGENT_BEISPIEL,
   TEILE_AGENT_BESCHREIBUNG,
   TEILE_AGENT_BUTTON,
   TEILE_AGENT_CLAIMS,
@@ -169,72 +169,9 @@ export default function TeileAgent() {
 
       <section className="container pb-12 sm:pb-16" aria-labelledby="beispiel-titel">
         <div className="max-w-3xl mx-auto">
-          <h2 id="beispiel-titel" className="text-2xl sm:text-3xl mb-2">{TEILE_AGENT_BEISPIEL.titel}</h2>
-          <p className="text-muted-foreground mb-6">{TEILE_AGENT_BEISPIEL.hinweis}</p>
-          <div className="overflow-hidden rounded-3xl border border-[#d7d0c4] bg-[#ECE5DD]">
-            <div className="flex items-center gap-3 bg-[#075E54] px-4 py-3 text-white">
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gold-bright font-display text-sm font-bold text-night">
-                AA
-              </span>
-              <div className="min-w-0">
-                <p className="font-semibold leading-tight">Alex Autoshop</p>
-                <p className="text-sm text-white/80">Teile-Agent</p>
-              </div>
-              <span className="ml-auto rounded-full bg-gold-bright px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-night">
-                Beispiel
-              </span>
-            </div>
-            <div className="flex flex-col gap-3 p-3 sm:p-5">
-              <div className="ml-auto max-w-[88%] rounded-2xl rounded-br-md bg-[#DCF8C6] px-4 py-3 text-sm sm:text-base leading-relaxed text-[#1A1A1A]">
-                {TEILE_AGENT_BEISPIEL.kunde}
-              </div>
-              <div className="ml-auto max-w-[88%] rounded-2xl rounded-br-md bg-[#DCF8C6] p-2.5">
-                <div className="rounded-xl bg-[#F6F1E6] p-3 text-[#1A1A1A]">
-                  <p className="text-xs font-bold uppercase tracking-wide text-[#9F2D22]">Beispiel</p>
-                  <p className="mt-1 font-display text-lg leading-tight">{TEILE_AGENT_BEISPIEL.schein}</p>
-                  <p className="mt-1 text-sm text-[#6B675E]">{TEILE_AGENT_BEISPIEL.scheinHinweis}</p>
-                  <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                    <dt className="text-[#8A8478]">HSN</dt>
-                    <dd>••••</dd>
-                    <dt className="text-[#8A8478]">TSN</dt>
-                    <dd>•••</dd>
-                    <dt className="text-[#8A8478]">FIN</dt>
-                    <dd>•••••••••</dd>
-                  </dl>
-                </div>
-              </div>
-              <div className="max-w-[92%] rounded-2xl rounded-bl-md bg-white px-4 py-3 text-sm sm:text-base leading-relaxed text-[#1A1A1A]">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#075E54]">Teile-Agent</p>
-                <p>{TEILE_AGENT_BEISPIEL.agent}</p>
-              </div>
-              <ul className="grid gap-3">
-                {TEILE_AGENT_BEISPIEL.optionen.map((option) => (
-                  <li key={option.nummer} className="flex gap-3 rounded-2xl bg-white p-2.5 shadow-sm">
-                    <img
-                      src={option.bild}
-                      alt={`${option.marke} ${option.nummer}, Produktfoto`}
-                      width={900}
-                      height={676}
-                      loading="lazy"
-                      decoding="async"
-                      className="h-24 w-24 shrink-0 rounded-xl bg-white object-contain sm:h-28 sm:w-28"
-                    />
-                    <div className="min-w-0 py-1">
-                      <p className="text-xs font-bold uppercase tracking-wide text-[#075E54]">{option.stufe}</p>
-                      <p className="font-semibold leading-tight">{option.marke}</p>
-                      <p className="text-sm text-[#5C6560]">{option.nummer}</p>
-                      <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
-                        <span className="font-display text-2xl leading-none">{option.preis}</span>
-                        <span className="text-xs uppercase tracking-wide text-[#5C6560]">{TEILE_AGENT_BEISPIEL.preisHinweis}</span>
-                      </p>
-                      {option.zeit ? <p className="mt-1 text-sm">{option.zeit}</p> : null}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-sm text-[#3E4742]">{TEILE_AGENT_BEISPIEL.lieferHinweis}</p>
-            </div>
-          </div>
+          <h2 id="beispiel-titel" className="text-2xl sm:text-3xl mb-2">So schreiben Kunden wirklich</h2>
+          <p className="text-muted-foreground mb-4">Schein fotografieren, kurz schreiben, oder das alte Teil zeigen.</p>
+          <WhatsAppBeispiel />
         </div>
       </section>
 

@@ -18,17 +18,21 @@ export const TEILE_AGENT_VERGLEICH: {
   agentTitel: string;
   agent: readonly string[];
 };
-export const TEILE_AGENT_BEISPIEL: {
-  titel: string;
-  hinweis: string;
-  kunde: string;
-  schein: string;
-  scheinHinweis: string;
-  agent: string;
-  optionen: readonly { stufe: string; marke: string; nummer: string; preis: string; zeit: string; bild: string }[];
-  preisHinweis: string;
-  lieferHinweis: string;
-};
+export const TEILE_AGENT_CHATS: readonly {
+  id: string;
+  tab: string;
+  nachrichten: readonly {
+    von: string;
+    art: string;
+    text?: string;
+    bild?: string;
+    alt?: string;
+    zeit: string;
+    key: string;
+    angebot?: { stufe: string; marke: string; nummer: string; preis: string; zeit: string; bild: string };
+  }[];
+}[];
+export const TEILE_AGENT_CHAT_HINWEIS: string;
 export const TEILE_AGENT_TIPPS: {
   titel: string;
   lead: string;
