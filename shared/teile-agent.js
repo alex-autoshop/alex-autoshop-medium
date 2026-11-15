@@ -94,13 +94,13 @@ export const TEILE_AGENT_CHATS = [
         von: "kunde",
         art: "bild",
         bild: "/media/fahrzeugschein-beispiel.jpg",
-        alt: "Foto einer erfundenen Zulassungsbescheinigung, Jonas Keller, Dortmund",
+        alt: "Foto einer erfundenen Zulassungsbescheinigung Teil I, Jonas Keller, VW Golf, Dortmund",
         zeit: "18:41",
         key: "schein",
       },
       { von: "agent", art: "text", text: "schein ist da. welches teil?", zeit: "18:41", key: "s1" },
       { von: "kunde", art: "text", text: "anlasser", zeit: "18:42", key: "s2" },
-      { von: "agent", art: "text", text: "bmw x3 e83, passt. drei preise, sind beispiele, inkl. mwst", zeit: "18:42", key: "s3" },
+      { von: "agent", art: "text", text: "golf 7 1.6 tdi, hsn 0603. drei preise, sind beispiele, inkl. mwst", zeit: "18:42", key: "s3" },
       ...angebote(anlasser, "18:43"),
     ],
   },
@@ -168,7 +168,7 @@ export const TEILE_AGENT_FILM_ALT =
 export const TEILE_AGENT_FILM_LABEL =
   "Erklärfilm mit Stimme. Der Ton ist aus, bis du ihn einschaltest.";
 export const TEILE_AGENT_FILM_TEXT =
-  "Der Film zeigt drei Wege: Foto vom Fahrzeugschein, eine kurze Nachricht, oder ein Foto vom alten Teil. Danach drei Beispiel-Angebote mit Marke, Preis und Bild. Abholung in der Handelstraße 64 in Wuppertal oder Lieferung. WhatsApp +49 202 82690.";
+  "Der Film zeigt drei Wege: Fahrzeugschein, kurze Nachricht oder Foto vom Teil. Über 20 Partner werden gleichzeitig gefragt, deutschlandweit. Danach drei Angebote, günstig, OE-Qualität und Premium, mit Bild. Der Code BESTERMANN15 gibt 15 Prozent auf die erste Teilebestellung, auf den ganzen Warenkorb. Die Übersicht und der Bestelllink kommen im Chat. Abholung in der Handelstraße 64 in Wuppertal oder Lieferung.";
 
 export const TEILE_AGENT_FILM_LD = {
   "@context": "https://schema.org",
@@ -177,7 +177,7 @@ export const TEILE_AGENT_FILM_LD = {
   description: TEILE_AGENT_BESCHREIBUNG,
   thumbnailUrl: "https://www.alex-autoshop.de/media/teile-agent-poster.jpg",
   uploadDate: "2026-11-14",
-  duration: "PT48S",
+  duration: "PT59S",
   contentUrl: "https://www.alex-autoshop.de/media/teile-agent.mp4",
   embedUrl: TEILE_AGENT_URL,
 };

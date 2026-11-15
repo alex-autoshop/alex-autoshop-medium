@@ -18,7 +18,7 @@ const ziel = join(wurzel, "public/media/teile-agent.mp4");
 const poster = join(wurzel, "public/media/teile-agent-poster.jpg");
 const framesDir = "/tmp/teile-agent-frames";
 const PORT = 9334;
-const POSTER_FRAME = 30 * 24;
+const POSTER_FRAME = 11 * 24;
 const stimme = join(hier, "stimme.mp3");
 
 const nur = process.env.FRAMES
