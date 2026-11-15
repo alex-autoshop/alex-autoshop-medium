@@ -18,7 +18,7 @@ const ziel = join(wurzel, "public/media/teile-agent.mp4");
 const poster = join(wurzel, "public/media/teile-agent-poster.jpg");
 const framesDir = "/tmp/teile-agent-frames";
 const PORT = 9334;
-const POSTER_FRAME = 20 * 24;
+const POSTER_FRAME = 30 * 24;
 
 const nur = process.env.FRAMES
   ? new Set(process.env.FRAMES.split(",").map((n) => Number(n.trim())))
@@ -43,6 +43,7 @@ const chrome = spawn("/usr/bin/google-chrome", [
   "--remote-allow-origins=*",
   "--window-size=1120,1480",
   "--force-device-scale-factor=1",
+  "--user-data-dir=/tmp/teile-agent-chrome",
   "about:blank",
 ], { stdio: ["ignore", "pipe", "pipe"] });
 

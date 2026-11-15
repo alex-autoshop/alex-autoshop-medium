@@ -1,33 +1,42 @@
 /**
- * Stummer Erklärfilm, 1080×1440, 24 Bilder/s, 36 Sekunden.
- * Jedes Bild erklärt sich über den eingeblendeten Text.
- * Preise und der Fahrzeugschein sind Beispiele, ohne echte Daten und ohne Markennamen.
+ * Stummer Erklärfilm, 1080×1440, 24 Bilder/s, 38 Sekunden.
+ * WhatsApp-Chat zum Anlasser eines BMW X3: ein Teil, drei Angebote.
+ * Preise aus einem Test-Chat, als Beispiel gekennzeichnet.
+ * Der Fahrzeugschein ist stilisiert und enthält keine echten Daten.
  */
 (function () {
   const W = 1080;
   const H = 1440;
   const FPS = 24;
-  const DAUER = 36;
+  const DAUER = 38;
   const FRAMES = FPS * DAUER;
   const GOLD = "#f1eb5b";
-  const GOLD_TIEF = "#c4b000";
   const CREME = "#EDE9E3";
   const NACHT = "#0D0D0D";
   const LEISE = "rgba(237,233,227,0.74)";
-  const LINIE = "rgba(237,233,227,0.14)";
-  const KARTE = "#161616";
+  const GRUEN = "#075E54";
+  const BLASE = "#DCF8C6";
+  const CHAT = "#ECE5DD";
 
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
   const logo = document.getElementById("logo");
+  const bilder = {
+    aspl: document.getElementById("bild-aspl"),
+    seg: document.getElementById("bild-seg"),
+    bosch: document.getElementById("bild-bosch"),
+  };
 
-  const FADE = 0.28;
+  const ANGEBOTE = [
+    { stufe: "Budget", marke: "AS-PL", nummer: "S0291", preis: "104,90 €", zeit: "Lieferung bis 18.11.", bild: "aspl", ab: 16.2 },
+    { stufe: "OE-Qualität", marke: "SEG Automotive", nummer: "0001148033", preis: "176,90 €", zeit: "", bild: "seg", ab: 21.2 },
+    { stufe: "Premium", marke: "Bosch", nummer: "0 986 022 020", preis: "179,90 €", zeit: "", bild: "bosch", ab: 26.2 },
+  ];
+
+  const FADE = 0.35;
   const SZENEN = [
-    { ein: 0.05, aus: 7.7, malen: szeneChat },
-    { ein: 7.9, aus: 15.2, malen: szenePassung },
-    { ein: 15.4, aus: 24.0, malen: szeneAngebote },
-    { ein: 24.2, aus: 31.4, malen: szeneTipps },
-    { ein: 31.6, aus: 35.9, malen: szeneAbschluss },
+    { ein: 0.08, aus: 33.15, malen: szeneChat },
+    { ein: 32.8, aus: 37.85, malen: szeneAbschluss },
   ];
 
   function ease(t) {
@@ -45,7 +54,7 @@
     ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
   }
   function umbrechen(text, max) {
-    const worte = text.split(" ");
+    const worte = String(text).split(" ");
     const zeilen = [];
     let zeile = "";
     for (const wort of worte) {
@@ -60,18 +69,11 @@
     if (zeile) zeilen.push(zeile);
     return zeilen;
   }
-  function spur(text, x, y, abstand) {
-    let cursor = x;
-    for (const zeichen of text) {
-      ctx.fillText(zeichen, cursor, y);
-      cursor += ctx.measureText(zeichen).width + abstand;
-    }
-  }
 
   function hintergrund(t) {
     ctx.fillStyle = NACHT;
     ctx.fillRect(0, 0, W, H);
-    const glow = ctx.createRadialGradient(W * 0.5, 280, 20, W * 0.5, 420, 820);
+    const glow = ctx.createRadialGradient(W * 0.5, 260, 20, W * 0.5, 420, 780);
     glow.addColorStop(0, "rgba(241,235,91,0.10)");
     glow.addColorStop(1, "rgba(241,235,91,0)");
     ctx.fillStyle = glow;
@@ -86,34 +88,15 @@
     ctx.fillRect(48, H - 22, (W - 96) * (t / DAUER), 6);
   }
 
-  function kopf(kicker, titel) {
-    schrift(26, 700, "'DM Sans', Inter, sans-serif");
-    ctx.fillStyle = GOLD;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    spur(kicker, 80, 128, 3.2);
-    ctx.fillStyle = GOLD;
-    ctx.fillRect(80, 152, 72, 4);
-    schrift(72, 700, "Syne, Inter, sans-serif");
-    ctx.fillStyle = CREME;
-    let y = 240;
-    for (const zeile of titel) {
-      ctx.fillText(zeile, 80, y);
-      y += 82;
-    }
-    return y + 8;
-  }
-
   function fuss(text) {
-    schrift(32, 600, "'DM Sans', Inter, sans-serif");
+    schrift(30, 600, "'DM Sans', Inter, sans-serif");
     ctx.fillStyle = LEISE;
     ctx.textAlign = "center";
-    const zeilen = umbrechen(text, 880);
-    let y = 1268;
-    if (zeilen.length > 1) y = 1236;
+    const zeilen = umbrechen(text, 900);
+    let y = zeilen.length > 1 ? 1288 : 1310;
     for (const zeile of zeilen) {
       ctx.fillText(zeile, W / 2, y);
-      y += 42;
+      y += 40;
     }
     ctx.textAlign = "left";
   }
@@ -122,440 +105,276 @@
     const aktiv = 36;
     const ruhend = 10;
     const luecke = 12;
-    const breite = aktiv + (SZENEN.length - 1) * (ruhend + luecke);
+    const anzahl = 4;
+    const breite = aktiv + (anzahl - 1) * (ruhend + luecke);
     let x = (W - breite) / 2;
-    const y = 1348;
-    for (let i = 0; i < SZENEN.length; i++) {
+    for (let i = 0; i < anzahl; i++) {
       const w = i === index ? aktiv : ruhend;
       ctx.fillStyle = i === index ? GOLD : "rgba(237,233,227,0.28)";
-      rrect(x, y, w, 10, 5);
+      rrect(x, 1362, w, 10, 5);
       ctx.fill();
       x += w + luecke;
     }
   }
 
-  function szeneIndex(t) {
-    let index = 0;
-    for (let i = 0; i < SZENEN.length; i++) {
-      if (t >= SZENEN[i].ein) index = i;
-    }
-    return index;
-  }
-
-  function scheibe(x, y, r) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.strokeStyle = GOLD;
-    ctx.fillStyle = GOLD;
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.38, 0, Math.PI * 2);
-    ctx.stroke();
-    for (let i = 0; i < 5; i++) {
-      const winkel = -Math.PI / 2 + (i * Math.PI * 2) / 5;
-      ctx.beginPath();
-      ctx.arc(Math.cos(winkel) * r * 0.68, Math.sin(winkel) * r * 0.68, r * 0.09, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  function haken(x, y, s, p) {
-    ctx.beginPath();
-    const ax = x;
-    const ay = y + s * 0.55;
-    const bx = x + s * 0.38;
-    const by = y + s * 0.92;
-    const cx = x + s;
-    const cy = y + s * 0.18;
-    if (p <= 0.42) {
-      const k = p / 0.42;
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(ax + (bx - ax) * k, ay + (by - ay) * k);
-    } else {
-      const k = Math.min(1, (p - 0.42) / 0.58);
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(bx, by);
-      ctx.lineTo(bx + (cx - bx) * k, by + (cy - by) * k);
-    }
-    ctx.stroke();
-  }
-
-  function kreisHaken(x, y, r, p) {
-    ctx.save();
-    ctx.strokeStyle = GOLD;
-    ctx.lineWidth = 6;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    const bogen = Math.min(1, p / 0.55);
-    ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * bogen);
-    ctx.stroke();
-    if (p > 0.4) haken(x - r * 0.42, y - r * 0.42, r * 0.9, (p - 0.4) / 0.6);
-    ctx.restore();
-  }
-
-  function schein(x, y, w, h, p) {
-    ctx.save();
-    ctx.translate(x + w / 2, y + h / 2);
-    ctx.rotate(-0.035);
-    ctx.translate(-w / 2, -h / 2);
-    ctx.globalAlpha *= p;
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    rrect(10, 16, w, h, 22);
-    ctx.fill();
-    ctx.fillStyle = "#F6F1E6";
-    rrect(0, 0, w, h, 22);
-    ctx.fill();
-    ctx.save();
-    rrect(0, 0, w, h, 22);
-    ctx.clip();
-    ctx.fillStyle = NACHT;
-    ctx.fillRect(0, 0, w, 48);
-    schrift(18, 700, "'DM Sans', Inter, sans-serif");
+  function kopf(kicker, titel) {
+    schrift(26, 700, "'DM Sans', Inter, sans-serif");
     ctx.fillStyle = GOLD;
     ctx.textAlign = "left";
-    ctx.fillText("BEISPIEL", 22, 31);
+    ctx.textBaseline = "alphabetic";
+    let cursor = 72;
+    for (const zeichen of kicker) {
+      ctx.fillText(zeichen, cursor, 108);
+      cursor += ctx.measureText(zeichen).width + 2.4;
+    }
+    ctx.fillRect(72, 128, 72, 4);
+    schrift(64, 700, "Syne, Inter, sans-serif");
+    ctx.fillStyle = CREME;
+    ctx.fillText(titel, 72, 204);
+  }
+
+  function foto(bild, x, y, w, h) {
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(x, y, w, h);
+    if (!bild || !bild.naturalWidth) return;
+    const mass = Math.min(w / bild.naturalWidth, h / bild.naturalHeight);
+    const dw = bild.naturalWidth * mass;
+    const dh = bild.naturalHeight * mass;
+    ctx.drawImage(bild, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  }
+
+  function schein(x, y, w, h) {
+    ctx.save();
+    rrect(x, y, w, h, 16);
+    ctx.clip();
+    ctx.fillStyle = "#F6F1E6";
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = NACHT;
+    ctx.fillRect(x, y, w, 36);
+    schrift(16, 700, "'DM Sans', Inter, sans-serif");
+    ctx.fillStyle = GOLD;
+    ctx.textAlign = "left";
+    ctx.fillText("BEISPIEL", x + 16, y + 24);
+    schrift(26, 700, "Syne, Inter, sans-serif");
+    ctx.fillStyle = "#1A1A1A";
+    ctx.fillText("Fahrzeugschein", x + 16, y + 72);
+    schrift(18, 600, "'DM Sans', Inter, sans-serif");
+    ctx.fillStyle = "#6B675E";
+    ctx.fillText("keine echten Daten", x + 16, y + 100);
+    const felder = [["HSN", "••••"], ["TSN", "•••"], ["FIN", "•••••••••"]];
+    felder.forEach((feld, i) => {
+      const fy = y + 140 + i * 32;
+      schrift(16, 700, "'DM Sans', Inter, sans-serif");
+      ctx.fillStyle = "#8A8478";
+      ctx.fillText(feld[0], x + 16, fy);
+      ctx.fillStyle = "#1A1A1A";
+      ctx.fillText(feld[1], x + 90, fy);
+    });
+    ctx.restore();
+  }
+
+  function handy(inhalt) {
+    const x = 130;
+    const y = 236;
+    const w = 820;
+    const h = 980;
+    ctx.fillStyle = "#111B21";
+    rrect(x, y, w, h, 42);
+    ctx.fill();
+    ctx.save();
+    rrect(x, y, w, h, 42);
+    ctx.clip();
+    ctx.fillStyle = GRUEN;
+    ctx.fillRect(x, y, w, 112);
+    ctx.fillStyle = GOLD;
+    ctx.beginPath();
+    ctx.arc(x + 70, y + 56, 28, 0, Math.PI * 2);
+    ctx.fill();
+    schrift(20, 700, "Syne, Inter, sans-serif");
+    ctx.fillStyle = NACHT;
+    ctx.textAlign = "center";
+    ctx.fillText("AA", x + 70, y + 63);
+    ctx.textAlign = "left";
+    schrift(28, 700, "'DM Sans', Inter, sans-serif");
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText("Alex Autoshop", x + 114, y + 50);
+    schrift(20, 600, "'DM Sans', Inter, sans-serif");
+    ctx.fillStyle = "rgba(255,255,255,0.82)";
+    ctx.fillText("Teile-Agent", x + 114, y + 80);
+    schrift(16, 700, "'DM Sans', Inter, sans-serif");
+    const pill = "BEISPIEL";
+    const pillW = ctx.measureText(pill).width + 22;
+    ctx.fillStyle = GOLD;
+    rrect(x + w - pillW - 28, y + 38, pillW, 32, 16);
+    ctx.fill();
+    ctx.fillStyle = NACHT;
+    ctx.textBaseline = "middle";
+    ctx.fillText(pill, x + w - pillW - 17, y + 55);
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = CHAT;
+    ctx.fillRect(x, y + 112, w, h - 112);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y + 112, w, h - 112);
+    ctx.clip();
+    inhalt(x, y + 112, w, h - 128);
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function zeilenHoehe(text, max, px) {
+    schrift(px, 600, "'DM Sans', Inter, sans-serif");
+    return umbrechen(text, max).length * (px + 10) + 28;
+  }
+
+  function textBlase(x, y, w, text, rechts) {
+    schrift(26, 600, "'DM Sans', Inter, sans-serif");
+    const zeilen = umbrechen(text, w - 36);
+    const h = zeilen.length * 36 + 28;
+    ctx.fillStyle = rechts ? BLASE : "#FFFFFF";
+    rrect(x, y, w, h, 18);
+    ctx.fill();
+    ctx.fillStyle = "#1A1A1A";
+    zeilen.forEach((zeile, i) => ctx.fillText(zeile, x + 18, y + 36 + i * 36));
+    return h;
+  }
+
+  function angebotBlase(x, y, w, daten, p) {
+    const h = 176;
+    ctx.save();
+    ctx.globalAlpha *= p;
+    ctx.fillStyle = "#FFFFFF";
+    rrect(x, y, w, h, 18);
+    ctx.fill();
+    foto(bilder[daten.bild], x + 12, y + 12, 152, 152);
+    schrift(16, 700, "'DM Sans', Inter, sans-serif");
+    ctx.fillStyle = GRUEN;
+    ctx.textAlign = "left";
+    ctx.fillText(daten.stufe.toUpperCase(), x + 180, y + 36);
     schrift(28, 700, "Syne, Inter, sans-serif");
     ctx.fillStyle = "#1A1A1A";
-    ctx.fillText("Fahrzeugschein", 22, 92);
+    ctx.fillText(daten.marke, x + 180, y + 74);
     schrift(20, 600, "'DM Sans', Inter, sans-serif");
-    ctx.fillStyle = "#6B675E";
-    ctx.fillText("keine echten Daten", 22, 122);
-    const felder = [
-      ["HSN", "••••"],
-      ["TSN", "•••"],
-      ["FIN", "•••••••••"],
-    ];
-    felder.forEach((feld, i) => {
-      const fy = 168 + i * 42;
-      schrift(18, 700, "'DM Sans', Inter, sans-serif");
-      ctx.fillStyle = "#8A8478";
-      ctx.fillText(feld[0], 22, fy);
-      schrift(22, 700, "'DM Sans', Inter, sans-serif");
-      ctx.fillStyle = "#1A1A1A";
-      ctx.fillText(feld[1], 110, fy);
-    });
-    ctx.strokeStyle = "#1A1A1A";
-    ctx.lineWidth = 3;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(w - 168, 214);
-    ctx.lineTo(w - 150, 188);
-    ctx.lineTo(w - 92, 184);
-    ctx.lineTo(w - 70, 214);
-    ctx.lineTo(w - 48, 214);
-    ctx.quadraticCurveTo(w - 42, 236, w - 62, 236);
-    ctx.lineTo(w - 156, 236);
-    ctx.quadraticCurveTo(w - 176, 236, w - 168, 214);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(w - 140, 236, 12, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(w - 78, 236, 12, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.translate(w - 86, 78);
-    ctx.rotate(-0.32);
-    ctx.strokeStyle = "#9F2D22";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(-62, -18, 124, 36);
-    schrift(16, 700, "Syne, Inter, sans-serif");
-    ctx.fillStyle = "#9F2D22";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("BEISPIEL", 0, 1);
+    ctx.fillStyle = "#5C6560";
+    ctx.fillText(daten.nummer, x + 180, y + 104);
+    schrift(30, 700, "Syne, Inter, sans-serif");
+    ctx.fillStyle = "#128C7E";
+    ctx.fillText(daten.preis, x + 180, y + 142);
+    schrift(16, 600, "'DM Sans', Inter, sans-serif");
+    ctx.fillStyle = "#5C6560";
+    ctx.fillText(daten.zeit ? `${daten.zeit} · inkl. MwSt` : "inkl. MwSt · Beispiel", x + 180, y + 166);
     ctx.restore();
-    ctx.restore();
+    return h;
   }
 
   function szeneChat(t) {
-    const u = t - 0.05;
-    kopf("01   ·   WHATSAPP", ["Anfrage im Chat"]);
-    const px = 210;
-    const py = 330 + (1 - strecke(u, 0.15, 0.55)) * 30;
-    const pw = 660;
-    const ph = 860;
-    ctx.save();
-    ctx.globalAlpha *= strecke(u, 0.1, 0.45);
-    ctx.fillStyle = "#070B10";
-    rrect(px, py, pw, ph, 52);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(237,233,227,0.16)";
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.save();
-    rrect(px, py, pw, ph, 52);
-    ctx.clip();
-    ctx.fillStyle = "#1F2C34";
-    ctx.fillRect(px, py, pw, 132);
-    ctx.fillStyle = GOLD;
-    ctx.beginPath();
-    ctx.arc(px + 78, py + 66, 32, 0, Math.PI * 2);
-    ctx.fill();
-    schrift(22, 700, "Syne, Inter, sans-serif");
-    ctx.fillStyle = NACHT;
-    ctx.textAlign = "center";
-    ctx.fillText("AA", px + 78, py + 74);
-    ctx.textAlign = "left";
-    schrift(30, 700, "'DM Sans', Inter, sans-serif");
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillText("Alex Autoshop", px + 128, py + 58);
-    schrift(22, 600, "'DM Sans', Inter, sans-serif");
-    ctx.fillStyle = GOLD;
-    ctx.fillText("Teile-Agent", px + 128, py + 92);
-    ctx.fillStyle = "#3DDC84";
-    ctx.beginPath();
-    ctx.arc(px + pw - 58, py + 66, 8, 0, Math.PI * 2);
-    ctx.fill();
-
-    const text = "Bremsscheiben + Beläge vorne, VW Golf 7, Bj. 2016";
-    const zeichen = Math.floor(strecke(u, 0.45, 3.5) * text.length);
-    const sichtbar = text.slice(0, zeichen);
-    schrift(28, 600, "'DM Sans', Inter, sans-serif");
-    const zeilen = umbrechen(sichtbar || " ", 430);
-    const zeilenHoehe = 38;
-    const blaseH = Math.max(74, zeilen.length * zeilenHoehe + 36);
-    const blaseW = 500;
-    const blaseX = px + pw - blaseW - 36;
-    const blaseY = py + 168;
-    if (zeichen > 0) {
-      ctx.fillStyle = "#005C4B";
-      rrect(blaseX, blaseY, blaseW, blaseH, 24);
-      ctx.fill();
-      ctx.fillStyle = "#E7FFEF";
-      zeilen.forEach((zeile, i) => {
-        ctx.fillText(zeile === " " ? "" : zeile, blaseX + 24, blaseY + 42 + i * zeilenHoehe);
-      });
-      if (u < 3.55 && Math.floor(u * 4) % 2 === 0) {
-        const letzte = zeilen[zeilen.length - 1] || "";
-        const cursorX = blaseX + 24 + ctx.measureText(letzte === " " ? "" : letzte).width + 2;
-        ctx.fillRect(cursorX, blaseY + 16 + (zeilen.length - 1) * zeilenHoehe, 3, 28);
+    const titel = t < 8 ? "Anfrage im Chat" : t < 15.6 ? "Passform geprüft" : "Drei Angebote";
+    const kicker = t < 8 ? "01   ·   WHATSAPP" : t < 15.6 ? "02   ·   PASSFORM" : "03   ·   BEISPIEL";
+    kopf(kicker, titel);
+    handy((x, y, w) => {
+      const innen = 28;
+      const breit = w - innen * 2;
+      const bloecke = [];
+      const kundeP = strecke(t, 0.45, 2.6);
+      if (kundeP > 0) {
+        const voll = "Anlasser für BMW X3 (E83)";
+        const sichtbar = voll.slice(0, Math.max(1, Math.floor(kundeP * voll.length)));
+        bloecke.push({ art: "kunde", text: sichtbar, p: 1 });
       }
-    }
-    const fotoP = strecke(u, 3.85, 4.6);
-    if (fotoP > 0) {
-      const fotoY = blaseY + (zeichen > 0 ? blaseH : 0) + 22 + (1 - fotoP) * 24;
-      schein(px + 78, fotoY, 500, 300, fotoP);
-    }
-    ctx.restore();
-    ctx.restore();
-    fuss("Teil, Fahrzeug, Baujahr — und ein Foto vom Schein.");
-  }
-
-  function szenePassung(t) {
-    const u = t - 7.9;
-    kopf("02   ·   PASSFORM", ["Passend geprüft"]);
-    const zeilen = [
-      ["HSN", "Herstellerschlüssel"],
-      ["TSN", "Typschlüssel"],
-      ["FIN", "Fahrzeug-Identnummer"],
-    ];
-    zeilen.forEach((zeile, i) => {
-      const y = 360 + i * 176;
-      const p = strecke(u, 0.35 + i * 0.7, 1.15 + i * 0.7);
-      const ein = strecke(u, 0.12 + i * 0.12, 0.45 + i * 0.12);
-      ctx.save();
-      ctx.globalAlpha *= ein;
-      ctx.fillStyle = KARTE;
-      rrect(80, y, W - 160, 156, 28);
-      ctx.fill();
-      ctx.strokeStyle = p > 0.85 ? "rgba(241,235,91,0.55)" : LINIE;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      schrift(44, 700, "Syne, Inter, sans-serif");
-      ctx.fillStyle = CREME;
-      ctx.fillText(zeile[0], 116, y + 72);
-      schrift(26, 600, "'DM Sans', Inter, sans-serif");
-      ctx.fillStyle = LEISE;
-      ctx.fillText(zeile[1], 116, y + 116);
-      if (p > 0) kreisHaken(W - 176, y + 78, 32, p);
-      ctx.restore();
+      const scheinP = strecke(t, 3.3, 4.2);
+      if (scheinP > 0) bloecke.push({ art: "schein", p: scheinP });
+      const agentP = strecke(t, 8.5, 9.3);
+      if (agentP > 0) {
+        bloecke.push({
+          art: "agent",
+          text: "Passform geprüft über HSN, TSN und FIN. Ich suche 3 Optionen.",
+          p: agentP,
+        });
+      }
+      for (const angebot of ANGEBOTE) {
+        const p = strecke(t, angebot.ab, angebot.ab + 0.7);
+        if (p > 0) bloecke.push({ art: "teil", daten: angebot, p });
+      }
+      const hoehen = bloecke.map((block) => {
+        if (block.art === "kunde" || block.art === "agent") return zeilenHoehe(block.text, breit * 0.78, 26);
+        if (block.art === "schein") return 210;
+        return 176;
+      });
+      const gesamt = hoehen.reduce((summe, wert) => summe + wert + 14, 8);
+      const sicht = 980 - 128;
+      let agentStart = null;
+      let lauf = 8;
+      bloecke.forEach((block, i) => {
+        if (block.art === "agent" && agentStart === null) agentStart = lauf;
+        lauf += hoehen[i] + 14;
+      });
+      const unten = Math.max(0, gesamt - sicht + 28);
+      const anAgent = agentStart === null ? unten : Math.max(0, agentStart + 8);
+      const versatz = t >= 18 ? anAgent : unten;
+      let cursor = y + 16 - versatz;
+      bloecke.forEach((block, i) => {
+        const h = hoehen[i];
+        ctx.save();
+        ctx.globalAlpha *= block.p;
+        if (block.art === "kunde") textBlase(x + w - innen - breit * 0.82, cursor, breit * 0.82, block.text, true);
+        else if (block.art === "agent") textBlase(x + innen, cursor, breit * 0.9, block.text, false);
+        else if (block.art === "schein") schein(x + w - innen - breit * 0.78, cursor, breit * 0.78, h);
+        else angebotBlase(x + innen, cursor, breit - 8, block.daten, 1);
+        ctx.restore();
+        cursor += h + 14;
+      });
     });
-    const siegel = strecke(u, 2.7, 3.4);
-    if (siegel > 0) {
-      ctx.save();
-      ctx.globalAlpha *= siegel;
-      ctx.fillStyle = "rgba(241,235,91,0.12)";
-      rrect(80, 900, W - 160, 150, 28);
-      ctx.fill();
-      kreisHaken(168, 975, 34, siegel);
-      schrift(40, 700, "Syne, Inter, sans-serif");
-      ctx.fillStyle = GOLD;
-      ctx.fillText("passend geprüft", 230, 990);
-      ctx.restore();
-    }
-    fuss("Der Agent prüft die Passform über HSN, TSN oder FIN.");
-  }
-
-  function angebotKarte(x, y, w, h, daten, p) {
-    ctx.save();
-    ctx.globalAlpha *= p;
-    ctx.translate(0, (1 - p) * 36);
-    ctx.fillStyle = "#121212";
-    rrect(x, y, w, h, 28);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(241,235,91,0.28)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.fillStyle = GOLD;
-    ctx.fillRect(x + 24, y + 22, 48, 5);
-    schrift(16, 700, "'DM Sans', Inter, sans-serif");
-    ctx.fillStyle = NACHT;
-    const pillW = ctx.measureText("BEISPIEL").width + 28;
-    ctx.fillStyle = GOLD;
-    rrect(x + 24, y + 44, pillW, 32, 16);
-    ctx.fill();
-    ctx.fillStyle = NACHT;
-    ctx.textBaseline = "middle";
-    ctx.fillText("BEISPIEL", x + 38, y + 61);
-    ctx.textBaseline = "alphabetic";
-    scheibe(x + w / 2, y + 156, 42);
-    schrift(26, 700, "Syne, Inter, sans-serif");
-    ctx.fillStyle = CREME;
-    ctx.textAlign = "center";
-    daten.stufe.forEach((zeile, i) => ctx.fillText(zeile, x + w / 2, y + 246 + i * 32));
-    const preisY = y + 360;
-    schrift(52, 700, "Syne, Inter, sans-serif");
-    ctx.fillStyle = GOLD;
-    ctx.fillText(daten.preis, x + w / 2, preisY);
-    schrift(18, 600, "'DM Sans', Inter, sans-serif");
-    ctx.fillStyle = LEISE;
-    ctx.fillText("Beispielpreis", x + w / 2, preisY + 34);
-    ctx.strokeStyle = LINIE;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x + 28, preisY + 58);
-    ctx.lineTo(x + w - 28, preisY + 58);
-    ctx.stroke();
-    schrift(24, 700, "'DM Sans', Inter, sans-serif");
-    ctx.fillStyle = CREME;
-    ctx.fillText(daten.zeit, x + w / 2, preisY + 100);
-    ctx.textAlign = "left";
-    ctx.restore();
-  }
-
-  function szeneAngebote(t) {
-    const u = t - 15.4;
-    kopf("03   ·   BEISPIEL", ["Drei Angebote"]);
-    schrift(30, 600, "'DM Sans', Inter, sans-serif");
-    ctx.fillStyle = LEISE;
-    ctx.fillText("Mehrere Marken und Preise,", 80, 360);
-    ctx.fillText("statt nur einem Vorschlag.", 80, 402);
-    const karten = [
-      { stufe: ["Budget"], preis: "64 €", zeit: "2–3 Werktage" },
-      { stufe: ["Erstausrüster", "Qualität"], preis: "89 €", zeit: "1–2 Werktage" },
-      { stufe: ["Premium"], preis: "129 €", zeit: "1 Werktag" },
-    ];
-    const spalt = 28;
-    const breite = (W - 160 - spalt * 2) / 3;
-    karten.forEach((karte, i) => {
-      const p = strecke(u, 0.25 + i * 0.22, 0.85 + i * 0.22);
-      angebotKarte(80 + i * (breite + spalt), 450, breite, 540, karte, p);
-    });
-    const band = strecke(u, 1.7, 2.2);
-    if (band > 0) {
-      ctx.save();
-      ctx.globalAlpha *= band;
-      schrift(28, 700, "'DM Sans', Inter, sans-serif");
-      ctx.fillStyle = GOLD;
-      ctx.textAlign = "center";
-      ctx.fillText("Über 20 Partnerlieferanten", W / 2, 1088);
-      ctx.textAlign = "left";
-      ctx.restore();
-    }
-    fuss("Preise und Lieferzeiten in diesem Film sind Beispiele.");
-  }
-
-  function szeneTipps(t) {
-    const u = t - 24.2;
-    kopf("04   ·   TIPPS", ["Preis und Lieferzeit"]);
-    const tipps = [
-      ["Fahrzeugschein-Foto schicken", "HSN, TSN oder die FIN stehen auf dem Schein."],
-      ["Teil und Einbauposition nennen", "Vorne oder hinten, links oder rechts."],
-      ["Sagen, was dir wichtiger ist", "Günstiger Preis oder kurze Lieferzeit."],
-    ];
-    tipps.forEach((tipp, i) => {
-      const p = strecke(u, 0.25 + i * 0.45, 0.85 + i * 0.45);
-      const y = 390 + i * 250;
-      ctx.save();
-      ctx.globalAlpha *= p;
-      ctx.translate((1 - p) * 40, 0);
-      ctx.fillStyle = KARTE;
-      rrect(80, y, W - 160, 220, 28);
-      ctx.fill();
-      ctx.strokeStyle = LINIE;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = GOLD;
-      ctx.beginPath();
-      ctx.arc(168, y + 110, 42, 0, Math.PI * 2);
-      ctx.fill();
-      schrift(36, 700, "Syne, Inter, sans-serif");
-      ctx.fillStyle = NACHT;
-      ctx.textAlign = "center";
-      ctx.fillText(String(i + 1), 168, y + 124);
-      ctx.textAlign = "left";
-      schrift(34, 700, "Syne, Inter, sans-serif");
-      ctx.fillStyle = CREME;
-      const titel = umbrechen(tipp[0], 700);
-      titel.forEach((zeile, n) => ctx.fillText(zeile, 236, y + 86 + n * 42));
-      schrift(26, 600, "'DM Sans', Inter, sans-serif");
-      ctx.fillStyle = LEISE;
-      ctx.fillText(tipp[1], 236, y + 92 + titel.length * 42);
-      ctx.restore();
-    });
-    fuss("Drei Angaben, damit die Auswahl konkret wird.");
+    const untertitel = t < 8
+      ? "Teil und Fahrzeug, plus ein Beispiel-Foto vom Schein."
+      : t < 15.6
+        ? "Der Agent prüft die Passform und sucht drei Optionen."
+        : "Ein Teil, drei Marken, drei Preise. Lieferzeit nur, wo sie im Chat stand.";
+    fuss(untertitel);
   }
 
   function szeneAbschluss(t) {
-    const u = t - 31.6;
-    kopf("05   ·   ALEX AUTOSHOP", ["Jetzt anfragen"]);
+    const u = t - 32.8;
+    kopf("04   ·   WHATSAPP", "Jetzt anfragen");
     const logoP = strecke(u, 0.15, 0.6);
     if (logo.complete && logo.naturalWidth && logoP > 0) {
-      const lw = 820;
+      const lw = 760;
       const lh = lw * (logo.naturalHeight / logo.naturalWidth);
       ctx.save();
       ctx.globalAlpha *= logoP;
-      ctx.drawImage(logo, (W - lw) / 2, 360 + (1 - logoP) * 16, lw, lh);
+      ctx.drawImage(logo, (W - lw) / 2, 250, lw, lh);
       ctx.restore();
     }
-    const knopf = strecke(u, 0.45, 0.9);
+    const knopf = strecke(u, 0.4, 0.85);
     if (knopf > 0) {
       const text = "Jetzt per WhatsApp anfragen";
       schrift(34, 700, "'DM Sans', Inter, sans-serif");
-      const bw = ctx.measureText(text).width + 80;
-      const bh = 92;
+      const bw = ctx.measureText(text).width + 72;
       const bx = (W - bw) / 2;
-      const by = 860;
+      const by = 760;
       ctx.save();
       ctx.globalAlpha *= knopf;
-      ctx.fillStyle = GOLD;
-      rrect(bx, by, bw, bh, 18);
+      ctx.fillStyle = "#25D366";
+      rrect(bx, by, bw, 92, 18);
       ctx.fill();
-      ctx.fillStyle = NACHT;
+      ctx.fillStyle = "#073B28";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(text, W / 2, by + bh / 2 + 2);
+      ctx.fillText(text, W / 2, by + 48);
       ctx.textBaseline = "alphabetic";
       ctx.textAlign = "left";
       ctx.restore();
     }
-    const nummer = strecke(u, 0.75, 1.15);
+    const nummer = strecke(u, 0.7, 1.1);
     if (nummer > 0) {
       ctx.save();
       ctx.globalAlpha *= nummer;
       schrift(48, 700, "Syne, Inter, sans-serif");
       ctx.fillStyle = CREME;
       ctx.textAlign = "center";
-      ctx.fillText("+49 202 82690", W / 2, 1040);
+      ctx.fillText("+49 202 82690", W / 2, 940);
       schrift(28, 600, "'DM Sans', Inter, sans-serif");
       ctx.fillStyle = LEISE;
-      ctx.fillText("Handelstraße 64 · Wuppertal", W / 2, 1096);
+      ctx.fillText("Alex Autoshop · Handelstraße 64 · Wuppertal", W / 2, 996);
       ctx.textAlign = "left";
       ctx.restore();
     }
@@ -565,6 +384,7 @@
   function zeichne(frame) {
     const t = frame / FPS;
     hintergrund(t);
+    const index = t < 8 ? 0 : t < 15.6 ? 1 : t < 32.8 ? 2 : 3;
     for (const szene of SZENEN) {
       if (t < szene.ein || t > szene.aus) continue;
       const ein = t < szene.ein + FADE ? (t - szene.ein) / FADE : 1;
@@ -574,28 +394,29 @@
       szene.malen(t);
       ctx.restore();
     }
-    punkte(szeneIndex(t));
+    punkte(index);
   }
 
   async function vorbereiten() {
     try {
       await document.fonts.ready;
       await Promise.all([
-        document.fonts.load("700 72px Syne"),
-        document.fonts.load("700 32px 'DM Sans'"),
-        document.fonts.load("600 32px 'DM Sans'"),
-        document.fonts.load("400 32px Inter"),
+        document.fonts.load("700 64px Syne"),
+        document.fonts.load("700 28px 'DM Sans'"),
+        document.fonts.load("600 26px 'DM Sans'"),
       ]);
-      if (!logo.complete) {
-        await new Promise((resolve) => {
-          logo.onload = resolve;
-          logo.onerror = resolve;
-        });
-      }
-      const syne = document.fonts.check("700 72px Syne");
-      const dm = document.fonts.check("600 32px 'DM Sans'");
-      if (!syne || !dm || !logo.naturalWidth) {
-        window.FILM_GRUND = `syne=${syne} dm=${dm} logo=${logo.naturalWidth}`;
+      const wartende = [logo, bilder.aspl, bilder.seg, bilder.bosch].filter((bild) => bild && !bild.complete);
+      await Promise.all(wartende.map((bild) => new Promise((resolve) => {
+        bild.onload = resolve;
+        bild.onerror = resolve;
+      })));
+      const ok = document.fonts.check("700 64px Syne")
+        && logo.naturalWidth
+        && bilder.aspl.naturalWidth
+        && bilder.seg.naturalWidth
+        && bilder.bosch.naturalWidth;
+      if (!ok) {
+        window.FILM_GRUND = `logo=${logo.naturalWidth} aspl=${bilder.aspl.naturalWidth} seg=${bilder.seg.naturalWidth} bosch=${bilder.bosch.naturalWidth}`;
         return;
       }
       window.FILM_BEREIT = true;

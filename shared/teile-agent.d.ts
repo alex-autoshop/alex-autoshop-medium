@@ -25,9 +25,9 @@ export const TEILE_AGENT_BEISPIEL: {
   schein: string;
   scheinHinweis: string;
   agent: string;
-  optionen: readonly { stufe: string; preis: string; zeit: string }[];
+  optionen: readonly { stufe: string; marke: string; nummer: string; preis: string; zeit: string; bild: string }[];
   preisHinweis: string;
-  frage: string;
+  lieferHinweis: string;
 };
 export const TEILE_AGENT_TIPPS: {
   titel: string;

@@ -171,15 +171,24 @@ export default function TeileAgent() {
         <div className="max-w-3xl mx-auto">
           <h2 id="beispiel-titel" className="text-2xl sm:text-3xl mb-2">{TEILE_AGENT_BEISPIEL.titel}</h2>
           <p className="text-muted-foreground mb-6">{TEILE_AGENT_BEISPIEL.hinweis}</p>
-          <div className="rounded-3xl bg-night text-[#EDE9E3] p-4 sm:p-6">
-            <p className="mb-4 inline-flex rounded-full bg-gold-bright px-3 py-1 text-xs font-bold uppercase tracking-wide text-night">
-              Beispiel
-            </p>
-            <div className="flex flex-col gap-3">
-              <div className="ml-auto max-w-[90%] rounded-2xl rounded-br-md bg-[#005C4B] px-4 py-3 text-sm sm:text-base leading-relaxed text-white">
+          <div className="overflow-hidden rounded-3xl border border-[#d7d0c4] bg-[#ECE5DD]">
+            <div className="flex items-center gap-3 bg-[#075E54] px-4 py-3 text-white">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gold-bright font-display text-sm font-bold text-night">
+                AA
+              </span>
+              <div className="min-w-0">
+                <p className="font-semibold leading-tight">Alex Autoshop</p>
+                <p className="text-sm text-white/80">Teile-Agent</p>
+              </div>
+              <span className="ml-auto rounded-full bg-gold-bright px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-night">
+                Beispiel
+              </span>
+            </div>
+            <div className="flex flex-col gap-3 p-3 sm:p-5">
+              <div className="ml-auto max-w-[88%] rounded-2xl rounded-br-md bg-[#DCF8C6] px-4 py-3 text-sm sm:text-base leading-relaxed text-[#1A1A1A]">
                 {TEILE_AGENT_BEISPIEL.kunde}
               </div>
-              <div className="ml-auto max-w-[90%] rounded-2xl rounded-br-md bg-[#005C4B] p-3 text-white">
+              <div className="ml-auto max-w-[88%] rounded-2xl rounded-br-md bg-[#DCF8C6] p-2.5">
                 <div className="rounded-xl bg-[#F6F1E6] p-3 text-[#1A1A1A]">
                   <p className="text-xs font-bold uppercase tracking-wide text-[#9F2D22]">Beispiel</p>
                   <p className="mt-1 font-display text-lg leading-tight">{TEILE_AGENT_BEISPIEL.schein}</p>
@@ -194,23 +203,36 @@ export default function TeileAgent() {
                   </dl>
                 </div>
               </div>
-              <div className="max-w-[95%] rounded-2xl rounded-bl-md bg-white/10 px-4 py-3 text-sm sm:text-base leading-relaxed">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gold-bright">Teile-Agent</p>
+              <div className="max-w-[92%] rounded-2xl rounded-bl-md bg-white px-4 py-3 text-sm sm:text-base leading-relaxed text-[#1A1A1A]">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[#075E54]">Teile-Agent</p>
                 <p>{TEILE_AGENT_BEISPIEL.agent}</p>
-                <ul className="mt-3 grid gap-2">
-                  {TEILE_AGENT_BEISPIEL.optionen.map((option) => (
-                    <li key={option.stufe} className="rounded-xl border border-white/10 bg-black/30 px-3 py-3">
-                      <p className="font-semibold text-white">{option.stufe}</p>
-                      <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <span className="font-display text-2xl text-gold-bright">{option.preis}</span>
-                        <span className="text-xs uppercase tracking-wide text-white/50">{TEILE_AGENT_BEISPIEL.preisHinweis}</span>
-                        <span className="text-white/80">{option.zeit}</span>
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-3">{TEILE_AGENT_BEISPIEL.frage}</p>
               </div>
+              <ul className="grid gap-3">
+                {TEILE_AGENT_BEISPIEL.optionen.map((option) => (
+                  <li key={option.nummer} className="flex gap-3 rounded-2xl bg-white p-2.5 shadow-sm">
+                    <img
+                      src={option.bild}
+                      alt={`${option.marke} ${option.nummer}, Produktfoto`}
+                      width={900}
+                      height={676}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-24 w-24 shrink-0 rounded-xl bg-white object-contain sm:h-28 sm:w-28"
+                    />
+                    <div className="min-w-0 py-1">
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#075E54]">{option.stufe}</p>
+                      <p className="font-semibold leading-tight">{option.marke}</p>
+                      <p className="text-sm text-[#5C6560]">{option.nummer}</p>
+                      <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                        <span className="font-display text-2xl leading-none">{option.preis}</span>
+                        <span className="text-xs uppercase tracking-wide text-[#5C6560]">{TEILE_AGENT_BEISPIEL.preisHinweis}</span>
+                      </p>
+                      {option.zeit ? <p className="mt-1 text-sm">{option.zeit}</p> : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-[#3E4742]">{TEILE_AGENT_BEISPIEL.lieferHinweis}</p>
             </div>
           </div>
         </div>

@@ -6,7 +6,7 @@
     <style>
       html, body { margin: 0; padding: 0; background: #0d0d0d; overflow: hidden; }
       canvas { display: block; width: 1080px; height: 1440px; }
-      #logo { position: absolute; left: -2000px; top: 0; width: 32px; height: auto; }
+      #logo, #bild-aspl, #bild-seg, #bild-bosch { position: absolute; left: -2000px; top: 0; width: 32px; height: auto; }
       @font-face {
         font-family: Syne;
         src: url("file:///workspace/node_modules/@fontsource/syne/files/syne-latin-700-normal.woff") format("woff");
@@ -61,6 +61,9 @@
   <body>
     <canvas id="c" width="1080" height="1440"></canvas>
     <img id="logo" alt="" src="file:///workspace/public/images/logo-cropped.png" />
+    <img id="bild-aspl" alt="" src="file:///workspace/public/media/anlasser-aspl.jpg" />
+    <img id="bild-seg" alt="" src="file:///workspace/public/media/anlasser-seg.jpg" />
+    <img id="bild-bosch" alt="" src="file:///workspace/public/media/anlasser-bosch.jpg" />
     <script src="film.js"></script>
   </body>
 </html>

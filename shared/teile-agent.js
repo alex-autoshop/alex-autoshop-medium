@@ -19,10 +19,10 @@ export const TEILE_AGENT_DATENSCHUTZ =
   "Mit „Abschicken & per WhatsApp weiter“ öffnet sich WhatsApp (Meta). Das Textfeld speichert nichts auf dieser Seite. Dein Text steht nur in der Nachricht. Details stehen in der Datenschutzerklärung.";
 
 export const TEILE_AGENT_CLAIMS = [
-  "Mehrere Marken, Preise und Lieferzeiten nebeneinander",
+  "Ein Teil, drei geprüfte Optionen",
+  "Marke, Preis und Lieferzeit im Chat",
   "Passform-Prüfung über Schlüsselnummer oder FIN",
   "Angebote aus über 20 Partnerlieferanten",
-  "Bestellt wird erst nach deiner Zusage",
 ];
 
 export const TEILE_AGENT_SCHRITTE = [
@@ -32,7 +32,7 @@ export const TEILE_AGENT_SCHRITTE = [
   },
   {
     titel: "Passform und Optionen prüfen",
-    text: "Die Rückmeldung zeigt mehrere Qualitätsstufen mit Preis und Lieferzeit. Die Passform prüfen wir über Schlüsselnummer oder FIN.",
+    text: "Die Rückmeldung zeigt bis zu drei Optionen mit Marke, Preis und Lieferzeit. Die Passform prüfen wir über Schlüsselnummer oder FIN.",
   },
   {
     titel: "Angebot annehmen und bestellen",
@@ -42,7 +42,7 @@ export const TEILE_AGENT_SCHRITTE = [
 
 export const TEILE_AGENT_VERGLEICH = {
   titel: "Klassische Beratung vs. Teile-Agent",
-  lead: "Zwei Wege zur passenden Anfrage. Der Teile-Agent ergänzt die Beratung im Laden und am Telefon. Bestellt wird in beiden Fällen erst, wenn du das Angebot annimmst.",
+  lead: "Klassisch gibt es einen Vorschlag. Der Teile-Agent legt zu einem Teil drei geprüfte Optionen vor. Bestellt wird in beiden Fällen erst, wenn du das Angebot annimmst.",
   klassischTitel: "Klassische Beratung",
   klassisch: [
     "Ein Vorschlag, abgestimmt auf deine Anfrage",
@@ -50,26 +50,47 @@ export const TEILE_AGENT_VERGLEICH = {
   ],
   agentTitel: "Teile-Agent",
   agent: [
-    "Mehrere Marken, Preise und Lieferzeiten nebeneinander",
+    "Drei geprüfte Optionen zu einem Teil",
+    "Marke, Preis und Lieferzeit, wo sie vorliegt",
     "Passform-Prüfung über Schlüsselnummer (HSN/TSN) oder FIN",
-    "Angebote aus über 20 Partnerlieferanten",
   ],
 };
 
 export const TEILE_AGENT_BEISPIEL = {
   titel: "So kann ein Chat aussehen",
-  hinweis: "Beispiel mit erfundenen Preisen. Kein Angebot und keine echten Fahrzeugdaten.",
-  kunde: "Bremsscheiben + Beläge vorne, VW Golf 7, Bj. 2016",
+  hinweis: "Beispiel aus einem Test-Chat vom 14.11.2026: Anlasser für einen BMW X3 (E83). Kein aktuelles Angebot. Preise inkl. MwSt.",
+  kunde: "Anlasser für BMW X3 (E83)",
   schein: "Foto vom Fahrzeugschein",
-  scheinHinweis: "HSN, TSN und FIN sind hier unkenntlich. Keine echten Daten.",
-  agent: "Passform über die Schlüsselnummer geprüft. Drei Optionen:",
+  scheinHinweis: "Beispiel-Schein. Keine echten Daten.",
+  agent: "Passform über HSN, TSN und FIN geprüft. Drei Optionen:",
   optionen: [
-    { stufe: "Budget", preis: "64 €", zeit: "2–3 Werktage" },
-    { stufe: "Erstausrüsterqualität", preis: "89 €", zeit: "1–2 Werktage" },
-    { stufe: "Premium", preis: "129 €", zeit: "1 Werktag" },
+    {
+      stufe: "Budget",
+      marke: "AS-PL",
+      nummer: "S0291",
+      preis: "104,90 €",
+      zeit: "Lieferung bis 18.11.",
+      bild: "/media/anlasser-aspl.jpg",
+    },
+    {
+      stufe: "OE-Qualität",
+      marke: "SEG Automotive",
+      nummer: "0001148033",
+      preis: "176,90 €",
+      zeit: "",
+      bild: "/media/anlasser-seg.jpg",
+    },
+    {
+      stufe: "Premium",
+      marke: "Bosch",
+      nummer: "0 986 022 020",
+      preis: "179,90 €",
+      zeit: "",
+      bild: "/media/anlasser-bosch.jpg",
+    },
   ],
-  preisHinweis: "Beispielpreis",
-  frage: "Was ist dir wichtiger: der günstigere Preis oder die kürzere Lieferzeit?",
+  preisHinweis: "inkl. MwSt",
+  lieferHinweis: "Die Lieferzeit steht nur dort, wo sie im Test-Chat genannt war.",
 };
 
 export const TEILE_AGENT_TIPPS = {
@@ -95,11 +116,11 @@ export const TEILE_AGENT_HINTER =
   "Hinter dem Teile-Agent steht der Laden Alex Autoshop in Wuppertal. Die Anfrage kommt bei uns an. Die Angebote stellen wir aus über 20 Partnerlieferanten zusammen.";
 
 export const TEILE_AGENT_FILM_ALT =
-  "Standbild: drei Beispiel-Angebote nebeneinander, Budget, Erstausrüsterqualität und Premium.";
+  "Standbild: drei Anlasser-Angebote für einen BMW X3, AS-PL, SEG Automotive und Bosch. Beispiel aus einem Test-Chat.";
 export const TEILE_AGENT_FILM_LABEL =
   "Erklärfilm ohne Ton. Die Texte stehen im Bild.";
 export const TEILE_AGENT_FILM_TEXT =
-  "Der Film zeigt eine Beispiel-Anfrage zu Bremsscheiben und Belägen vorne für einen VW Golf 7, Baujahr 2016, plus ein stilisiertes Foto vom Fahrzeugschein ohne echte Daten. Danach prüft der Teile-Agent die Passform über HSN, TSN oder FIN. Es folgen drei Beispiel-Angebote mit Beispielpreis und Lieferzeit. Drei Tipps: Fahrzeugschein-Foto schicken, Teil und Einbauposition nennen, sagen ob der Preis oder die Lieferzeit wichtiger ist. Am Ende die Anfrage bei Alex Autoshop, Handelstraße 64 in Wuppertal, Telefon +49 202 82690.";
+  "Der Film zeigt eine Beispiel-Anfrage nach einem Anlasser für einen BMW X3 (E83) und einen stilisierten Fahrzeugschein ohne echte Daten. Der Teile-Agent prüft die Passform über HSN, TSN und FIN und sucht drei Optionen. Danach: AS-PL S0291 für 104,90 Euro inklusive MwSt mit Lieferung bis 18.11., SEG Automotive 0001148033 für 176,90 Euro und Bosch 0 986 022 020 für 179,90 Euro. Für SEG und Bosch nennt der Test-Chat keine Lieferzeit. Am Ende die Anfrage bei Alex Autoshop, +49 202 82690.";
 
 export const TEILE_AGENT_FILM_LD = {
   "@context": "https://schema.org",
@@ -108,7 +129,7 @@ export const TEILE_AGENT_FILM_LD = {
   description: TEILE_AGENT_BESCHREIBUNG,
   thumbnailUrl: "https://www.alex-autoshop.de/media/teile-agent-poster.jpg",
   uploadDate: "2026-11-14",
-  duration: "PT36S",
+  duration: "PT38S",
   contentUrl: "https://www.alex-autoshop.de/media/teile-agent.mp4",
   embedUrl: TEILE_AGENT_URL,
 };
@@ -132,7 +153,7 @@ export const TEILE_AGENT_FAQ = [
   },
   {
     q: "Sind die Beispiele auf dieser Seite echte Angebote?",
-    a: "Nein. Preise, Qualitätsstufen und Lieferzeiten im Beispiel dienen der Erklärung. Das Angebot für dein Fahrzeug steht im Chat.",
+    a: "Nein. Der Anlasser im Beispiel stammt aus einem Test-Chat und ist kein aktuelles Angebot. Die Lieferzeit steht nur dort, wo sie im Chat genannt war.",
   },
 ];
 
@@ -178,8 +199,8 @@ export function teileAgentKundentexte() {
     TEILE_AGENT_BEISPIEL.scheinHinweis,
     TEILE_AGENT_BEISPIEL.agent,
     TEILE_AGENT_BEISPIEL.preisHinweis,
-    TEILE_AGENT_BEISPIEL.frage,
-    ...TEILE_AGENT_BEISPIEL.optionen.flatMap((option) => [option.stufe, option.preis, option.zeit]),
+    TEILE_AGENT_BEISPIEL.lieferHinweis,
+    ...TEILE_AGENT_BEISPIEL.optionen.flatMap((option) => [option.stufe, option.marke, option.nummer, option.preis, option.zeit]),
     TEILE_AGENT_TIPPS.titel,
     TEILE_AGENT_TIPPS.lead,
     ...TEILE_AGENT_TIPPS.punkte.flatMap((punkt) => [punkt.titel, punkt.text]),
