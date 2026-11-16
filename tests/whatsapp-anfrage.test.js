@@ -16,6 +16,7 @@ import {
   TEILE_AGENT_FAQ,
   TEILE_AGENT_FAQ_LD,
   TEILE_AGENT_HINWEIS,
+  TEILE_AGENT_LIVE,
   TEILE_AGENT_PFAD,
   TEILE_AGENT_PLATZHALTER,
   TEILE_AGENT_TITEL,
@@ -86,7 +87,8 @@ test("Kundentext bleibt rechtssicher und die Seite hat nur ein Textfeld", () => 
   assert.match(seite, /TeileAgentFilm/);
   assert.match(seite, /WhatsAppBeispiel/);
   assert.match(seite, /SHOP_INFO/);
-  assert.match(seite, /label: "Teile-Agent"|Wer steckt dahinter/);
+  assert.match(seite, /Wer steckt dahinter/);
+  assert.equal(TEILE_AGENT_LIVE, false);
   assert.match(film, /prefers-reduced-motion/);
   assert.match(film, /preload="metadata"/);
   assert.match(film, /playsInline/);
@@ -99,11 +101,18 @@ test("Kundentext bleibt rechtssicher und die Seite hat nur ein Textfeld", () => 
   const vercel = readFileSync(new URL("../vercel.json", import.meta.url), "utf8");
   const app = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
   const header = readFileSync(new URL("../src/components/Header.tsx", import.meta.url), "utf8");
+  const footer = readFileSync(new URL("../src/components/Footer.tsx", import.meta.url), "utf8");
   const schale = readFileSync(new URL("../scripts/schale.mjs", import.meta.url), "utf8");
-  assert.match(sitemap, /https:\/\/www\.alex-autoshop\.de\/teile-agent</);
+  const huelle = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  assert.equal(sitemap.includes("/teile-agent"), false);
+  assert.equal(huelle.includes('href="/teile-agent"'), false);
   assert.match(vercel, /"source": "\/teile-agent"/);
   assert.match(app, /path="\/teile-agent"/);
-  assert.match(header, /label: "Teile-Agent"/);
-  assert.match(schale, /teile-agent\/index\.html/);
+  assert.match(app, /TEILE_AGENT_LIVE \? <TeileAgent/);
+  assert.match(app, /noindex/);
+  assert.match(app, /Navigate to="\/"/);
+  assert.match(header, /TEILE_AGENT_LIVE/);
+  assert.match(footer, /TEILE_AGENT_LIVE/);
+  assert.match(schale, /TEILE_AGENT_LIVE \? \[teileAgentRoute\]/);
   assert.equal(TEILE_AGENT_PFAD, "/teile-agent");
 });

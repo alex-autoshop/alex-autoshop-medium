@@ -13,6 +13,7 @@ import {
   TEILE_AGENT_FAQ_LD,
   TEILE_AGENT_H1,
   TEILE_AGENT_LEAD,
+  TEILE_AGENT_LIVE,
   TEILE_AGENT_TITEL,
   TEILE_AGENT_URL,
 } from "../shared/teile-agent.js";
@@ -65,6 +66,18 @@ function mitHero(basis, hero, klasse, kopf) {
   return h;
 }
 
+const teileAgentRoute = {
+  pfad: "teile-agent/index.html",
+  klasse: " aa-mitte",
+  hero: `<p class="aa-kicker">WhatsApp · Autoteile</p><h1>${htmlText(TEILE_AGENT_H1)}</h1><p class="aa-lead">${htmlText(TEILE_AGENT_LEAD)} ${htmlText(TEILE_AGENT_CLAIMS[0])}.</p><p class="aa-lead">${htmlText(WHATSAPP_ANZEIGE)}</p><div class="aa-actions"><a class="aa-goldbtn" href="${htmlText(whatsappChatUrl())}">WhatsApp-Chat öffnen</a></div>`,
+  kopf: {
+    title: TEILE_AGENT_TITEL,
+    description: TEILE_AGENT_BESCHREIBUNG,
+    canonical: TEILE_AGENT_URL,
+    jsonLd: TEILE_AGENT_FAQ_LD,
+  },
+};
+
 const routen = [
   {
     pfad: "mitgliedschaft/index.html",
@@ -76,18 +89,14 @@ const routen = [
       canonical: "https://www.alex-autoshop.de/mitgliedschaft",
     },
   },
-  {
-    pfad: "teile-agent/index.html",
-    klasse: " aa-mitte",
-    hero: `<p class="aa-kicker">WhatsApp · Autoteile</p><h1>${htmlText(TEILE_AGENT_H1)}</h1><p class="aa-lead">${htmlText(TEILE_AGENT_LEAD)} ${htmlText(TEILE_AGENT_CLAIMS[0])}.</p><p class="aa-lead">${htmlText(WHATSAPP_ANZEIGE)}</p><div class="aa-actions"><a class="aa-goldbtn" href="${htmlText(whatsappChatUrl())}">WhatsApp-Chat öffnen</a></div>`,
-    kopf: {
-      title: TEILE_AGENT_TITEL,
-      description: TEILE_AGENT_BESCHREIBUNG,
-      canonical: TEILE_AGENT_URL,
-      jsonLd: TEILE_AGENT_FAQ_LD,
-    },
-  },
+  ...(TEILE_AGENT_LIVE ? [teileAgentRoute] : []),
 ];
+if (TEILE_AGENT_LIVE) {
+  html = html.replace(
+    '<a href="/shop">Shop</a>',
+    '<a href="/shop">Shop</a>\n          <a href="/teile-agent">Teile-Agent</a>',
+  );
+}
 
 for (const route of routen) {
   const ziel = join(dist, route.pfad);

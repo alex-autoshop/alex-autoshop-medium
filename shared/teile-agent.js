@@ -1,7 +1,15 @@
 /**
  * Texte und SEO der Seite /teile-agent.
  * Keine unbelegbaren Superlative, keine Lieferantennamen.
+ *
+ * TEILE_AGENT_LIVE = false archiviert die Seite:
+ * kein Menüpunkt, /teile-agent leitet auf / um (noindex),
+ * nicht in der Sitemap und nicht in der Prerender-Schale.
+ * Wieder live: nur diese Konstante auf true setzen und den
+ * Eintrag in public/sitemap-seiten.xml wieder aufnehmen.
+ * Seite, Film und Bilder bleiben im Repo.
  */
+export const TEILE_AGENT_LIVE = false;
 
 export const TEILE_AGENT_PFAD = "/teile-agent";
 export const TEILE_AGENT_URL = "https://www.alex-autoshop.de/teile-agent";
