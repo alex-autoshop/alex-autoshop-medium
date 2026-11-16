@@ -24,6 +24,7 @@ import {
   TEILE_AGENT_H1,
   TEILE_AGENT_HINTER,
   TEILE_AGENT_HINWEIS,
+  TEILE_AGENT_KURZ,
   TEILE_AGENT_LEAD,
   TEILE_AGENT_PLATZHALTER,
   TEILE_AGENT_SCHRITTE,
@@ -69,25 +70,30 @@ export default function TeileAgent() {
       />
 
       <section className="section-dark">
-        <div className="container py-6 sm:py-10">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-gold-accent font-semibold tracking-wide uppercase text-sm mb-3">
-              WhatsApp · Autoteile
-            </p>
-            <h1 className="text-3xl sm:text-5xl leading-tight mb-3">{TEILE_AGENT_H1}</h1>
-            <p className="text-white/80 text-base sm:text-lg leading-relaxed">{TEILE_AGENT_LEAD}</p>
-            <a
-              href={CHAT}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-gold-bright mt-5 w-full sm:w-auto"
-            >
-              <MessageCircle className="w-5 h-5" /> WhatsApp-Chat öffnen
-            </a>
-            <p className="mt-3 text-sm text-white/70">{TEILE_AGENT_CODE_KLEIN}</p>
-          </div>
-          <div className="-mx-4 mt-6 sm:mx-auto sm:max-w-[720px]">
-            <TeileAgentFilm />
+        <div className="container py-4 lg:py-5">
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-x-10">
+            <div className="text-center lg:text-left">
+              <p className="text-gold-accent font-semibold tracking-wide uppercase text-sm mb-2">
+                WhatsApp · Autoteile
+              </p>
+              <h1 className="text-3xl sm:text-4xl xl:text-5xl leading-tight">{TEILE_AGENT_H1}</h1>
+              <p className="mt-2 text-white/80 text-base sm:text-lg">{TEILE_AGENT_KURZ}</p>
+            </div>
+            <div className="-mx-4 mt-4 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:mx-0 lg:mt-0">
+              <TeileAgentFilm />
+            </div>
+            <div className="mt-4 text-center lg:col-start-1 lg:mt-5 lg:text-left">
+              <p className="text-white/80 text-base leading-relaxed">{TEILE_AGENT_LEAD}</p>
+              <a
+                href={CHAT}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-gold-bright mt-4 w-full sm:w-auto"
+              >
+                <MessageCircle className="w-5 h-5" /> WhatsApp-Chat öffnen
+              </a>
+              <p className="mt-3 text-sm text-white/70">{TEILE_AGENT_CODE_KLEIN}</p>
+            </div>
           </div>
         </div>
       </section>

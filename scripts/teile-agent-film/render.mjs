@@ -18,7 +18,7 @@ const ziel = join(wurzel, "public/media/teile-agent.mp4");
 const poster = join(wurzel, "public/media/teile-agent-poster.jpg");
 const framesDir = "/tmp/teile-agent-frames";
 const PORT = 9334;
-const POSTER_FRAME = 32 * 24;
+const POSTER_FRAME = 24;
 const stimme = join(hier, "stimme.mp3");
 
 const nur = process.env.FRAMES
@@ -182,6 +182,13 @@ try {
     "-vf", "scale=720:960",
     "-q:v", "4",
     poster,
+  ]);
+  await ffmpeg([
+    "-y",
+    "-i", poster,
+    "-c:v", "libwebp",
+    "-quality", "72",
+    poster.replace(/\.jpg$/, ".webp"),
   ]);
   console.log(`Film: ${ziel}`);
   console.log(`Poster: ${poster}`);

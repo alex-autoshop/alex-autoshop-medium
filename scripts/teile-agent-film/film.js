@@ -26,9 +26,10 @@
 
   const chats = [
     {
-      ab: 6.6, bis: 13.03, titel: "Fahrzeugschein",
+      ab: 0, bis: 13.03, titel: "Fahrzeugschein",
       zeilen: [
-        { ab: 6.65, von: "kunde", art: "bild", html: `<img class="foto" src="${bild("fahrzeugschein-beispiel.jpg")}" alt=""><span class="meta auf">18:41 ${haken}</span>` },
+        { ab: 0, von: "kunde", art: "bild", html: `<img class="foto" src="${bild("fahrzeugschein-beispiel.jpg")}" alt=""><span class="meta auf">18:41 ${haken}</span>` },
+        angebot(0, "18:43", "Angebot 1", "AS-PL", "104,90 €", bild("anlasser-aspl.jpg")),
         { ab: 9.8, von: "agent", art: "text", zeit: "18:41", text: "schein ist da. golf 7, hsn 0603." },
       ],
     },

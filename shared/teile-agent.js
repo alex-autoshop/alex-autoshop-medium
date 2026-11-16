@@ -9,8 +9,9 @@ export const TEILE_AGENT_TITEL = "Autoteile per WhatsApp anfragen | Alex Autosho
 export const TEILE_AGENT_BESCHREIBUNG =
   "Autoteile per WhatsApp anfragen. Unser KI-Teileagent prüft Angebote aus über 20 Partnerlieferanten und antwortet direkt im Chat.";
 export const TEILE_AGENT_H1 = "Autoteile per WhatsApp anfragen";
+export const TEILE_AGENT_KURZ = "Fahrzeugschein, Text oder Foto.";
 export const TEILE_AGENT_LEAD =
-  "Fahrzeugschein, Text oder Foto. Standardmäßig 3 Aftermarket-Angebote, auf Wunsch bis zu 10. OE-Qualität und Premium auf Anfrage. Code BESTERMANN15: 15 % auf die erste Teilebestellung.";
+  "Standardmäßig 3 Aftermarket-Angebote, auf Wunsch bis zu 10. OE-Qualität und Premium auf Anfrage. Code BESTERMANN15: 15 % auf die erste Teilebestellung.";
 export const TEILE_AGENT_BESTPREIS =
   "Wir fragen über 20 Lieferanten gleichzeitig ab – dein Bestpreis in Minuten, deutschlandweit.";
 export const TEILE_AGENT_STANDARD =
@@ -273,6 +274,7 @@ export function teileAgentKundentexte() {
     TEILE_AGENT_TITEL,
     TEILE_AGENT_BESCHREIBUNG,
     TEILE_AGENT_H1,
+    TEILE_AGENT_KURZ,
     TEILE_AGENT_LEAD,
     TEILE_AGENT_BESTPREIS,
     TEILE_AGENT_STANDARD,

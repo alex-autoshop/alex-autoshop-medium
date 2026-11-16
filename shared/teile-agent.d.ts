@@ -3,6 +3,7 @@ export const TEILE_AGENT_URL: string;
 export const TEILE_AGENT_TITEL: string;
 export const TEILE_AGENT_BESCHREIBUNG: string;
 export const TEILE_AGENT_H1: string;
+export const TEILE_AGENT_KURZ: string;
 export const TEILE_AGENT_LEAD: string;
 export const TEILE_AGENT_BESTPREIS: string;
 export const TEILE_AGENT_STANDARD: string;

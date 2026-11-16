@@ -56,12 +56,12 @@ export function TeileAgentFilm() {
           width={720}
           height={960}
           decoding="async"
-          className="aspect-[3/4] w-full bg-night object-cover sm:rounded-2xl sm:border sm:border-white/10"
+          className="aspect-[3/4] h-auto w-full bg-night object-cover sm:rounded-2xl lg:h-[calc(100svh-12rem)] lg:w-auto"
         />
         <button type="button" onClick={() => setGestartet(true)} className="btn-gold-bright mt-3 w-full">
           Film abspielen
         </button>
-        <figcaption className="mt-3 text-center text-sm text-white/70">{TEILE_AGENT_FILM_LABEL}</figcaption>
+        <figcaption className="sr-only">{TEILE_AGENT_FILM_LABEL}</figcaption>
         <p className="sr-only">{TEILE_AGENT_FILM_TEXT}</p>
       </figure>
     );
@@ -72,7 +72,7 @@ export function TeileAgentFilm() {
       <div className="relative">
         <video
           ref={videoRef}
-          className="aspect-[3/4] w-full bg-night object-contain sm:rounded-2xl sm:border sm:border-white/10"
+          className="aspect-[3/4] h-auto w-full bg-night object-contain sm:rounded-2xl lg:h-[calc(100svh-12rem)] lg:w-auto"
           width={1080}
           height={1440}
           muted
@@ -89,13 +89,13 @@ export function TeileAgentFilm() {
         <button
           type="button"
           onClick={tonSchalten}
-          className="btn-gold-bright absolute right-3 top-3 z-10 min-h-12 shadow-lg"
+          className="btn-gold-bright absolute bottom-16 right-3 z-10 min-h-12 shadow-lg"
           aria-pressed={ton}
         >
           {ton ? "Ton aus" : "Ton an"}
         </button>
       </div>
-      <figcaption className="mt-3 px-4 text-center text-sm leading-snug text-white/70 sm:px-0">{TEILE_AGENT_FILM_LABEL}</figcaption>
+      <figcaption className="sr-only">{TEILE_AGENT_FILM_LABEL}</figcaption>
       <p className="sr-only">{TEILE_AGENT_FILM_TEXT}</p>
     </figure>
   );
