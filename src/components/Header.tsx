@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
 import { SHOP_INFO } from "@/data/shopInfo";
+import { TEILE_AGENT_LIVE } from "../../shared/teile-agent.js";
 import { cn } from "@/lib/utils";
 
 const CartDrawer = lazy(() => import("@/components/CartDrawer").then((m) => ({ default: m.CartDrawer })));
@@ -205,6 +206,7 @@ export function Header() {
   const istAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
   const navPunkte = NAV.flatMap((item) => {
+    if (item.to === "/teile-agent" && !TEILE_AGENT_LIVE) return [];
     if (item.to === "/teileboerse" && !teileSichtbar) return [];
     if (item.to === "/laden" && istAdmin) return [...NAV_ADMIN, item];
     return [item];

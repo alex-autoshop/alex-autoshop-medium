@@ -1,3 +1,4 @@
+export const TEILE_AGENT_LIVE: boolean;
 export const TEILE_AGENT_PFAD: string;
 export const TEILE_AGENT_URL: string;
 export const TEILE_AGENT_TITEL: string;

@@ -8,6 +8,8 @@ import { empfehlungOffen } from "../shared/empfehlung.js";
 import { PRODUKT_WEITERLEITUNG } from "../shared/produkt-weiterleitung.js";
 import { istListenPfad } from "../shared/listen-zustand.js";
 import { Header } from "@/components/Header";
+import { Seo } from "@/components/Seo";
+import { TEILE_AGENT_LIVE } from "../shared/teile-agent.js";
 import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -289,7 +291,12 @@ export default function App() {
                     {/* alte Adressen bleiben gueltig */}
                     <Route path="/fahrzeugmarkt" element={<Navigate to="/fahrzeugboerse" replace />} />
                     <Route path="/fahrzeugmarkt/:slug" element={<AltesFahrzeug />} />
-                    <Route path="/teile-agent" element={<TeileAgent />} />
+                    <Route path="/teile-agent" element={TEILE_AGENT_LIVE ? <TeileAgent /> : (
+                      <>
+                        <Seo title="Weiterleitung" description="Diese Seite ist derzeit nicht verfügbar." noindex />
+                        <Navigate to="/" replace />
+                      </>
+                    )} />
                     <Route path="/laden" element={<Laden />} />
                     <Route path="/konto" element={<Konto />} />
                     <Route

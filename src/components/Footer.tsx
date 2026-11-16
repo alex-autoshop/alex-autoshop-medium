@@ -3,6 +3,7 @@ import { einwilligungZuruecksetzen } from "@/lib/tracking";
 import { RotateCcw, ArrowUpRight } from "lucide-react";
 import { SHOP_INFO } from "@/data/shopInfo";
 import { useTeileboerseSichtbar } from "@/lib/teileboerseSichtbar";
+import { TEILE_AGENT_LIVE } from "../../shared/teile-agent.js";
 
 const PRODUKTE = [
   { label: "Alle Produkte", to: "/shop" },
@@ -35,7 +36,11 @@ const RECHTLICHES = [
 
 export function Footer() {
   const { sichtbar: teileSichtbar } = useTeileboerseSichtbar();
-  const service = teileSichtbar ? SERVICE : SERVICE.filter((eintrag) => eintrag.to !== "/teileboerse");
+  const service = SERVICE.filter((eintrag) => {
+    if (eintrag.to === "/teileboerse" && !teileSichtbar) return false;
+    if (eintrag.to === "/teile-agent" && !TEILE_AGENT_LIVE) return false;
+    return true;
+  });
   return (
     <footer className="section-dark mt-16">
       <div className="container py-14 sm:py-16">
