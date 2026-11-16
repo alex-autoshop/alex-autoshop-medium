@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    @font-face { font-family: Sans; src: url("file:///usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf") format("truetype"); }
+    @font-face { font-family: Sans; src: url("file:///usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf") format("truetype"); font-weight: 700; }
+    @font-face { font-family: Mono; src: url("file:///usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf") format("truetype"); font-weight: 700; }
+    html, body { margin: 0; background: #efe6d4; }
+    #blatt {
+      width: 1500px; height: 2140px; position: relative; overflow: hidden;
+      background: #d5dec4;
+      color: #1c2418;
+      font-family: Sans, sans-serif;
+    }
+    .wert { font-family: Mono, monospace; font-weight: 700; letter-spacing: .03em; color: #141814; text-shadow: 0.6px 0 #141814; }
+    .micro { font-size: 11px; line-height: 1.15; color: #2a3828; }
+    .code { font-weight: 700; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; }
+    td { border: 1px solid #31402c; vertical-align: top; padding: 3px 6px 4px; }
+    .lbl { font-size: 11px; line-height: 1.05; }
+    .v { font-size: 18px; margin-top: 1px; }
+    .v.s { font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div id="blatt">
+    <svg xmlns="http://www.w3.org/2000/svg" width="1500" height="2140" style="position:absolute;inset:0">
+      <defs>
+        <pattern id="g" width="36" height="18" patternUnits="userSpaceOnUse">
+          <path d="M0 9 C6 2 12 16 18 9 S30 2 36 9" fill="none" stroke="#b7c3a4" stroke-width="0.6"/>
+          <path d="M0 4 C8 12 14 0 22 6 S32 14 36 4" fill="none" stroke="#e4ecd6" stroke-width="0.45"/>
+        </pattern>
+      </defs>
+      <rect width="1500" height="2140" fill="#d7e0c6"/>
+      <rect width="1500" height="2140" fill="url(#g)"/>
+      <rect width="1500" height="2140" fill="rgba(196,176,110,.08)"/>
+      <rect y="1320" width="1500" height="820" fill="rgba(214,226,196,.35)"/>
+    </svg>
+    <div style="position:relative;z-index:2;padding:28px 32px 0">
+      <div style="display:grid;grid-template-columns:520px 1fr;gap:18px">
+        <div>
+          <div style="font-size:28px;font-weight:700;line-height:1.05">Zulassungsbescheinigung<br>Teil I (Fahrzeugschein)</div>
+          <div class="micro" style="margin-top:4px">Registration certificate · Certificat d'immatriculation · Carta di circolazione</div>
+          <div style="margin-top:8px;font-size:13px">Nr. <span class="wert" style="font-size:16px">2016 0418 004821</span></div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:10px">
+            <svg width="78" height="54" viewBox="0 0 78 54">
+              <rect x="1" y="1" width="76" height="52" rx="4" fill="none" stroke="#1d4e86" stroke-width="2"/>
+              <circle cx="28" cy="27" r="16" fill="none" stroke="#1d4e86" stroke-width="1.4"/>
+              <text x="28" y="33" text-anchor="middle" font-family="Sans" font-size="16" font-weight="700" fill="#1d4e86">D</text>
+              <g fill="#1d4e86">
+                <circle cx="28" cy="8" r="1.5"/><circle cx="38" cy="11" r="1.5"/><circle cx="44" cy="19" r="1.5"/>
+                <circle cx="44" cy="29" r="1.5"/><circle cx="38" cy="37" r="1.5"/><circle cx="28" cy="40" r="1.5"/>
+                <circle cx="18" cy="37" r="1.5"/><circle cx="12" cy="29" r="1.5"/><circle cx="12" cy="19" r="1.5"/><circle cx="18" cy="11" r="1.5"/>
+              </g>
+            </svg>
+            <div style="font-size:15px;line-height:1.2">
+              <div>Europäische Gemeinschaft</div>
+              <div style="font-weight:700">Bundesrepublik Deutschland</div>
+            </div>
+          </div>
+          <div class="micro" style="margin-top:8px">A amtliches Kennzeichen / registration number · C.1.1 Name / nom · C.1.2 Vorname(n) · C.1.3 Anschrift / address</div>
+          <div style="margin-top:12px;border:2.5px solid #243024;padding:6px 10px 8px;background:rgba(255,255,255,.22)">
+            <div class="lbl"><span class="code">A</span> Amtliches Kennzeichen</div>
+            <div class="wert" style="font-size:42px;letter-spacing:.08em;margin-top:2px">DO&nbsp;JK&nbsp;2041</div>
+          </div>
+          <table style="margin-top:8px">
+            <tr><td><div class="lbl"><span class="code">C.1.1</span> Name / nom</div><div class="wert v" style="margin-left:2px">KELLER</div></td></tr>
+            <tr><td><div class="lbl"><span class="code">C.1.2</span> Vorname(n)</div><div class="wert v" style="margin-left:-1px">JONAS</div></td></tr>
+            <tr><td><div class="lbl"><span class="code">C.1.3</span> Anschrift / address</div><div class="wert v s">LINDENWEG 12<br>44137 DORTMUND</div></td></tr>
+          </table>
+          <div style="margin-top:14px;font-size:13px;line-height:1.3">
+            Ort, Datum der Zulassung<br>
+            <span class="wert" style="font-size:16px">DORTMUND, 18.04.2016</span>
+          </div>
+          <div class="micro" style="margin-top:10px">C.4c Der Inhaber der Zulassungsbescheinigung wird nicht als Eigentümer des Fahrzeugs ausgewiesen.</div>
+        </div>
+        <div>
+          <div class="micro" style="margin-bottom:6px">B Datum der Erstzulassung · 2.1 HSN · 2.2 TSN · D.1 Marke · D.2 Typ/Variante/Version · D.3 Handelsbezeichnung · J Klasse · 4 Aufbau · 5 Bezeichnung · E FIN · P.1 Hubraum · P.2 kW · P.3 Kraftstoff · R Farbe · F.1/F.2 Masse · G Betriebsmasse · 15.1–15.3 Reifen · K Genehmigung</div>
+          <table>
+            <tr>
+              <td style="width:18%"><div class="lbl"><span class="code">B</span><br>Erstzulassung</div></td>
+              <td colspan="3"><div class="wert v" style="margin-top:8px">12.03.2016</div></td>
+            </tr>
+            <tr>
+              <td><div class="lbl"><span class="code">2.1</span> HSN</div><div class="wert v">0603</div></td>
+              <td><div class="lbl"><span class="code">2.2</span> TSN</div><div class="wert v">BKN</div></td>
+              <td colspan="2"><div class="lbl"><span class="code">J</span> Fahrzeugklasse</div><div class="wert v">M1</div></td>
+            </tr>
+            <tr>
+              <td colspan="4"><div class="lbl"><span class="code">D.1</span> Marke / make</div><div class="wert v">VOLKSWAGEN (D)</div></td>
+            </tr>
+            <tr>
+              <td colspan="2"><div class="lbl"><span class="code">D.2</span> Typ / Variante / Version</div><div class="wert v s">AU</div></td>
+              <td colspan="2"><div class="lbl"><span class="code">D.3</span> Handelsbezeichnung</div><div class="wert v">GOLF</div></td>
+            </tr>
+            <tr>
+              <td><div class="lbl"><span class="code">4</span> Aufbau</div><div class="wert v">AB</div></td>
+              <td colspan="3"><div class="lbl"><span class="code">5</span> Bezeichnung</div><div class="wert v s">PKW GESCHLOSSEN</div></td>
+            </tr>
+            <tr>
+              <td colspan="4"><div class="lbl"><span class="code">E</span> Fahrzeug-Identifizierungsnummer</div><div class="wert v" style="letter-spacing:.06em">WVWZZZAUZHW123456</div></td>
+            </tr>
+            <tr>
+              <td><div class="lbl"><span class="code">P.1</span> cm³</div><div class="wert v">1598</div></td>
+              <td><div class="lbl"><span class="code">P.2</span> kW</div><div class="wert v">81</div></td>
+              <td><div class="lbl"><span class="code">P.3</span> Kraftstoff</div><div class="wert v s">DIESEL</div></td>
+              <td><div class="lbl"><span class="code">R</span> Farbe</div><div class="wert v">GRAU</div></td>
+            </tr>
+            <tr>
+              <td><div class="lbl"><span class="code">F.1</span> kg</div><div class="wert v">1860</div></td>
+              <td><div class="lbl"><span class="code">F.2</span> kg</div><div class="wert v">1800</div></td>
+              <td colspan="2"><div class="lbl"><span class="code">G</span> Betriebsmasse kg</div><div class="wert v">1305</div></td>
+            </tr>
+            <tr>
+              <td colspan="2"><div class="lbl"><span class="code">15.1</span> Reifen Achse 1</div><div class="wert v s">205/55R16 91V</div></td>
+              <td colspan="2"><div class="lbl"><span class="code">15.2</span> Reifen Achse 2</div><div class="wert v s">205/55R16 91V</div></td>
+            </tr>
+            <tr>
+              <td><div class="lbl"><span class="code">15.3</span></div><div class="wert v">–</div></td>
+              <td colspan="3"><div class="lbl"><span class="code">K</span> Nummer der EG-Typgenehmigung</div><div class="wert v s">e1*2007/46*0001*00</div></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      <div style="height:18px;margin:22px -32px 0;background:linear-gradient(#c3cbae,#e7eedb 40%,#aeb892)"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;min-height:620px;padding-top:36px;align-items:center">
+        <div style="display:flex;gap:18px;align-items:center;padding-left:24px">
+          <svg width="250" height="250" viewBox="0 0 250 250">
+            <circle cx="125" cy="125" r="112" fill="none" stroke="#1a2744" stroke-width="7"/>
+            <circle cx="125" cy="125" r="100" fill="none" stroke="#1a2744" stroke-width="2"/>
+            <path id="ring" d="M35,125 a90,90 0 1,1 180,0 a90,90 0 1,1 -180,0" fill="none"/>
+            <text fill="#1a2744" font-family="Sans" font-size="15" font-weight="700" letter-spacing="1.5">
+              <textPath href="#ring" startOffset="8%">FACHDIENST STRASSENVERKEHR</textPath>
+            </text>
+            <path d="M125 72 L168 92 L168 128 Q125 168 82 128 L82 92 Z" fill="none" stroke="#1a2744" stroke-width="3"/>
+            <text x="125" y="188" text-anchor="middle" fill="#1a2744" font-family="Sans" font-size="16" font-weight="700">i. A.</text>
+          </svg>
+          <div>
+            <div style="font-size:15px;font-weight:700">Fachdienst Straßenverkehr</div>
+            <div class="wert" style="font-size:18px;margin-top:8px">i.A.</div>
+            <svg width="120" height="36" viewBox="0 0 120 36"><path d="M4 24 C 20 8, 40 30, 70 16 S 100 28, 116 12" fill="none" stroke="#1a2744" stroke-width="2"/></svg>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:center">
+          <div style="width:280px;height:280px;border:3px dashed #3a4634;border-radius:50%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

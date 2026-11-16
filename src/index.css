@@ -368,6 +368,41 @@ font[style] {
   }
 }
 
+/* WhatsApp-Beispiele: echte Chat-Farben, ohne Karten-Glanz. */
+.wa-wand {
+  background-color: #e5ddd5;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='84' height='84' fill='none' stroke='%23ddd4c8' stroke-width='1.2'><circle cx='12' cy='18' r='5'/><path d='M40 14h16M40 20h10M62 48l8 8-8 8M18 58h14v10H18z'/></svg>");
+  background-size: 84px 84px;
+}
+.wa-aus, .wa-ein { position: relative; max-width: 86%; flex-shrink: 0; }
+.wa-aus { margin-left: auto; background: #dcf8c6; border-radius: 8px 0 8px 8px; }
+.wa-ein { margin-right: auto; background: #fff; border-radius: 0 8px 8px 8px; }
+.wa-aus::after, .wa-ein::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 13px;
+}
+.wa-aus::after {
+  right: -8px;
+  background: linear-gradient(225deg, #e5ddd5 50%, #dcf8c6 50%);
+}
+.wa-ein::before {
+  left: -8px;
+  background: linear-gradient(135deg, #e5ddd5 50%, #fff 50%);
+}
+.wa-meta { float: right; margin: 6px 0 0 10px; font-size: 11px; line-height: 1; color: #667781; }
+.wa-meta-bild {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,.65);
+}
+
 /* Barrierefreiheit: Nutzer mit reduzierter Bewegung bekommen keine Animationen */
 @media (prefers-reduced-motion: reduce) {
   *,

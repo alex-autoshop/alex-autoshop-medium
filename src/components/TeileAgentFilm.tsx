@@ -6,7 +6,7 @@ import {
 } from "../../shared/teile-agent.js";
 
 const FILM = "/media/teile-agent.mp4";
-const POSTER = "/media/teile-agent-poster.jpg";
+const POSTER = "/media/teile-agent-poster.webp";
 
 function bewegungReduziert() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -16,8 +16,10 @@ export function TeileAgentFilm() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ruhe, setRuhe] = useState(bewegungReduziert);
   const [gestartet, setGestartet] = useState(false);
-  const [laeuft, setLaeuft] = useState(false);
+  const [ton, setTon] = useState(false);
+  const [pausiert, setPausiert] = useState(true);
   const zeigen = !ruhe || gestartet;
+  const rahmen = "rounded-2xl ring-2 ring-[#F2E85C] shadow-[0_0_28px_rgba(242,232,92,0.45)]";
 
   useEffect(() => {
     const medien = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -29,79 +31,103 @@ export function TeileAgentFilm() {
   useEffect(() => {
     const el = videoRef.current;
     if (!el || !zeigen) return;
-    const an = () => setLaeuft(true);
-    const aus = () => setLaeuft(false);
-    el.addEventListener("play", an);
-    el.addEventListener("pause", aus);
+    const tonSync = () => setTon(!el.muted);
+    const stand = () => setPausiert(el.paused);
+    el.addEventListener("volumechange", tonSync);
+    el.addEventListener("play", stand);
+    el.addEventListener("pause", stand);
     el.muted = true;
-    el.play().catch(() => setLaeuft(false));
+    el.play().catch(() => setPausiert(true));
     return () => {
-      el.removeEventListener("play", an);
-      el.removeEventListener("pause", aus);
+      el.removeEventListener("volumechange", tonSync);
+      el.removeEventListener("play", stand);
+      el.removeEventListener("pause", stand);
     };
   }, [zeigen]);
 
-  function umschalten() {
+  function abspielen() {
     const el = videoRef.current;
     if (!el) return;
-    if (el.paused) {
-      el.muted = true;
-      el.play().catch(() => {});
-    } else {
-      el.pause();
-    }
+    el.muted = true;
+    setTon(false);
+    el.play().catch(() => setPausiert(true));
+  }
+
+  function tonSchalten() {
+    const el = videoRef.current;
+    if (!el) return;
+    const an = el.muted;
+    el.muted = !an;
+    setTon(an);
+    if (an) el.play().catch(() => {});
   }
 
   if (!zeigen) {
     return (
-      <figure className="mx-auto w-full max-w-[440px]">
+      <figure className="relative w-full">
         <img
           src={POSTER}
           alt={TEILE_AGENT_FILM_ALT}
           width={720}
           height={960}
           decoding="async"
-          className="aspect-[3/4] w-full rounded-2xl border border-white/10 bg-night object-cover"
+          className={`aspect-[3/4] h-auto w-full bg-night object-cover lg:h-[calc(100svh-12rem)] lg:w-auto ${rahmen}`}
         />
-        <button type="button" onClick={() => setGestartet(true)} className="btn-gold-bright mt-3 w-full">
-          Film abspielen
+        <button
+          type="button"
+          onClick={() => setGestartet(true)}
+          className="absolute left-1/2 top-1/2 z-10 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full shadow-lg"
+          style={{ background: "#F2E85C" }}
+          aria-label="Film abspielen"
+        >
+          <span className="ml-1 block border-y-[16px] border-l-[26px] border-y-transparent border-l-[#14120b]" />
         </button>
-        <figcaption className="mt-3 text-center text-sm text-white/70">{TEILE_AGENT_FILM_LABEL}</figcaption>
+        <figcaption className="sr-only">{TEILE_AGENT_FILM_LABEL}</figcaption>
         <p className="sr-only">{TEILE_AGENT_FILM_TEXT}</p>
       </figure>
     );
   }
 
   return (
-    <figure className="mx-auto w-full max-w-[440px]">
+    <figure className="w-full">
       <div className="relative">
         <video
           ref={videoRef}
-          className="aspect-[3/4] w-full rounded-2xl border border-white/10 bg-night object-contain"
+          className={`aspect-[3/4] h-auto w-full bg-night object-contain lg:h-[calc(100svh-12rem)] lg:w-auto ${rahmen}`}
           width={1080}
           height={1440}
           muted
           autoPlay={!ruhe}
           loop
           playsInline
+          controls
           preload="metadata"
           poster={POSTER}
           aria-label={TEILE_AGENT_FILM_LABEL}
         >
           <source src={FILM} type="video/mp4" />
         </video>
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <figcaption className="text-sm leading-snug text-white/70">{TEILE_AGENT_FILM_LABEL}</figcaption>
+        {pausiert ? (
+          <button
+            type="button"
+            onClick={abspielen}
+            className="absolute left-1/2 top-1/2 z-10 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full shadow-lg"
+            style={{ background: "#F2E85C" }}
+            aria-label="Film abspielen"
+          >
+            <span className="ml-1 block border-y-[16px] border-l-[26px] border-y-transparent border-l-[#14120b]" />
+          </button>
+        ) : null}
         <button
           type="button"
-          onClick={umschalten}
-          className="min-h-12 shrink-0 rounded-lg border border-white/20 px-4 text-sm font-semibold text-white hover:bg-white/10"
-          aria-pressed={laeuft}
+          onClick={tonSchalten}
+          className="btn-gold-bright absolute bottom-16 right-3 z-10 min-h-12 shadow-lg"
+          aria-pressed={ton}
         >
-          {laeuft ? "Pause" : "Abspielen"}
+          {ton ? "Ton aus" : "Ton an"}
         </button>
       </div>
+      <figcaption className="sr-only">{TEILE_AGENT_FILM_LABEL}</figcaption>
       <p className="sr-only">{TEILE_AGENT_FILM_TEXT}</p>
     </figure>
   );

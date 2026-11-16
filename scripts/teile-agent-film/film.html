@@ -4,66 +4,49 @@
     <meta charset="utf-8" />
     <title>Teile-Agent Film</title>
     <style>
-      html, body { margin: 0; padding: 0; background: #0d0d0d; overflow: hidden; }
-      canvas { display: block; width: 1080px; height: 1440px; }
-      #logo, #bild-aspl, #bild-seg, #bild-bosch { position: absolute; left: -2000px; top: 0; width: 32px; height: auto; }
-      @font-face {
-        font-family: Syne;
-        src: url("file:///workspace/node_modules/@fontsource/syne/files/syne-latin-700-normal.woff") format("woff");
-        font-weight: 700;
-        font-style: normal;
-        font-display: block;
-      }
-      @font-face {
-        font-family: "DM Sans";
-        src: url("file:///workspace/node_modules/@fontsource/dm-sans/files/dm-sans-latin-400-normal.woff") format("woff");
-        font-weight: 400;
-        font-style: normal;
-        font-display: block;
-      }
-      @font-face {
-        font-family: "DM Sans";
-        src: url("file:///workspace/node_modules/@fontsource/dm-sans/files/dm-sans-latin-600-normal.woff") format("woff");
-        font-weight: 600;
-        font-style: normal;
-        font-display: block;
-      }
-      @font-face {
-        font-family: "DM Sans";
-        src: url("file:///workspace/node_modules/@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff") format("woff");
-        font-weight: 700;
-        font-style: normal;
-        font-display: block;
-      }
-      @font-face {
-        font-family: Inter;
-        src: url("file:///usr/share/fonts/truetype/macos/Inter-Regular.ttf") format("truetype");
-        font-weight: 400;
-        font-style: normal;
-        font-display: block;
-      }
-      @font-face {
-        font-family: Inter;
-        src: url("file:///usr/share/fonts/truetype/macos/Inter-SemiBold.ttf") format("truetype");
-        font-weight: 600;
-        font-style: normal;
-        font-display: block;
-      }
-      @font-face {
-        font-family: Inter;
-        src: url("file:///usr/share/fonts/truetype/macos/Inter-Bold.ttf") format("truetype");
-        font-weight: 700;
-        font-style: normal;
-        font-display: block;
-      }
+      html, body { margin: 0; background: #0d0d0d; overflow: hidden; }
+      #buehne { width: 1080px; height: 1440px; position: relative; color: #111b21; font-family: "DM Sans", Inter, sans-serif; }
+      #kicker, h1 { display: none; }
+      #telefon { position: absolute; left: 36px; top: 28px; width: 1008px; height: 1280px; background: #efeae2; border-radius: 28px; overflow: hidden; display: flex; flex-direction: column; }
+      #kopf { display: flex; gap: 14px; align-items: center; background: #f0f2f5; padding: 16px 18px; border-bottom: 1px solid #e9edef; }
+      #avatar { width: 52px; height: 52px; border-radius: 50%; background: #00a884; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+      #name { font-weight: 700; font-size: 22px; }
+      #online { color: #667781; font-size: 16px; }
+      #verlauf { flex: 1; overflow: hidden; padding: 14px; display: flex; flex-direction: column; gap: 8px; justify-content: flex-end;
+        background: #e5ddd5 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='84' height='84' fill='none' stroke='%23ddd4c8' stroke-width='1.2'><circle cx='12' cy='18' r='5'/><path d='M40 14h16M40 20h10M62 48l8 8-8 8M18 58h14v10H18z'/></svg>"); }
+      #eingabe { display: flex; gap: 10px; align-items: center; background: #f0f2f5; padding: 10px 12px; color: #54656f; }
+      #feld { flex: 1; background: #fff; border-radius: 24px; min-height: 42px; display: flex; align-items: center; padding: 0 16px; color: #667781; }
+      .aus, .ein { position: relative; max-width: 86%; font-size: 22px; line-height: 1.3; }
+      .aus { margin-left: auto; background: #dcf8c6; border-radius: 8px 0 8px 8px; }
+      .ein { margin-right: auto; background: #fff; border-radius: 0 8px 8px 8px; }
+      .text { padding: 8px 10px 6px; }
+      .bild, .angebot { padding: 4px; }
+      img.foto { display: block; width: 100%; max-height: 340px; object-fit: contain; background: #efeae2; border-radius: 6px; }
+      s { color: #667781; }
+      img.produkt { display: block; width: 100%; height: 92px; object-fit: contain; background: #fff; border-radius: 6px; }
+      .meta { float: right; margin-left: 12px; font-size: 14px; color: #667781; }
+      .meta.auf { position: absolute; right: 10px; bottom: 8px; color: #fff; text-shadow: 0 1px 2px #000; }
+      #unter { position: absolute; left: 48px; right: 48px; bottom: 36px; z-index: 3; text-align: center; color: #fff; font-size: 28px; line-height: 1.25; text-shadow: 0 2px 8px #000; }
+      #ende { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 18px; background: #0d0d0d; color: #ede9e3; text-align: center; }
+      #ende strong { font-size: 54px; }
+      #knopf { background: #25d366; color: #073b28; font-weight: 700; font-size: 32px; border-radius: 16px; padding: 22px 36px; }
+      @font-face { font-family: Syne; src: url("file:///workspace/node_modules/@fontsource/syne/files/syne-latin-700-normal.woff") format("woff"); font-weight: 700; }
+      @font-face { font-family: "DM Sans"; src: url("file:///workspace/node_modules/@fontsource/dm-sans/files/dm-sans-latin-600-normal.woff") format("woff"); font-weight: 600; }
+      @font-face { font-family: Inter; src: url("file:///usr/share/fonts/truetype/macos/Inter-Regular.ttf") format("truetype"); font-weight: 400; }
     </style>
   </head>
   <body>
-    <canvas id="c" width="1080" height="1440"></canvas>
-    <img id="logo" alt="" src="file:///workspace/public/images/logo-cropped.png" />
-    <img id="bild-aspl" alt="" src="file:///workspace/public/media/anlasser-aspl.jpg" />
-    <img id="bild-seg" alt="" src="file:///workspace/public/media/anlasser-seg.jpg" />
-    <img id="bild-bosch" alt="" src="file:///workspace/public/media/anlasser-bosch.jpg" />
+    <div id="buehne">
+      <div id="kicker">WHATSAPP</div>
+      <h1 id="titel">Teile anfragen</h1>
+      <div id="telefon">
+        <div id="kopf"><div id="avatar">A</div><div><div id="name">Alex Autoshop</div><div id="online">online</div></div></div>
+        <div id="verlauf"></div>
+        <div id="eingabe"><span>☺</span><div id="feld">Nachricht</div><span>📎</span><span>📷</span><span style="background:#00a884;color:#fff;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center">🎤</span></div>
+      </div>
+      <div id="unter"></div>
+      <div id="ende"><img id="logo" alt="" src="file:///workspace/public/images/logo-cropped.png" style="width:720px" /><div id="knopf">Jetzt per WhatsApp anfragen</div><strong>+49 202 82690</strong><div>Handelstraße 64 · Wuppertal</div></div>
+    </div>
     <script src="film.js"></script>
   </body>
 </html>

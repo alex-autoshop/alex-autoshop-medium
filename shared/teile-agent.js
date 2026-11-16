@@ -9,7 +9,18 @@ export const TEILE_AGENT_TITEL = "Autoteile per WhatsApp anfragen | Alex Autosho
 export const TEILE_AGENT_BESCHREIBUNG =
   "Autoteile per WhatsApp anfragen. Unser KI-Teileagent prüft Angebote aus über 20 Partnerlieferanten und antwortet direkt im Chat.";
 export const TEILE_AGENT_H1 = "Autoteile per WhatsApp anfragen";
-export const TEILE_AGENT_LEAD = "Unser KI-Teileagent antwortet dir direkt im Chat.";
+export const TEILE_AGENT_KURZ = "Fahrzeugschein, Text oder Foto.";
+export const TEILE_AGENT_LEAD =
+  "Standardmäßig 3 Aftermarket-Angebote, auf Wunsch bis zu 10. OE-Qualität und Premium auf Anfrage. Code BESTERMANN15: 15 % auf die erste Teilebestellung.";
+export const TEILE_AGENT_BESTPREIS =
+  "Wir fragen über 20 Lieferanten gleichzeitig ab – dein Bestpreis in Minuten, deutschlandweit.";
+export const TEILE_AGENT_STANDARD =
+  "Standardmäßig 3 Angebote von Aftermarket-Marken – auf Wunsch bis zu 10 Angebote pro Teil. OE-Qualität und Premium auf Anfrage.";
+export const TEILE_AGENT_CODE = "BESTERMANN15";
+export const TEILE_AGENT_CODE_VORGABE = "Hallo, ich suche ein Teil. Code: BESTERMANN15";
+export const TEILE_AGENT_CODE_CTA =
+  "Starte den WhatsApp-Chat mit deinem Teil, der Teilenummer, deinem Fahrzeugschein oder einem Foto und schreib BESTERMANN15 dazu – du bekommst 15 % auf deine erste Teilebestellung, auf den ganzen Warenkorb.";
+export const TEILE_AGENT_CODE_KLEIN = "Einmal pro Kunde, gilt für die erste Teilebestellung.";
 export const TEILE_AGENT_PLATZHALTER =
   "Schreib einfach, was du brauchst, z.B. Bremsscheiben vorne für VW Golf 7, Bj. 2016";
 export const TEILE_AGENT_BUTTON = "Abschicken & per WhatsApp weiter";
@@ -19,8 +30,8 @@ export const TEILE_AGENT_DATENSCHUTZ =
   "Mit „Abschicken & per WhatsApp weiter“ öffnet sich WhatsApp (Meta). Das Textfeld speichert nichts auf dieser Seite. Dein Text steht nur in der Nachricht. Details stehen in der Datenschutzerklärung.";
 
 export const TEILE_AGENT_CLAIMS = [
-  "Ein Teil, drei geprüfte Optionen",
-  "Marke, Preis und Lieferzeit im Chat",
+  "Standard 3 Aftermarket-Angebote, auf Wunsch bis zu 10",
+  "OE-Qualität und Premium auf Anfrage",
   "Passform-Prüfung über Schlüsselnummer oder FIN",
   "Angebote aus über 20 Partnerlieferanten",
 ];
@@ -28,21 +39,21 @@ export const TEILE_AGENT_CLAIMS = [
 export const TEILE_AGENT_SCHRITTE = [
   {
     titel: "Anfrage schicken",
-    text: "Schreib ins Feld, was du brauchst, und schick die Anfrage per WhatsApp. Ein Foto vom Fahrzeugschein kannst du im Chat anhängen.",
+    text: "Schein, Text oder ein Foto per WhatsApp.",
   },
   {
     titel: "Passform und Optionen prüfen",
-    text: "Die Rückmeldung zeigt bis zu drei Optionen mit Marke, Preis und Lieferzeit. Die Passform prüfen wir über Schlüsselnummer oder FIN.",
+    text: "Du siehst die Angebote im Chat und suchst dir eins aus.",
   },
   {
     titel: "Angebot annehmen und bestellen",
-    text: "Die Nachricht ist eine Anfrage. Bestellt wird, wenn du das Angebot annimmst.",
+    text: "Bestellt wird erst, wenn du zusagst. Abholung in Wuppertal oder Lieferung.",
   },
 ];
 
 export const TEILE_AGENT_VERGLEICH = {
   titel: "Klassische Beratung vs. Teile-Agent",
-  lead: "Klassisch gibt es einen Vorschlag. Der Teile-Agent legt zu einem Teil drei geprüfte Optionen vor. Bestellt wird in beiden Fällen erst, wenn du das Angebot annimmst.",
+  lead: "Klassisch gibt es einen Vorschlag. Der Teile-Agent legt standardmäßig drei Aftermarket-Angebote vor, auf Wunsch bis zu zehn. Bestellt wird in beiden Fällen erst, wenn du das Angebot annimmst.",
   klassischTitel: "Klassische Beratung",
   klassisch: [
     "Ein Vorschlag, abgestimmt auf deine Anfrage",
@@ -50,48 +61,139 @@ export const TEILE_AGENT_VERGLEICH = {
   ],
   agentTitel: "Teile-Agent",
   agent: [
-    "Drei geprüfte Optionen zu einem Teil",
-    "Marke, Preis und Lieferzeit, wo sie vorliegt",
+    "Standard 3 Aftermarket-Angebote, auf Wunsch bis zu 10",
+    "OE-Qualität und Premium auf Anfrage",
     "Passform-Prüfung über Schlüsselnummer (HSN/TSN) oder FIN",
   ],
 };
 
-export const TEILE_AGENT_BEISPIEL = {
-  titel: "So kann ein Chat aussehen",
-  hinweis: "Beispiel aus einem Test-Chat vom 14.11.2026: Anlasser für einen BMW X3 (E83). Kein aktuelles Angebot. Preise inkl. MwSt.",
-  kunde: "Anlasser für BMW X3 (E83)",
-  schein: "Foto vom Fahrzeugschein",
-  scheinHinweis: "Beispiel-Schein. Keine echten Daten.",
-  agent: "Passform über HSN, TSN und FIN geprüft. Drei Optionen:",
-  optionen: [
-    {
-      stufe: "Budget",
-      marke: "AS-PL",
-      nummer: "S0291",
-      preis: "104,90 €",
-      zeit: "Lieferung bis 18.11.",
-      bild: "/media/anlasser-aspl.jpg",
-    },
-    {
-      stufe: "OE-Qualität",
-      marke: "SEG Automotive",
-      nummer: "0001148033",
-      preis: "176,90 €",
-      zeit: "",
-      bild: "/media/anlasser-seg.jpg",
-    },
-    {
-      stufe: "Premium",
-      marke: "Bosch",
-      nummer: "0 986 022 020",
-      preis: "179,90 €",
-      zeit: "",
-      bild: "/media/anlasser-bosch.jpg",
-    },
-  ],
-  preisHinweis: "inkl. MwSt",
-  lieferHinweis: "Die Lieferzeit steht nur dort, wo sie im Test-Chat genannt war.",
-};
+const scheibe = "/media/scheibe-aftermarket.jpg";
+
+const anlasser = [
+  { stufe: "Angebot 1", marke: "AS-PL", nummer: "", preis: "104,90 €", zeit: "", bild: "/media/anlasser-aspl.jpg" },
+  { stufe: "Angebot 2", marke: "HC-Cargo", nummer: "", preis: "118,90 €", zeit: "", bild: "" },
+  { stufe: "Angebot 3", marke: "Unipoint", nummer: "", preis: "129,90 €", zeit: "", bild: "" },
+];
+
+const scheiben = [
+  { stufe: "Angebot 1", marke: "ABE", nummer: "", altPreis: "39,90 €", preis: "33,92 €", zeit: "pro Stück", bild: scheibe },
+  { stufe: "Angebot 2", marke: "NK", nummer: "", altPreis: "42,00 €", preis: "35,70 €", zeit: "pro Stück", bild: scheibe },
+  { stufe: "Angebot 3", marke: "Mapco", nummer: "", altPreis: "44,90 €", preis: "38,17 €", zeit: "pro Stück", bild: scheibe },
+];
+
+const zehnScheiben = [
+  ["ABE", "33,92 €"],
+  ["NK", "35,70 €"],
+  ["Mapco", "38,17 €"],
+  ["Triscan", "39,87 €"],
+  ["Japanparts", "41,23 €"],
+  ["Optimal", "42,42 €"],
+  ["Vaico", "44,12 €"],
+  ["Febi Bilstein", "46,67 €"],
+  ["Meyle", "49,22 €"],
+  ["Blue Print", "52,62 €"],
+];
+
+const drossel = [
+  { stufe: "Angebot 1", marke: "ESEN", nummer: "", preis: "114,90 €", zeit: "", bild: "/media/drossel-esen.jpg" },
+  { stufe: "Angebot 2", marke: "Meat & Doria", nummer: "", preis: "124,90 €", zeit: "", bild: "/media/drossel-meat.jpg" },
+  { stufe: "Angebot 3", marke: "Trucktec", nummer: "", preis: "152,90 €", zeit: "", bild: "/media/drossel-trucktec.jpg" },
+];
+
+function angebote(liste, basis) {
+  return liste.map((eintrag, index) => ({
+    von: "agent",
+    art: "angebot",
+    zeit: basis,
+    angebot: eintrag,
+    alt: `${eintrag.marke} ${eintrag.nummer}`.trim(),
+    key: `${eintrag.marke}-${index}`,
+  }));
+}
+
+export const TEILE_AGENT_CHATS = [
+  {
+    id: "schein",
+    tab: "Fahrzeugschein",
+    nachrichten: [
+      {
+        von: "kunde",
+        art: "bild",
+        bild: "/media/fahrzeugschein-beispiel.jpg",
+        alt: "Foto einer erfundenen Zulassungsbescheinigung Teil I, Jonas Keller, VW Golf, Dortmund",
+        zeit: "18:41",
+        key: "schein",
+      },
+      { von: "agent", art: "text", text: "schein ist da. welches teil?", zeit: "18:41", key: "s1" },
+      { von: "kunde", art: "text", text: "anlasser", zeit: "18:42", key: "s2" },
+      { von: "agent", art: "text", text: "golf 7 1.6 tdi, hsn 0603. drei aftermarket-angebote, beispiel, inkl. mwst", zeit: "18:42", key: "s3" },
+      ...angebote(anlasser, "18:43"),
+    ],
+  },
+  {
+    id: "text",
+    tab: "Nachricht",
+    nachrichten: [
+      {
+        von: "kunde",
+        art: "text",
+        text: "hi brauche bremsscheiben vorne für meinen golf 7 1.6 tdi was kostet das",
+        zeit: "11:07",
+        key: "t0",
+      },
+      { von: "kunde", art: "text", text: "BESTERMANN15", zeit: "11:07", key: "tcode" },
+      { von: "agent", art: "text", text: "code ist drin. 15% auf den ganzen warenkorb. drei aftermarket-angebote, stück, beispiel", zeit: "11:08", key: "t1" },
+      ...angebote(scheiben, "11:09"),
+      { von: "kunde", art: "text", text: "zeig mir 10", zeit: "11:10", key: "tmehr" },
+      {
+        von: "agent",
+        art: "liste",
+        zeit: "11:10",
+        key: "tliste",
+        liste: {
+          titel: "10 angebote, stück, 15% drin, beispiel",
+          zeilen: zehnScheiben.map(([marke, preis]) => ({ marke, preis })),
+        },
+      },
+      { von: "kunde", art: "text", text: "nehm 2 nk für vorne", zeit: "11:11", key: "twahl" },
+      {
+        von: "agent",
+        art: "korb",
+        zeit: "11:12",
+        key: "tkorb",
+        korb: {
+          titel: "Übersicht",
+          zeilen: [{ name: "2× Bremsscheibe NK, vorne", alt: "84,00 €", preis: "71,40 €" }],
+          rabatt: "Rabatt −15 %",
+          summe: "71,40 €",
+          linkText: "Jetzt bestellen",
+        },
+      },
+    ],
+  },
+  {
+    id: "foto",
+    tab: "Teilefoto",
+    nachrichten: [
+      {
+        von: "kunde",
+        art: "bild",
+        bild: "/media/teilefoto-drosselklappe.jpg",
+        alt: "Foto einer gebrauchten Drosselklappe auf einer Werkbank",
+        zeit: "16:22",
+        key: "f0",
+      },
+      { von: "kunde", art: "text", text: "die hier, bmw x3", zeit: "16:22", key: "f1" },
+      { von: "agent", art: "text", text: "drosselklappe. drei aftermarket-angebote, beispiel, inkl. mwst", zeit: "16:23", key: "f2" },
+      ...angebote(drossel, "16:24"),
+      { von: "kunde", art: "text", text: "hast du auch oe?", zeit: "16:25", key: "foe" },
+      { von: "agent", art: "text", text: "oe und premium nur auf anfrage. sag bescheid, dann such ich die.", zeit: "16:25", key: "foe2" },
+    ],
+  },
+];
+
+export const TEILE_AGENT_CHAT_HINWEIS =
+  "Drei Beispiele, kein aktuelles Angebot. Preise inkl. MwSt. Der Fahrzeugschein ist erfunden. Lieferzeit nur, wo sie im Test-Chat stand.";
 
 export const TEILE_AGENT_TIPPS = {
   titel: "Drei Tipps für Preis und Lieferzeit",
@@ -107,20 +209,20 @@ export const TEILE_AGENT_TIPPS = {
     },
     {
       titel: "Sagen, was dir wichtiger ist",
-      text: "Ein günstiger Preis oder eine kurze Lieferzeit.",
+      text: "Mehr Angebote, oder OE-Qualität und Premium, kannst du im Chat nachfragen.",
     },
   ],
 };
 
 export const TEILE_AGENT_HINTER =
-  "Hinter dem Teile-Agent steht der Laden Alex Autoshop in Wuppertal. Die Anfrage kommt bei uns an. Die Angebote stellen wir aus über 20 Partnerlieferanten zusammen.";
+  "Hinter dem Teile-Agent steht der Laden Alex Autoshop in Wuppertal. Die Anfrage kommt bei uns an.";
 
 export const TEILE_AGENT_FILM_ALT =
-  "Standbild: drei Anlasser-Angebote für einen BMW X3, AS-PL, SEG Automotive und Bosch. Beispiel aus einem Test-Chat.";
+  "Standbild aus dem Erklärfilm: WhatsApp-Chat mit drei Beispiel-Angeboten.";
 export const TEILE_AGENT_FILM_LABEL =
-  "Erklärfilm ohne Ton. Die Texte stehen im Bild.";
+  "Erklärfilm mit Stimme. Der Ton ist aus, bis du ihn einschaltest.";
 export const TEILE_AGENT_FILM_TEXT =
-  "Der Film zeigt eine Beispiel-Anfrage nach einem Anlasser für einen BMW X3 (E83) und einen stilisierten Fahrzeugschein ohne echte Daten. Der Teile-Agent prüft die Passform über HSN, TSN und FIN und sucht drei Optionen. Danach: AS-PL S0291 für 104,90 Euro inklusive MwSt mit Lieferung bis 18.11., SEG Automotive 0001148033 für 176,90 Euro und Bosch 0 986 022 020 für 179,90 Euro. Für SEG und Bosch nennt der Test-Chat keine Lieferzeit. Am Ende die Anfrage bei Alex Autoshop, +49 202 82690.";
+  "Der Film zeigt drei Wege: Fahrzeugschein, kurze Nachricht oder Foto vom Teil. Wir fragen über 20 Lieferanten gleichzeitig ab, dein Bestpreis in Minuten, deutschlandweit. Standard sind drei Angebote von Aftermarket-Marken. Auf Wunsch bis zu zehn pro Teil. OE-Qualität und Premium nur auf Anfrage. Der Code BESTERMANN15 gibt 15 Prozent auf die erste Teilebestellung, auf den ganzen Warenkorb. Die Übersicht und der Bestelllink kommen im Chat. Abholung in der Handelstraße 64 in Wuppertal oder Lieferung.";
 
 export const TEILE_AGENT_FILM_LD = {
   "@context": "https://schema.org",
@@ -129,7 +231,7 @@ export const TEILE_AGENT_FILM_LD = {
   description: TEILE_AGENT_BESCHREIBUNG,
   thumbnailUrl: "https://www.alex-autoshop.de/media/teile-agent-poster.jpg",
   uploadDate: "2026-11-14",
-  duration: "PT38S",
+  duration: "PT58S",
   contentUrl: "https://www.alex-autoshop.de/media/teile-agent.mp4",
   embedUrl: TEILE_AGENT_URL,
 };
@@ -153,7 +255,7 @@ export const TEILE_AGENT_FAQ = [
   },
   {
     q: "Sind die Beispiele auf dieser Seite echte Angebote?",
-    a: "Nein. Der Anlasser im Beispiel stammt aus einem Test-Chat und ist kein aktuelles Angebot. Die Lieferzeit steht nur dort, wo sie im Chat genannt war.",
+    a: "Nein. Die Chats sind Beispiele. Der Anlasser stammt aus einem Test-Chat, die anderen Preise sind Beispielpreise. Die Lieferzeit steht nur dort, wo sie genannt war.",
   },
 ];
 
@@ -172,7 +274,14 @@ export function teileAgentKundentexte() {
     TEILE_AGENT_TITEL,
     TEILE_AGENT_BESCHREIBUNG,
     TEILE_AGENT_H1,
+    TEILE_AGENT_KURZ,
     TEILE_AGENT_LEAD,
+    TEILE_AGENT_BESTPREIS,
+    TEILE_AGENT_STANDARD,
+    TEILE_AGENT_CODE,
+    TEILE_AGENT_CODE_VORGABE,
+    TEILE_AGENT_CODE_CTA,
+    TEILE_AGENT_CODE_KLEIN,
     TEILE_AGENT_PLATZHALTER,
     TEILE_AGENT_BUTTON,
     TEILE_AGENT_HINWEIS,
@@ -192,15 +301,27 @@ export function teileAgentKundentexte() {
     TEILE_AGENT_VERGLEICH.agentTitel,
     ...TEILE_AGENT_VERGLEICH.klassisch,
     ...TEILE_AGENT_VERGLEICH.agent,
-    TEILE_AGENT_BEISPIEL.titel,
-    TEILE_AGENT_BEISPIEL.hinweis,
-    TEILE_AGENT_BEISPIEL.kunde,
-    TEILE_AGENT_BEISPIEL.schein,
-    TEILE_AGENT_BEISPIEL.scheinHinweis,
-    TEILE_AGENT_BEISPIEL.agent,
-    TEILE_AGENT_BEISPIEL.preisHinweis,
-    TEILE_AGENT_BEISPIEL.lieferHinweis,
-    ...TEILE_AGENT_BEISPIEL.optionen.flatMap((option) => [option.stufe, option.marke, option.nummer, option.preis, option.zeit]),
+    TEILE_AGENT_CHAT_HINWEIS,
+    ...TEILE_AGENT_CHATS.flatMap((chat) => [
+      chat.tab,
+      ...chat.nachrichten.flatMap((nachricht) => [
+        nachricht.text || "",
+        nachricht.alt || "",
+        nachricht.angebot?.stufe || "",
+        nachricht.angebot?.marke || "",
+        nachricht.angebot?.nummer || "",
+        nachricht.angebot?.altPreis || "",
+        nachricht.angebot?.preis || "",
+        nachricht.angebot?.zeit || "",
+        nachricht.korb?.titel || "",
+        nachricht.korb?.rabatt || "",
+        nachricht.korb?.summe || "",
+        nachricht.korb?.linkText || "",
+        ...(nachricht.korb?.zeilen.flatMap((zeile) => [zeile.name, zeile.alt, zeile.preis]) || []),
+        nachricht.liste?.titel || "",
+        ...(nachricht.liste?.zeilen.flatMap((zeile) => [zeile.marke, zeile.preis]) || []),
+      ]),
+    ]),
     TEILE_AGENT_TIPPS.titel,
     TEILE_AGENT_TIPPS.lead,
     ...TEILE_AGENT_TIPPS.punkte.flatMap((punkt) => [punkt.titel, punkt.text]),
