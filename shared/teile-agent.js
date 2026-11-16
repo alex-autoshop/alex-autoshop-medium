@@ -9,7 +9,8 @@ export const TEILE_AGENT_TITEL = "Autoteile per WhatsApp anfragen | Alex Autosho
 export const TEILE_AGENT_BESCHREIBUNG =
   "Autoteile per WhatsApp anfragen. Unser KI-Teileagent prüft Angebote aus über 20 Partnerlieferanten und antwortet direkt im Chat.";
 export const TEILE_AGENT_H1 = "Autoteile per WhatsApp anfragen";
-export const TEILE_AGENT_LEAD = "Unser KI-Teileagent antwortet dir direkt im Chat.";
+export const TEILE_AGENT_LEAD =
+  "Fahrzeugschein, Text oder Foto. Standardmäßig 3 Aftermarket-Angebote, auf Wunsch bis zu 10. OE-Qualität und Premium auf Anfrage. Code BESTERMANN15: 15 % auf die erste Teilebestellung.";
 export const TEILE_AGENT_BESTPREIS =
   "Wir fragen über 20 Lieferanten gleichzeitig ab – dein Bestpreis in Minuten, deutschlandweit.";
 export const TEILE_AGENT_STANDARD =
@@ -37,15 +38,15 @@ export const TEILE_AGENT_CLAIMS = [
 export const TEILE_AGENT_SCHRITTE = [
   {
     titel: "Anfrage schicken",
-    text: "Schreib ins Feld, was du brauchst, und schick die Anfrage per WhatsApp. Ein Foto vom Fahrzeugschein kannst du im Chat anhängen.",
+    text: "Schein, Text oder ein Foto per WhatsApp.",
   },
   {
     titel: "Passform und Optionen prüfen",
-    text: "Standard sind drei Angebote von Aftermarket-Marken, mit Marke und Preis. Auf Wunsch bis zu zehn. OE-Qualität und Premium nur auf Anfrage. Die Passform prüfen wir über Schlüsselnummer oder FIN.",
+    text: "Du siehst die Angebote im Chat und suchst dir eins aus.",
   },
   {
     titel: "Angebot annehmen und bestellen",
-    text: "Die Nachricht ist eine Anfrage. Bestellt wird, wenn du das Angebot annimmst.",
+    text: "Bestellt wird erst, wenn du zusagst. Abholung in Wuppertal oder Lieferung.",
   },
 ];
 
@@ -213,7 +214,7 @@ export const TEILE_AGENT_TIPPS = {
 };
 
 export const TEILE_AGENT_HINTER =
-  "Hinter dem Teile-Agent steht der Laden Alex Autoshop in Wuppertal. Die Anfrage kommt bei uns an. Die Angebote stellen wir aus über 20 Partnerlieferanten zusammen.";
+  "Hinter dem Teile-Agent steht der Laden Alex Autoshop in Wuppertal. Die Anfrage kommt bei uns an.";
 
 export const TEILE_AGENT_FILM_ALT =
   "Standbild aus dem Erklärfilm: WhatsApp-Chat mit drei Beispiel-Angeboten.";

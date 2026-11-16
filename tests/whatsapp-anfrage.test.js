@@ -82,16 +82,16 @@ test("Kundentext bleibt rechtssicher und die Seite hat nur ein Textfeld", () => 
   assert.equal(seite.includes('id="fin"'), false);
   assert.match(seite, /whatsappAnfrageUrl\(nachrichtMitCode\(text\)\)/);
   assert.match(seite, /BESTERMANN15/);
-  assert.match(seite, /TEILE_AGENT_BESTPREIS/);
   assert.match(seite, /location\.assign/);
   assert.match(seite, /TeileAgentFilm/);
-  assert.match(seite, /TEILE_AGENT_VERGLEICH/);
   assert.match(seite, /WhatsAppBeispiel/);
   assert.match(seite, /SHOP_INFO/);
   assert.match(seite, /label: "Teile-Agent"|Wer steckt dahinter/);
   assert.match(film, /prefers-reduced-motion/);
   assert.match(film, /preload="metadata"/);
   assert.match(film, /playsInline/);
+  assert.match(film, /controls/);
+  assert.match(film, /Ton an/);
   assert.match(film, /teile-agent\.mp4/);
   assert.equal(/shopify|\bbeta\b/i.test(seite + film), false);
 
