@@ -30,7 +30,7 @@ function Blase({ nachricht }: { nachricht: Nachricht }) {
     return (
       <div className={`${klasse} w-[78%] overflow-hidden p-[3px]`}>
         <div className="relative">
-          <img src={nachricht.bild} alt={nachricht.alt || ""} className="block max-h-72 w-full rounded-[6px] bg-[#efeae2] object-contain" />
+          <img src={nachricht.bild} alt={nachricht.alt || ""} className="block max-h-[32rem] w-full rounded-[6px] bg-[#efeae2] object-contain" />
           <span className="wa-meta-bild">
             {nachricht.zeit}
             {aus ? <Haken /> : null}
