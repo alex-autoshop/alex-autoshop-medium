@@ -17,7 +17,9 @@ export function TeileAgentFilm() {
   const [ruhe, setRuhe] = useState(bewegungReduziert);
   const [gestartet, setGestartet] = useState(false);
   const [ton, setTon] = useState(false);
+  const [pausiert, setPausiert] = useState(true);
   const zeigen = !ruhe || gestartet;
+  const rahmen = "rounded-2xl ring-2 ring-[#F2E85C] shadow-[0_0_28px_rgba(242,232,92,0.45)]";
 
   useEffect(() => {
     const medien = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -30,13 +32,26 @@ export function TeileAgentFilm() {
     const el = videoRef.current;
     if (!el || !zeigen) return;
     const tonSync = () => setTon(!el.muted);
+    const stand = () => setPausiert(el.paused);
     el.addEventListener("volumechange", tonSync);
+    el.addEventListener("play", stand);
+    el.addEventListener("pause", stand);
     el.muted = true;
-    el.play().catch(() => {});
+    el.play().catch(() => setPausiert(true));
     return () => {
       el.removeEventListener("volumechange", tonSync);
+      el.removeEventListener("play", stand);
+      el.removeEventListener("pause", stand);
     };
   }, [zeigen]);
+
+  function abspielen() {
+    const el = videoRef.current;
+    if (!el) return;
+    el.muted = true;
+    setTon(false);
+    el.play().catch(() => setPausiert(true));
+  }
 
   function tonSchalten() {
     const el = videoRef.current;
@@ -49,17 +64,23 @@ export function TeileAgentFilm() {
 
   if (!zeigen) {
     return (
-      <figure className="w-full">
+      <figure className="relative w-full">
         <img
           src={POSTER}
           alt={TEILE_AGENT_FILM_ALT}
           width={720}
           height={960}
           decoding="async"
-          className="aspect-[3/4] h-auto w-full bg-night object-cover sm:rounded-2xl lg:h-[calc(100svh-12rem)] lg:w-auto"
+          className={`aspect-[3/4] h-auto w-full bg-night object-cover lg:h-[calc(100svh-12rem)] lg:w-auto ${rahmen}`}
         />
-        <button type="button" onClick={() => setGestartet(true)} className="btn-gold-bright mt-3 w-full">
-          Film abspielen
+        <button
+          type="button"
+          onClick={() => setGestartet(true)}
+          className="absolute left-1/2 top-1/2 z-10 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full shadow-lg"
+          style={{ background: "#F2E85C" }}
+          aria-label="Film abspielen"
+        >
+          <span className="ml-1 block border-y-[16px] border-l-[26px] border-y-transparent border-l-[#14120b]" />
         </button>
         <figcaption className="sr-only">{TEILE_AGENT_FILM_LABEL}</figcaption>
         <p className="sr-only">{TEILE_AGENT_FILM_TEXT}</p>
@@ -72,7 +93,7 @@ export function TeileAgentFilm() {
       <div className="relative">
         <video
           ref={videoRef}
-          className="aspect-[3/4] h-auto w-full bg-night object-contain sm:rounded-2xl lg:h-[calc(100svh-12rem)] lg:w-auto"
+          className={`aspect-[3/4] h-auto w-full bg-night object-contain lg:h-[calc(100svh-12rem)] lg:w-auto ${rahmen}`}
           width={1080}
           height={1440}
           muted
@@ -86,6 +107,17 @@ export function TeileAgentFilm() {
         >
           <source src={FILM} type="video/mp4" />
         </video>
+        {pausiert ? (
+          <button
+            type="button"
+            onClick={abspielen}
+            className="absolute left-1/2 top-1/2 z-10 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full shadow-lg"
+            style={{ background: "#F2E85C" }}
+            aria-label="Film abspielen"
+          >
+            <span className="ml-1 block border-y-[16px] border-l-[26px] border-y-transparent border-l-[#14120b]" />
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={tonSchalten}
