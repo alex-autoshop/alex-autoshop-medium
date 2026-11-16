@@ -5,6 +5,7 @@ export const TEILE_AGENT_BESCHREIBUNG: string;
 export const TEILE_AGENT_H1: string;
 export const TEILE_AGENT_LEAD: string;
 export const TEILE_AGENT_BESTPREIS: string;
+export const TEILE_AGENT_STANDARD: string;
 export const TEILE_AGENT_CODE: string;
 export const TEILE_AGENT_CODE_VORGABE: string;
 export const TEILE_AGENT_CODE_CTA: string;
@@ -35,6 +36,7 @@ export const TEILE_AGENT_CHATS: readonly {
     zeit: string;
     key: string;
     angebot?: { stufe: string; marke: string; nummer: string; altPreis?: string; preis: string; zeit: string; bild: string };
+    liste?: { titel: string; zeilen: readonly { marke: string; preis: string }[] };
     korb?: {
       titel: string;
       zeilen: readonly { name: string; alt: string; preis: string }[];

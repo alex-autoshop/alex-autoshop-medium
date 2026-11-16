@@ -31,6 +31,7 @@ import {
   TEILE_AGENT_LEAD,
   TEILE_AGENT_PLATZHALTER,
   TEILE_AGENT_SCHRITTE,
+  TEILE_AGENT_STANDARD,
   TEILE_AGENT_TIPPS,
   TEILE_AGENT_TITEL,
   TEILE_AGENT_URL,
@@ -85,6 +86,9 @@ export default function TeileAgent() {
               <p className="text-white/70 text-base sm:text-lg leading-relaxed max-w-xl">{TEILE_AGENT_LEAD}</p>
               <p className="mt-5 max-w-xl rounded-xl border border-gold-bright/50 bg-white/10 px-4 py-3 text-base font-semibold leading-snug text-white sm:text-lg">
                 {TEILE_AGENT_BESTPREIS}
+              </p>
+              <p className="mt-3 max-w-xl text-base font-semibold leading-snug text-white">
+                {TEILE_AGENT_STANDARD}
               </p>
             </div>
 

@@ -12,6 +12,8 @@ export const TEILE_AGENT_H1 = "Autoteile per WhatsApp anfragen";
 export const TEILE_AGENT_LEAD = "Unser KI-Teileagent antwortet dir direkt im Chat.";
 export const TEILE_AGENT_BESTPREIS =
   "Wir fragen über 20 Lieferanten gleichzeitig ab – dein Bestpreis in Minuten, deutschlandweit.";
+export const TEILE_AGENT_STANDARD =
+  "Standardmäßig 3 Angebote von Aftermarket-Marken – auf Wunsch bis zu 10 Angebote pro Teil. OE-Qualität und Premium auf Anfrage.";
 export const TEILE_AGENT_CODE = "BESTERMANN15";
 export const TEILE_AGENT_CODE_VORGABE = "Hallo, ich suche ein Teil. Code: BESTERMANN15";
 export const TEILE_AGENT_CODE_CTA =
@@ -26,8 +28,8 @@ export const TEILE_AGENT_DATENSCHUTZ =
   "Mit „Abschicken & per WhatsApp weiter“ öffnet sich WhatsApp (Meta). Das Textfeld speichert nichts auf dieser Seite. Dein Text steht nur in der Nachricht. Details stehen in der Datenschutzerklärung.";
 
 export const TEILE_AGENT_CLAIMS = [
-  "Ein Teil, drei geprüfte Optionen",
-  "Marke, Preis und Lieferzeit im Chat",
+  "Standard 3 Aftermarket-Angebote, auf Wunsch bis zu 10",
+  "OE-Qualität und Premium auf Anfrage",
   "Passform-Prüfung über Schlüsselnummer oder FIN",
   "Angebote aus über 20 Partnerlieferanten",
 ];
@@ -39,7 +41,7 @@ export const TEILE_AGENT_SCHRITTE = [
   },
   {
     titel: "Passform und Optionen prüfen",
-    text: "Die Rückmeldung zeigt bis zu drei Optionen mit Marke, Preis und Lieferzeit. Die Passform prüfen wir über Schlüsselnummer oder FIN.",
+    text: "Standard sind drei Angebote von Aftermarket-Marken, mit Marke und Preis. Auf Wunsch bis zu zehn. OE-Qualität und Premium nur auf Anfrage. Die Passform prüfen wir über Schlüsselnummer oder FIN.",
   },
   {
     titel: "Angebot annehmen und bestellen",
@@ -49,7 +51,7 @@ export const TEILE_AGENT_SCHRITTE = [
 
 export const TEILE_AGENT_VERGLEICH = {
   titel: "Klassische Beratung vs. Teile-Agent",
-  lead: "Klassisch gibt es einen Vorschlag. Der Teile-Agent legt zu einem Teil drei geprüfte Optionen vor. Bestellt wird in beiden Fällen erst, wenn du das Angebot annimmst.",
+  lead: "Klassisch gibt es einen Vorschlag. Der Teile-Agent legt standardmäßig drei Aftermarket-Angebote vor, auf Wunsch bis zu zehn. Bestellt wird in beiden Fällen erst, wenn du das Angebot annimmst.",
   klassischTitel: "Klassische Beratung",
   klassisch: [
     "Ein Vorschlag, abgestimmt auf deine Anfrage",
@@ -57,28 +59,43 @@ export const TEILE_AGENT_VERGLEICH = {
   ],
   agentTitel: "Teile-Agent",
   agent: [
-    "Drei geprüfte Optionen zu einem Teil",
-    "Marke, Preis und Lieferzeit, wo sie vorliegt",
+    "Standard 3 Aftermarket-Angebote, auf Wunsch bis zu 10",
+    "OE-Qualität und Premium auf Anfrage",
     "Passform-Prüfung über Schlüsselnummer (HSN/TSN) oder FIN",
   ],
 };
 
+const scheibe = "/media/scheibe-aftermarket.jpg";
+
 const anlasser = [
-  { stufe: "Budget", marke: "AS-PL", nummer: "S0291", preis: "104,90 €", zeit: "bis 18.11.", bild: "/media/anlasser-aspl.jpg" },
-  { stufe: "OE-Qualität", marke: "SEG Automotive", nummer: "0001148033", preis: "176,90 €", zeit: "", bild: "/media/anlasser-seg.jpg" },
-  { stufe: "Premium", marke: "Bosch", nummer: "0 986 022 020", preis: "179,90 €", zeit: "", bild: "/media/anlasser-bosch.jpg" },
+  { stufe: "Angebot 1", marke: "AS-PL", nummer: "", preis: "104,90 €", zeit: "", bild: "/media/anlasser-aspl.jpg" },
+  { stufe: "Angebot 2", marke: "HC-Cargo", nummer: "", preis: "118,90 €", zeit: "", bild: "" },
+  { stufe: "Angebot 3", marke: "Unipoint", nummer: "", preis: "129,90 €", zeit: "", bild: "" },
 ];
 
 const scheiben = [
-  { stufe: "Budget", marke: "NK", nummer: "", altPreis: "46,90 €", preis: "39,87 €", zeit: "pro Stück", bild: "/media/scheibe-budget.jpg" },
-  { stufe: "OE-Qualität", marke: "ATE", nummer: "", altPreis: "74,90 €", preis: "63,67 €", zeit: "pro Stück", bild: "/media/scheibe-oe.jpg" },
-  { stufe: "Premium", marke: "Zimmermann", nummer: "", altPreis: "96,90 €", preis: "82,37 €", zeit: "pro Stück", bild: "/media/scheibe-premium.jpg" },
+  { stufe: "Angebot 1", marke: "ABE", nummer: "", altPreis: "39,90 €", preis: "33,92 €", zeit: "pro Stück", bild: scheibe },
+  { stufe: "Angebot 2", marke: "NK", nummer: "", altPreis: "42,00 €", preis: "35,70 €", zeit: "pro Stück", bild: scheibe },
+  { stufe: "Angebot 3", marke: "Mapco", nummer: "", altPreis: "44,90 €", preis: "38,17 €", zeit: "pro Stück", bild: scheibe },
+];
+
+const zehnScheiben = [
+  ["ABE", "33,92 €"],
+  ["NK", "35,70 €"],
+  ["Mapco", "38,17 €"],
+  ["Triscan", "39,87 €"],
+  ["Japanparts", "41,23 €"],
+  ["Optimal", "42,42 €"],
+  ["Vaico", "44,12 €"],
+  ["Febi Bilstein", "46,67 €"],
+  ["Meyle", "49,22 €"],
+  ["Blue Print", "52,62 €"],
 ];
 
 const drossel = [
-  { stufe: "Budget", marke: "ESEN", nummer: "", preis: "114,90 €", zeit: "", bild: "/media/drossel-esen.jpg" },
-  { stufe: "OE-Qualität", marke: "Meat & Doria", nummer: "", preis: "124,90 €", zeit: "", bild: "/media/drossel-meat.jpg" },
-  { stufe: "Premium", marke: "Trucktec", nummer: "", preis: "152,90 €", zeit: "", bild: "/media/drossel-trucktec.jpg" },
+  { stufe: "Angebot 1", marke: "ESEN", nummer: "", preis: "114,90 €", zeit: "", bild: "/media/drossel-esen.jpg" },
+  { stufe: "Angebot 2", marke: "Meat & Doria", nummer: "", preis: "124,90 €", zeit: "", bild: "/media/drossel-meat.jpg" },
+  { stufe: "Angebot 3", marke: "Trucktec", nummer: "", preis: "152,90 €", zeit: "", bild: "/media/drossel-trucktec.jpg" },
 ];
 
 function angebote(liste, basis) {
@@ -107,7 +124,7 @@ export const TEILE_AGENT_CHATS = [
       },
       { von: "agent", art: "text", text: "schein ist da. welches teil?", zeit: "18:41", key: "s1" },
       { von: "kunde", art: "text", text: "anlasser", zeit: "18:42", key: "s2" },
-      { von: "agent", art: "text", text: "golf 7 1.6 tdi, hsn 0603. drei preise, sind beispiele, inkl. mwst", zeit: "18:42", key: "s3" },
+      { von: "agent", art: "text", text: "golf 7 1.6 tdi, hsn 0603. drei aftermarket-angebote, beispiel, inkl. mwst", zeit: "18:42", key: "s3" },
       ...angebote(anlasser, "18:43"),
     ],
   },
@@ -123,19 +140,30 @@ export const TEILE_AGENT_CHATS = [
         key: "t0",
       },
       { von: "kunde", art: "text", text: "BESTERMANN15", zeit: "11:07", key: "tcode" },
-      { von: "agent", art: "text", text: "code ist drin. 15% auf den ganzen warenkorb. drei stückpreise, beispiel, inkl. mwst", zeit: "11:08", key: "t1" },
+      { von: "agent", art: "text", text: "code ist drin. 15% auf den ganzen warenkorb. drei aftermarket-angebote, stück, beispiel", zeit: "11:08", key: "t1" },
       ...angebote(scheiben, "11:09"),
-      { von: "kunde", art: "text", text: "nehm die ate", zeit: "11:10", key: "twahl" },
+      { von: "kunde", art: "text", text: "zeig mir 10", zeit: "11:10", key: "tmehr" },
+      {
+        von: "agent",
+        art: "liste",
+        zeit: "11:10",
+        key: "tliste",
+        liste: {
+          titel: "10 angebote, stück, 15% drin, beispiel",
+          zeilen: zehnScheiben.map(([marke, preis]) => ({ marke, preis })),
+        },
+      },
+      { von: "kunde", art: "text", text: "nehm 2 nk für vorne", zeit: "11:11", key: "twahl" },
       {
         von: "agent",
         art: "korb",
-        zeit: "11:11",
+        zeit: "11:12",
         key: "tkorb",
         korb: {
           titel: "Übersicht",
-          zeilen: [{ name: "Bremsscheibe ATE, pro Stück", alt: "74,90 €", preis: "63,67 €" }],
+          zeilen: [{ name: "2× Bremsscheibe NK, vorne", alt: "84,00 €", preis: "71,40 €" }],
           rabatt: "Rabatt −15 %",
-          summe: "63,67 €",
+          summe: "71,40 €",
           linkText: "Jetzt bestellen",
         },
       },
@@ -154,8 +182,10 @@ export const TEILE_AGENT_CHATS = [
         key: "f0",
       },
       { von: "kunde", art: "text", text: "die hier, bmw x3", zeit: "16:22", key: "f1" },
-      { von: "agent", art: "text", text: "drosselklappe. drei preise, beispiel, inkl. mwst", zeit: "16:23", key: "f2" },
+      { von: "agent", art: "text", text: "drosselklappe. drei aftermarket-angebote, beispiel, inkl. mwst", zeit: "16:23", key: "f2" },
       ...angebote(drossel, "16:24"),
+      { von: "kunde", art: "text", text: "hast du auch oe?", zeit: "16:25", key: "foe" },
+      { von: "agent", art: "text", text: "oe und premium nur auf anfrage. sag bescheid, dann such ich die.", zeit: "16:25", key: "foe2" },
     ],
   },
 ];
@@ -177,7 +207,7 @@ export const TEILE_AGENT_TIPPS = {
     },
     {
       titel: "Sagen, was dir wichtiger ist",
-      text: "Ein günstiger Preis oder eine kurze Lieferzeit.",
+      text: "Mehr Angebote, oder OE-Qualität und Premium, kannst du im Chat nachfragen.",
     },
   ],
 };
@@ -190,7 +220,7 @@ export const TEILE_AGENT_FILM_ALT =
 export const TEILE_AGENT_FILM_LABEL =
   "Erklärfilm mit Stimme. Der Ton ist aus, bis du ihn einschaltest.";
 export const TEILE_AGENT_FILM_TEXT =
-  "Der Film zeigt drei Wege: Fahrzeugschein, kurze Nachricht oder Foto vom Teil. Wir fragen über 20 Lieferanten gleichzeitig ab, dein Bestpreis in Minuten, deutschlandweit. Danach drei Angebote, günstig, OE-Qualität und Premium, mit Bild. Der Code BESTERMANN15 gibt 15 Prozent auf die erste Teilebestellung, auf den ganzen Warenkorb. Die Übersicht und der Bestelllink kommen im Chat. Abholung in der Handelstraße 64 in Wuppertal oder Lieferung.";
+  "Der Film zeigt drei Wege: Fahrzeugschein, kurze Nachricht oder Foto vom Teil. Wir fragen über 20 Lieferanten gleichzeitig ab, dein Bestpreis in Minuten, deutschlandweit. Standard sind drei Angebote von Aftermarket-Marken. Auf Wunsch bis zu zehn pro Teil. OE-Qualität und Premium nur auf Anfrage. Der Code BESTERMANN15 gibt 15 Prozent auf die erste Teilebestellung, auf den ganzen Warenkorb. Die Übersicht und der Bestelllink kommen im Chat. Abholung in der Handelstraße 64 in Wuppertal oder Lieferung.";
 
 export const TEILE_AGENT_FILM_LD = {
   "@context": "https://schema.org",
@@ -199,7 +229,7 @@ export const TEILE_AGENT_FILM_LD = {
   description: TEILE_AGENT_BESCHREIBUNG,
   thumbnailUrl: "https://www.alex-autoshop.de/media/teile-agent-poster.jpg",
   uploadDate: "2026-11-14",
-  duration: "PT60S",
+  duration: "PT58S",
   contentUrl: "https://www.alex-autoshop.de/media/teile-agent.mp4",
   embedUrl: TEILE_AGENT_URL,
 };
@@ -244,6 +274,7 @@ export function teileAgentKundentexte() {
     TEILE_AGENT_H1,
     TEILE_AGENT_LEAD,
     TEILE_AGENT_BESTPREIS,
+    TEILE_AGENT_STANDARD,
     TEILE_AGENT_CODE,
     TEILE_AGENT_CODE_VORGABE,
     TEILE_AGENT_CODE_CTA,
@@ -284,6 +315,8 @@ export function teileAgentKundentexte() {
         nachricht.korb?.summe || "",
         nachricht.korb?.linkText || "",
         ...(nachricht.korb?.zeilen.flatMap((zeile) => [zeile.name, zeile.alt, zeile.preis]) || []),
+        nachricht.liste?.titel || "",
+        ...(nachricht.liste?.zeilen.flatMap((zeile) => [zeile.marke, zeile.preis]) || []),
       ]),
     ]),
     TEILE_AGENT_TIPPS.titel,

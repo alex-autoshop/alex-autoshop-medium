@@ -44,7 +44,7 @@ function Blase({ nachricht }: { nachricht: Nachricht }) {
     const zeile = [angebot.marke, angebot.nummer].filter(Boolean).join(" ");
     return (
       <div className={`${klasse} w-[86%] overflow-hidden p-[3px] pb-1`}>
-        <img src={angebot.bild} alt={nachricht.alt || angebot.marke} className="block max-h-44 w-full rounded-[6px] bg-white object-contain" />
+        {angebot.bild ? <img src={angebot.bild} alt={nachricht.alt || angebot.marke} className="block max-h-44 w-full rounded-[6px] bg-white object-contain" /> : null}
         <div className="px-1.5 pt-1 text-[15px] leading-snug text-[#111b21]">
           <div>{angebot.stufe}</div>
           <div>{zeile}</div>
@@ -55,6 +55,18 @@ function Blase({ nachricht }: { nachricht: Nachricht }) {
             <Meta zeit={nachricht.zeit} aus={false} />
           </div>
         </div>
+      </div>
+    );
+  }
+  if (nachricht.art === "liste" && nachricht.liste) {
+    const liste = nachricht.liste;
+    return (
+      <div className={`${klasse} px-2 pb-1 pt-1.5 text-[15px] leading-snug text-[#111b21]`}>
+        <div>{liste.titel}</div>
+        {liste.zeilen.map((zeile, index) => (
+          <div key={zeile.marke}>{index + 1} {zeile.marke} {zeile.preis}</div>
+        ))}
+        <Meta zeit={nachricht.zeit} aus={false} />
       </div>
     );
   }
