@@ -1,14 +1,14 @@
 // Stripe-Webhook — bestätigt Abo-Zahlung → schaltet Mitgliedschaft frei.
 // In Stripe anlegen: Developers → Webhooks → Endpoint
-//   URL:    https://alex-autoshop.de/api/stripe-webhook
-//   Events: checkout.session.completed, checkout.session.expired,
-//           checkout.session.async_payment_succeeded, checkout.session.async_payment_failed,
-//           customer.subscription.updated, customer.subscription.deleted,
-//           invoice.paid, invoice.payment_failed
-//   (expired ist wichtig: dann kommt eingesetztes Empfehlungs-Guthaben zurück)
+//   URL:    https://www.alex-autoshop.de/api/stripe-webhook
+//   Events: shared/oeffentliche-basis.js → STRIPE_WEBHOOK_EVENTS
+//           (auch .env.example und docs/webhooks.md)
+//   checkout.session.expired gibt eingesetztes Empfehlungs-Guthaben zurück.
+//   invoice.paid schreibt den Höchstbeitrag der Mindestlaufzeit fort.
 //   Abo-Ende nimmt dem Shopify-Kunden das Tag "mitglied". Eine einzelne
 //   fehlgeschlagene Rate, die Stripe noch einmal versucht, tut das nicht.
-//   Signing secret → Vercel-Env STRIPE_WEBHOOK_SECRET (whsec_…)
+//   Signing secret → Vercel-Env STRIPE_WEBHOOK_SECRET
+//   Fehlt das Geheimnis: 500, nichts wird verarbeitet. Falsche Signatur: 400.
 
 export const config = { runtime: "edge" };
 
@@ -16,7 +16,9 @@ import { activateMembership, activateProduktAbo } from "./_activate-membership.j
 import { hatMindestlaufzeit, stripeHoechstMerken, stripeMindestSichern } from "./_abo-mindest.js";
 import { shopifyAboStufen, shopifyMitgliedTag } from "./_shopify-order.js";
 import { positionenLesen, teileBestellung } from "./_teile-bestellung.js";
+import { webhookEinmal } from "./_webhook-einmal.js";
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from "../shared/empfehlung.js";
+import { stripeSignaturPruefen } from "../shared/webhook-signatur.js";
 
 // ── Teile-Zahlungen für die Zahlungsgrenze festhalten (nur Server) ──────────
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co").replace(/\/+$/, "");
@@ -72,26 +74,6 @@ async function zahlungStatus(externId, status) {
   }).catch(() => {});
 }
 
-// Stripe-Signatur (HMAC-SHA256) mit Web Crypto prüfen
-async function verifyStripe(rawBody, sigHeader, secret) {
-  if (!sigHeader || !secret) return false;
-  const parts = Object.fromEntries(sigHeader.split(",").map((kv) => kv.split("=")));
-  const t = parts.t;
-  const v1 = parts.v1;
-  if (!t || !v1) return false;
-  const key = await crypto.subtle.importKey(
-    "raw", new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
-  );
-  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${rawBody}`));
-  const hex = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  // konstantzeit-ähnlicher Vergleich
-  if (hex.length !== v1.length) return false;
-  let diff = 0;
-  for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ v1.charCodeAt(i);
-  return diff === 0;
-}
-
 function istMitgliedsMeta(m) {
   if (!m || m.typ === "teile" || m.typ === "theke") return false;
   return !!(m.email && (m.level || m.paket));
@@ -142,19 +124,13 @@ async function stripeKundenEmail(customerId) {
   }
 }
 
-export default async function handler(req) {
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+function jsonAntwort(obj, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status, headers: { "Content-Type": "application/json" },
+  });
+}
 
-  const raw = await req.text();
-  const sig = req.headers.get("stripe-signature");
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  const ok = await verifyStripe(raw, sig, secret);
-  if (!ok) return new Response("Signatur ungültig", { status: 400 });
-
-  let event;
-  try { event = JSON.parse(raw); } catch { return new Response("Invalid JSON", { status: 400 }); }
-
+async function stripeEreignis(event) {
   // Teile-Bestellungen (Teilebörse + Theke) — Grundlage der Zahlungsgrenze.
   // Events in Stripe: checkout.session.completed (+ für Lastschrift über
   // Stripe: checkout.session.async_payment_succeeded / _failed).
@@ -285,8 +261,35 @@ export default async function handler(req) {
     }
   }
 
-  // Stripe erwartet 2xx, sonst wird der Event erneut zugestellt.
-  return new Response(JSON.stringify({ received: true }), {
-    status: 200, headers: { "Content-Type": "application/json" },
-  });
+}
+
+export default async function handler(req) {
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
+
+  const geheimnis = String(process.env.STRIPE_WEBHOOK_SECRET || "").trim();
+  if (!geheimnis) {
+    console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET fehlt");
+    return new Response("STRIPE_WEBHOOK_SECRET fehlt", { status: 500 });
+  }
+
+  // Roh-Body: die Signatur gilt für die Bytes, nicht für neu gebautes JSON.
+  const raw = await req.text();
+  const sig = req.headers.get("stripe-signature");
+  if (!(await stripeSignaturPruefen(raw, sig, geheimnis))) {
+    return new Response("Signatur ungültig", { status: 400 });
+  }
+
+  let event;
+  try { event = JSON.parse(raw); } catch { return new Response("Invalid JSON", { status: 400 }); }
+  if (!event || typeof event !== "object" || typeof event.type !== "string") {
+    return new Response("Invalid JSON", { status: 400 });
+  }
+
+  try {
+    const erg = await webhookEinmal("stripe", event.id, () => stripeEreignis(event));
+    return jsonAntwort({ received: true, ...(erg.doppelt ? { duplicate: true } : {}) });
+  } catch (e) {
+    console.error("[stripe-webhook]", String(e?.message || e).slice(0, 200));
+    return new Response("Verarbeitung fehlgeschlagen", { status: 500 });
+  }
 }

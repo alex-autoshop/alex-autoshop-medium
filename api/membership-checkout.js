@@ -8,7 +8,7 @@
 //   STRIPE_SECRET_KEY            (sk_test_… / sk_live_…)
 //   GOCARDLESS_ACCESS_TOKEN      (sandbox_… / live_…)
 //   GOCARDLESS_ENVIRONMENT       "sandbox" | "live"  (Default: sandbox)
-//   PUBLIC_BASE_URL              z.B. https://alex-autoshop.de (Default gesetzt)
+//   PUBLIC_BASE_URL              https://www.alex-autoshop.de (Default; Apex wird umgebogen)
 //
 // PREIS: Der Beitrag wird HIER berechnet (shared/mitgliedspreise.js) — der
 // Browser schickt nur die Auswahl. Bis 22.09.2026 kam der Betrag aus dem
@@ -23,6 +23,7 @@ import { kgAusShopify, versandPlan } from "../shared/versand.js";
 import { storefront } from "./_storefront.js";
 import { empfehlungSichtbar } from "../shared/empfehlung.js";
 import { kundeAusAnfrage, paketMitKonto } from "../shared/abo-konto.js";
+import { oeffentlicheBasis } from "../shared/oeffentliche-basis.js";
 
 const REF_OK = /^[A-Z0-9]{6,8}$/;
 const refAus = (email, x) => {
@@ -31,7 +32,7 @@ const refAus = (email, x) => {
   return REF_OK.test(r) ? r : "";
 };
 
-const BASE = () => process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de";
+const BASE = () => oeffentlicheBasis();
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",

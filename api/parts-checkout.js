@@ -31,7 +31,7 @@
 // Öffnet der Kunde den Warenkorb wieder (GET mit Anmeldung), werden seine
 // verlassenen Bezahlseiten geschlossen und das Guthaben steht wieder voll da.
 //   SUPABASE_SERVICE_ROLE_KEY    für Konto, Guthaben und Zahlungsgrenze
-//   PUBLIC_BASE_URL              z.B. https://alex-autoshop.de
+//   PUBLIC_BASE_URL              https://www.alex-autoshop.de (Default; Apex wird umgebogen)
 //   ADMIN_PIN                    für den Ladenverkauf (siehe unten)
 //
 // LADENVERKAUF ("theke"): Alex bestellt im Laden für den Kunden vor ihm.
@@ -47,8 +47,9 @@ import { adminPruefen } from "./_admin.js";
 import { versandPlan, pfandBetrag, VERSAND_FREI_AB, VERSAND_ANFRAGE } from "../shared/versand.js";
 import { markeFuerKunde } from "../shared/grosshaendler.js";
 import { teileboerseDarf } from "../shared/teileboerse-zugang.js";
+import { oeffentlicheBasis } from "../shared/oeffentliche-basis.js";
 
-const BASE = () => (process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de").replace(/\/+$/, "");
+const BASE = () => oeffentlicheBasis();
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co";
 
 const MAX_POSITIONEN = 50;
