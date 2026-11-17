@@ -8,8 +8,9 @@
 import { createShopifyOrder, shopifyMitgliedTag, shopifyAboStufen } from "./_shopify-order.js";
 import { internSignatur } from "./_intern.js";
 import { rabattName } from "../shared/mitgliedspreise.js";
+import { oeffentlicheBasis } from "../shared/oeffentliche-basis.js";
 
-const BASE = () => process.env.PUBLIC_BASE_URL || "https://alex-autoshop.de";
+const BASE = () => oeffentlicheBasis();
 
 /**
  * @param {Object} meta  { email, level, modules(string[]|string), price, provider, providerId, ref }

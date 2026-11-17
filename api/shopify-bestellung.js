@@ -1,7 +1,7 @@
 // Sicherheitsdatenblätter an Gewerbekunden.
 // Shopify: Einstellungen → Benachrichtigungen → Webhooks
 //   Ereignis: Order payment (orders/paid)
-//   URL:      https://alex-autoshop.de/api/shopify-bestellung
+//   URL:      https://www.alex-autoshop.de/api/shopify-bestellung
 //   Secret →  Vercel-Env SHOPIFY_WEBHOOK_SECRET
 // Außerdem: SHOPIFY_ADMIN_TOKEN (Metafelder) und RESEND_API_KEY (Mail).
 // Fehlt eines davon, wird keine Mail verschickt und der Webhook antwortet 503.

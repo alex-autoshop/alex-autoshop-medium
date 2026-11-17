@@ -1,7 +1,10 @@
 // GoCardless-Webhook — bestätigt SEPA-Mandat → legt monatliches Abo an + schaltet frei.
 // In GoCardless anlegen: Developers → Webhook endpoints
-//   URL:    https://alex-autoshop.de/api/gocardless-webhook
+//   URL:    https://www.alex-autoshop.de/api/gocardless-webhook
 //   Secret → Vercel-Env GOCARDLESS_WEBHOOK_SECRET
+//   Fehlt das Geheimnis: 500 mit klarem Text, die Anfrage wird nicht verarbeitet.
+//   GoCardless stellt 500 erneut zu. Eine falsche Webhook-Signature ist 498
+//   (die wiederholt GoCardless nicht).
 //
 // Ablauf: Kunde autorisiert SEPA-Mandat (Billing Request) → Event
 // billing_requests "fulfilled" → wir holen Mandat + Metadaten, erstellen ein
@@ -18,11 +21,13 @@ export const config = { runtime: "edge" };
 
 import { activateMembership, activateProduktAbo } from "./_activate-membership.js";
 import { gocardlessMindestSichern } from "./_abo-mindest.js";
+import { webhookEinmal } from "./_webhook-einmal.js";
 import { userIdAusPaket } from "../shared/abo-konto.js";
 import { shopifyMitgliedTag } from "./_shopify-order.js";
 import { positionenLesen, teileBestellung, teileBestellungBezahlt } from "./_teile-bestellung.js";
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from "../shared/empfehlung.js";
 import { rabattName } from "../shared/mitgliedspreise.js";
+import { gocardlessSignaturPruefen } from "../shared/webhook-signatur.js";
 
 // ── Teile-Zahlungen für die Zahlungsgrenze festhalten (nur Server) ──────────
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co").replace(/\/+$/, "");
@@ -102,20 +107,6 @@ const gcHeaders = () => ({
   "Content-Type": "application/json",
   Accept: "application/json",
 });
-
-async function verifyGoCardless(rawBody, sigHeader, secret) {
-  if (!sigHeader || !secret) return false;
-  const key = await crypto.subtle.importKey(
-    "raw", new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
-  );
-  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
-  const hex = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  if (hex.length !== sigHeader.length) return false;
-  let diff = 0;
-  for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ sigHeader.charCodeAt(i);
-  return diff === 0;
-}
 
 // Mitgliedschaft: seit 22.09.2026 steckt die Auswahl kompakt in "paket"
 // ("L2|Autoteile,Lackfarben|180|farbe|aufb"), weil GoCardless nur 3
@@ -201,7 +192,10 @@ async function handleBillingRequestFulfilled(billingRequestId) {
       try {
         await fetch(`${gcHost()}/subscriptions`, {
           method: "POST",
-          headers: gcHeaders(),
+          headers: {
+            ...gcHeaders(),
+            ...(billingRequestId ? { "Idempotency-Key": `abo-${billingRequestId}` } : {}),
+          },
           body: JSON.stringify({
             subscriptions: {
               amount: Math.round(price * 100),
@@ -239,7 +233,10 @@ async function handleBillingRequestFulfilled(billingRequestId) {
     try {
       await fetch(`${gcHost()}/subscriptions`, {
         method: "POST",
-        headers: gcHeaders(),
+        headers: {
+          ...gcHeaders(),
+          ...(billingRequestId ? { "Idempotency-Key": `abo-${billingRequestId}` } : {}),
+        },
         body: JSON.stringify({
           subscriptions: {
             amount: Math.round(price * 100),
@@ -336,72 +333,89 @@ async function zahlungTagWeg(paymentId, action) {
   await mitgliedTagEntfernen(email, `payment:${action}:${status || "ohne-status"}`);
 }
 
+async function gocardlessEreignis(ev) {
+  if (ev.resource_type === "billing_requests" && ev.action === "fulfilled") {
+    await handleBillingRequestFulfilled(ev.links?.billing_request);
+  }
+  // Teile-Zahlungen: erst eingezogen zählt sie für die Zahlungsgrenze
+  if (ev.resource_type === "payments") {
+    const id = ev.links?.payment;
+    if (["confirmed", "paid_out"].includes(ev.action)) {
+      await zahlungStatus(id, "bezahlt");
+      await provisionBuchen(id);
+      await guthabenAbschliessen(id, true);
+      const pay = (await gcJson(`/payments/${id}`))?.payments;
+      const meta = pay?.metadata || {};
+      if (meta.typ === "teile" || meta.typ === "theke") {
+        const gelesen = positionenLesen(meta.positionen);
+        await teileBestellungBezahlt(id, {
+          anbieter: "gocardless",
+          positionen: gelesen.positionen,
+          versand: gelesen.versand,
+          pfand: gelesen.pfand,
+          summe: Number(pay?.amount || 0) / 100,
+        });
+      } else {
+        await teileBestellungBezahlt(id, {
+          anbieter: "gocardless",
+          nurWennDa: true,
+          summe: Number(pay?.amount || 0) / 100 || undefined,
+        });
+      }
+    }
+    if (["failed", "cancelled", "charged_back", "late_failure_settled"].includes(ev.action)) {
+      await zahlungStatus(id, "fehlgeschlagen");
+      await provisionBuchen(id);
+      await guthabenAbschliessen(id, false);
+      await zahlungTagWeg(id, ev.action);
+    }
+  }
+  if (ev.resource_type === "subscriptions" && ["cancelled", "finished"].includes(ev.action)) {
+    if (ev.action === "cancelled") await gocardlessMindestSichern(ev.links?.subscription);
+    await aboTagWeg(ev.links?.subscription, `subscription:${ev.action}`);
+  }
+  if (ev.resource_type === "mandates" && ["cancelled", "failed", "expired"].includes(ev.action)) {
+    await mandatTagWeg(ev.links?.mandate, `mandate:${ev.action}`);
+  }
+  // Lastschrift-Anfrage abgebrochen → eingesetztes Guthaben zurück
+  if (ev.resource_type === "billing_requests" && ev.action === "cancelled") {
+    await guthabenAbschliessen(ev.links?.billing_request, false);
+  }
+}
+
 export default async function handler(req) {
   if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
+  const geheimnis = String(process.env.GOCARDLESS_WEBHOOK_SECRET || "").trim();
+  if (!geheimnis) {
+    console.error("[gocardless-webhook] GOCARDLESS_WEBHOOK_SECRET fehlt");
+    return new Response("GOCARDLESS_WEBHOOK_SECRET fehlt", { status: 500 });
+  }
+
+  // Roh-Body: Webhook-Signature gilt für die Bytes, nicht für neu gebautes JSON.
   const raw = await req.text();
   const sig = req.headers.get("webhook-signature");
-  const ok = await verifyGoCardless(raw, sig, process.env.GOCARDLESS_WEBHOOK_SECRET);
-  if (!ok) return new Response("Signatur ungültig", { status: 498 });
+  if (!(await gocardlessSignaturPruefen(raw, sig, geheimnis))) {
+    return new Response("Signatur ungültig", { status: 498 });
+  }
 
   let payload;
   try { payload = JSON.parse(raw); } catch { return new Response("Invalid JSON", { status: 400 }); }
 
+  let fehler = false;
+  let doppelt = false;
   for (const ev of payload.events || []) {
     try {
-      if (ev.resource_type === "billing_requests" && ev.action === "fulfilled") {
-        await handleBillingRequestFulfilled(ev.links?.billing_request);
-      }
-      // Teile-Zahlungen: erst eingezogen zählt sie für die Zahlungsgrenze
-      if (ev.resource_type === "payments") {
-        const id = ev.links?.payment;
-        if (["confirmed", "paid_out"].includes(ev.action)) {
-          await zahlungStatus(id, "bezahlt");
-          await provisionBuchen(id);
-          await guthabenAbschliessen(id, true);
-          const pay = (await gcJson(`/payments/${id}`))?.payments;
-          const meta = pay?.metadata || {};
-          if (meta.typ === "teile" || meta.typ === "theke") {
-            const gelesen = positionenLesen(meta.positionen);
-            await teileBestellungBezahlt(id, {
-              anbieter: "gocardless",
-              positionen: gelesen.positionen,
-              versand: gelesen.versand,
-              pfand: gelesen.pfand,
-              summe: Number(pay?.amount || 0) / 100,
-            });
-          } else {
-            await teileBestellungBezahlt(id, {
-              anbieter: "gocardless",
-              nurWennDa: true,
-              summe: Number(pay?.amount || 0) / 100 || undefined,
-            });
-          }
-        }
-        if (["failed", "cancelled", "charged_back", "late_failure_settled"].includes(ev.action)) {
-          await zahlungStatus(id, "fehlgeschlagen");
-          await provisionBuchen(id);
-          await guthabenAbschliessen(id, false);
-          await zahlungTagWeg(id, ev.action);
-        }
-      }
-      if (ev.resource_type === "subscriptions" && ["cancelled", "finished"].includes(ev.action)) {
-        if (ev.action === "cancelled") await gocardlessMindestSichern(ev.links?.subscription);
-        await aboTagWeg(ev.links?.subscription, `subscription:${ev.action}`);
-      }
-      if (ev.resource_type === "mandates" && ["cancelled", "failed", "expired"].includes(ev.action)) {
-        await mandatTagWeg(ev.links?.mandate, `mandate:${ev.action}`);
-      }
-      // Lastschrift-Anfrage abgebrochen → eingesetztes Guthaben zurück
-      if (ev.resource_type === "billing_requests" && ev.action === "cancelled") {
-        await guthabenAbschliessen(ev.links?.billing_request, false);
-      }
+      const erg = await webhookEinmal("gocardless", ev?.id, () => gocardlessEreignis(ev));
+      if (erg.doppelt) doppelt = true;
     } catch (e) {
-      console.error("[gocardless-webhook] event error:", e.message);
+      fehler = true;
+      console.error("[gocardless-webhook] event error:", String(e?.message || e).slice(0, 200));
     }
   }
 
-  return new Response(JSON.stringify({ received: true }), {
+  if (fehler) return new Response("Verarbeitung fehlgeschlagen", { status: 500 });
+  return new Response(JSON.stringify({ received: true, ...(doppelt ? { duplicate: true } : {}) }), {
     status: 200, headers: { "Content-Type": "application/json" },
   });
 }
