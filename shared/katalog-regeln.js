@@ -220,6 +220,16 @@ export function bildSrcset(url, format = "webp") {
   return BILD_BREITEN.map((w) => `${bildAdresse(url, w, format)} ${w}w`).join(", ");
 }
 
+/** Preload, das zur srcset-Auswahl des sichtbaren Bildes passt. */
+export function bildVorspann(url, sizes = KARTEN_GROESSEN, breite = 480) {
+  if (!url) return "";
+  return {
+    href: bildAdresse(url, breite, "webp"),
+    srcSet: bildSrcset(url, "webp"),
+    sizes,
+  };
+}
+
 export function bildAdresse(url, breite, format) {
   try {
     const u = new URL(url);
@@ -274,7 +284,7 @@ export function kartenHtml(edges) {
     const src = bild ? bildAdresse(bild, 480, "webp") : "";
     const set = bild ? bildSrcset(bild, "webp") : "";
     const mehrere = (node.variants?.edges?.length || 0) > 1;
-    const prio = i < 2 ? ' fetchpriority="high"' : ' loading="lazy"';
+    const prio = i === 0 ? ' fetchpriority="high"' : ' loading="lazy"';
     const breite = Number(bildNode?.width) > 0 ? Math.round(bildNode.width) : 480;
     const hoehe = Number(bildNode?.height) > 0 ? Math.round(bildNode.height) : 480;
     return `<a href="/produkt/${htmlText(node.handle)}"><span class="aa-bild">${

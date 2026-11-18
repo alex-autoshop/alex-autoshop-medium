@@ -6,10 +6,11 @@ import { storefront } from "../api/_storefront.js";
 import {
   QUERY_KOLLEKTION,
   QUERY_PRODUKT,
-  bildAdresse,
+  bildVorspann,
   euro,
   htmlText,
   kartenHtml,
+  KARTEN_GROESSEN,
   sichererHandle,
 } from "./katalog-regeln.js";
 import { lieferzeitText, lieferzeitWaehlen } from "./lieferzeit.js";
@@ -89,7 +90,12 @@ async function produktSeite(url, handle) {
     klasse: " aa-hell",
     hero: produktHero(produkt),
     karten: kartenHtml([{ node: produkt }]),
-    preload: bild ? bildAdresse(bild, 960, "webp") : "",
+    preload: bild
+      ? [
+          { ...bildVorspann(bild, KARTEN_GROESSEN, 480), media: "(max-width: 767px)" },
+          { ...bildVorspann(bild, "(min-width: 768px) 45vw, 92vw", 960), media: "(min-width: 768px)" },
+        ]
+      : "",
     daten: {
       meta: { art: "produkt", handle: sicher, schluessel: `produkt:${sicher}` },
       data: { productByHandle: produkt },
@@ -134,7 +140,7 @@ async function kategorieSeite(url, handle) {
     hero: `<h1>${htmlText(label)}</h1>`,
     karten: kartenHtml(edges),
     preload: edges[0]?.node?.images?.edges?.[0]?.node?.url
-      ? bildAdresse(edges[0].node.images.edges[0].node.url, 640, "webp")
+      ? bildVorspann(edges[0].node.images.edges[0].node.url, KARTEN_GROESSEN, 480)
       : "",
     daten: collection
       ? {

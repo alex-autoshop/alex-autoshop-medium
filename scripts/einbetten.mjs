@@ -13,7 +13,8 @@ import {
   htmlText,
   kartenHtml,
   sichererHandle,
-  bildAdresse,
+  bildVorspann,
+  KARTEN_GROESSEN,
 } from "../shared/katalog-regeln.js";
 import { kategorieDokument, produktDokument } from "../shared/seo-katalog.js";
 import { geruest } from "../shared/seo-html.js";
@@ -75,7 +76,19 @@ async function beschreibungenDazu(nodes) {
 
 function erstesBild(edges) {
   const url = edges?.[0]?.node?.images?.edges?.[0]?.node?.url;
-  return url ? bildAdresse(url, 480, "webp") : "";
+  return url ? bildVorspann(url, KARTEN_GROESSEN, 480) : "";
+}
+
+const PRODUKT_GROSS = "(min-width: 768px) 45vw, 92vw";
+
+function produktPreload(url) {
+  if (!url) return "";
+  const klein = bildVorspann(url, KARTEN_GROESSEN, 480);
+  const gross = bildVorspann(url, PRODUKT_GROSS, 960);
+  return [
+    { ...klein, media: "(max-width: 767px)" },
+    { ...gross, media: "(min-width: 768px)" },
+  ];
 }
 
 export async function einbetten(basis, dist) {
@@ -205,7 +218,7 @@ export async function einbetten(basis, dist) {
           meta: { art: "produkt", handle, schluessel: `produkt:${handle}` },
           data: { productByHandle: node },
         },
-        preload: bild ? bildAdresse(bild, 960, "webp") : "",
+        preload: produktPreload(bild),
       }));
       anzahl += 1;
     }
