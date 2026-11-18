@@ -24,6 +24,7 @@ import { storefront } from "./_storefront.js";
 import { empfehlungSichtbar } from "../shared/empfehlung.js";
 import { kundeAusAnfrage, paketMitKonto } from "../shared/abo-konto.js";
 import { oeffentlicheBasis } from "../shared/oeffentliche-basis.js";
+import { sepaJson, sepaWeiterwerfen } from "./_sepa-fehler.js";
 
 const REF_OK = /^[A-Z0-9]{6,8}$/;
 const refAus = (email, x) => {
@@ -192,37 +193,39 @@ async function createProduktFlow({ email, userId, price, paket, positionen }) {
     "Content-Type": "application/json",
     Accept: "application/json",
   };
-  const brRes = await fetch(`${host}/billing_requests`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      billing_requests: {
-        mandate_request: { scheme: "sepa_core", currency: "EUR" },
-        metadata: {
-          email,
-          paket: paketMitKonto(paket, userId),
-          positionen: String(positionen || "").slice(0, 200),
+  try {
+    const brRes = await fetch(`${host}/billing_requests`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        billing_requests: {
+          mandate_request: { scheme: "sepa_core", currency: "EUR" },
+          metadata: {
+            email,
+            paket: paketMitKonto(paket, userId),
+            positionen: String(positionen || "").slice(0, 200),
+          },
         },
-      },
-    }),
-  });
-  const br = await brRes.json().catch(() => null);
-  if (!brRes.ok) throw new Error(`GoCardless BR ${brRes.status}: ${JSON.stringify(br?.error || br).slice(0, 300)}`);
-  const flowRes = await fetch(`${host}/billing_request_flows`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      billing_request_flows: {
-        redirect_uri: `${BASE()}/mitgliedschaft?status=success&provider=gocardless`,
-        exit_uri: `${BASE()}/mitgliedschaft?status=cancel`,
-        prefilled_customer: { email },
-        links: { billing_request: br?.billing_requests?.id },
-      },
-    }),
-  });
-  const flow = await flowRes.json().catch(() => null);
-  if (!flowRes.ok) throw new Error(`GoCardless Flow ${flowRes.status}: ${JSON.stringify(flow?.error || flow).slice(0, 300)}`);
-  return { url: flow?.billing_request_flows?.authorisation_url };
+      }),
+    });
+    const br = await sepaJson(brRes, "membership-checkout billing_requests");
+    const flowRes = await fetch(`${host}/billing_request_flows`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        billing_request_flows: {
+          redirect_uri: `${BASE()}/mitgliedschaft?status=success&provider=gocardless`,
+          exit_uri: `${BASE()}/mitgliedschaft?status=cancel`,
+          prefilled_customer: { email },
+          links: { billing_request: br?.billing_requests?.id },
+        },
+      }),
+    });
+    const flow = await sepaJson(flowRes, "membership-checkout billing_request_flows");
+    return { url: flow?.billing_request_flows?.authorisation_url };
+  } catch (e) {
+    sepaWeiterwerfen("membership-checkout", e);
+  }
 }
 
 // ── GoCardless: Billing Request + Flow (SEPA-Mandat) ─────────────────────────
@@ -241,42 +244,44 @@ async function createGoCardlessFlow({ email, userId, level, modules, price, pake
 
   // 1) Billing Request mit SEPA-Mandatsanfrage. Betrag/Intervall werden nach
   //    Mandats-Aktivierung im Webhook als Subscription angelegt.
-  const brRes = await fetch(`${host}/billing_requests`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      billing_requests: {
-        mandate_request: { scheme: "sepa_core", currency: "EUR" },
-        // GoCardless erlaubt höchstens 3 Metadaten-Felder (vorher 4 → die
-        // SEPA-Buchung wäre abgelehnt worden). Der Webhook packt "paket" aus.
-        metadata: {
-          email,
-          paket: paketMitKonto(paket, userId),
-          ...(ref ? { ref } : { user_id: String(userId || "") }),
+  try {
+    const brRes = await fetch(`${host}/billing_requests`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        billing_requests: {
+          mandate_request: { scheme: "sepa_core", currency: "EUR" },
+          // GoCardless erlaubt höchstens 3 Metadaten-Felder (vorher 4 → die
+          // SEPA-Buchung wäre abgelehnt worden). Der Webhook packt "paket" aus.
+          metadata: {
+            email,
+            paket: paketMitKonto(paket, userId),
+            ...(ref ? { ref } : { user_id: String(userId || "") }),
+          },
         },
-      },
-    }),
-  });
-  const br = await brRes.json().catch(() => null);
-  if (!brRes.ok) throw new Error(`GoCardless BR ${brRes.status}: ${JSON.stringify(br?.error || br).slice(0, 300)}`);
-  const brId = br?.billing_requests?.id;
+      }),
+    });
+    const br = await sepaJson(brRes, "membership-checkout billing_requests");
+    const brId = br?.billing_requests?.id;
 
-  // 2) Billing Request Flow → gibt die Kunden-Autorisierungs-URL zurück
-  const flowRes = await fetch(`${host}/billing_request_flows`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      billing_request_flows: {
-        redirect_uri: `${BASE()}/mitgliedschaft?status=success&provider=gocardless`,
-        exit_uri: `${BASE()}/mitgliedschaft?status=cancel`,
-        prefilled_customer: { email },
-        links: { billing_request: brId },
-      },
-    }),
-  });
-  const flow = await flowRes.json().catch(() => null);
-  if (!flowRes.ok) throw new Error(`GoCardless Flow ${flowRes.status}: ${JSON.stringify(flow?.error || flow).slice(0, 300)}`);
-  return { url: flow?.billing_request_flows?.authorisation_url };
+    // 2) Billing Request Flow → gibt die Kunden-Autorisierungs-URL zurück
+    const flowRes = await fetch(`${host}/billing_request_flows`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        billing_request_flows: {
+          redirect_uri: `${BASE()}/mitgliedschaft?status=success&provider=gocardless`,
+          exit_uri: `${BASE()}/mitgliedschaft?status=cancel`,
+          prefilled_customer: { email },
+          links: { billing_request: brId },
+        },
+      }),
+    });
+    const flow = await sepaJson(flowRes, "membership-checkout billing_request_flows");
+    return { url: flow?.billing_request_flows?.authorisation_url };
+  } catch (e) {
+    sepaWeiterwerfen("membership-checkout", e);
+  }
 }
 
 async function gewichtNachVariante(ids) {

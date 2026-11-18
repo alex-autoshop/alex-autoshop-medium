@@ -48,6 +48,7 @@ import { versandPlan, pfandBetrag, VERSAND_FREI_AB, VERSAND_ANFRAGE } from "../s
 import { markeFuerKunde } from "../shared/grosshaendler.js";
 import { teileboerseDarf } from "../shared/teileboerse-zugang.js";
 import { oeffentlicheBasis } from "../shared/oeffentliche-basis.js";
+import { sepaJson, sepaNetzLog, sepaNurLog, sepaWeiterwerfen } from "./_sepa-fehler.js";
 
 const BASE = () => oeffentlicheBasis();
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co";
@@ -485,71 +486,78 @@ async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId,
     Accept: "application/json",
   };
 
-  const brRes = await fetch(`${host}/billing_requests`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      billing_requests: {
-        mandate_request: { scheme: "sepa_core", currency: "EUR" },
-        payment_request: {
-          description: `Alex Autoshop Teile${fahrzeug ? ` — ${fahrzeug}` : ""}${versand > 0 ? " inkl. Versand" : ""}${pfand > 0 ? " inkl. Batteriepfand" : ""}`.slice(0, 100),
-          amount: Math.round(rund2(summe + versand + pfand - guthaben) * 100),
-          currency: "EUR",
-          scheme: "sepa_core",
-        },
-        metadata: {
-          typ: "teile",
-          // GoCardless erlaubt höchstens 3 Metadaten-Felder.
-          user_id: String(userId || ""),
-          positionen: [
-            vin ? `FIN ${String(vin).slice(0, 20)}` : "",
-            ...positionen.map((p) => `${p.quantity}x${p.articleNumber}@${Number(p.einzel).toFixed(2)}`),
-            `v:${Number(versand || 0).toFixed(2)}`,
-            `p:${Number(pfand || 0).toFixed(2)}`,
-          ].filter(Boolean).join("|").slice(0, 490),
-        },
-      },
-    }),
-  });
-  const br = await brRes.json().catch(() => null);
-  if (!brRes.ok) throw new Error(`GoCardless BR ${brRes.status}: ${JSON.stringify(br?.error || br).slice(0, 300)}`);
-  const brId = br?.billing_requests?.id;
-  if (lieferung && brId) {
-    const teile = lieferung.name.split(/\s+/);
-    const given = teile.shift() || lieferung.name;
-    const family = teile.join(" ") || given;
-    await fetch(`${host}/billing_requests/${brId}/actions/collect_customer_details`, {
+  try {
+    const brRes = await fetch(`${host}/billing_requests`, {
       method: "POST",
       headers,
       body: JSON.stringify({
-        data: {
-          customer: { email: email || undefined, given_name: given, family_name: family, country_code: "DE" },
-          customer_billing_detail: {
-            address_line1: lieferung.strasse,
-            city: lieferung.ort,
-            postal_code: lieferung.plz,
-            country_code: "DE",
+        billing_requests: {
+          mandate_request: { scheme: "sepa_core", currency: "EUR" },
+          payment_request: {
+            description: `Alex Autoshop Teile${fahrzeug ? ` — ${fahrzeug}` : ""}${versand > 0 ? " inkl. Versand" : ""}${pfand > 0 ? " inkl. Batteriepfand" : ""}`.slice(0, 100),
+            amount: Math.round(rund2(summe + versand + pfand - guthaben) * 100),
+            currency: "EUR",
+            scheme: "sepa_core",
+          },
+          metadata: {
+            typ: "teile",
+            // GoCardless erlaubt höchstens 3 Metadaten-Felder.
+            user_id: String(userId || ""),
+            positionen: [
+              vin ? `FIN ${String(vin).slice(0, 20)}` : "",
+              ...positionen.map((p) => `${p.quantity}x${p.articleNumber}@${Number(p.einzel).toFixed(2)}`),
+              `v:${Number(versand || 0).toFixed(2)}`,
+              `p:${Number(pfand || 0).toFixed(2)}`,
+            ].filter(Boolean).join("|").slice(0, 490),
           },
         },
       }),
-    }).catch((e) => console.error("[gocardless] adresse:", String(e?.message || e).slice(0, 160)));
-  }
+    });
+    const br = await sepaJson(brRes, "parts-checkout billing_requests");
+    const brId = br?.billing_requests?.id;
+    if (lieferung && brId) {
+      const teile = lieferung.name.split(/\s+/);
+      const given = teile.shift() || lieferung.name;
+      const family = teile.join(" ") || given;
+      try {
+        const adr = await fetch(`${host}/billing_requests/${brId}/actions/collect_customer_details`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            data: {
+              customer: { email: email || undefined, given_name: given, family_name: family, country_code: "DE" },
+              customer_billing_detail: {
+                address_line1: lieferung.strasse,
+                city: lieferung.ort,
+                postal_code: lieferung.plz,
+                country_code: "DE",
+              },
+            },
+          }),
+        });
+        await sepaNurLog(adr, "parts-checkout collect_customer_details");
+      } catch (e) {
+        sepaNetzLog("parts-checkout collect_customer_details", e);
+      }
+    }
 
-  const flowRes = await fetch(`${host}/billing_request_flows`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      billing_request_flows: {
-        redirect_uri: `${BASE()}/teileboerse?zahlung=ok&anbieter=gocardless`,
-        exit_uri: `${BASE()}/teileboerse?zahlung=abbruch`,
-        ...(email ? { prefilled_customer: { email } } : {}),
-        links: { billing_request: brId },
-      },
-    }),
-  });
-  const flow = await flowRes.json().catch(() => null);
-  if (!flowRes.ok) throw new Error(`GoCardless Flow ${flowRes.status}: ${JSON.stringify(flow?.error || flow).slice(0, 300)}`);
-  return { url: flow?.billing_request_flows?.authorisation_url, externId: brId };
+    const flowRes = await fetch(`${host}/billing_request_flows`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        billing_request_flows: {
+          redirect_uri: `${BASE()}/teileboerse?zahlung=ok&anbieter=gocardless`,
+          exit_uri: `${BASE()}/teileboerse?zahlung=abbruch`,
+          ...(email ? { prefilled_customer: { email } } : {}),
+          links: { billing_request: brId },
+        },
+      }),
+    });
+    const flow = await sepaJson(flowRes, "parts-checkout billing_request_flows");
+    return { url: flow?.billing_request_flows?.authorisation_url, externId: brId };
+  } catch (e) {
+    sepaWeiterwerfen("parts-checkout", e);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

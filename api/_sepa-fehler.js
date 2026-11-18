@@ -1,0 +1,92 @@
+// Fehler der SEPA-Schnittstelle: ins Log, nie an den Kunden.
+// Der Access-Token und andere Geheimnisse gehören nicht ins Log.
+
+export const SEPA_KUNDENTEXT =
+  "SEPA-Lastschrift ist gerade nicht verfügbar. Bitte wähle Karte oder versuche es später erneut.";
+
+const SUCHBEGRIFF = "[sepa-checkout]";
+const GEHEIM = /\b(?:live|sandbox|sk|rk|whsec)_[A-Za-z0-9_-]{8,}\b|Bearer\s+\S+/gi;
+
+export function sepaBereinigen(text) {
+  return String(text ?? "").replace(GEHEIM, "[entfernt]");
+}
+
+function header(res, name) {
+  try {
+    return sepaBereinigen(res?.headers?.get?.(name) || "").slice(0, 180);
+  } catch {
+    return "";
+  }
+}
+
+function fehlerObjekt(daten) {
+  const roh = daten?.error;
+  if (typeof roh === "string") return { message: roh };
+  if (roh && typeof roh === "object") return roh;
+  return {};
+}
+
+function sepaLog(res, stelle, daten, sicher) {
+  const error = fehlerObjekt(daten);
+  const liste = Array.isArray(error.errors) ? error.errors : [];
+  const requestId = error.request_id || header(res, "x-request-id") || null;
+  console.error(SUCHBEGRIFF, JSON.stringify({
+    stelle: String(stelle || "").slice(0, 80),
+    status: res?.status ?? null,
+    type: error.type ?? null,
+    code: error.code ?? null,
+    message: error.message == null ? null : sepaBereinigen(error.message).slice(0, 300),
+    errors: liste.map((e) => ({
+      reason: e?.reason == null ? null : sepaBereinigen(e.reason).slice(0, 120),
+      field: e?.field == null ? null : sepaBereinigen(e.field).slice(0, 120),
+    })),
+    request_id: requestId,
+    headers: {
+      "x-request-id": header(res, "x-request-id"),
+      "cf-ray": header(res, "cf-ray"),
+      "content-type": header(res, "content-type"),
+    },
+    roh: sepaBereinigen(sicher).slice(0, 500),
+  }));
+}
+
+async function lesen(res) {
+  let roh = "";
+  try { roh = await res.text(); } catch { roh = ""; }
+  const sicher = sepaBereinigen(roh);
+  let daten = null;
+  if (sicher) {
+    try { daten = JSON.parse(sicher); } catch { daten = null; }
+  }
+  return { daten, sicher };
+}
+
+/** Erfolg: JSON der Antwort. Fehler: Log und Abbruch mit dem Kundentext. */
+export async function sepaJson(res, stelle) {
+  const gelesen = await lesen(res);
+  if (!res.ok) {
+    sepaLog(res, stelle, gelesen.daten, gelesen.sicher);
+    throw new Error(SEPA_KUNDENTEXT);
+  }
+  return gelesen.daten;
+}
+
+/** Nebenaufruf: Fehler nur ins Log, der Checkout läuft weiter. */
+export async function sepaNurLog(res, stelle) {
+  if (res.ok) return;
+  const gelesen = await lesen(res);
+  sepaLog(res, stelle, gelesen.daten, gelesen.sicher);
+}
+
+export function sepaNetzLog(stelle, e) {
+  console.error(SUCHBEGRIFF, JSON.stringify({
+    stelle: String(stelle || "").slice(0, 80),
+    netz: sepaBereinigen(e?.message || e).slice(0, 300),
+  }));
+}
+
+export function sepaWeiterwerfen(stelle, e) {
+  if (e instanceof Error && e.message === SEPA_KUNDENTEXT) throw e;
+  sepaNetzLog(stelle, e);
+  throw new Error(SEPA_KUNDENTEXT);
+}
