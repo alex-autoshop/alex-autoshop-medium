@@ -24,7 +24,8 @@ import { storefront } from "./_storefront.js";
 import { empfehlungSichtbar } from "../shared/empfehlung.js";
 import { kundeAusAnfrage, paketMitKonto } from "../shared/abo-konto.js";
 import { oeffentlicheBasis } from "../shared/oeffentliche-basis.js";
-import { sepaJson, sepaWeiterwerfen } from "./_sepa-fehler.js";
+import { sepaWeiterwerfen } from "./_sepa-fehler.js";
+import { gocardlessHost, gocardlessKopf, gocardlessPost } from "./_gocardless.js";
 
 const REF_OK = /^[A-Z0-9]{6,8}$/;
 const refAus = (email, x) => {
@@ -183,105 +184,58 @@ async function createWarenAboSession({ email, userId, monat, waren, versand, pak
   return { url: data.url };
 }
 
-async function createProduktFlow({ email, userId, price, paket, positionen }) {
+// SEPA nur über die gehostete Seite. Betrag und Intervall stehen im Paket;
+// das monatliche Abo legt der Webhook an, sobald das Mandat da ist.
+// subscription_request kennt GoCardless nur für ACH/PAD, nicht für SEPA.
+async function mandatFlow({ email, metadata }) {
   const token = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
   if (!/^(live|sandbox)_[A-Za-z0-9_-]{10,}$/.test(token)) return { fallback: true };
-  const host = token.startsWith("live_") ? "https://api.gocardless.com" : "https://api-sandbox.gocardless.com";
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "GoCardless-Version": "2015-07-06",
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  };
+  const host = gocardlessHost(token);
+  const headers = gocardlessKopf(token);
   try {
-    const brRes = await fetch(`${host}/billing_requests`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        billing_requests: {
-          mandate_request: { scheme: "sepa_core", currency: "EUR" },
-          metadata: {
-            email,
-            paket: paketMitKonto(paket, userId),
-            positionen: String(positionen || "").slice(0, 200),
-          },
-        },
-      }),
-    });
-    const br = await sepaJson(brRes, "membership-checkout billing_requests");
-    const flowRes = await fetch(`${host}/billing_request_flows`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        billing_request_flows: {
-          redirect_uri: `${BASE()}/mitgliedschaft?status=success&provider=gocardless`,
-          exit_uri: `${BASE()}/mitgliedschaft?status=cancel`,
-          prefilled_customer: { email },
-          links: { billing_request: br?.billing_requests?.id },
-        },
-      }),
-    });
-    const flow = await sepaJson(flowRes, "membership-checkout billing_request_flows");
+    const br = await gocardlessPost(`${host}/billing_requests`, headers, {
+      billing_requests: {
+        mandate_request: { scheme: "sepa_core" },
+        metadata,
+      },
+    }, "membership-checkout billing_requests");
+    const flow = await gocardlessPost(`${host}/billing_request_flows`, headers, {
+      billing_request_flows: {
+        redirect_uri: `${BASE()}/mitgliedschaft?status=success&provider=gocardless`,
+        exit_uri: `${BASE()}/mitgliedschaft?status=cancel`,
+        prefilled_customer: { email },
+        links: { billing_request: br?.billing_requests?.id },
+      },
+    }, "membership-checkout billing_request_flows");
     return { url: flow?.billing_request_flows?.authorisation_url };
   } catch (e) {
     sepaWeiterwerfen("membership-checkout", e);
   }
 }
 
+async function createProduktFlow({ email, userId, paket, positionen }) {
+  return mandatFlow({
+    email,
+    metadata: {
+      email,
+      paket: paketMitKonto(paket, userId),
+      positionen: String(positionen || "").slice(0, 200),
+    },
+  });
+}
+
 // ── GoCardless: Billing Request + Flow (SEPA-Mandat) ─────────────────────────
-async function createGoCardlessFlow({ email, userId, level, modules, price, paket, ref, titel }) {
-  // Nur ein echter Token zählt (Platzhalter in Vercel → freundlicher Hinweis),
-  // und live/sandbox ergibt sich aus dem Token selbst.
-  const token = String(process.env.GOCARDLESS_ACCESS_TOKEN || "").trim();
-  if (!/^(live|sandbox)_[A-Za-z0-9_-]{10,}$/.test(token)) return { fallback: true };
-  const host = token.startsWith("live_") ? "https://api.gocardless.com" : "https://api-sandbox.gocardless.com";
-  const headers = {
-    Authorization: `Bearer ${token}`,
-    "GoCardless-Version": "2015-07-06",
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  };
-
-  // 1) Billing Request mit SEPA-Mandatsanfrage. Betrag/Intervall werden nach
-  //    Mandats-Aktivierung im Webhook als Subscription angelegt.
-  try {
-    const brRes = await fetch(`${host}/billing_requests`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        billing_requests: {
-          mandate_request: { scheme: "sepa_core", currency: "EUR" },
-          // GoCardless erlaubt höchstens 3 Metadaten-Felder (vorher 4 → die
-          // SEPA-Buchung wäre abgelehnt worden). Der Webhook packt "paket" aus.
-          metadata: {
-            email,
-            paket: paketMitKonto(paket, userId),
-            ...(ref ? { ref } : { user_id: String(userId || "") }),
-          },
-        },
-      }),
-    });
-    const br = await sepaJson(brRes, "membership-checkout billing_requests");
-    const brId = br?.billing_requests?.id;
-
-    // 2) Billing Request Flow → gibt die Kunden-Autorisierungs-URL zurück
-    const flowRes = await fetch(`${host}/billing_request_flows`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        billing_request_flows: {
-          redirect_uri: `${BASE()}/mitgliedschaft?status=success&provider=gocardless`,
-          exit_uri: `${BASE()}/mitgliedschaft?status=cancel`,
-          prefilled_customer: { email },
-          links: { billing_request: brId },
-        },
-      }),
-    });
-    const flow = await sepaJson(flowRes, "membership-checkout billing_request_flows");
-    return { url: flow?.billing_request_flows?.authorisation_url };
-  } catch (e) {
-    sepaWeiterwerfen("membership-checkout", e);
-  }
+async function createGoCardlessFlow({ email, userId, paket, ref }) {
+  // Nur ein echter Token zählt (Platzhalter in Vercel → freundlicher Hinweis).
+  // GoCardless erlaubt höchstens 3 Metadaten-Felder. Der Webhook packt "paket" aus.
+  return mandatFlow({
+    email,
+    metadata: {
+      email,
+      paket: paketMitKonto(paket, userId),
+      ...(ref ? { ref } : { user_id: String(userId || "") }),
+    },
+  });
 }
 
 async function gewichtNachVariante(ids) {

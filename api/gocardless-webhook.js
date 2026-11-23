@@ -28,6 +28,7 @@ import { positionenLesen, teileBestellung, teileBestellungBezahlt } from "./_tei
 import { EMPFEHLUNGS_PROZENT, empfehlungOffen } from "../shared/empfehlung.js";
 import { rabattName } from "../shared/mitgliedspreise.js";
 import { gocardlessSignaturPruefen } from "../shared/webhook-signatur.js";
+import { sepaNurLog } from "./_sepa-fehler.js";
 
 // ── Teile-Zahlungen für die Zahlungsgrenze festhalten (nur Server) ──────────
 const SUPABASE_URL = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://zasbdvtsxgimcezotlsi.supabase.co").replace(/\/+$/, "");
@@ -160,6 +161,7 @@ async function handleBillingRequestFulfilled(billingRequestId) {
     let adresse = {};
     const kundeId = br.links?.customer;
     if (kundeId) {
+      // Nur lesen (Lieferadresse). Anlegen von Kunden bleibt der gehosteten Seite.
       const c = (await gcJson(`/customers/${kundeId}`))?.customers;
       if (c) {
         adresse = {
@@ -189,31 +191,18 @@ async function handleBillingRequestFulfilled(billingRequestId) {
     const teile = String(meta.paket).split("|");
     const price = Number(teile[1]);
     if (mandateId && price > 0) {
-      try {
-        await fetch(`${gcHost()}/subscriptions`, {
-          method: "POST",
-          headers: {
-            ...gcHeaders(),
-            ...(billingRequestId ? { "Idempotency-Key": `abo-${billingRequestId}` } : {}),
-          },
-          body: JSON.stringify({
-            subscriptions: {
-              amount: Math.round(price * 100),
-              currency: "EUR",
-              interval_unit: "monthly",
-              name: "Alex Autoshop Produkt-Abo",
-              links: { mandate: mandateId },
-              metadata: {
-                email: String(meta.email || ""),
-                paket: String(meta.paket || ""),
-                laufzeit: "3",
-              },
-            },
-          }),
-        });
-      } catch (e) {
-        console.error("[gocardless-webhook] produkt-abo:", e.message);
-      }
+      await aboAnlegen(billingRequestId, {
+        amount: Math.round(price * 100),
+        currency: "EUR",
+        interval_unit: "monthly",
+        name: "Alex Autoshop Produkt-Abo",
+        links: { mandate: mandateId },
+        metadata: {
+          email: String(meta.email || ""),
+          paket: String(meta.paket || ""),
+          laufzeit: "3",
+        },
+      }, "produkt-abo");
     }
     if (meta.email) {
       const r = await activateProduktAbo({
@@ -228,29 +217,17 @@ async function handleBillingRequestFulfilled(billingRequestId) {
   const paket = paketAuspacken(meta);
   const price = paket.price;
 
-  // 2) Monatliches Abo anlegen (best effort — Fehler blockt Freischaltung nicht)
+  // 2) Monatliches Abo am Mandat. SEPA kennt kein subscription_request
+  //    in der Billing Request. Fehler blockt die Freischaltung nicht.
   if (mandateId && price > 0) {
-    try {
-      await fetch(`${gcHost()}/subscriptions`, {
-        method: "POST",
-        headers: {
-          ...gcHeaders(),
-          ...(billingRequestId ? { "Idempotency-Key": `abo-${billingRequestId}` } : {}),
-        },
-        body: JSON.stringify({
-          subscriptions: {
-            amount: Math.round(price * 100),
-            currency: "EUR",
-            interval_unit: "monthly",
-            name: `Alex Autoshop Mitgliedschaft — ${rabattName(paket.level)}`,
-            links: { mandate: mandateId },
-            metadata: aboMeta(meta),
-          },
-        }),
-      });
-    } catch (e) {
-      console.error("[gocardless-webhook] subscription:", e.message);
-    }
+    await aboAnlegen(billingRequestId, {
+      amount: Math.round(price * 100),
+      currency: "EUR",
+      interval_unit: "monthly",
+      name: `Alex Autoshop Mitgliedschaft — ${rabattName(paket.level)}`,
+      links: { mandate: mandateId },
+      metadata: aboMeta(meta),
+    }, "subscription");
   }
 
   // 3) Mitgliedschaft freischalten + Shopify-Bestellung
@@ -278,6 +255,24 @@ async function mitgliedTagEntfernen(email, grund) {
     else console.log("[gocardless-webhook] mitglied-tag:", grund, r.aktion);
   } catch (e) {
     console.error("[gocardless-webhook] mitglied-tag:", grund, String(e?.message || e).slice(0, 200));
+  }
+}
+
+async function aboAnlegen(billingRequestId, subscription, stelle) {
+  const url = `${gcHost()}/subscriptions`;
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...gcHeaders(),
+        ...(billingRequestId ? { "Idempotency-Key": `abo-${billingRequestId}` } : {}),
+      },
+      body: JSON.stringify({ subscriptions: subscription }),
+      redirect: "manual",
+    });
+    if (!res.ok) await sepaNurLog(res, `gocardless-webhook ${stelle}`, url);
+  } catch (e) {
+    console.error(`[gocardless-webhook] ${stelle}:`, String(e?.message || e).slice(0, 200));
   }
 }
 

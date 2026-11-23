@@ -26,10 +26,24 @@ function fehlerObjekt(daten) {
   return {};
 }
 
-function sepaLog(res, stelle, daten, sicher) {
+function adresse(wert) {
+  const roh = String(wert || "");
+  if (!roh) return "";
+  try {
+    const u = new URL(roh);
+    return `${u.origin}${u.pathname}`.slice(0, 200);
+  } catch {
+    return "";
+  }
+}
+
+function sepaLog(res, stelle, daten, sicher, ziel) {
   const error = fehlerObjekt(daten);
   const liste = Array.isArray(error.errors) ? error.errors : [];
   const requestId = error.request_id || header(res, "x-request-id") || null;
+  const angefragt = adresse(ziel);
+  const gelandet = adresse(res?.url);
+  const ort = adresse(header(res, "location"));
   console.error(SUCHBEGRIFF, JSON.stringify({
     stelle: String(stelle || "").slice(0, 80),
     status: res?.status ?? null,
@@ -41,6 +55,9 @@ function sepaLog(res, stelle, daten, sicher) {
       field: e?.field == null ? null : sepaBereinigen(e.field).slice(0, 120),
     })),
     request_id: requestId,
+    ...(angefragt ? { ziel: angefragt } : {}),
+    ...(gelandet && gelandet !== angefragt ? { gelandet } : {}),
+    ...(ort ? { ort } : {}),
     headers: {
       "x-request-id": header(res, "x-request-id"),
       "cf-ray": header(res, "cf-ray"),
@@ -62,20 +79,20 @@ async function lesen(res) {
 }
 
 /** Erfolg: JSON der Antwort. Fehler: Log und Abbruch mit dem Kundentext. */
-export async function sepaJson(res, stelle) {
+export async function sepaJson(res, stelle, ziel) {
   const gelesen = await lesen(res);
   if (!res.ok) {
-    sepaLog(res, stelle, gelesen.daten, gelesen.sicher);
+    sepaLog(res, stelle, gelesen.daten, gelesen.sicher, ziel);
     throw new Error(SEPA_KUNDENTEXT);
   }
   return gelesen.daten;
 }
 
 /** Nebenaufruf: Fehler nur ins Log, der Checkout läuft weiter. */
-export async function sepaNurLog(res, stelle) {
+export async function sepaNurLog(res, stelle, ziel) {
   if (res.ok) return;
   const gelesen = await lesen(res);
-  sepaLog(res, stelle, gelesen.daten, gelesen.sicher);
+  sepaLog(res, stelle, gelesen.daten, gelesen.sicher, ziel);
 }
 
 export function sepaNetzLog(stelle, e) {
