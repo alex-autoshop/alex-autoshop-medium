@@ -55,6 +55,9 @@ test("403 ohne JSON: Kunde sieht den SEPA-Hinweis, das Log den Rohtext", async (
           "content-type": "text/html; charset=utf-8",
           "x-request-id": "rid-leer",
           "cf-ray": "ray-1",
+          server: "cloudflare",
+          "content-length": "900",
+          "www-authenticate": "Basic realm=api",
         },
       });
     }
@@ -81,7 +84,14 @@ test("403 ohne JSON: Kunde sieht den SEPA-Hinweis, das Log den Rohtext", async (
     assert.equal(eintrag.headers["cf-ray"], "ray-1");
     assert.match(eintrag.headers["content-type"], /text\/html/);
     assert.equal(eintrag.roh.length, 500);
+    assert.equal(eintrag.auszug.length, 300);
+    assert.equal(eintrag.html, true);
+    assert.equal(eintrag.gelandet, "");
+    assert.equal(eintrag.headers.server, "cloudflare");
+    assert.equal(eintrag.headers["content-length"], "900");
+    assert.equal(eintrag.headers["www-authenticate"], "Basic realm=api");
     assert.equal(eintrag.roh.includes(TOKEN), false);
+    assert.equal(eintrag.auszug.includes(TOKEN), false);
     assert.equal(log[0].includes(TOKEN), false);
   } finally {
     globalThis.fetch = vorher;
@@ -165,6 +175,12 @@ test("sepaJson liest den Rohtext und wirft den Kundentext", async () => {
     const eintrag = JSON.parse(protokoll.nurSepa()[0].replace("[sepa-checkout] ", ""));
     assert.equal(eintrag.stelle, "parts-checkout billing_requests");
     assert.equal(eintrag.roh, "nicht-json");
+    assert.equal(eintrag.auszug, "nicht-json");
+    assert.equal(eintrag.html, false);
+    assert.equal(eintrag.gelandet, "");
+    assert.equal(eintrag.headers.server, "");
+    assert.equal(eintrag.headers["content-length"], "");
+    assert.equal(eintrag.headers["www-authenticate"], "");
     assert.equal(eintrag.headers["cf-ray"], "ray-x");
   } finally {
     protokoll.ende();
