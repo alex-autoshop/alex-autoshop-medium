@@ -37,13 +37,20 @@ function adresse(wert) {
   }
 }
 
+function istHtml(contentType, text) {
+  if (/text\/html/i.test(String(contentType || ""))) return true;
+  const anfang = String(text || "").trimStart().slice(0, 24).toLowerCase();
+  return anfang.startsWith("<!doctype") || anfang.startsWith("<html");
+}
+
 function sepaLog(res, stelle, daten, sicher, ziel) {
   const error = fehlerObjekt(daten);
   const liste = Array.isArray(error.errors) ? error.errors : [];
   const requestId = error.request_id || header(res, "x-request-id") || null;
   const angefragt = adresse(ziel);
-  const gelandet = adresse(res?.url);
   const ort = adresse(header(res, "location"));
+  const typ = header(res, "content-type");
+  const bereinigt = sepaBereinigen(sicher);
   console.error(SUCHBEGRIFF, JSON.stringify({
     stelle: String(stelle || "").slice(0, 80),
     status: res?.status ?? null,
@@ -56,14 +63,19 @@ function sepaLog(res, stelle, daten, sicher, ziel) {
     })),
     request_id: requestId,
     ...(angefragt ? { ziel: angefragt } : {}),
-    ...(gelandet && gelandet !== angefragt ? { gelandet } : {}),
+    gelandet: sepaBereinigen(res?.url || "").slice(0, 300),
     ...(ort ? { ort } : {}),
+    html: istHtml(typ, bereinigt),
     headers: {
       "x-request-id": header(res, "x-request-id"),
       "cf-ray": header(res, "cf-ray"),
-      "content-type": header(res, "content-type"),
+      "content-type": typ,
+      server: header(res, "server"),
+      "content-length": header(res, "content-length"),
+      "www-authenticate": header(res, "www-authenticate"),
     },
-    roh: sepaBereinigen(sicher).slice(0, 500),
+    auszug: bereinigt.slice(0, 300),
+    roh: bereinigt.slice(0, 500),
   }));
 }
 

@@ -31,7 +31,17 @@ test("Checkout legt nur ein SEPA-Mandat an und schickt auf die gehostete Seite",
   const aufrufe = [];
   globalThis.fetch = async (url, init) => {
     const ziel = String(url);
-    aufrufe.push({ ziel, method: init?.method || "GET", body: init?.body ? String(init.body) : "" });
+    const kopf = new Headers(init?.headers || {});
+    aufrufe.push({
+      ziel,
+      method: init?.method || "GET",
+      body: init?.body ? String(init.body) : "",
+      ua: kopf.get("user-agent"),
+      accept: kopf.get("accept"),
+      type: kopf.get("content-type"),
+      version: kopf.get("gocardless-version"),
+      key: kopf.get("idempotency-key"),
+    });
     if (ziel.endsWith("/auth/v1/user")) return Response.json({ id: KONTO, email: MAIL });
     if (ziel.endsWith("/billing_requests")) {
       return Response.json({ billing_requests: { id: "BRQ1" } }, { status: 201 });
@@ -60,7 +70,18 @@ test("Checkout legt nur ein SEPA-Mandat an und schickt auf die gehostete Seite",
     for (const a of posts) {
       assert.equal(/\/(customers|customer_bank_accounts|mandates)(\/|$)/.test(new URL(a.ziel).pathname), false);
     }
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    for (const a of posts) {
+      assert.equal(a.ua, "AlexAutoshop/1.0 (+https://www.alex-autoshop.de)");
+      assert.equal(a.accept, "application/json");
+      assert.equal(a.type, "application/json");
+      assert.equal(a.version, "2015-07-06");
+      assert.match(a.key, uuid);
+      assert.equal(a.ziel.endsWith("/"), false);
+    }
+    assert.notEqual(posts[0].key, posts[1].key);
     const mandat = JSON.parse(posts[0].body);
+    assert.deepEqual(Object.keys(mandat), ["billing_requests"]);
     assert.deepEqual(mandat.billing_requests.mandate_request, { scheme: "sepa_core" });
     assert.equal("currency" in mandat.billing_requests.mandate_request, false);
     assert.equal(mandat.billing_requests.payment_request, undefined);
@@ -137,6 +158,61 @@ test("Direkte Kunden-, Konto- und Mandats-Anlage ist gesperrt", async () => {
         (e) => e instanceof Error && e.message === SEPA_KUNDENTEXT,
       );
     }
+  } finally {
+    globalThis.fetch = vorher;
+  }
+});
+
+test("Schrägstriche fallen weg, der Body bleibt in billing_requests gewickelt", async () => {
+  const vorher = globalThis.fetch;
+  let gesehen = "";
+  let body = "";
+  let kopf;
+  globalThis.fetch = async (url, init) => {
+    gesehen = String(url);
+    body = String(init?.body || "");
+    kopf = new Headers(init?.headers || {});
+    return Response.json({ billing_requests: { id: "BRQ1" } }, { status: 201 });
+  };
+  try {
+    const res = await gocardlessPost(
+      "https://api.gocardless.com//billing_requests/",
+      { Authorization: "Bearer live_" + "a".repeat(20) },
+      { mandate_request: { scheme: "sepa_core" } },
+      "test",
+    );
+    assert.equal(res.billing_requests.id, "BRQ1");
+    assert.equal(gesehen, "https://api.gocardless.com/billing_requests");
+    assert.deepEqual(JSON.parse(body), {
+      billing_requests: { mandate_request: { scheme: "sepa_core" } },
+    });
+    assert.equal(kopf.get("user-agent"), "AlexAutoshop/1.0 (+https://www.alex-autoshop.de)");
+    assert.equal(kopf.get("accept"), "application/json");
+    assert.equal(kopf.get("content-type"), "application/json");
+    assert.equal(kopf.get("gocardless-version"), "2015-07-06");
+    assert.match(kopf.get("idempotency-key"), /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+  } finally {
+    globalThis.fetch = vorher;
+  }
+});
+
+test("Schon gewickelter Body wird nicht doppelt gewickelt", async () => {
+  const vorher = globalThis.fetch;
+  let body = "";
+  globalThis.fetch = async (_url, init) => {
+    body = String(init?.body || "");
+    return Response.json({ billing_request_flows: { authorisation_url: "https://pay.gocardless.com/flow" } }, { status: 201 });
+  };
+  try {
+    await gocardlessPost(
+      "https://api-sandbox.gocardless.com/billing_request_flows",
+      {},
+      { billing_request_flows: { links: { billing_request: "BRQ1" } } },
+      "test",
+    );
+    assert.deepEqual(JSON.parse(body), {
+      billing_request_flows: { links: { billing_request: "BRQ1" } },
+    });
   } finally {
     globalThis.fetch = vorher;
   }
