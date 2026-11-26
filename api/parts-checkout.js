@@ -492,7 +492,7 @@ async function gocardlessFlow({ positionen, summe, email, fahrzeug, vin, userId,
       headers,
       body: JSON.stringify({
         billing_requests: {
-          mandate_request: { scheme: "sepa_core", currency: "EUR" },
+          mandate_request: { scheme: "sepa_core" },
           payment_request: {
             description: `Alex Autoshop Teile${fahrzeug ? ` — ${fahrzeug}` : ""}${versand > 0 ? " inkl. Versand" : ""}${pfand > 0 ? " inkl. Batteriepfand" : ""}`.slice(0, 100),
             amount: Math.round(rund2(summe + versand + pfand - guthaben) * 100),
